@@ -133,6 +133,7 @@ export default function App() {
           component={MainTabNavigator}
           options={{ headerShown: false }} // Hide header for the tab navigator itself
         />
+        <Stack.Screen name="ChatScreen" component={MessagesScreen} options={{ headerShown: false }} />
         <Stack.Screen name="BusinessDetail" component={BusinessDetailScreen} options={{ headerShown: false }} />
         <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} options={{ headerShown: false }} />
         <Stack.Screen name="ContractorDashboard" component={ContractorDashboardScreen} options={{ headerShown: false }} />

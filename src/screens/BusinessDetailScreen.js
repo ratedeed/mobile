@@ -170,7 +170,7 @@ const BusinessDetailScreen = () => {
             </View>
             <Button
               title="Contact Contractor"
-              onPress={() => navigation.navigate('Main', { screen: 'Messages', params: { recipientId: contractor.user._id, recipientName: contractor.companyName } })}
+              onPress={() => navigation.navigate('ChatScreen', { recipientId: contractor.user._id, recipientName: contractor.companyName })}
               style={styles.contactButton}
             />
           </View>

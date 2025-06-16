@@ -3,16 +3,17 @@ const mongoose = require('mongoose');
 const conversationSchema = new mongoose.Schema({
   participants: [
     {
-      type: mongoose.Schema.Types.ObjectId,
-      refPath: 'participantModel', // Dynamically reference User or Contractor
-      required: true,
+      _id: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: true,
+      },
+      participantModel: {
+        type: String,
+        required: true,
+        enum: ['User', 'Contractor'],
+      },
     },
   ],
-  participantModel: {
-    type: String,
-    required: true,
-    enum: ['User', 'Contractor'], // Specify possible models
-  },
   name: {
     type: String,
     required: false, // Can be auto-generated or user-defined
@@ -28,6 +29,9 @@ const conversationSchema = new mongoose.Schema({
 }, {
   timestamps: true,
 });
+
+// Add a unique compound index to ensure only one conversation between two specific participants
+conversationSchema.index({ 'participants._id': 1 }, { unique: true });
 
 const Conversation = mongoose.model('Conversation', conversationSchema);
 

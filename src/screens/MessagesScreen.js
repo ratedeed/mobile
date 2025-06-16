@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Dimensions } from 'react-native';
 import io from 'socket.io-client';
+import AsyncStorage from '@react-native-async-storage/async-storage'; // Import AsyncStorage
+import { jwtDecode } from 'jwt-decode'; // Import jwt-decode
 import { fetchConversations, fetchMessages, sendMessage } from '../api/messages';
 import { FontAwesome5 } from '@expo/vector-icons';
 import Header from '../components/common/Header';
@@ -9,16 +11,40 @@ import Card from '../components/common/Card';
 import Avatar from '../components/common/Avatar';
 import Typography from '../components/common/Typography';
 import { Spacing, Radii, Colors, Shadows } from '../constants/designTokens';
-import { useRoute } from '@react-navigation/native';
+import { useRoute, useNavigation } from '@react-navigation/native';
 import { API_BASE_URL } from '../config'; // Import API_BASE_URL
+
+const getParticipantDisplayName = (participant) => {
+  console.log('getParticipantDisplayName: Received participant:', participant);
+  if (!participant) {
+    console.log('getParticipantDisplayName: Participant is null/undefined, returning "Unknown".');
+    return 'Unknown';
+  }
+  if (participant.name) {
+    console.log('getParticipantDisplayName: Using participant.name:', participant.name);
+    return participant.name; // Prioritize 'name' if already set (e.g., from newConversation)
+  }
+  if (participant.role === 'User') {
+    const name = `${participant.firstName || ''} ${participant.lastName || ''}`.trim();
+    console.log('getParticipantDisplayName: Participant is User. Constructed name:', name);
+    return name || 'Unknown User';
+  }
+  if (participant.role === 'Contractor') {
+    console.log('getParticipantDisplayName: Participant is Contractor. Using companyName:', participant.companyName);
+    return participant.companyName || 'Unknown Contractor';
+  }
+  console.log('getParticipantDisplayName: No specific role/name found, returning "Unknown".');
+  return 'Unknown';
+};
 
 const MessagesScreen = () => {
   const route = useRoute();
+  const navigation = useNavigation();
   const { recipientId, recipientName } = route.params || {};
-
-  console.log('MessagesScreen: route.params:', route.params);
-  console.log('MessagesScreen: recipientId:', recipientId);
-  console.log('MessagesScreen: recipientName:', recipientName);
+  console.log('MessagesScreen (initial render): route.params:', route.params);
+  console.log('MessagesScreen (initial render): recipientId:', recipientId);
+  console.log('MessagesScreen (initial render): recipientName:', recipientName);
+  console.log('MessagesScreen (initial render): route.name:', route.name);
  
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
@@ -26,57 +52,80 @@ const MessagesScreen = () => {
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
  
-  // Dummy user ID for demonstration. In a real app, this would come from auth context/storage.
-  // For testing, using a user ID from the provided log that is a contractor.
-  const DUMMY_CURRENT_USER_ID = '684d745968c6888a0c30833a'; // Updated based on backend logs
+  const [currentUserId, setCurrentUserId] = useState(null); // State to store current user ID
 
   useEffect(() => {
-    const initializeMessages = async () => {
-      setLoading(true);
+    const fetchUserId = async () => {
       try {
-        console.log('initializeMessages: recipientId at start:', recipientId);
-        if (recipientId) {
-          // Try to find an existing conversation with this recipient
-          const existingConversations = await fetchConversations();
-          console.log('initializeMessages: existingConversations:', existingConversations);
-          const foundConversation = existingConversations.find(conv =>
-            conv.otherParticipant && conv.otherParticipant._id === recipientId
-          );
- 
-          if (foundConversation) {
-            console.log('initializeMessages: Found existing conversation:', foundConversation);
-            setSelectedConversation(foundConversation);
-            await loadMessages(foundConversation.otherParticipant._id); // Load messages for existing conversation
-          } else {
-            // Prepare for a new conversation with this recipient
-            const newMockConversation = {
-              _id: recipientId, // This will be used as the 'otherUserId' for sendMessage and fetchMessages
-              name: recipientName,
-              otherParticipant: { _id: recipientId, firstName: recipientName.split(' ')[0], lastName: recipientName.split(' ')[1] || '' }, // Mock otherParticipant for consistency
-            };
-            console.log('initializeMessages: Preparing new mock conversation:', newMockConversation);
-            setSelectedConversation(newMockConversation);
-            setMessages([]); // No messages yet for a new conversation
-          }
+        const token = await AsyncStorage.getItem('userToken');
+        if (token) {
+          const decodedToken = jwtDecode(token);
+          setCurrentUserId(decodedToken.id); // Assuming the user ID is in the 'id' field of the token
+          console.log('Fetched CURRENT_USER_ID from token:', decodedToken.id);
         } else {
-          console.log('initializeMessages: No recipientId, loading all conversations.');
-          loadConversations();
+          console.warn('No user token found in AsyncStorage.');
         }
       } catch (error) {
-        Alert.alert('Error', error.message || 'Failed to initialize messages.');
-        console.error('Initialize messages error:', error);
-      } finally {
-        setLoading(false);
-        console.log('initializeMessages: Loading finished, selectedConversation:', selectedConversation);
+        console.error('Error fetching user ID from token:', error);
       }
     };
-    initializeMessages();
-  }, [recipientId, DUMMY_CURRENT_USER_ID]);
- 
+    fetchUserId();
+  }, []); // Run once on component mount
+
+  // Use a separate useEffect for handling initial load based on recipientId
   useEffect(() => {
-    console.log('selectedConversation useEffect triggered. selectedConversation:', selectedConversation);
+    const initializeSpecificChat = async () => {
+      if (route.name === 'ChatScreen' && recipientId && currentUserId) { // Add currentUserId dependency
+        setLoading(true);
+        console.log('initializeSpecificChat: recipientId:', recipientId);
+        try {
+          const existingConversations = await fetchConversations();
+          console.log('initializeSpecificChat: existingConversations:', existingConversations);
+          const foundConversation = existingConversations.find(conv => {
+            console.log('initializeSpecificChat: Comparing conv.otherParticipant._id:', conv.otherParticipant?._id, 'with recipientId:', recipientId);
+            return conv.otherParticipant && conv.otherParticipant._id === recipientId;
+          });
+          console.log('initializeSpecificChat: foundConversation:', foundConversation);
+
+          if (foundConversation) {
+            setSelectedConversation(foundConversation);
+            await loadMessages(foundConversation.otherParticipant._id);
+          } else {
+            const newMockConversation = {
+              _id: recipientId,
+              name: recipientName,
+              otherParticipant: { _id: recipientId, firstName: recipientName.split(' ')[0], lastName: recipientName.split(' ')[1] || '' },
+            };
+            setSelectedConversation(newMockConversation);
+            setMessages([]);
+          }
+        } catch (error) {
+          Alert.alert('Error', error.message || 'Failed to initialize specific chat.');
+          console.error('Initialize specific chat error:', error);
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+    initializeSpecificChat();
+  }, [route.name, recipientId, currentUserId]); // Add currentUserId to dependencies
+
+  // Use another useEffect to handle tab focus for loading all conversations
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      console.log('MessagesScreen: Focus event detected. Current route name:', route.name);
+      if (route.name === 'Messages') {
+        console.log('MessagesScreen: Tab focused - loading all conversations.');
+        loadConversations();
+        setSelectedConversation(null); // Ensure conversation list is shown
+      }
+    });
+
+    return unsubscribe; // Cleanup the listener
+  }, [navigation, route.name]); // Add navigation and route.name to dependencies
+
+  useEffect(() => {
     if (selectedConversation && selectedConversation.otherParticipant && selectedConversation.otherParticipant._id) {
-      console.log('selectedConversation useEffect: Loading messages for existing conversation with otherUserId:', selectedConversation.otherParticipant._id);
       loadMessages(selectedConversation.otherParticipant._id);
     } else if (selectedConversation && !selectedConversation.otherParticipant && recipientId) {
       console.log('selectedConversation useEffect: New conversation, setting messages to empty.');
@@ -85,20 +134,121 @@ const MessagesScreen = () => {
   }, [selectedConversation]);
 
   useEffect(() => {
+    if (!currentUserId) return; // Only proceed if currentUserId is available
+
     const socket = io(API_BASE_URL);
 
     socket.on('connect', () => {
       console.log('Socket connected:', socket.id);
-      socket.emit('register', DUMMY_CURRENT_USER_ID); // Register current user with their ID
+      socket.emit('register', currentUserId); // Register current user with their ID
     });
 
     socket.on('newMessage', (message) => {
       console.log('New message received via socket:', message);
-      // Only add message if it belongs to the currently selected conversation
+
+      const senderId = message.senderId._id;
+      const recipientId = message.recipientId._id;
+      console.log('newMessage: currentUserId:', currentUserId);
+      console.log('newMessage: senderId (full object):', message.senderId); // Log full object
+      console.log('newMessage: recipientId (full object):', message.recipientId); // Log full object
+      console.log('newMessage: senderId (ID only):', senderId, 'recipientId (ID only):', recipientId);
+      const otherParticipantId = senderId === currentUserId ? recipientId : senderId;
+      console.log('newMessage: otherParticipantId (calculated):', otherParticipantId);
+
+      let updatedSelectedConversation = selectedConversation; // Keep track if selected conversation is updated
+
+      setConversations((prevConversations) => {
+        let conversationFound = false;
+        const updatedConversations = prevConversations.map((conv) => {
+          const isMatch = conv.otherParticipant && conv.otherParticipant._id === otherParticipantId;
+          console.log(`newMessage: Comparing conv.otherParticipant._id: ${conv.otherParticipant?._id} with otherParticipantId: ${otherParticipantId}. Match: ${isMatch}`);
+          if (isMatch) {
+            conversationFound = true;
+            console.log('newMessage: Matched existing conversation:', conv._id);
+            const updatedConv = {
+              ...conv,
+              lastMessage: {
+                _id: message._id,
+                messageText: message.messageText,
+                createdAt: message.createdAt,
+              },
+              // Increment unreadCount if the message is from the other participant and not currently selected
+              unreadCount: (conv.unreadCount || 0) + (senderId === otherParticipantId && (!selectedConversation || selectedConversation._id !== conv._id) ? 1 : 0),
+            };
+            // If this is the currently selected conversation, update our local reference
+            if (selectedConversation && selectedConversation.otherParticipant && selectedConversation.otherParticipant._id === otherParticipantId) {
+              updatedSelectedConversation = updatedConv;
+            }
+            return updatedConv;
+          }
+          return conv;
+        });
+        if (!conversationFound) {
+          console.log('newMessage: No existing conversation found. Creating new one.');
+          console.log('newMessage: message.conversationId:', message.conversationId);
+          // Determine the other participant based on who sent the message
+          const rawOtherParticipant = senderId === currentUserId
+            ? message.recipientId
+            : message.senderId;
+
+          // Construct otherParticipant with necessary fields, handling missing data
+          // Prioritize existing name fields if available, otherwise use a placeholder
+          const otherParticipant = {
+            _id: rawOtherParticipant._id,
+            firstName: rawOtherParticipant.firstName || '',
+            lastName: rawOtherParticipant.lastName || '',
+            companyName: rawOtherParticipant.companyName || '',
+            role: rawOtherParticipant.role || 'User', // Default role if not provided
+          };
+
+          // Refine the name based on role for display
+          let displayName = 'Unknown';
+          if (otherParticipant.role === 'User') {
+            displayName = `${otherParticipant.firstName} ${otherParticipant.lastName}`.trim();
+            if (!displayName) displayName = 'Unknown User';
+          } else if (otherParticipant.role === 'Contractor') {
+            displayName = otherParticipant.companyName || 'Unknown Contractor';
+          }
+          console.log('newMessage: Constructed new otherParticipant:', otherParticipant);
+          console.log('newMessage: Display Name for new conversation:', displayName);
+
+          const newConversation = {
+            _id: message.conversationId || `temp-${Date.now()}`, // Use conversationId if available, otherwise a temp ID
+            lastMessage: {
+              _id: message._id,
+              messageText: message.messageText,
+              createdAt: message.createdAt,
+            },
+            otherParticipant: { // Ensure otherParticipant is a full object for rendering
+              _id: otherParticipant._id,
+              firstName: otherParticipant.firstName,
+              lastName: otherParticipant.lastName,
+              companyName: otherParticipant.companyName,
+              role: otherParticipant.role,
+              name: displayName, // Add a 'name' property for easier display in Header and Avatar
+            },
+            unreadCount: senderId === otherParticipant._id ? 1 : 0, // Mark as unread if received from other participant
+          };
+          // Prepend the new conversation to the list
+          return [newConversation, ...updatedConversations].sort((a, b) => new Date(b.lastMessage.createdAt) - new Date(a.lastMessage.createdAt));
+        }
+
+        // No redundant return statements needed here
+      });
+
+      // Update selectedConversation state if it was the one that received the new message
+      console.log('newMessage: updatedSelectedConversation after map:', updatedSelectedConversation);
+      console.log('newMessage: selectedConversation before update:', selectedConversation);
+      if (updatedSelectedConversation !== selectedConversation) {
+        setSelectedConversation(updatedSelectedConversation);
+        console.log('newMessage: selectedConversation updated to:', updatedSelectedConversation);
+      }
+
+      // If the message belongs to the currently selected conversation, add it to messages state
       const targetRecipientId = selectedConversation?.otherParticipant?._id || selectedConversation?._id;
       if (
-        (message.senderId._id === DUMMY_CURRENT_USER_ID && message.recipientId._id === targetRecipientId) ||
-        (message.senderId._id === targetRecipientId && message.recipientId._id === DUMMY_CURRENT_USER_ID)
+        (senderId === currentUserId && recipientId === targetRecipientId) ||
+        (senderId === targetRecipientId && recipientId === currentUserId)
       ) {
         setMessages((prevMessages) => [...prevMessages, message]);
       }
@@ -111,13 +261,15 @@ const MessagesScreen = () => {
     return () => {
       socket.disconnect();
     };
-  }, [selectedConversation, DUMMY_CURRENT_USER_ID]);
+  }, [selectedConversation, currentUserId]); // Add currentUserId to dependencies
 
   const loadConversations = async () => {
     setLoading(true);
     try {
       const data = await fetchConversations();
+      console.log('loadConversations: Data fetched from API:', data);
       setConversations(data);
+      console.log('loadConversations: conversations state set to:', data);
     } catch (error) {
       Alert.alert('Error', error.message || 'Failed to load conversations.');
       console.error('Load conversations error:', error);
@@ -148,9 +300,9 @@ const MessagesScreen = () => {
       // The recipientId for sendMessage is always the ID of the 'other' participant in the conversation
       const targetRecipientId = selectedConversation.otherParticipant ? selectedConversation.otherParticipant._id : selectedConversation._id;
 
-      await sendMessage(targetRecipientId, newMessage); // Corrected parameters
+      const sentMessage = await sendMessage(targetRecipientId, newMessage); // Corrected parameters
       setNewMessage('');
-      await loadMessages(targetRecipientId); // Reload messages to show the new one
+      setMessages((prevMessages) => [...prevMessages, sentMessage]); // Add the sent message to the state
     } catch (error) {
       Alert.alert('Error', error.message || 'Failed to send message.');
       console.error('Send message error:', error);
@@ -191,50 +343,70 @@ const MessagesScreen = () => {
       <View style={styles.container}>
         {/* Header is always present */}
         <Header
-          title={selectedConversation ? (selectedConversation.name || recipientName || (selectedConversation.otherParticipant ? `${selectedConversation.otherParticipant.firstName} ${selectedConversation.otherParticipant.lastName}` : `Conversation`)) : "Messages"}
+          title={(() => {
+            const participantForHeader = selectedConversation?.otherParticipant || selectedConversation;
+            const displayName = getParticipantDisplayName(participantForHeader);
+            console.log('MessagesScreen: Header title participant:', participantForHeader, 'Display Name:', displayName);
+            return displayName;
+          })()}
           showBackButton={!!selectedConversation}
           onBackPress={() => setSelectedConversation(null)} // Custom back press to show conversation list
-          rightComponent={selectedConversation ? <Avatar text={selectedConversation.name || recipientName || (selectedConversation.otherParticipant ? `${selectedConversation.otherParticipant.firstName} ${selectedConversation.otherParticipant.lastName}` : `Conversation`)} size={Spacing.lg} /> : null}
+          rightComponent={(() => {
+            const participantForAvatar = selectedConversation?.otherParticipant || selectedConversation;
+            const displayName = getParticipantDisplayName(participantForAvatar);
+            console.log('MessagesScreen: Avatar text participant:', participantForAvatar, 'Display Name:', displayName);
+            return selectedConversation ? <Avatar text={displayName} size={Spacing.lg} /> : null;
+          })()}
         />
 
         {/* Conditional rendering for conversation list or messages list */}
         {!selectedConversation ? (
           <ScrollView style={styles.conversationList} contentContainerStyle={styles.conversationListContent}>
-            {conversations.length > 0 ? (
-              conversations.map((conv) => (
-                <Card key={conv.lastMessage._id} style={styles.conversationCard}>
-                  <TouchableOpacity
-                    onPress={() => setSelectedConversation(conv)}
-                    style={styles.conversationTouchable}
-                  >
-                    <Avatar text={conv.otherParticipant.firstName + ' ' + conv.otherParticipant.lastName} size={Spacing.xxl} style={styles.conversationAvatar} />
-                    <View style={styles.conversationTextContent}>
-                      <Typography variant="h6" style={styles.conversationName}>{`Conversation with ${conv.otherParticipant.firstName} ${conv.otherParticipant.lastName}`}</Typography>
-                      <Typography variant="body" style={styles.lastMessage}>{conv.lastMessage.messageText || 'No messages yet.'}</Typography>
-                    </View>
-                    <Typography variant="caption" style={styles.conversationTime}>{formatMessageTime(conv.lastMessage.createdAt)}</Typography>
-                  </TouchableOpacity>
-                </Card>
-              ))
-            ) : (
+            {conversations.length > 0 ?
+              conversations.map((conv) => {
+                console.log('Rendering conversation:', conv); // Log each conversation object
+                if (!conv.lastMessage || !conv.otherParticipant) {
+                  console.warn('Skipping conversation due to missing lastMessage or otherParticipant:', conv);
+                  return null; // Skip rendering if essential data is missing
+                }
+                return (
+                  <Card key={conv.lastMessage._id} style={styles.conversationCard}>
+                    <TouchableOpacity
+                      onPress={() => setSelectedConversation(conv)}
+                      style={styles.conversationTouchable}
+                    >
+                      <Avatar text={getParticipantDisplayName(conv.otherParticipant)} size={Spacing.xxl} style={styles.conversationAvatar} />
+                      <View style={styles.conversationTextContent}>
+                        <Typography variant="h6" style={styles.conversationName}>{`Conversation with ${getParticipantDisplayName(conv.otherParticipant)}`}</Typography>
+                        <Typography variant="body" style={styles.lastMessage}>{conv.lastMessage.messageText || 'No messages yet.'}</Typography>
+                      </View>
+                      <Typography variant="caption" style={styles.conversationTime}>{formatMessageTime(conv.lastMessage.createdAt)}</Typography>
+                    </TouchableOpacity>
+                  </Card>
+                );
+              })
+            : (
               <Typography variant="body" style={styles.noContentText}>No conversations yet. Start a new chat!</Typography>
             )}
           </ScrollView>
         ) : (
           <ScrollView style={styles.messagesList} contentContainerStyle={styles.messagesListContent}>
             {messages.length > 0 ? (
-              messages.map((msg) => (
-                <View
-                  key={msg._id}
-                  style={[
-                    styles.messageBubble,
-                    msg.senderId._id === DUMMY_CURRENT_USER_ID ? styles.myMessage : styles.otherMessage
-                  ]}
-                >
-                  <Typography variant="body" style={msg.senderId._id === DUMMY_CURRENT_USER_ID ? styles.myMessageText : styles.otherMessageText}>{msg.messageText}</Typography>
-                  <Typography variant="caption" style={msg.senderId._id === DUMMY_CURRENT_USER_ID ? styles.myMessageTime : styles.otherMessageTime}>{formatMessageTime(msg.createdAt)}</Typography>
-                </View>
-              ))
+              messages.map((msg) => {
+                console.log('Message senderId:', msg.senderId._id, 'currentUserId:', currentUserId, 'Is my message:', msg.senderId._id === currentUserId);
+                return (
+                  <View
+                    key={msg._id}
+                    style={[
+                      styles.messageBubble,
+                      msg.senderId._id === currentUserId ? styles.myMessage : styles.otherMessage
+                    ]}
+                  >
+                    <Typography variant="body" style={msg.senderId._id === currentUserId ? styles.myMessageText : styles.otherMessageText}>{msg.messageText}</Typography>
+                    <Typography variant="caption" style={msg.senderId._id === currentUserId ? styles.myMessageTime : styles.otherMessageTime}>{formatMessageTime(msg.createdAt)}</Typography>
+                  </View>
+                );
+              })
             ) : (
               <Typography variant="body" style={styles.noContentText}>No messages in this conversation yet. Say hello!</Typography>
             )}
@@ -341,6 +513,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end', // Stick messages to the bottom
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
+    // Removed alignItems: 'flex-start' to allow individual message bubbles to control their alignment
   },
   messageBubble: {
     maxWidth: '80%',
@@ -349,31 +522,36 @@ const styles = StyleSheet.create({
     borderRadius: Radii.lg,
     marginBottom: Spacing.sm,
     ...Shadows.xs,
+    flexDirection: 'column', // Ensure content within bubble stacks vertically
   },
   myMessage: {
     alignSelf: 'flex-end',
     backgroundColor: Colors.primary500, // Purple background
     borderBottomRightRadius: Radii.sm,
+    alignItems: 'flex-end', // Align content within my message bubble to the right
   },
   otherMessage: {
     alignSelf: 'flex-start',
     backgroundColor: Colors.neutral200,
     borderBottomLeftRadius: Radii.sm,
+    alignItems: 'flex-start', // Align content within other message bubble to the left
   },
   myMessageText: {
     color: Colors.neutral50, // White text for purple background
+    textAlign: 'right', // Ensure text is right-aligned within the bubble
   },
   otherMessageText: {
     color: Colors.neutral800,
+    textAlign: 'left', // Ensure text is left-aligned within the bubble
   },
   myMessageTime: {
     color: Colors.primary100, // Lighter purple for time
-    alignSelf: 'flex-end',
+    alignSelf: 'flex-end', // Keep time aligned to the end of the bubble
     marginTop: Spacing.xxs,
   },
   otherMessageTime: {
     color: Colors.neutral600,
-    alignSelf: 'flex-start',
+    alignSelf: 'flex-start', // Keep time aligned to the start of the bubble
     marginTop: Spacing.xxs,
   },
   messageInputContainer: {

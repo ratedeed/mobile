@@ -26,6 +26,15 @@ const messageSchema = new mongoose.Schema({
     required: true,
     trim: true,
   },
+  read: {
+    type: Boolean,
+    default: false,
+  },
+  conversation: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Conversation',
+    required: true,
+  },
 }, {
   timestamps: true,
 });
