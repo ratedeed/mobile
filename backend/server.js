@@ -102,19 +102,58 @@ io.on('connection', (socket) => {
     socket.join(userId); // Join a room named after the user's ID
     console.log(`Backend: Socket ${socket.id} joined room ${userId}`);
     console.log('Backend: Current active users map after register:', Array.from(activeUsers.entries()));
+    // Broadcast online status to all connected clients
+    io.emit('userOnlineStatus', { userId, isOnline: true });
+  });
+
+  socket.on('joinConversation', (conversationId) => {
+    socket.join(conversationId);
+    console.log(`Backend: Socket ${socket.id} joined conversation room: ${conversationId}`);
+  });
+
+  socket.on('leaveConversation', (conversationId) => {
+    socket.leave(conversationId);
+    console.log(`Backend: Socket ${socket.id} left conversation room: ${conversationId}`);
+  });
+
+  socket.on('typing', ({ conversationId, userId, isTyping }) => {
+    // Broadcast typing status to other participants in the conversation room
+    socket.to(conversationId).emit('typing', { userId, isTyping });
+    console.log(`Backend: User ${userId} is ${isTyping ? 'typing' : 'not typing'} in conversation ${conversationId}`);
+  });
+
+  socket.on('messageRead', async ({ messageId, readerId }) => {
+    try {
+      const message = await Message.findById(messageId);
+      if (message && message.recipientId.toString() === readerId && !message.read) {
+        message.read = true;
+        await message.save();
+        // Emit to the sender of the message that it has been read
+        io.to(message.senderId.toString()).emit('messageRead', { messageId, conversationId: message.conversation.toString(), readerId });
+        console.log(`Backend: Message ${messageId} marked as read by ${readerId}. Emitted to sender.`);
+      }
+    } catch (error) {
+      console.error('Backend: Error marking message as read via socket:', error.stack);
+    }
   });
 
   socket.on('disconnect', () => {
     console.log('Backend: User disconnected via socket:', socket.id);
+    let disconnectedUserId = null;
     // Remove disconnected user from activeUsers map
     for (let [userId, userInfo] of activeUsers.entries()) {
       if (userInfo.socketId === socket.id) {
         activeUsers.delete(userId);
+        disconnectedUserId = userId;
         console.log(`Backend: User ${userId} removed from active users.`);
         break;
       }
     }
     console.log('Backend: Current active users map after disconnect:', Array.from(activeUsers.entries()));
+    if (disconnectedUserId) {
+      // Broadcast offline status to all connected clients
+      io.emit('userOnlineStatus', { userId: disconnectedUserId, isOnline: false });
+    }
   });
 });
 

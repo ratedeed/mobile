@@ -30,8 +30,21 @@ const conversationSchema = new mongoose.Schema({
   timestamps: true,
 });
 
-// Add a unique compound index to ensure only one conversation between two specific participants
-conversationSchema.index({ 'participants._id': 1 }, { unique: true });
+// Pre-save hook to sort participants by their _id before saving
+conversationSchema.pre('save', function(next) {
+  if (this.isModified('participants') || this.isNew) {
+    this.participants.sort((a, b) => a._id.toString().localeCompare(b._id.toString()));
+  }
+  next();
+});
+
+// Add a unique compound index on the sorted participant _ids
+// This ensures that there's only one conversation document for any given pair of participants,
+// regardless of their original order in the array.
+conversationSchema.index(
+  { 'participants._id': 1 },
+  { unique: true, partialFilterExpression: { 'participants.1': { $exists: true } } }
+);
 
 const Conversation = mongoose.model('Conversation', conversationSchema);
 
