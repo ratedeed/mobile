@@ -48,4 +48,4 @@ with_node \
   --target "/Users/tamim/Desktop/ratedeedmobile/ios/Pods/Target Support Files/Pods-myapp/ExpoModulesProvider.swift" \
   --entitlement "/Users/tamim/Desktop/ratedeedmobile/ios/myapp/myapp.entitlements" \
   --platform "apple" \
-  --packages "expo" "expo-asset" "expo-constants" "expo-file-system" "expo-font" "expo-keep-awake" "expo-secure-store"
+  --packages "expo" "expo-asset" "expo-constants" "expo-file-system" "expo-font" "expo-keep-awake"

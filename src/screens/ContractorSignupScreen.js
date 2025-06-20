@@ -2,6 +2,10 @@ import React, { useState } from 'react';
 import { View, StyleSheet, Alert, ScrollView, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { contractorSignup } from '../api/auth';
+import { auth } from '../firebaseConfig';
+import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
+console.log('ContractorSignupScreen: auth imported.');
+console.log('ContractorSignupScreen: Firebase Auth module loaded.');
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
 import Header from '../components/common/Header';
@@ -32,11 +36,45 @@ const ContractorSignupScreen = () => {
 
     setLoading(true);
     try {
+      // 1. Create user with Firebase Authentication
+      console.log('ContractorSignupScreen: Attempting to create user with email and password.');
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+      console.log('ContractorSignupScreen: User created, attempting to send email verification.');
+      // 2. Send email verification
+      await sendEmailVerification(user);
+
+      // 3. Register contractor details in your backend (if needed, pass Firebase UID or email)
+      // Assuming contractorSignup handles the backend registration and might use the email
       const data = await contractorSignup(businessName, contactPerson, email, phone, password, zipCode, category);
-      Alert.alert('Success', 'Contractor registration successful! Please sign in.');
+
+      Alert.alert(
+        'Success',
+        'Contractor registration successful! A verification email has been sent to your email address. Please verify your email before signing in.'
+      );
       navigation.navigate('Login');
     } catch (error) {
-      Alert.alert('Registration Failed', error.message || 'An error occurred during registration.');
+      let errorMessage = 'An error occurred during registration.';
+      if (error.code) {
+        switch (error.code) {
+          case 'auth/email-already-in-use':
+            errorMessage = 'The email address is already in use by another account.';
+            break;
+          case 'auth/invalid-email':
+            errorMessage = 'The email address is not valid.';
+            break;
+          case 'auth/operation-not-allowed':
+            errorMessage = 'Email/password accounts are not enabled. Please contact support.';
+            break;
+          case 'auth/weak-password':
+            errorMessage = 'The password is too weak.';
+            break;
+          default:
+            errorMessage = error.message;
+            break;
+        }
+      }
+      Alert.alert('Registration Failed', errorMessage);
       console.error('Contractor signup error:', error);
     } finally {
       setLoading(false);

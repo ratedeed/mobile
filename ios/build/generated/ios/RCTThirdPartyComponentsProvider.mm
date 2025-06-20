@@ -21,9 +21,6 @@
   dispatch_once(&nativeComponentsToken, ^{
     thirdPartyComponents = @{
 			@"RNGestureHandlerButton": NSClassFromString(@"RNGestureHandlerButtonComponentView"), // react-native-gesture-handler
-			@"KeyboardControllerView": NSClassFromString(@"KeyboardControllerView"), // react-native-keyboard-controller
-			@"KeyboardGestureArea": NSClassFromString(@"KeyboardGestureArea"), // react-native-keyboard-controller
-			@"OverKeyboardView": NSClassFromString(@"OverKeyboardView"), // react-native-keyboard-controller
 			@"RNCSafeAreaProvider": NSClassFromString(@"RNCSafeAreaProviderComponentView"), // react-native-safe-area-context
 			@"RNCSafeAreaView": NSClassFromString(@"RNCSafeAreaViewComponentView"), // react-native-safe-area-context
 			@"RNSFullWindowOverlay": NSClassFromString(@"RNSFullWindowOverlay"), // react-native-screens

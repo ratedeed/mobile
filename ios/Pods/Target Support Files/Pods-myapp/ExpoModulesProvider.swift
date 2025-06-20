@@ -12,7 +12,6 @@ import EXConstants
 import ExpoFileSystem
 import ExpoFont
 import ExpoKeepAwake
-import ExpoSecureStore
 
 @objc(ExpoModulesProvider)
 public class ExpoModulesProvider: ModulesProvider {
@@ -25,8 +24,7 @@ public class ExpoModulesProvider: ModulesProvider {
       FileSystemNextModule.self,
       FontLoaderModule.self,
       FontUtilsModule.self,
-      KeepAwakeModule.self,
-      SecureStoreModule.self
+      KeepAwakeModule.self
     ]
   }
 

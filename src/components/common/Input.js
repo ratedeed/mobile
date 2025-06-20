@@ -24,13 +24,13 @@ const styles = StyleSheet.create({
   },
   input: {
     width: '100%',
-    paddingVertical: Spacing.sm,
+    paddingVertical: Spacing.sm, // Adjusted padding to ensure text visibility with fontSize 18
     paddingHorizontal: Spacing.md,
     borderWidth: 1,
     borderColor: Colors.neutral200,
-    borderRadius: Radii.md,
+    borderRadius: Radii.lg, // More rounded corners for a modern look
     backgroundColor: Colors.neutral50,
-    fontSize: 16, // Consider defining font sizes in designTokens
+    fontSize: 18, // Increased font size for better readability
     color: Colors.neutral800,
     ...Shadows.xs, // Apply extra small shadow
   },

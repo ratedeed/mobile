@@ -1,12 +1,16 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Alert, ScrollView, Image, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { register } from '../api/auth';
+import { auth } from '../firebaseConfig';
+import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
 import Header from '../components/common/Header';
 import { Spacing, Colors, Radii, Shadows } from '../constants/designTokens';
 import Typography from '../components/common/Typography';
+import Toast from 'react-native-toast-message';
 
 const RegisterScreen = () => {
   const [firstName, setFirstName] = useState('');
@@ -20,21 +24,73 @@ const RegisterScreen = () => {
 
   const handleRegister = async () => {
     if (!firstName || !lastName || !email || !password || !confirmPassword) {
-      Alert.alert('Error', 'Please fill in all required fields.');
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Please fill in all required fields.',
+      });
       return;
     }
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match.');
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Passwords do not match.',
+      });
       return;
     }
 
     setLoading(true);
     try {
-      const data = await register(firstName, lastName, email, password, zipCode);
-      Alert.alert('Success', 'Registration successful! Please sign in.');
-      navigation.navigate('Login'); // After registration, typically navigate to login
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+      console.log('RegisterScreen: Firebase createUserWithEmailAndPassword successful. User UID:', user.uid, 'Email:', user.email);
+      await sendEmailVerification(user);
+      console.log('RegisterScreen: Verification email sent.');
+      await auth.signOut(); // Sign out the newly registered user from Firebase immediately
+      console.log('RegisterScreen: Firebase user signed out after registration.');
+
+      // Ensure any existing backend token is cleared before registering with backend
+      console.log('RegisterScreen: Checking AsyncStorage availability before removeItem:', typeof AsyncStorage);
+      await AsyncStorage.removeItem('userToken');
+      console.log('RegisterScreen: Cleared any existing userToken from AsyncStorage before backend registration.');
+
+      await register(firstName, lastName, email, password, zipCode, user.uid); // Pass Firebase UID to backend
+
+      Toast.show({
+        type: 'success',
+        text1: 'Registration Successful',
+        text2: 'A verification email has been sent to your email address. Please verify your email before logging in.',
+      });
+      navigation.navigate('Login');
     } catch (error) {
-      Alert.alert('Registration Failed', error.message || 'An error occurred during registration.');
+      let errorMessage = 'An error occurred during registration.';
+      if (error.code) {
+        switch (error.code) {
+          case 'auth/email-already-in-use':
+            errorMessage = 'That email address is already in use!';
+            break;
+          case 'auth/invalid-email':
+            errorMessage = 'That email address is invalid!';
+            break;
+          case 'auth/operation-not-allowed':
+            errorMessage = 'Email/password accounts are not enabled. Please enable them in the Firebase console.';
+            break;
+          case 'auth/weak-password':
+            errorMessage = 'The password is too weak.';
+            break;
+          default:
+            errorMessage = error.message;
+            break;
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      Toast.show({
+        type: 'error',
+        text1: 'Registration Failed',
+        text2: errorMessage,
+      });
       console.error('Registration error:', error);
     } finally {
       setLoading(false);
@@ -128,7 +184,7 @@ const RegisterScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.neutral100, // Light background for the screen
+    backgroundColor: Colors.neutral100,
   },
   scrollViewContent: {
     flexGrow: 1,
@@ -139,7 +195,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.neutral50,
     borderRadius: Radii.lg,
     padding: Spacing.xl,
-    ...Shadows.md, // Apply a noticeable shadow to the form card
+    ...Shadows.md,
     alignItems: 'center',
   },
   title: {
@@ -154,7 +210,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
   },
   inputField: {
-    marginBottom: Spacing.md, // Spacing between inputs
+    marginBottom: Spacing.md,
   },
   registerButton: {
     marginTop: Spacing.lg,
@@ -162,7 +218,7 @@ const styles = StyleSheet.create({
   },
   loginPrompt: {
     marginTop: Spacing.md,
-    padding: Spacing.xs, // Make touch area larger
+    padding: Spacing.xs,
   },
   contractorPrompt: {
     marginTop: Spacing.sm,

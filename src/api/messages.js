@@ -78,35 +78,47 @@ export const sendMessageSocket = (payload) => {
   }
 };
 
-export const onNewMessage = (callback) => {
+export const onNewMessage = async (callback) => {
+  if (!socket || !socket.connected) {
+    await initializeSocket();
+  }
   if (socket) {
     socket.on('newMessage', callback);
   } else {
-    console.warn('Socket not initialized. Cannot set newMessage listener.');
+    console.warn('Socket still not initialized after attempt. Cannot set newMessage listener.');
   }
 };
 
-export const onMessageRead = (callback) => {
+export const onMessageRead = async (callback) => {
+  if (!socket || !socket.connected) {
+    await initializeSocket();
+  }
   if (socket) {
     socket.on('messageRead', callback);
   } else {
-    console.warn('Socket not initialized. Cannot set messageRead listener.');
+    console.warn('Socket still not initialized after attempt. Cannot set messageRead listener.');
   }
 };
 
-export const onTyping = (callback) => {
+export const onTyping = async (callback) => {
+  if (!socket || !socket.connected) {
+    await initializeSocket();
+  }
   if (socket) {
     socket.on('typing', callback);
   } else {
-    console.warn('Socket not initialized. Cannot set typing listener.');
+    console.warn('Socket still not initialized after attempt. Cannot set typing listener.');
   }
 };
 
-export const onUserOnlineStatus = (callback) => {
+export const onUserOnlineStatus = async (callback) => {
+  if (!socket || !socket.connected) {
+    await initializeSocket();
+  }
   if (socket) {
     socket.on('userOnlineStatus', callback);
   } else {
-    console.warn('Socket not initialized. Cannot set userOnlineStatus listener.');
+    console.warn('Socket still not initialized after attempt. Cannot set userOnlineStatus listener.');
   }
 };
 
@@ -168,5 +180,7 @@ export const createConversation = async (participantIds) => { // Removed 'name' 
     },
     body: JSON.stringify({ participantIds }), // Only send participantIds
   });
-  return handleResponse(response);
+  const result = await handleResponse(response);
+  console.log('DEBUG: createConversation - API response:', JSON.stringify(result, null, 2));
+  return result;
 };

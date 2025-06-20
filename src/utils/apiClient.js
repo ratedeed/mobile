@@ -16,18 +16,93 @@ export const getAuthHeaders = async () => {
   return token ? { 'Authorization': `Bearer ${token}` } : {};
 };
 
+/**
+ * Handles API responses, checking for errors and parsing JSON.
+ * @param {Response} response - The fetch API response object.
+ * @returns {Promise<any>} The parsed JSON data or text.
+ * @throws {Error} If the response is not OK.
+ */
 export const handleResponse = async (response) => {
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`API Error: ${response.status} - ${errorText || response.statusText}`);
+    let errorData = {};
+    try {
+      errorData = JSON.parse(errorText);
+    } catch (e) {
+      // If not JSON, use the raw text
+      errorData = { message: errorText || response.statusText };
+    }
+    const error = new Error(errorData.message || `API Error: ${response.status}`);
+    error.response = response; // Attach the original response object
+    error.data = errorData; // Attach parsed error data
+    throw error;
   }
-  // Check if the response has content before parsing as JSON
   const contentType = response.headers.get("content-type");
-  if (contentType && contentType.indexOf("application/json") !== -1) {
+  if (contentType && contentType.includes("application/json")) {
     return response.json();
   } else {
-    return response.text(); // Or handle as appropriate for non-JSON responses
+    return response.text();
   }
+};
+
+/**
+ * Generic GET request.
+ * @param {string} url - The API endpoint URL.
+ * @param {Object} headers - Additional headers for the request.
+ * @returns {Promise<any>} The response data.
+ */
+export const get = async (url, headers = {}) => {
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      ...headers,
+    },
+  });
+  return handleResponse(response);
+};
+
+/**
+ * Generic POST request.
+ * @param {string} url - The API endpoint URL.
+ * @param {Object} data - The data to send in the request body.
+ * @param {Object} headers - Additional headers for the request.
+ * @returns {Promise<any>} The response data.
+ */
+export const post = async (url, data, headers = {}) => {
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...headers,
+      },
+      body: JSON.stringify(data),
+    });
+    return handleResponse(response);
+  } catch (error) {
+    console.error('apiClient.js: Network or Fetch Error during POST to', url, ':', error);
+    // Re-throw the original error to preserve its properties (e.g., error.response)
+    throw error;
+  }
+};
+
+/**
+ * Generic PUT request.
+ * @param {string} url - The API endpoint URL.
+ * @param {Object} data - The data to send in the request body.
+ * @param {Object} headers - Additional headers for the request.
+ * @returns {Promise<any>} The response data.
+ */
+export const put = async (url, data, headers = {}) => {
+  const response = await fetch(url, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      ...headers,
+    },
+    body: JSON.stringify(data),
+  });
+  return handleResponse(response);
 };
 
 /**
@@ -38,11 +113,7 @@ export const handleResponse = async (response) => {
 export const browseContractors = async (queryParams = {}) => {
   const queryString = new URLSearchParams(queryParams).toString();
   const authHeaders = await getAuthHeaders();
-  const response = await fetch(`${API_BASE}/api/contractors?${queryString}`, {
-    method: 'GET',
-    headers: authHeaders,
-  });
-  return handleResponse(response);
+  return get(`${API_BASE}/api/contractors?${queryString}`, authHeaders);
 };
 
 /**
@@ -57,15 +128,7 @@ export const browseContractors = async (queryParams = {}) => {
  */
 export const createContractor = async (contractorData) => {
   const authHeaders = await getAuthHeaders();
-  const response = await fetch(`${API_BASE}/api/contractors`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...authHeaders,
-    },
-    body: JSON.stringify(contractorData),
-  });
-  return handleResponse(response);
+  return post(`${API_BASE}/api/contractors`, contractorData, authHeaders);
 };
 
 /**
@@ -74,11 +137,7 @@ export const createContractor = async (contractorData) => {
  */
 export const getMyContractorProfile = async () => {
   const authHeaders = await getAuthHeaders();
-  const response = await fetch(`${API_BASE}/api/contractors/profile`, {
-    method: 'GET',
-    headers: authHeaders,
-  });
-  return handleResponse(response);
+  return get(`${API_BASE}/api/contractors/profile`, authHeaders);
 };
 
 /**
@@ -88,15 +147,7 @@ export const getMyContractorProfile = async () => {
  */
 export const updateContractorProfile = async (profileData) => {
   const authHeaders = await getAuthHeaders();
-  const response = await fetch(`${API_BASE}/api/contractors/profile`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      ...authHeaders,
-    },
-    body: JSON.stringify(profileData),
-  });
-  return handleResponse(response);
+  return put(`${API_BASE}/api/contractors/profile`, profileData, authHeaders);
 };
 
 /**
@@ -106,11 +157,7 @@ export const updateContractorProfile = async (profileData) => {
  */
 export const getContractorDetails = async (contractorId) => {
   const authHeaders = await getAuthHeaders();
-  const response = await fetch(`${API_BASE}/api/contractors/${contractorId}`, {
-    method: 'GET',
-    headers: authHeaders,
-  });
-  return handleResponse(response);
+  return get(`${API_BASE}/api/contractors/${contractorId}`, authHeaders);
 };
 
 /**
@@ -120,15 +167,7 @@ export const getContractorDetails = async (contractorId) => {
  */
 export const sendMessage = async (messageData) => {
   const authHeaders = await getAuthHeaders();
-  const response = await fetch(`${API_BASE}/api/messages`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...authHeaders,
-    },
-    body: JSON.stringify(messageData),
-  });
-  return handleResponse(response);
+  return post(`${API_BASE}/api/messages`, messageData, authHeaders);
 };
 
 /**
@@ -137,11 +176,7 @@ export const sendMessage = async (messageData) => {
  */
 export const listConversations = async () => {
   const authHeaders = await getAuthHeaders();
-  const response = await fetch(`${API_BASE}/api/messages/conversations`, {
-    method: 'GET',
-    headers: authHeaders,
-  });
-  return handleResponse(response);
+  return get(`${API_BASE}/api/messages/conversations`, authHeaders);
 };
 
 /**
@@ -151,11 +186,7 @@ export const listConversations = async () => {
  */
 export const getConversationWithUser = async (otherUserId) => {
   const authHeaders = await getAuthHeaders();
-  const response = await fetch(`${API_BASE}/api/messages/conversation/${otherUserId}`, {
-    method: 'GET',
-    headers: authHeaders,
-  });
-  return handleResponse(response);
+  return get(`${API_BASE}/api/messages/conversation/${otherUserId}`, authHeaders);
 };
 
 /**
@@ -165,11 +196,7 @@ export const getConversationWithUser = async (otherUserId) => {
  */
 export const markMessageRead = async (messageId) => {
   const authHeaders = await getAuthHeaders();
-  const response = await fetch(`${API_BASE}/api/messages/read/${messageId}`, {
-    method: 'PUT',
-    headers: authHeaders,
-  });
-  return handleResponse(response);
+  return put(`${API_BASE}/api/messages/read/${messageId}`, {}, authHeaders);
 };
 
 /**
@@ -179,15 +206,7 @@ export const markMessageRead = async (messageId) => {
  */
 export const createPost = async (postData) => {
   const authHeaders = await getAuthHeaders();
-  const response = await fetch(`${API_BASE}/api/posts`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...authHeaders,
-    },
-    body: JSON.stringify(postData),
-  });
-  return handleResponse(response);
+  return post(`${API_BASE}/api/posts`, postData, authHeaders);
 };
 
 /**
@@ -198,12 +217,7 @@ export const createPost = async (postData) => {
 export const listPosts = async (queryParams = {}) => {
   const queryString = new URLSearchParams(queryParams).toString();
   const authHeaders = await getAuthHeaders(); // optional if public
-  const url = `${API_BASE}/api/posts?${queryString}`;
-  const response = await fetch(url, {
-    method: 'GET',
-    headers: authHeaders,
-  });
-  return handleResponse(response);
+  return get(`${API_BASE}/api/posts?${queryString}`, authHeaders);
 };
 
 /**
@@ -215,12 +229,7 @@ export const listPosts = async (queryParams = {}) => {
 export const listContractorPosts = async (contractorId, queryParams = {}) => {
   const queryString = new URLSearchParams(queryParams).toString();
   const authHeaders = await getAuthHeaders();
-  const url = `${API_BASE}/api/posts/contractor/${contractorId}?${queryString}`;
-  const response = await fetch(url, {
-    method: 'GET',
-    headers: authHeaders,
-  });
-  return handleResponse(response);
+  return get(`${API_BASE}/api/posts/contractor/${contractorId}?${queryString}`, authHeaders);
 };
 
 /**
@@ -230,11 +239,7 @@ export const listContractorPosts = async (contractorId, queryParams = {}) => {
  */
 export const likePost = async (postId) => {
   const authHeaders = await getAuthHeaders();
-  const response = await fetch(`${API_BASE}/api/posts/${postId}/like`, {
-    method: 'PUT',
-    headers: authHeaders,
-  });
-  return handleResponse(response);
+  return put(`${API_BASE}/api/posts/${postId}/like`, {}, authHeaders);
 };
 
 /**
@@ -245,15 +250,7 @@ export const likePost = async (postId) => {
  */
 export const commentOnPost = async (postId, commentData) => {
   const authHeaders = await getAuthHeaders();
-  const response = await fetch(`${API_BASE}/api/posts/${postId}/comments`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...authHeaders,
-    },
-    body: JSON.stringify(commentData),
-  });
-  return handleResponse(response);
+  return post(`${API_BASE}/api/posts/${postId}/comments`, commentData, authHeaders);
 };
 
 /**
@@ -265,13 +262,9 @@ export const commentOnPost = async (postId, commentData) => {
 export const listContractorReviews = async (contractorId, queryParams = {}) => {
   const queryString = new URLSearchParams(queryParams).toString();
   const authHeaders = await getAuthHeaders(); // Reviews are public, but good to include auth if available
-  const url = `${API_BASE}/api/contractors/${contractorId}/reviews?${queryString}`;
-  const response = await fetch(url, {
-    method: 'GET',
-    headers: authHeaders,
-  });
-  return handleResponse(response);
+  return get(`${API_BASE}/api/contractors/${contractorId}/reviews?${queryString}`, authHeaders);
 };
+
 /**
  * Submits a review for a specific contractor.
  * @param {string} contractorId - The ID of the contractor to review.
@@ -280,13 +273,5 @@ export const listContractorReviews = async (contractorId, queryParams = {}) => {
  */
 export const submitReview = async (contractorId, reviewData) => {
   const authHeaders = await getAuthHeaders();
-  const response = await fetch(`${API_BASE}/api/contractors/${contractorId}/reviews`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...authHeaders,
-    },
-    body: JSON.stringify(reviewData),
-  });
-  return handleResponse(response);
+  return post(`${API_BASE}/api/contractors/${contractorId}/reviews`, reviewData, authHeaders);
 };

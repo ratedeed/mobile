@@ -113,7 +113,7 @@ router.post('/', protect, async (req, res) => {
         const populatedMessage = await Message.findById(createdMessage._id)
             .populate({
                 path: 'recipientId',
-                select: '_id firstName lastName companyName profilePicture role',
+                select: '_id firstName lastName businessName profilePicture role', // Ensure businessName is selected
                 refPath: 'recipientOnModel'
             })
             .populate({
@@ -125,16 +125,16 @@ router.post('/', protect, async (req, res) => {
         // Manually add sender details for the frontend response
         let senderDetailsForFrontend;
         if (senderOnModel === 'Contractor') {
-            const senderContractorProfile = await Contractor.findById(actualSenderId).select('_id firstName lastName companyName profilePicture');
+            const senderContractorProfile = await Contractor.findById(actualSenderId).select('_id firstName lastName businessName profilePicture'); // Changed companyName to businessName
             // Also get the linked User's firstName/lastName if needed for display
             const linkedUser = await User.findById(req.user._id).select('firstName lastName');
             senderDetailsForFrontend = {
                 _id: senderContractorProfile._id,
                 firstName: senderContractorProfile.firstName || (linkedUser ? linkedUser.firstName : ''),
                 lastName: senderContractorProfile.lastName || (linkedUser ? linkedUser.lastName : ''),
-                companyName: senderContractorProfile.companyName,
+                businessName: senderContractorProfile.businessName, // Changed companyName to businessName
                 profilePicture: senderContractorProfile.profilePicture,
-                role: 'contractor'
+                role: 'Contractor' // Standardized to 'Contractor' (capitalized)
             };
         } else {
             senderDetailsForFrontend = {
@@ -224,7 +224,7 @@ router.get('/conversations', protect, async (req, res) => {
                     }
                 } else if (otherParticipantModelType === 'Contractor') {
                     // Find the Contractor profile linked to this User ID
-                    const contractor = await Contractor.findOne({ user: otherParticipantUserId }).select('_id firstName lastName companyName profilePicture user');
+                    const contractor = await Contractor.findOne({ user: otherParticipantUserId }).select('_id firstName lastName businessName profilePicture user'); // Changed companyName to businessName
                     if (contractor) {
                         // Get linked User's firstName/lastName for display if available
                         const linkedUser = await User.findById(contractor.user).select('firstName lastName');
@@ -232,7 +232,7 @@ router.get('/conversations', protect, async (req, res) => {
                             _id: contractor._id,
                             firstName: contractor.firstName || (linkedUser ? linkedUser.firstName : ''),
                             lastName: contractor.lastName || (linkedUser ? linkedUser.lastName : ''),
-                            companyName: contractor.companyName,
+                            businessName: contractor.businessName, // Changed companyName to businessName
                             profilePicture: contractor.profilePicture,
                             role: 'Contractor'
                         };
@@ -250,12 +250,12 @@ router.get('/conversations', protect, async (req, res) => {
                 .sort({ createdAt: -1 })
                 .populate({
                     path: 'senderId',
-                    select: '_id firstName lastName companyName profilePicture role',
+                    select: '_id firstName lastName businessName profilePicture role', // Ensure businessName is selected
                     refPath: 'senderOnModel'
                 })
                 .populate({
                     path: 'recipientId',
-                    select: '_id firstName lastName companyName profilePicture role',
+                    select: '_id firstName lastName businessName profilePicture role', // Ensure businessName is selected
                     refPath: 'recipientOnModel'
                 })
                 .exec();
@@ -341,7 +341,8 @@ router.get('/conversation/:conversationId', protect, async (req, res) => {
                 if (msgObj.senderOnModel === 'User') {
                     senderDetails = await User.findById(msgObj.senderId).select('_id firstName lastName profilePicture role');
                 } else if (msgObj.senderOnModel === 'Contractor') {
-                    senderDetails = await Contractor.findById(msgObj.senderId).select('_id firstName lastName companyName profilePicture role');
+                    senderDetails = await Contractor.findById(msgObj.senderId).select('_id firstName lastName businessName profilePicture role');
+                    console.log('DEBUG: GET /conversation/:conversationId - Fetched sender contractor details:', JSON.stringify(senderDetails, null, 2));
                     // If it's a contractor, also try to get firstName/lastName from the linked User model
                     // Prioritize contractor's own name, then linked user's
                     if (senderDetails && senderDetails.user) {
@@ -349,6 +350,8 @@ router.get('/conversation/:conversationId', protect, async (req, res) => {
                         senderDetails.firstName = senderDetails.firstName || (linkedUser ? linkedUser.firstName : '');
                         senderDetails.lastName = senderDetails.lastName || (linkedUser ? linkedUser.lastName : '');
                     }
+                    // Ensure businessName is explicitly set for the frontend
+                    senderDetails.businessName = senderDetails.businessName || '';
                 }
                 msgObj.senderId = senderDetails || {};
             } else {
@@ -361,7 +364,8 @@ router.get('/conversation/:conversationId', protect, async (req, res) => {
                 if (msgObj.recipientOnModel === 'User') {
                     recipientDetails = await User.findById(msgObj.recipientId).select('_id firstName lastName profilePicture role');
                 } else if (msgObj.recipientOnModel === 'Contractor') {
-                    recipientDetails = await Contractor.findById(msgObj.recipientId).select('_id firstName lastName companyName profilePicture role');
+                    recipientDetails = await Contractor.findById(msgObj.recipientId).select('_id firstName lastName businessName profilePicture role');
+                    console.log('DEBUG: GET /conversation/:conversationId - Fetched recipient contractor details:', JSON.stringify(recipientDetails, null, 2));
                     // If it's a contractor, also try to get firstName/lastName from the linked User model
                     // Prioritize contractor's own name, then linked user's
                     if (recipientDetails && recipientDetails.user) {
@@ -369,12 +373,13 @@ router.get('/conversation/:conversationId', protect, async (req, res) => {
                         recipientDetails.firstName = recipientDetails.firstName || (linkedUser ? linkedUser.firstName : '');
                         recipientDetails.lastName = recipientDetails.lastName || (linkedUser ? linkedUser.lastName : '');
                     }
+                    // Ensure businessName is explicitly set for the frontend
+                    recipientDetails.businessName = recipientDetails.businessName || '';
                 }
                 msgObj.recipientId = recipientDetails || {};
             } else {
                 msgObj.recipientId = {};
             }
-
             return msgObj;
         }));
 
@@ -517,7 +522,39 @@ router.post('/find-or-create-conversation', protect, async (req, res) => {
             { upsert: true, new: true }
         );
 
-        res.status(200).json({ conversationId: conversation._id });
+        // Return full participant details for the frontend to use
+        const participantsWithDetails = [];
+        for (const pId of conversationUserIds) {
+            const participantModelType = sortedParticipantModels[conversationUserIds.indexOf(pId)];
+            let details;
+            if (participantModelType === 'User') {
+                details = await User.findById(pId).select('_id firstName lastName profilePicture role');
+            } else if (participantModelType === 'Contractor') {
+                // Find the Contractor profile linked to this User ID
+                const contractorProfile = await Contractor.findOne({ user: pId }).select('_id firstName lastName businessName profilePicture user');
+                console.log('DEBUG: find-or-create-conversation - Fetched contractor profile for participant:', JSON.stringify(contractorProfile, null, 2)); // Add this log
+                if (contractorProfile) {
+                    // Get linked User's firstName/lastName for display if available
+                    const linkedUser = await User.findById(contractorProfile.user).select('firstName lastName');
+                    details = {
+                        _id: contractorProfile._id,
+                        firstName: contractorProfile.firstName || (linkedUser ? linkedUser.firstName : ''),
+                        lastName: contractorProfile.lastName || (linkedUser ? linkedUser.lastName : ''),
+                        businessName: contractorProfile.businessName,
+                        profilePicture: contractorProfile.profilePicture,
+                        role: 'Contractor'
+                    };
+                }
+            }
+            if (details) {
+                participantsWithDetails.push(details);
+            }
+        }
+
+        res.status(200).json({
+            conversationId: conversation._id,
+            participants: participantsWithDetails
+        });
 
     } catch (error) {
         console.error('Backend: Error in /find-or-create-conversation:', error.stack);

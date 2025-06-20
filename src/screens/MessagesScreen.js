@@ -27,26 +27,66 @@ import { Spacing, Radii, Colors, Shadows } from '../constants/designTokens';
 import { useRoute, useNavigation } from '@react-navigation/native';
 // API_BASE_URL is now used internally by src/api/messages.js, no need to import here
 
-const getParticipantDisplayName = (participant) => {
-  console.log('getParticipantDisplayName: Received participant:', participant);
-  if (!participant) {
-    console.log('getParticipantDisplayName: Participant is null/undefined, returning "Unknown".');
+const getParticipantDisplayName = (entity, currentUserId) => { // Pass currentUserId to identify 'other' participant
+  console.log('DEBUG: getParticipantDisplayName - Received entity:', JSON.stringify(entity));
+  if (!entity) {
+    console.log('DEBUG: getParticipantDisplayName - Entity is null/undefined, returning "Unknown".');
     return 'Unknown';
   }
-  if (participant.name) {
-    console.log('getParticipantDisplayName: Using participant.name:', participant.name);
-    return participant.name; // Prioritize 'name' if already set (e.g., from newConversation)
+
+  // Try to get name from direct properties (for participant objects)
+  if (entity.businessName) {
+    console.log('DEBUG: getParticipantDisplayName - Found businessName directly:', entity.businessName);
+    return entity.businessName;
   }
-  if (participant.role === 'User') {
-    const name = `${participant.firstName || ''} ${participant.lastName || ''}`.trim();
-    console.log('getParticipantDisplayName: Participant is User. Constructed name:', name);
-    return name || 'Unknown User';
+  if (entity.companyName) {
+    console.log('DEBUG: getParticipantDisplayName - Found companyName directly:', entity.companyName);
+    return entity.companyName;
   }
-  if (participant.role === 'Contractor') {
-    console.log('getParticipantDisplayName: Participant is Contractor. Using companyName:', participant.companyName);
-    return participant.companyName || 'Unknown Contractor';
+  const nameFromFirstLast = `${entity.firstName || ''} ${entity.lastName || ''}`.trim();
+  if (nameFromFirstLast) {
+    console.log('DEBUG: getParticipantDisplayName - Found firstName/lastName directly:', nameFromFirstLast);
+    return nameFromFirstLast;
   }
-  console.log('getParticipantDisplayName: No specific role/name found, returning "Unknown".');
+  if (entity.name && entity.name !== 'Unknown') {
+    console.log('DEBUG: getParticipantDisplayName - Found generic name directly:', entity.name);
+    return entity.name;
+  }
+
+  // If entity is a conversation object, try to find the other participant within it
+  if (entity.participants && Array.isArray(entity.participants) && currentUserId) {
+    const otherParticipantInConvo = entity.participants.find(p => p._id && p._id.toString() !== currentUserId.toString());
+    if (otherParticipantInConvo) {
+      console.log('DEBUG: getParticipantDisplayName - Found otherParticipant in conversation.participants:', JSON.stringify(otherParticipantInConvo));
+      // Recursively call to get display name from the found participant
+      const nameFromNestedParticipant = getParticipantDisplayName(otherParticipantInConvo);
+      if (nameFromNestedParticipant && nameFromNestedParticipant !== 'Unknown') {
+        return nameFromNestedParticipant;
+      }
+    }
+  }
+
+  // If entity has an otherParticipant property (e.g., selectedConversation.otherParticipant)
+  if (entity.otherParticipant) {
+    console.log('DEBUG: getParticipantDisplayName - Found otherParticipant property:', JSON.stringify(entity.otherParticipant));
+    const nameFromOtherParticipantProp = getParticipantDisplayName(entity.otherParticipant);
+    if (nameFromOtherParticipantProp && nameFromOtherParticipantProp !== 'Unknown') {
+      return nameFromOtherParticipantProp;
+    }
+  }
+
+  // Fallback to role-based names if available on the entity itself
+  if (entity.role && entity.role.toLowerCase() === 'contractor') {
+    console.log('DEBUG: getParticipantDisplayName - Entity is contractor, but no specific name. Falling back to "Unknown Contractor".');
+    return 'Unknown Contractor';
+  }
+  if (entity.role && entity.role.toLowerCase() === 'user') {
+    console.log('DEBUG: getParticipantDisplayName - Entity is user, but no specific name. Falling back to "Unknown User".');
+    return 'Unknown User';
+  }
+
+  // Final fallback
+  console.log('DEBUG: getParticipantDisplayName - No identifiable name found in any field. Returning "Unknown". Final entity state:', JSON.stringify(entity));
   return 'Unknown';
 };
 
@@ -54,10 +94,11 @@ const MessagesScreen = () => {
   const route = useRoute();
   const navigation = useNavigation();
   const { recipientId, recipientName } = route.params || {};
-  console.log('MessagesScreen (initial render): route.params:', route.params);
-  console.log('MessagesScreen (initial render): recipientId:', recipientId);
-  console.log('MessagesScreen (initial render): recipientName:', recipientName);
-  console.log('MessagesScreen (initial render): route.name:', route.name);
+  console.log('DEBUG: MessagesScreen (initial render) - route.params:', JSON.stringify(route.params));
+  console.log('DEBUG: MessagesScreen (initial render) - recipientId:', recipientId);
+  console.log('DEBUG: MessagesScreen (initial render) - recipientName:', recipientName);
+  console.log('DEBUG: MessagesScreen (initial render) - route.name:', route.name);
+  console.log('DEBUG: MessagesScreen (initial render) - Type of recipientName:', typeof recipientName);
  
   const [conversations, setConversations] = useState({}); // Change to an object keyed by conversationId
   const [selectedConversation, setSelectedConversation] = useState(null);
@@ -122,10 +163,11 @@ const MessagesScreen = () => {
     const initializeSpecificChat = async () => {
       if (route.name === 'ChatScreen' && recipientId && currentUserId) { // Add currentUserId dependency
         setLoading(true);
-        console.log('initializeSpecificChat: recipientId:', recipientId);
+        console.log('DEBUG: initializeSpecificChat - recipientId:', recipientId);
+        console.log('DEBUG: initializeSpecificChat - recipientName (from route.params):', recipientName); // Added log
         try {
           const fetchedConversations = await fetchConversations();
-          console.log('initializeSpecificChat: fetchedConversations:', fetchedConversations);
+          console.log('DEBUG: initializeSpecificChat - fetchedConversations (raw):', JSON.stringify(fetchedConversations, null, 2));
           // Convert array to object keyed by conversationId and ensure _id is set
           const conversationsMap = fetchedConversations.reduce((acc, conv) => {
             acc[conv.conversationId] = { ...conv, _id: conv.conversationId }; // Use conversationId as _id
@@ -137,7 +179,7 @@ const MessagesScreen = () => {
             // For existing conversations, check if the recipientId matches any participant's _id
             return conv.participants.some(p => p._id === recipientId);
           });
-          console.log('initializeSpecificChat: foundConversation:', foundConversation);
+          console.log('DEBUG: initializeSpecificChat - foundConversation:', JSON.stringify(foundConversation, null, 2));
 
           if (foundConversation) {
             setSelectedConversation(foundConversation);
@@ -148,24 +190,29 @@ const MessagesScreen = () => {
               _id: `temp-${recipientId}`, // Temporary ID for new conversations
               conversationId: `temp-${recipientId}`, // Also set conversationId for consistency
               name: recipientName, // Use recipientName for initial display
+              businessName: recipientName, // Add businessName to the top level of newMockConversation
+              companyName: recipientName, // Add companyName to the top level of newMockConversation
               participants: [
                 { _id: currentUserId, role: 'User' }, // Assuming current user is always a User
-                { _id: recipientId, name: recipientName, role: 'Unknown' } // Role will be determined on backend
+                { _id: recipientId, name: recipientName, role: 'Contractor' } // Explicitly set role to Contractor for new chats
               ],
               otherParticipant: {
                 _id: recipientId,
                 name: recipientName, // Use recipientName for display
-                // Add other potential fields for display if available from route.params or a lookup
-                // For now, we'll rely on the name passed.
+                role: 'Contractor', // Explicitly set role to Contractor for new chats
+                businessName: recipientName, // Assume recipientName is the businessName for new contractor chats
+                companyName: recipientName, // Also set companyName for robustness
               },
               messages: [],
             };
+            console.log('DEBUG: initializeSpecificChat - newMockConversation.otherParticipant before setting selectedConversation:', JSON.stringify(newMockConversation.otherParticipant, null, 2)); // Added log
             setSelectedConversation(newMockConversation);
             setMessages([]);
+            console.log('DEBUG: initializeSpecificChat - Created newMockConversation:', JSON.stringify(newMockConversation, null, 2));
           }
         } catch (error) {
           Alert.alert('Error', error.message || 'Failed to initialize specific chat.');
-          console.error('Initialize specific chat error:', error);
+          console.error('DEBUG: Initialize specific chat error:', error);
         } finally {
           setLoading(false);
         }
@@ -178,7 +225,7 @@ const MessagesScreen = () => {
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
       console.log('MessagesScreen: Focus event detected. Current route name:', route.name);
-      if (route.name === 'Messages') {
+      if (route.name === 'Messages' && currentUserId) { // Add currentUserId dependency
         console.log('MessagesScreen: Tab focused - loading all conversations.');
         loadConversations();
         setSelectedConversation(null); // Ensure conversation list is shown
@@ -186,16 +233,19 @@ const MessagesScreen = () => {
     });
 
     return unsubscribe; // Cleanup the listener
-  }, [navigation, route.name]);
+  }, [navigation, route.name, currentUserId]); // Add currentUserId to dependencies
 
   // Effect to load messages when a conversation is selected
   useEffect(() => {
-    if (selectedConversation && selectedConversation.conversationId && currentUserId) { // Use conversationId here
+    console.log('DEBUG: selectedConversation useEffect - selectedConversation changed:', JSON.stringify(selectedConversation, null, 2));
+    if (selectedConversation?.conversationId && currentUserId) { // Use optional chaining for selectedConversation
       // If it's a temporary conversation (new chat), don't load messages yet
-      if (selectedConversation.conversationId.startsWith('temp-')) { // Use conversationId here
+      if (selectedConversation.conversationId?.startsWith('temp-')) { // Use optional chaining for conversationId
         setMessages([]);
+        console.log('DEBUG: selectedConversation useEffect - Temporary conversation, not loading messages.');
       } else {
         loadMessages(selectedConversation.conversationId); // Load messages using conversationId
+        console.log('DEBUG: selectedConversation useEffect - Loading messages for conversation:', selectedConversation.conversationId);
       }
     }
   }, [selectedConversation, currentUserId]); // Add currentUserId to dependencies
@@ -215,15 +265,15 @@ const MessagesScreen = () => {
 
     const handleNewMessage = (message) => {
       console.log('--- SOCKET EVENT: newMessage received ---');
-      console.log('Full message object:', JSON.stringify(message, null, 2));
-      console.log('currentUserId (from state):', currentUserId);
-      console.log('selectedConversationRef.current:', JSON.stringify(selectedConversationRef.current, null, 2));
+      console.log('DEBUG: handleNewMessage - Full message object:', JSON.stringify(message, null, 2));
+      console.log('DEBUG: handleNewMessage - currentUserId (from state):', currentUserId);
+      console.log('DEBUG: handleNewMessage - selectedConversationRef.current:', JSON.stringify(selectedConversationRef.current, null, 2));
 
       const senderId = message.senderId?._id;
       const recipientId = message.recipientId?._id;
 
       if (!senderId || !recipientId) {
-        console.warn('newMessage: Missing senderId or recipientId in message:', message);
+        console.warn('DEBUG: handleNewMessage - Missing senderId or recipientId in message:', message);
         return;
       }
 
@@ -241,27 +291,28 @@ const MessagesScreen = () => {
 
         let otherParticipant = convo.otherParticipant;
         // If otherParticipant is not fully populated, try to populate it from the message sender/recipient
-        if (!otherParticipant || !otherParticipant.name || otherParticipant.name === 'Unknown') {
+        if (!otherParticipant || !otherParticipant.name || otherParticipant.name === 'Unknown' || !otherParticipant.role) { // Add !otherParticipant.role check
           const rawOtherParticipant = message.senderId._id === currentUserId
             ? message.recipientId
             : message.senderId;
+          console.log('DEBUG: handleNewMessage - rawOtherParticipant (for populating otherParticipant):', JSON.stringify(rawOtherParticipant));
 
           let displayName = 'Unknown';
           let firstName = '';
           let lastName = '';
-          let companyName = '';
+          let businessName = ''; // Changed companyName to businessName
           let profilePicture = '';
-          let role = rawOtherParticipant.role || 'User';
+          let role = rawOtherParticipant.role || 'User'; // Ensure role is always set
 
-          if (rawOtherParticipant.role === 'User') {
+          if (role.toLowerCase() === 'user') { // Use toLowerCase for robustness
             firstName = rawOtherParticipant.firstName || '';
             lastName = rawOtherParticipant.lastName || '';
             displayName = `${firstName} ${lastName}`.trim();
             if (!displayName) displayName = 'Unknown User';
             profilePicture = rawOtherParticipant.profilePicture || '';
-          } else if (rawOtherParticipant.role === 'Contractor') {
-            companyName = rawOtherParticipant.companyName || '';
-            displayName = companyName;
+          } else if (role.toLowerCase() === 'contractor') { // Use toLowerCase for robustness
+            businessName = rawOtherParticipant.businessName || rawOtherParticipant.companyName || ''; // Prioritize businessName, fallback to companyName
+            displayName = businessName;
             if (!displayName) displayName = 'Unknown Contractor';
             profilePicture = rawOtherParticipant.profilePicture || '';
             // For contractors, also try to get firstName/lastName from the linked user if available
@@ -273,11 +324,12 @@ const MessagesScreen = () => {
             _id: rawOtherParticipant._id,
             firstName: firstName,
             lastName: lastName,
-            companyName: companyName,
+            businessName: businessName, // Store as businessName
             profilePicture: profilePicture,
-            role: role,
+            role: role, // Ensure role is explicitly set
             name: displayName, // Set the display name here
           };
+          console.log('DEBUG: handleNewMessage - Constructed otherParticipant:', JSON.stringify(otherParticipant));
         }
 
         const updatedMessages = [...convo.messages, message].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
@@ -372,8 +424,8 @@ const MessagesScreen = () => {
 
   // Effect to join/leave conversation rooms
   useEffect(() => {
-    if (selectedConversation && currentUserId) {
-      if (!selectedConversation.conversationId.startsWith('temp-')) { // Use conversationId
+    if (selectedConversation?.conversationId && currentUserId) { // Use optional chaining
+      if (!selectedConversation.conversationId?.startsWith('temp-')) { // Use optional chaining
         joinConversationSocket(selectedConversation.conversationId); // Use conversationId
         // Mark all messages in the selected conversation as read when opened
         setConversations(prev => {
@@ -396,7 +448,7 @@ const MessagesScreen = () => {
     }
     // Cleanup: leave the conversation room when component unmounts or conversation changes
     return () => {
-      if (selectedConversation && !selectedConversation.conversationId.startsWith('temp-')) { // Use conversationId
+      if (selectedConversation?.conversationId && !selectedConversation.conversationId?.startsWith('temp-')) { // Use optional chaining
         leaveConversationSocket(selectedConversation.conversationId); // Use conversationId
       }
     };
@@ -404,16 +456,17 @@ const MessagesScreen = () => {
 
   const loadConversations = async () => {
     setLoading(true);
+    console.log('DEBUG: loadConversations - currentUserId at start:', currentUserId);
     try {
       const fetchedConversations = await fetchConversations();
-      console.log('loadConversations: Raw data fetched from API:', JSON.stringify(fetchedConversations, null, 2));
+      console.log('DEBUG: loadConversations - Raw data fetched from API:', JSON.stringify(fetchedConversations, null, 2));
 
       // Load conversations from AsyncStorage first
       let conversationsMap = await loadConversationsFromStorage() || {};
 
       // Fetch latest conversations from API
       const apiFetchedConversations = await fetchConversations();
-      console.log('loadConversations: Raw data fetched from API:', JSON.stringify(apiFetchedConversations, null, 2));
+      console.log('DEBUG: loadConversations - Raw data fetched from API (second fetch, for comparison):', JSON.stringify(apiFetchedConversations, null, 2));
 
       // Merge API fetched conversations with stored ones, prioritizing API data for existing conversations
       // and adding new ones. Ensure _id is set to conversationId.
@@ -425,6 +478,28 @@ const MessagesScreen = () => {
           messages: [], // Always initialize messages as empty, they will be loaded on selection
           fragmentConversationIds: conversationsMap[conv.conversationId]?.fragmentConversationIds || [], // Preserve fragment IDs if already present
         };
+        // Ensure otherParticipant is correctly populated from the fetched conversation
+        const other = conv.participants.find(p => {
+          console.log(`DEBUG: loadConversations - Checking participant p._id: ${p._id}, currentUserId: ${currentUserId}`);
+          return p._id && currentUserId && p._id.toString() !== currentUserId.toString();
+        });
+        if (other) {
+          // Construct otherParticipant with all necessary fields, including role and businessName/companyName
+          const otherParticipantDetails = {
+            _id: other._id,
+            firstName: other.firstName || '',
+            lastName: other.lastName || '',
+            businessName: other.businessName || '',
+            companyName: other.companyName || '',
+            profilePicture: other.profilePicture || '',
+            // Determine role: if businessName or companyName exists, assume 'Contractor', else use existing role or default to 'User'
+            role: (other.businessName || other.companyName) ? 'Contractor' : (other.role || 'User'),
+          };
+          console.log('DEBUG: loadConversations - otherParticipantDetails before getParticipantDisplayName:', JSON.stringify(otherParticipantDetails)); // Added log
+          otherParticipantDetails.name = getParticipantDisplayName(otherParticipantDetails, currentUserId); // Pass currentUserId
+          conversationsMap[conv.conversationId].otherParticipant = otherParticipantDetails;
+          console.log('DEBUG: loadConversations - Constructed otherParticipant for conversation:', JSON.stringify(otherParticipantDetails));
+        }
       });
 
       // Remove conversations from map that are no longer returned by the API
@@ -434,11 +509,14 @@ const MessagesScreen = () => {
         }
       }
 
-      console.log('loadConversations: conversationsMap after initial fetch and merge with stored:', JSON.stringify(conversationsMap, null, 2));
+      console.log('DEBUG: loadConversations - conversationsMap after initial fetch and merge with stored:', JSON.stringify(conversationsMap, null, 2));
 
       // Retroactive Merge of Fragments (Step 4)
       const groups = Object.values(conversationsMap).reduce((acc, convo) => {
-        const other = convo.participants.find(p => p._id && p._id.toString() !== currentUserId.toString());
+        const other = convo.participants.find(p => {
+          console.log(`DEBUG: loadConversations - Grouping participant p._id: ${p._id}, currentUserId: ${currentUserId}`);
+          return p._id && currentUserId && p._id.toString() !== currentUserId.toString();
+        });
         if (other) {
           const otherId = other._id.toString();
           acc[otherId] = acc[otherId] || [];
@@ -446,11 +524,11 @@ const MessagesScreen = () => {
         }
         return acc;
       }, {});
-      console.log('loadConversations: groups after fragment grouping:', JSON.stringify(groups, null, 2));
+      console.log('DEBUG: loadConversations - groups after fragment grouping:', JSON.stringify(groups, null, 2));
 
       Object.entries(groups).forEach(([otherId, convos]) => {
         if (convos.length > 1) {
-          console.log(`Merging fragments for otherId: ${otherId}`);
+          console.log(`DEBUG: Merging fragments for otherId: ${otherId}`);
           // Choose canonical (e.g., highest message count or earliest createdAt)
           const canonical = convos.reduce((keep, c) =>
             new Date(c.lastMessage?.createdAt || 0) < new Date(keep.lastMessage?.createdAt || 0) ? c : keep
@@ -478,10 +556,10 @@ const MessagesScreen = () => {
 
       setConversations(conversationsMap);
       await saveConversationsToStorage(conversationsMap); // Persist the cleaned state
-      console.log('loadConversations: conversations state set to (after merge and persist):', JSON.stringify(conversationsMap, null, 2));
+      console.log('DEBUG: loadConversations - conversations state set to (after merge and persist):', JSON.stringify(conversationsMap, null, 2));
     } catch (error) {
       Alert.alert('Error', error.message || 'Failed to load conversations.');
-      console.error('Load conversations error:', error);
+      console.error('DEBUG: Load conversations error:', error);
     } finally {
       setLoading(false);
     }
@@ -527,64 +605,82 @@ const MessagesScreen = () => {
       let finalConversationId = selectedConversation.conversationId; // Use conversationId
       let targetRecipientId;
 
-      if (selectedConversation.conversationId.startsWith('temp-')) {
+      if (selectedConversation.conversationId?.startsWith('temp-')) { // Use optional chaining
         // For a new conversation, the recipientId from route.params is the targetRecipientId
-        console.log('handleSendMessage: Finding or creating new conversation...');
-        const { conversationId: newConvoId } = await createConversation([currentUserId, recipientId]);
+        console.log('DEBUG: handleSendMessage - Finding or creating new conversation...');
+        const { conversationId: newConvoId, participants: newConvoParticipants } = await createConversation([currentUserId, recipientId]);
         finalConversationId = newConvoId;
-        targetRecipientId = recipientId;
+        
+        // Find the other participant from the newly created conversation's participants
+        const rawActualOtherParticipant = newConvoParticipants.find(p => p._id && p._id.toString() !== currentUserId.toString());
+        console.log('DEBUG: handleSendMessage - rawActualOtherParticipant from createConversation:', JSON.stringify(rawActualOtherParticipant, null, 2));
 
+        // Construct the full otherParticipant object, similar to loadConversations
+        let processedOtherParticipant = {
+          _id: rawActualOtherParticipant._id,
+          firstName: rawActualOtherParticipant.firstName || '',
+          lastName: rawActualOtherParticipant.lastName || '',
+          businessName: rawActualOtherParticipant.businessName || rawActualOtherParticipant.companyName || '', // Prioritize businessName, fallback to companyName
+          profilePicture: rawActualOtherParticipant.profilePicture || '',
+          role: (rawActualOtherParticipant.businessName || rawActualOtherParticipant.companyName) ? 'Contractor' : (rawActualOtherParticipant.role || 'User'),
+        };
+        processedOtherParticipant.name = getParticipantDisplayName(processedOtherParticipant, currentUserId); // Pass currentUserId
+        console.log('DEBUG: handleSendMessage - processedOtherParticipant before setting selectedConversation:', JSON.stringify(processedOtherParticipant, null, 2));
+        
         // Update the selected conversation with the real ID and participants
-        // We'll rely on loadConversations to fetch full details later, or socket events
-        setSelectedConversation(prev => ({
-          ...prev,
-          _id: newConvoId, // Update _id
-          conversationId: newConvoId, // Update conversationId
-          // Keep existing recipientName for display until full details are loaded
-          otherParticipant: { _id: recipientId, name: recipientName },
-          participants: [
-            { _id: currentUserId, role: 'User' }, // Assuming current user is always a User
-            { _id: recipientId, name: recipientName, role: 'Unknown' } // Role will be determined on backend
-          ],
-        }));
+        setSelectedConversation(prev => {
+          const updatedSelected = {
+            ...prev,
+            _id: newConvoId, // Update _id
+            conversationId: newConvoId, // Update conversationId
+            otherParticipant: processedOtherParticipant, // Use the processed object
+            participants: newConvoParticipants,
+          };
+          console.log('DEBUG: handleSendMessage - Updated selectedConversation after createConversation:', JSON.stringify(updatedSelected, null, 2));
+          return updatedSelected;
+        });
 
-        // Add the new conversation to the conversations map with minimal info for now
-        setConversations(prev => ({
-          ...prev,
-          [newConvoId]: { // Use newConvoId
-            _id: newConvoId, // Ensure _id is set
-            conversationId: newConvoId, // Ensure conversationId is set
-            participants: [
-              { _id: currentUserId, role: 'User' },
-              { _id: recipientId, name: recipientName, role: 'Unknown' }
-            ],
-            otherParticipant: { _id: recipientId, name: recipientName },
-            messages: [],
-            lastMessage: null,
-            unreadCount: 0,
-          }
-        }));
+        // Add the new conversation to the conversations map with full info
+        setConversations(prev => {
+          const updatedConversationsMap = {
+            ...prev,
+            [newConvoId]: { // Use newConvoId
+              _id: newConvoId, // Ensure _id is set
+              conversationId: newConvoId, // Ensure conversationId is set
+              participants: newConvoParticipants,
+              otherParticipant: processedOtherParticipant, // Directly use the full participant object from backend
+              messages: [],
+              lastMessage: null,
+              unreadCount: 0,
+            }
+          };
+          console.log('DEBUG: handleSendMessage - Added new conversation to conversations map:', JSON.stringify(updatedConversationsMap[newConvoId], null, 2));
+          return updatedConversationsMap;
+        });
         joinConversationSocket(finalConversationId); // Join the new conversation room
+        targetRecipientId = processedOtherParticipant._id; // Set targetRecipientId from the actual participant
       } else {
         // For existing conversations, find the other participant from the participants array
         const otherParticipant = selectedConversation.participants.find(
           p => p._id && p._id.toString() !== currentUserId.toString()
         );
         targetRecipientId = otherParticipant?._id;
+        console.log('DEBUG: handleSendMessage - Existing conversation, otherParticipant:', JSON.stringify(otherParticipant));
       }
 
       if (!targetRecipientId) {
-        console.error('handleSendMessage: targetRecipientId is undefined. Cannot send message.');
+        console.error('DEBUG: handleSendMessage - targetRecipientId is undefined. Cannot send message.');
         Alert.alert('Error', 'Could not determine recipient for message.');
         return;
       }
 
-      console.log('handleSendMessage: Determined targetRecipientId:', targetRecipientId);
+      console.log('DEBUG: handleSendMessage - Determined targetRecipientId:', targetRecipientId);
 
       // Send the message using the determined conversationId and recipientId
       const sentMessage = await sendMessage(finalConversationId, targetRecipientId, newMessage);
       setNewMessage('');
       emitTyping(finalConversationId, currentUserId, false); // Stop typing after sending
+      console.log('DEBUG: handleSendMessage - Message sent:', JSON.stringify(sentMessage, null, 2));
 
       // Update the messages for the currently selected conversation
       setConversations(prev => {
@@ -600,15 +696,18 @@ const MessagesScreen = () => {
 
         let otherParticipant = currentConvo.otherParticipant;
         // If otherParticipant is not fully populated, try to populate it from the message sender/recipient
-        if (!otherParticipant || !otherParticipant.name || otherParticipant.name === 'Unknown') {
+        // This block is now less critical as createConversation should provide full details,
+        // but kept as a fallback for messages received via socket for existing conversations.
+        if (!otherParticipant || !otherParticipant.name || otherParticipant.name === 'Unknown' || (!otherParticipant.businessName && otherParticipant.role === 'Contractor')) {
           const rawOtherParticipant = sentMessage.senderId._id === currentUserId
             ? sentMessage.recipientId
             : sentMessage.senderId;
+          console.log('DEBUG: handleSendMessage - rawOtherParticipant (for updating otherParticipant in conversations map):', JSON.stringify(rawOtherParticipant));
 
           let displayName = 'Unknown';
           let firstName = '';
           let lastName = '';
-          let companyName = '';
+          let businessName = ''; // Changed companyName to businessName
           let profilePicture = '';
           let role = rawOtherParticipant.role || 'User';
 
@@ -619,8 +718,8 @@ const MessagesScreen = () => {
             if (!displayName) displayName = 'Unknown User';
             profilePicture = rawOtherParticipant.profilePicture || '';
           } else if (rawOtherParticipant.role === 'Contractor') {
-            companyName = rawOtherParticipant.companyName || '';
-            displayName = companyName;
+            businessName = rawOtherParticipant.businessName || ''; // Use businessName
+            displayName = businessName;
             if (!displayName) displayName = 'Unknown Contractor';
             profilePicture = rawOtherParticipant.profilePicture || '';
             // For contractors, also try to get firstName/lastName from the linked user if available
@@ -632,11 +731,12 @@ const MessagesScreen = () => {
             _id: rawOtherParticipant._id,
             firstName: firstName,
             lastName: lastName,
-            companyName: companyName,
+            businessName: businessName, // Store as businessName
             profilePicture: profilePicture,
-            role: role,
+            role: role, // Ensure role is explicitly set
             name: displayName, // Set the display name here
           };
+          console.log('DEBUG: handleSendMessage - Constructed otherParticipant for conversations map update:', JSON.stringify(otherParticipant));
         }
 
         const updatedMessages = [...currentConvo.messages, sentMessage].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
@@ -657,7 +757,7 @@ const MessagesScreen = () => {
 
     } catch (error) {
       Alert.alert('Error', error.message || 'Failed to send message.');
-      console.error('Send message error:', error);
+      console.error('DEBUG: Send message error:', error);
     }
   };
 
@@ -712,9 +812,15 @@ const MessagesScreen = () => {
         {/* Header is always present */}
         <Header
           title={(() => {
+            if (!selectedConversation) {
+              console.log('DEBUG: MessagesScreen - Header title: No conversation selected, showing "Conversations".');
+              return 'Conversations';
+            }
+            console.log('DEBUG: MessagesScreen - selectedConversation for Header:', JSON.stringify(selectedConversation, null, 2));
             const participantForHeader = selectedConversation?.otherParticipant || selectedConversation;
-            const displayName = getParticipantDisplayName(participantForHeader);
-            console.log('MessagesScreen: Header title participant:', participantForHeader, 'Display Name:', displayName);
+            console.log('DEBUG: MessagesScreen - participantForHeader before getParticipantDisplayName:', JSON.stringify(participantForHeader, null, 2));
+            const displayName = getParticipantDisplayName(participantForHeader, currentUserId); // Pass currentUserId
+            console.log('DEBUG: MessagesScreen - Header title final displayName:', displayName);
             return displayName;
           })()}
           showBackButton={!!selectedConversation || route.name === 'ChatScreen'}
@@ -727,10 +833,16 @@ const MessagesScreen = () => {
             }
           }}
           rightComponent={(() => {
+            if (!selectedConversation) {
+              console.log('DEBUG: MessagesScreen - Avatar: No conversation selected, returning null.');
+              return null;
+            }
+            console.log('DEBUG: MessagesScreen - selectedConversation for Avatar:', JSON.stringify(selectedConversation, null, 2));
             const participantForAvatar = selectedConversation?.otherParticipant || selectedConversation;
-            const displayName = getParticipantDisplayName(participantForAvatar);
-            console.log('MessagesScreen: Avatar text participant:', participantForAvatar, 'Display Name:', displayName);
-            return selectedConversation ? <Avatar text={displayName} size={Spacing.lg} /> : null;
+            console.log('DEBUG: MessagesScreen - participantForAvatar before getParticipantDisplayName:', JSON.stringify(participantForAvatar, null, 2));
+            const displayName = getParticipantDisplayName(participantForAvatar, currentUserId); // Pass currentUserId
+            console.log('DEBUG: MessagesScreen - Avatar text final displayName:', displayName);
+            return <Avatar text={displayName} size={Spacing.lg} />;
           })()}
         />
 
@@ -741,20 +853,20 @@ const MessagesScreen = () => {
               Object.values(conversations)
                 .sort((a, b) => new Date(b.lastMessage?.createdAt || 0) - new Date(a.lastMessage?.createdAt || 0)) // Sort by last message date
                 .map((conv) => {
-                  console.log('Rendering conversation:', conv); // Log each conversation object
+                  console.log('DEBUG: Rendering conversation card for:', JSON.stringify(conv)); // Log each conversation object
                   if (!conv.lastMessage || !conv.otherParticipant) {
-                    console.warn('Skipping conversation due to missing lastMessage or otherParticipant:', conv);
+                    console.warn('DEBUG: Skipping conversation card due to missing lastMessage or otherParticipant:', JSON.stringify(conv));
                     return null; // Skip rendering if essential data is missing
                   }
                   return (
-                    <Card key={conv.conversationId} style={styles.conversationCard}> {/* Use conversationId as key */}
+                    <Card key={conv.conversationId} style={styles.conversationCard}>
                       <TouchableOpacity
                         onPress={() => setSelectedConversation(conv)}
                         style={styles.conversationTouchable}
                       >
-                        <Avatar text={getParticipantDisplayName(conv.otherParticipant)} size={Spacing.xxl} style={styles.conversationAvatar} />
+                        <Avatar text={getParticipantDisplayName(conv.otherParticipant, currentUserId)} size={Spacing.xxl} style={styles.conversationAvatar} />
                         <View style={styles.conversationTextContent}>
-                          <Typography variant="h6" style={styles.conversationName}>{`Conversation with ${getParticipantDisplayName(conv.otherParticipant)}`}</Typography>
+                          <Typography variant="h6" style={styles.conversationName}>{`Conversation with ${getParticipantDisplayName(conv.otherParticipant, currentUserId)}`}</Typography>
                           <Typography variant="body" style={styles.lastMessage}>{conv.lastMessage.messageText || 'No messages yet.'}</Typography>
                           {conv.unreadCount > 0 && (
                             <View style={styles.unreadBadge}>
@@ -781,7 +893,7 @@ const MessagesScreen = () => {
             {messages.length > 0 ? (
               messages.map((msg) => {
                 const isMyMessage = currentUserId && msg.senderId && msg.senderId._id === currentUserId;
-                const senderDisplayName = getParticipantDisplayName(msg.senderId);
+                const senderDisplayName = getParticipantDisplayName(msg.senderId, currentUserId); // Pass currentUserId
                 const isRead = msg.read;
 
                 return (
@@ -792,9 +904,10 @@ const MessagesScreen = () => {
                       isMyMessage ? styles.myMessage : styles.otherMessage
                     ]}
                   >
-                    {!isMyMessage && (
+                    {/* Removed sender name display as per user request */}
+                    {/* {!isMyMessage && (
                       <Typography variant="caption" style={styles.senderName}>{senderDisplayName}</Typography>
-                    )}
+                    )} */}
                     <Typography variant="body" style={isMyMessage ? styles.myMessageText : styles.otherMessageText}>{msg.messageText}</Typography>
                     <View style={styles.messageFooter}>
                       <Typography variant="caption" style={isMyMessage ? styles.myMessageTime : styles.otherMessageTime}>
@@ -817,7 +930,7 @@ const MessagesScreen = () => {
                   if (typingParticipant) {
                     return (
                       <Typography key={userId} variant="caption" style={styles.typingIndicator}>
-                        {getParticipantDisplayName(typingParticipant)} is typing...
+                        {getParticipantDisplayName(typingParticipant, currentUserId)} is typing...
                       </Typography>
                     );
                   }

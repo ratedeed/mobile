@@ -40,8 +40,8 @@ const HomeScreen = () => {
   const loadFeedPosts = async () => {
     try {
       // Assuming a general endpoint for feed posts, or fetch posts from featured contractors
-      // For simplicity, let's assume a general feed endpoint or aggregate from contractors
-      const data = await fetchContractorPosts('all'); // You might need a specific API for a general feed
+      // Fetch a general feed of posts (all contractors)
+      const data = await fetchContractorPosts();
       setFeedPosts(data);
     } catch (error) {
       Alert.alert('Error', error.message || 'Failed to load feed posts.');

@@ -34,12 +34,26 @@ const BusinessSearchScreen = () => {
             initialFilters.name = query;
           }
         }
-        const data = await searchContractors(initialFilters);
-        setContractors(data);
-        setNumResults(data.length);
+        // Only perform search if there are actual filters
+        if (Object.keys(initialFilters).length > 0) {
+          const data = await searchContractors(initialFilters);
+          setContractors(data);
+          setNumResults(data.length);
+        } else {
+          // If no initial query, display no results initially or a message
+          setContractors([]);
+          setNumResults(0);
+        }
       } catch (error) {
-        Alert.alert('Error', error.message || 'Failed to load contractors.');
-        console.error('Error fetching contractors:', error);
+        // Check if the error is due to "No contractors found"
+        if (error.message && error.message.includes("No contractors found for the given criteria")) {
+          setContractors([]);
+          setNumResults(0);
+          console.warn('No contractors found for the given criteria, displaying empty results.');
+        } else {
+          Alert.alert('Error', error.message || 'Failed to load contractors.');
+          console.error('Error fetching contractors:', error);
+        }
       } finally {
         setLoading(false);
       }
@@ -56,21 +70,39 @@ const BusinessSearchScreen = () => {
     try {
       const filters = {};
       if (searchQuery) {
-        // If a general search query is present, prioritize it
-        // This assumes 'name' search is the default for general query
-        filters.name = searchQuery;
+        // Determine if the search query is a zip code (5 digits)
+        const isZipCode = /^\d{5}$/.test(searchQuery);
+        if (isZipCode) {
+          filters.zip = searchQuery;
+        } else {
+          // Otherwise, assume it's a name search
+          filters.name = searchQuery;
+        }
       }
       if (selectedCategory) {
         // If a category is selected, apply it
         filters.type = selectedCategory;
       }
-      // If no filters are applied, fetch all contractors
-      const data = await searchContractors(filters);
-      setContractors(data);
-      setNumResults(data.length);
+      // Only perform search if there are actual filters
+      if (Object.keys(filters).length > 0) {
+        const data = await searchContractors(filters);
+        setContractors(data);
+        setNumResults(data.length);
+      } else {
+        // If no search query or category, display no results
+        setContractors([]);
+        setNumResults(0);
+      }
     } catch (error) {
-      Alert.alert('Error', error.message || 'Failed to load contractors.');
-      console.error('Error fetching contractors:', error);
+      // Check if the error is due to "No contractors found"
+      if (error.message && error.message.includes("No contractors found for the given criteria")) {
+        setContractors([]);
+        setNumResults(0);
+        console.warn('No contractors found for the given criteria, displaying empty results.');
+      } else {
+        Alert.alert('Error', error.message || 'Failed to load contractors.');
+        console.error('Error fetching contractors:', error);
+      }
     } finally {
       setLoading(false);
     }
@@ -213,7 +245,10 @@ const styles = StyleSheet.create({
   },
   searchHeader: {
     flexDirection: 'row',
-    padding: Spacing.lg,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.lg,
+    paddingRight: Spacing.lg,
+    paddingLeft: Spacing.md, // Adjusted to move content slightly to the left
     backgroundColor: Colors.neutral50,
     alignItems: 'center',
     ...Shadows.sm,
@@ -222,15 +257,17 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     marginRight: Spacing.sm,
+    height: 60, // Further increase height for a bigger search bar
   },
   searchButton: {
     backgroundColor: Colors.primary500,
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.md,
+    padding: Spacing.md, // Adjust padding to make it a square and ensure icon visibility
     borderRadius: Radii.md,
     justifyContent: 'center',
     alignItems: 'center',
-    ...Shadows.md,
+    height: 60, // Make button height consistent with input height
+    width: 60, // Make button a square
+    ...Shadows.xs, // Consistent with Input component for a professional look
   },
   mainContent: {
     paddingHorizontal: Spacing.lg,
@@ -256,8 +293,7 @@ const styles = StyleSheet.create({
   },
   categoryButton: {
     backgroundColor: Colors.neutral200,
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.md,
+    padding: 18, // Custom padding to perfectly center the Spacing.lg icon in a 60x60 button
     borderRadius: Radii.xl,
     marginRight: Spacing.sm,
     ...Shadows.xs,

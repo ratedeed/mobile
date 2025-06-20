@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { fetchUserProfile, updateUserProfile, changePassword, toggleTwoFactorAuth } from '../api/user';
+import { useAuth } from '../context/AuthContext';
+// Removed direct firebase auth imports as we will use context's logout
 import Input from '../components/common/Input';
 import Button from '../components/common/Button';
 import Header from '../components/common/Header';
@@ -22,25 +24,25 @@ const ProfileScreen = () => {
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [is2FAEnabled, setIs2FAEnabled] = useState(false); // Assuming initial state from backend
-
-  // Dummy user ID and token for demonstration. In a real app, these would come from auth context/storage.
-  const DUMMY_USER_ID = 'user123';
-  const DUMMY_AUTH_TOKEN = 'your_auth_token_here';
-
-  useEffect(() => {
-    loadUserProfile();
-  }, []);
+  const { logout } = useAuth(); // Get logout function from AuthContext
+ 
+   // Dummy user ID and token for demonstration. In a real app, these would come from auth context/storage.
+   useFocusEffect(
+     React.useCallback(() => {
+       loadUserProfile();
+     }, [])
+   );
 
   const loadUserProfile = async () => {
     setLoading(true);
     try {
-      // In a real app, userId and token would be retrieved from secure storage
-      const userData = await fetchUserProfile(DUMMY_USER_ID, DUMMY_AUTH_TOKEN);
+      const userData = await fetchUserProfile();
+      console.log('Fetched user data:', userData);
       setUser(userData);
-      setEditableName(userData.name);
+      setEditableName(`${userData.firstName || ''} ${userData.lastName || ''}`.trim());
       setEditableEmail(userData.email);
-      setEditableZipCode(userData.zipCode);
-      setIs2FAEnabled(userData.is2FAEnabled || false); // Assuming 2FA status is part of user data
+      setEditableZipCode(userData.zipCode || '');
+      setIs2FAEnabled(userData.is2FAEnabled || false);
     } catch (error) {
       Alert.alert('Error', error.message || 'Failed to load profile.');
       console.error('Load profile error:', error);
@@ -56,12 +58,17 @@ const ProfileScreen = () => {
   const handleSaveProfile = async () => {
     setLoading(true);
     try {
+      const [firstName, ...lastNameParts] = editableName.split(' ');
+      const lastName = lastNameParts.join(' ');
+
       const updatedProfile = {
-        name: editableName,
+        firstName: firstName,
+        lastName: lastName,
         email: editableEmail,
         zipCode: editableZipCode,
       };
-      const data = await updateUserProfile(DUMMY_USER_ID, DUMMY_AUTH_TOKEN, updatedProfile);
+      console.log('Sending profile data:', updatedProfile);
+      const data = await updateUserProfile(updatedProfile);
       setUser(data);
       setIsEditing(false);
       Alert.alert('Success', 'Profile updated successfully!');
@@ -77,9 +84,9 @@ const ProfileScreen = () => {
     setIsEditing(false);
     // Reset editable fields to current user data
     if (user) {
-      setEditableName(user.name);
+      setEditableName(`${user.firstName || ''} ${user.lastName || ''}`.trim());
       setEditableEmail(user.email);
-      setEditableZipCode(user.zipCode);
+      setEditableZipCode(user.zipCode || '');
     }
   };
 
@@ -95,7 +102,7 @@ const ProfileScreen = () => {
 
     setLoading(true);
     try {
-      await changePassword(DUMMY_USER_ID, DUMMY_AUTH_TOKEN, currentPassword, newPassword);
+      await changePassword(currentPassword, newPassword);
       Alert.alert('Success', 'Password changed successfully!');
       setCurrentPassword('');
       setNewPassword('');
@@ -113,7 +120,7 @@ const ProfileScreen = () => {
     setLoading(true);
     try {
       const new2FAStatus = !is2FAEnabled;
-      await toggleTwoFactorAuth(DUMMY_USER_ID, DUMMY_AUTH_TOKEN, new2FAStatus);
+      await toggleTwoFactorAuth(new2FAStatus);
       setIs2FAEnabled(new2FAStatus);
       Alert.alert('Success', `Two-Factor Authentication ${new2FAStatus ? 'enabled' : 'disabled'}!`);
     } catch (error) {
@@ -135,9 +142,16 @@ const ProfileScreen = () => {
         },
         {
           text: 'Log Out',
-          onPress: () => {
-            // In a real app, clear user session/token from storage
-            navigation.navigate('Login'); // Navigate to login screen after logout
+          onPress: async () => {
+            try {
+              console.log('ProfileScreen: Calling AuthContext logout function...');
+              await logout(); // Use the logout function from AuthContext
+              console.log('ProfileScreen: AuthContext logout function called successfully.');
+              // App.js will automatically switch to AuthNavigator due to AuthContext change
+            } catch (error) {
+              console.error('ProfileScreen: Error during logout:', error);
+              Alert.alert('Logout Error', error.message || 'Failed to log out.');
+            }
           },
         },
       ],
@@ -201,7 +215,7 @@ const ProfileScreen = () => {
             </>
           ) : (
             <>
-              <Typography variant="body" style={styles.infoText}><Typography variant="label">Name:</Typography> {user?.name || 'N/A'}</Typography>
+              <Typography variant="body" style={styles.infoText}><Typography variant="label">Name:</Typography> {`${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'N/A'}</Typography>
               <Typography variant="body" style={styles.infoText}><Typography variant="label">Email:</Typography> {user?.email || 'N/A'}</Typography>
               <Typography variant="body" style={styles.infoText}><Typography variant="label">Zip Code:</Typography> {user?.zipCode || 'N/A'}</Typography>
               <Button

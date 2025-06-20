@@ -1,4 +1,3 @@
-
 const express = require('express');
 const path = require('path');
 const cors = require('cors');
@@ -12,6 +11,8 @@ const messageRoutes = require('./routes/messages');
 const notificationRoutes = require('./routes/notificationRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const postRoutes = require('./routes/posts');
+const User = require('./models/User'); // Import User model
+const asyncHandler = require('express-async-handler'); // Import asyncHandler
 
 const app = express();
 const http = require('http'); // Import http module
@@ -36,37 +37,48 @@ app.use((req, res, next) => {
 });
 
 // 2) Mount all your API routes *before* any static/catch-all
-
-// Diagnostic route: Catch all POST requests to /api/auth/*
-app.post('/api/auth/*', (req, res, next) => {
-  console.log('Backend: Generic /api/auth/* POST route hit.');
-  next(); // Pass control to the next matching route
-});
+// Ensure user routes are mounted early to avoid being caught by general API catch-all
+console.log('Backend: Attempting to mount user routes at /api/users');
+app.use('/api/users', (req, res, next) => {
+  console.log(`Backend: User Route Specific Logger - ${req.method} ${req.originalUrl}`);
+  next();
+}, userRoutes);
+console.log('Backend: User routes mounted at /api/users');
 
 app.use('/api/auth', authRoutes);
-console.log('Backend: Auth routes mounted at /api/auth'); // Added log
-app.use('/api/users', userRoutes);
+console.log('Backend: Auth routes mounted at /api/auth');
 app.use('/api/contractors', contractorRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/posts', postRoutes);
 
+// Health/Version endpoint for debugging
+app.get('/api/version', (req, res) => {
+  console.log('Backend: /api/version endpoint hit.');
+  res.json({
+    name: process.env.BACKEND_NAME || 'ratedeed-backend',
+    version: '1.0.0', // You might want to manage this dynamically
+    timestamp: new Date().toISOString()
+  });
+});
+
 // 3) (Optional) Serve any static files you own, e.g. images
 app.use('/img', express.static(path.join(__dirname, 'img')));
 
-// 4) Finally, any routes you don’t recognize — return JSON 404, not HTML
+// Diagnostic: Log before catch-all route - moved after all specific API routes
+app.use('/api/*', (req, res, next) => {
+  console.log(`Backend: Catch-all /api/* hit for ${req.method} ${req.originalUrl}. No specific route handled it.`);
+  next();
+});
+
+// 4) Finally, any routes you don’t recognize — return JSON 404, not HTML - moved after all specific API routes
 app.all('/api/*', (req, res) => {
+  console.log(`Backend: Final 404 for ${req.method} ${req.originalUrl}.`);
   res.status(404).json({ message: 'API endpoint not found' });
 });
 
-// 5) If you’re serving a frontend build (Next/React), do *that* last:
-//    app.use(express.static(path.join(__dirname, '../frontend/build')));
-//    app.get('*', (req, res) => {
-//      res.sendFile(path.join(__dirname, '../frontend/build', 'index.html'));
-//    });
-
-// Error handling middleware
+// Error handling middleware - moved after all specific API routes
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(err.statusCode || 500).json({
@@ -74,6 +86,12 @@ app.use((err, req, res, next) => {
     error: process.env.NODE_ENV === 'development' ? err.stack : {}
   });
 });
+
+// 5) If you’re serving a frontend build (Next/React), do *that* last:
+//    app.use(express.static(path.join(__dirname, '../frontend/build')));
+//    app.get('*', (req, res) => {
+//      res.sendFile(path.join(__dirname, '../frontend/build', 'index.html'));
+//    });
 
 // Start the server
 server.listen(PORT, () => {

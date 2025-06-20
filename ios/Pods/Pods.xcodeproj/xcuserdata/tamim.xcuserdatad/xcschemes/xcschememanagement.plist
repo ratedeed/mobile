@@ -59,11 +59,6 @@
 			<key>isShown</key>
 			<false/>
 		</dict>
-		<key>ExpoSecureStore.xcscheme</key>
-		<dict>
-			<key>isShown</key>
-			<false/>
-		</dict>
 		<key>FBLazyVector.xcscheme</key>
 		<dict>
 			<key>isShown</key>
@@ -110,11 +105,6 @@
 			<false/>
 		</dict>
 		<key>RNGestureHandler.xcscheme</key>
-		<dict>
-			<key>isShown</key>
-			<false/>
-		</dict>
-		<key>RNReanimated.xcscheme</key>
 		<dict>
 			<key>isShown</key>
 			<false/>
@@ -465,11 +455,6 @@
 			<false/>
 		</dict>
 		<key>hermes-engine.xcscheme</key>
-		<dict>
-			<key>isShown</key>
-			<false/>
-		</dict>
-		<key>react-native-keyboard-controller.xcscheme</key>
 		<dict>
 			<key>isShown</key>
 			<false/>
