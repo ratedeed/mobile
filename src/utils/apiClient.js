@@ -112,8 +112,10 @@ export const put = async (url, data, headers = {}) => {
  */
 export const browseContractors = async (queryParams = {}) => {
   const queryString = new URLSearchParams(queryParams).toString();
+  const url = `${API_BASE}/api/contractors?${queryString}`;
+  console.log('apiClient.js: Full URL for browseContractors:', url);
   const authHeaders = await getAuthHeaders();
-  return get(`${API_BASE}/api/contractors?${queryString}`, authHeaders);
+  return get(url, authHeaders);
 };
 
 /**

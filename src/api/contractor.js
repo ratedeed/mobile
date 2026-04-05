@@ -19,8 +19,14 @@ export const fetchContractorDetails = async (contractorId) => {
   return apiClientGetContractorDetails(contractorId);
 };
 
-export const fetchFeaturedContractors = async () => {
-  return apiClientBrowseContractors({ isFeatured: true });
+export const fetchFeaturedContractors = async (zipCode = null) => {
+  console.log('contractor.js: fetchFeaturedContractors received zipCode:', zipCode);
+  const filters = { isFeatured: true };
+  if (zipCode) {
+    filters.zip = zipCode; // Changed from filters.zipCode to filters.zip
+  }
+  console.log('contractor.js: Filters object passed to apiClientBrowseContractors (sending "zip"):', filters);
+  return apiClientBrowseContractors(filters);
 };
 
 export const searchContractors = async (filters) => {

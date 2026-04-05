@@ -1,237 +1,459 @@
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator, Alert } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+  ActivityIndicator,
+  Alert,
+  RefreshControl,
+  TextInput,
+  Dimensions,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
-import { fetchFeaturedContractors, fetchContractorPosts } from '../api/contractor';
+import { getTopRatedContractors, getNearbyTopRatedContractors } from '../api/contractor';
+import { getFeedPosts } from '../api/post';
 import Header from '../components/common/Header';
 import Button from '../components/common/Button';
-import Input from '../components/common/Input';
 import Card from '../components/common/Card';
 import Avatar from '../components/common/Avatar';
 import Typography from '../components/common/Typography';
 import { Spacing, Radii, Colors, Shadows } from '../constants/designTokens';
+import { SkeletonLoader } from '../components/common/SkeletonLoader';
+import { EmptyState } from '../components/common/EmptyState';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+const CATEGORIES = [
+  { name: 'Home Builders', icon: 'home' },
+  { name: 'Plumbers', icon: 'bath' },
+  { name: 'Electricians', icon: 'bolt' },
+  { name: 'Painters', icon: 'paint-roller' },
+  { name: 'Landscapers', icon: 'tree' },
+  { name: 'Handymen', icon: 'tools' },
+  { name: 'Roofers', icon: 'house-damage' },
+  { name: 'HVAC', icon: 'fan' },
+  { name: 'Carpenters', icon: 'hammer' },
+  { name: 'Cleaners', icon: 'broom' },
+];
+
+const TESTIMONIALS = [
+  {
+    name: 'Sarah Johnson',
+    role: 'Homeowner',
+    avatar: 'https://randomuser.me/api/portraits/women/32.jpg',
+    rating: 5,
+    text: 'Found an amazing electrician through Ratedeed. The reviews were spot on and he did a fantastic job rewiring our home.',
+  },
+  {
+    name: 'Michael Rodriguez',
+    role: 'General Contractor',
+    avatar: 'https://randomuser.me/api/portraits/men/45.jpg',
+    rating: 5,
+    text: 'As a contractor, Ratedeed has helped me connect with so many new clients. The platform is easy to use.',
+  },
+  {
+    name: 'Jennifer Lee',
+    role: 'Homeowner',
+    avatar: 'https://randomuser.me/api/portraits/women/44.jpg',
+    rating: 4,
+    text: 'Great platform for finding reliable contractors. The verification badge gives me peace of mind.',
+  },
+];
 
 const HomeScreen = () => {
   const navigation = useNavigation();
   const [zipCode, setZipCode] = useState('');
+  const [ipZipCode, setIpZipCode] = useState(null);
   const [featuredContractors, setFeaturedContractors] = useState([]);
   const [feedPosts, setFeedPosts] = useState([]);
   const [loadingFeatured, setLoadingFeatured] = useState(true);
   const [loadingFeed, setLoadingFeed] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    loadFeaturedContractors();
-    loadFeedPosts();
+    fetchLocationAndData();
   }, []);
 
-  const loadFeaturedContractors = async () => {
+  const fetchLocationAndData = async () => {
     try {
-      const data = await fetchFeaturedContractors();
-      console.log("Fetched featured contractors:", data); // Add this line
-      setFeaturedContractors(data);
-    } catch (error) {
-      Alert.alert('Error', error.message || 'Failed to load featured contractors.');
-      console.error('Error fetching featured contractors:', error);
+      setError(null);
+      const response = await fetch('https://free.freeipapi.com/api/json');
+      const data = await response.json();
+      const detectedZip = data.zipCode;
+      setIpZipCode(detectedZip);
+      await loadFeaturedContractors(detectedZip);
+    } catch (err) {
+      console.error('Error fetching location:', err);
+      setIpZipCode('10001');
+      await loadFeaturedContractors('10001');
+    }
+  };
+
+  const loadFeaturedContractors = async (zip) => {
+    if (!zip) {
+      setLoadingFeatured(false);
+      return;
+    }
+    setLoadingFeatured(true);
+    try {
+      const data = await getTopRatedContractors(zip, 6);
+      setFeaturedContractors(data || []);
+    } catch (err) {
+      console.error('Error fetching featured contractors:', err);
+      try {
+        const nearbyData = await getNearbyTopRatedContractors(zip);
+        setFeaturedContractors(nearbyData || []);
+      } catch (nearbyErr) {
+        console.error('Error fetching nearby contractors:', nearbyErr);
+        setFeaturedContractors([]);
+      }
     } finally {
       setLoadingFeatured(false);
     }
   };
 
   const loadFeedPosts = async () => {
+    setLoadingFeed(true);
     try {
-      // Assuming a general endpoint for feed posts, or fetch posts from featured contractors
-      // Fetch a general feed of posts (all contractors)
-      const data = await fetchContractorPosts();
-      setFeedPosts(data);
-    } catch (error) {
-      Alert.alert('Error', error.message || 'Failed to load feed posts.');
-      console.error('Error fetching feed posts:', error);
+      const data = await getFeedPosts(ipZipCode);
+      setFeedPosts(data?.posts || []);
+    } catch (err) {
+      console.error('Error fetching feed posts:', err);
+      setFeedPosts([]);
     } finally {
       setLoadingFeed(false);
     }
   };
 
-  const handleSearchByZipCode = () => {
-    if (zipCode) {
-      navigation.navigate('Main', { screen: 'Search', params: { query: zipCode, searchType: 'zipCode' } });
-    } else {
-      Alert.alert('Error', 'Please enter a zip code to search.');
+  useEffect(() => {
+    if (ipZipCode) {
+      loadFeedPosts();
     }
+  }, [ipZipCode]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchLocationAndData();
+    await loadFeedPosts();
+    setRefreshing(false);
+  }, [ipZipCode]);
+
+  const handleSearch = () => {
+    const searchZip = zipCode.trim() || ipZipCode;
+    navigation.navigate('Main', {
+      screen: 'Search',
+      params: { query: searchZip, searchType: 'zipCode' },
+    });
   };
 
   const handleCategoryPress = (category) => {
-    navigation.navigate('Main', { screen: 'Search', params: { query: category, searchType: 'category' } });
+    navigation.navigate('Main', {
+      screen: 'Search',
+      params: { query: category, searchType: 'category' },
+    });
   };
 
-  const renderStarRating = (rating) => {
-    const stars = [];
-    for (let i = 1; i <= 5; i++) {
-      stars.push(
+  const handleContractorPress = (contractor) => {
+    if (contractor.slug) {
+      navigation.navigate('BusinessDetail', { slug: contractor.slug });
+    } else {
+      navigation.navigate('BusinessDetail', { contractorId: contractor._id });
+    }
+  };
+
+  const renderStars = (rating, size = 12) => (
+    <View style={styles.starsContainer}>
+      {[1, 2, 3, 4, 5].map((i) => (
         <FontAwesome5
           key={i}
-          name={rating >= i ? 'star' : (rating >= i - 0.5 ? 'star-half-alt' : 'star')}
-          solid={rating >= i || rating >= i - 0.5}
-          size={16}
-          color={rating >= i ? Colors.warning : (rating >= i - 0.5 ? Colors.warning : Colors.neutral400)}
+          name={i <= rating ? 'star' : 'star'}
+          solid={i <= rating}
+          size={size}
+          color={Colors.warning500}
           style={styles.starIcon}
+        />
+      ))}
+    </View>
+  );
+
+  const renderFeaturedContractors = () => {
+    if (loadingFeatured) {
+      return <SkeletonLoader type="card" count={4} />;
+    }
+
+    if (featuredContractors.length === 0) {
+      return (
+        <EmptyState
+          title="No contractors found"
+          message="Try a different zip code or check back later"
+          icon="🔍"
         />
       );
     }
-    return <View style={styles.starRatingContainer}>{stars}</View>;
+
+    return (
+      <View style={styles.contractorsGrid}>
+        {featuredContractors.map((contractor) => (
+          <Card key={contractor._id} style={styles.contractorCard}>
+            <TouchableOpacity onPress={() => handleContractorPress(contractor)} activeOpacity={0.8}>
+              <Image
+                source={{ uri: contractor.profilePicture || 'https://via.placeholder.com/200x150' }}
+                style={styles.contractorImage}
+              />
+              <View style={styles.contractorInfo}>
+                <View style={styles.nameRow}>
+                  <Typography variant="h6" style={styles.contractorName} numberOfLines={1}>
+                    {contractor.companyName}
+                  </Typography>
+                  {contractor.isVerified && (
+                    <FontAwesome5 name="check-circle" size={14} color={Colors.success500} />
+                  )}
+                </View>
+                <Typography variant="caption" style={styles.contractorCategory}>
+                  {contractor.category || 'General Contractor'}
+                </Typography>
+                <View style={styles.ratingRow}>
+                  {renderStars(Math.round(contractor.averageRating || 0))}
+                  <Typography variant="caption" style={styles.ratingText}>
+                    {contractor.averageRating?.toFixed(1) || '0.0'} ({contractor.numReviews || 0})
+                  </Typography>
+                </View>
+                {contractor.pricing && (
+                  <Typography variant="caption" style={styles.pricing}>
+                    {contractor.pricing}
+                  </Typography>
+                )}
+              </View>
+            </TouchableOpacity>
+          </Card>
+        ))}
+      </View>
+    );
+  };
+
+  const renderFeedPosts = () => {
+    if (loadingFeed) {
+      return <SkeletonLoader type="post" count={2} />;
+    }
+
+    if (feedPosts.length === 0) {
+      return null;
+    }
+
+    return (
+      <View style={styles.feedSection}>
+        <Typography variant="h5" style={styles.sectionTitle}>
+          Community Updates
+        </Typography>
+        {feedPosts.slice(0, 3).map((post) => (
+          <Card key={post._id} style={styles.postCard}>
+            <View style={styles.postHeader}>
+              <Avatar
+                source={{ uri: post.contractor?.user?.profilePicture || 'https://via.placeholder.com/40' }}
+                size={40}
+              />
+              <View style={styles.postHeaderInfo}>
+                <Typography variant="body" style={styles.postAuthorName}>
+                  {post.contractor?.user?.firstName} {post.contractor?.user?.lastName}
+                </Typography>
+                <Typography variant="caption" style={styles.postDate}>
+                  {new Date(post.createdAt).toLocaleDateString()}
+                </Typography>
+              </View>
+            </View>
+            <TextInput
+              style={styles.postCaption}
+              value={post.caption}
+              editable={false}
+              multiline
+            />
+            {post.images?.length > 0 && (
+              <ScrollView horizontal style={styles.postImages} showsHorizontalScrollIndicator={false}>
+                {post.images.map((img, idx) => (
+                  <Image key={idx} source={{ uri: img }} style={styles.postImage} />
+                ))}
+              </ScrollView>
+            )}
+            <View style={styles.postStats}>
+              <TextInput style={styles.postStat}>❤️ {post.likes?.length || 0}</TextInput>
+              <TextInput style={styles.postStat}>💬 {post.comments?.length || 0}</TextInput>
+            </View>
+          </Card>
+        ))}
+      </View>
+    );
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <Header title="Ratedeed" />
-
-      {/* Search Bar - Airbnb style */}
-      <View style={styles.searchBarWrapper}>
-        <TouchableOpacity style={styles.searchBar} onPress={() => navigation.navigate('Main', { screen: 'Search' })}>
-          <FontAwesome5 name="search" size={Spacing.md} color={Colors.neutral700} style={styles.searchIcon} />
-          <View>
-            <Typography variant="h6" style={styles.searchBarText}>Where are you looking?</Typography>
-            <Typography variant="caption" style={styles.searchBarSubText}>Anywhere • Any Category</Typography>
-          </View>
+    <ScrollView
+      style={styles.container}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+    >
+      <View style={styles.searchContainer}>
+        <View style={styles.searchBar}>
+          <FontAwesome5 name="search" size={18} color={Colors.neutral500} style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search by name, zip code..."
+            placeholderTextColor={Colors.neutral500}
+            value={zipCode}
+            onChangeText={setZipCode}
+            onSubmitEditing={handleSearch}
+            returnKeyType="search"
+          />
+          {zipCode.length > 0 && (
+            <TouchableOpacity onPress={() => setZipCode('')}>
+              <FontAwesome5 name="times-circle" size={18} color={Colors.neutral500} />
+            </TouchableOpacity>
+          )}
+        </View>
+        <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
+          <FontAwesome5 name="arrow-right" size={20} color={Colors.neutral50} />
         </TouchableOpacity>
       </View>
 
-      {/* Categories - Horizontal Scroll */}
+      <View style={styles.locationBanner}>
+        <FontAwesome5 name="map-marker-alt" size={14} color={Colors.primary500} />
+        <Typography variant="caption" style={styles.locationText}>
+          {ipZipCode ? `Showing contractors near ${ipZipCode}` : 'Detecting location...'}
+        </Typography>
+      </View>
+
       <View style={styles.categoriesSection}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoriesScrollContainer}>
-          {[
-            { name: 'Home Builders', icon: 'home' },
-            { name: 'Plumbers', icon: 'bath' },
-            { name: 'Electricians', icon: 'bolt' },
-            { name: 'Painters', icon: 'paint-roller' },
-            { name: 'Landscapers', icon: 'tree' },
-            { name: 'Handymen', icon: 'tools' },
-            { name: 'Roofers', icon: 'house-damage' },
-            { name: 'HVAC', icon: 'fan' },
-            { name: 'Carpenters', icon: 'hammer' },
-            { name: 'Cleaners', icon: 'broom' },
-          ].map((category, index) => (
-            <TouchableOpacity key={index} style={styles.categoryItem} onPress={() => handleCategoryPress(category.name)}>
-              <FontAwesome5 name={category.icon} size={Spacing.xl} color={Colors.primary500} />
-              <Typography variant="caption" style={styles.categoryItemText}>{category.name}</Typography>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoriesContainer}>
+          {CATEGORIES.map((category) => (
+            <TouchableOpacity
+              key={category.name}
+              style={styles.categoryItem}
+              onPress={() => handleCategoryPress(category.name)}
+            >
+              <View style={styles.categoryIcon}>
+                <FontAwesome5 name={category.icon} size={20} color={Colors.primary500} />
+              </View>
+              <Typography variant="caption" style={styles.categoryText}>
+                {category.name}
+              </Typography>
             </TouchableOpacity>
           ))}
         </ScrollView>
       </View>
 
-      {/* Featured Contractors - Grid Layout */}
       <View style={styles.section}>
-        <Typography variant="h4" style={styles.sectionTitle}>Featured Contractors</Typography>
-        {loadingFeatured ? (
-          <ActivityIndicator size="large" color={Colors.primary500} style={styles.loadingIndicator} />
-        ) : (
-          <View style={styles.featuredContractorsGrid}>
-            {featuredContractors.map(contractor => (
-              <Card key={contractor._id} style={styles.contractorGridCard}>
-                <TouchableOpacity
-                  onPress={() => navigation.navigate('BusinessDetail', { id: contractor._id })}
-                >
-                  <Image source={{ uri: contractor.imageUrl || 'https://via.placeholder.com/150' }} style={styles.contractorGridImage} />
-                  <View style={styles.contractorGridInfo}>
-                    <Typography variant="h6" style={styles.contractorGridName}>{contractor.companyName}</Typography>
-                    <Typography variant="subtitle2" style={styles.contractorGridCategory}>{contractor.category}</Typography>
-                    <View style={styles.ratingContainer}>
-                      {renderStarRating(contractor.averageRating)}
-                      <Typography variant="caption" style={styles.ratingText}>
-                        {contractor.averageRating != null ? contractor.averageRating.toFixed(1) : 'N/A'} ({contractor.numReviews})
-                      </Typography>
-                    </View>
-                    {contractor.isVerified && (
-                      <View style={styles.verifiedBadge}>
-                        <Typography variant="caption" style={styles.badgeText}>LICENSE VERIFIED</Typography>
-                      </View>
-                    )}
-                  </View>
-                </TouchableOpacity>
-              </Card>
-            ))}
-          </View>
-        )}
-        <Button
-          title="View All Featured Contractors"
-          onPress={() => navigation.navigate('Main', { screen: 'Search', params: { searchType: 'featured' } })}
-          style={styles.viewAllButton}
-        />
+        <View style={styles.sectionHeader}>
+          <Typography variant="h5">Featured Contractors</Typography>
+          <TouchableOpacity onPress={() => navigation.navigate('Main', { screen: 'Search' })}>
+            <Typography variant="body" style={styles.viewAllLink}>
+              View All
+            </Typography>
+          </TouchableOpacity>
+        </View>
+        {renderFeaturedContractors()}
       </View>
 
-      {/* How It Works Section */}
-      <View style={[styles.section, styles.howItWorksSection]}>
-        <Typography variant="h3" style={styles.howItWorksTitle}>How Ratedeed Works</Typography>
-        <View style={styles.howItWorksGrid}>
-          <View style={styles.howItWorksItem}>
-            <FontAwesome5 name="search" size={Spacing.xl} color={Colors.neutral50} style={styles.howItWorksIcon} />
-            <Typography variant="h6" style={styles.howItWorksItemTitle}>Find Contractors</Typography>
-            <Typography variant="caption" style={styles.howItWorksItemText}>Search by location, service type, or rating.</Typography>
+      {renderFeedPosts()}
+
+      <View style={styles.howItWorksSection}>
+        <Typography variant="h5" style={styles.howItWorksTitle}>
+          How Ratedeed Works
+        </Typography>
+        <View style={styles.stepsContainer}>
+          <View style={styles.step}>
+            <View style={styles.stepIcon}>
+              <FontAwesome5 name="search" size={24} color={Colors.neutral50} />
+            </View>
+            <Typography variant="body" style={styles.stepTitle}>
+              Find Contractors
+            </Typography>
+            <Typography variant="caption" style={styles.stepText}>
+              Search by location, service, or rating
+            </Typography>
           </View>
-          <View style={styles.howItWorksItem}>
-            <FontAwesome5 name="star" size={Spacing.xl} color={Colors.neutral50} style={styles.howItWorksIcon} />
-            <Typography variant="h6" style={styles.howItWorksItemTitle}>Read Reviews</Typography>
-            <Typography variant="caption" style={styles.howItWorksItemText}>Check detailed ratings and reviews.</Typography>
+          <View style={styles.stepConnector}>
+            <FontAwesome5 name="chevron-right" size={16} color={Colors.primary300} />
           </View>
-          <View style={styles.howItWorksItem}>
-            <FontAwesome5 name="handshake" size={Spacing.xl} color={Colors.neutral50} style={styles.howItWorksIcon} />
-            <Typography variant="h6" style={styles.howItWorksItemTitle}>Hire with Confidence</Typography>
-            <Typography variant="caption" style={styles.howItWorksItemText}>Connect directly with professionals.</Typography>
+          <View style={styles.step}>
+            <View style={styles.stepIcon}>
+              <FontAwesome5 name="star" size={24} color={Colors.neutral50} />
+            </View>
+            <Typography variant="body" style={styles.stepTitle}>
+              Read Reviews
+            </Typography>
+            <Typography variant="caption" style={styles.stepText}>
+              Check detailed ratings from real customers
+            </Typography>
+          </View>
+          <View style={styles.stepConnector}>
+            <FontAwesome5 name="chevron-right" size={16} color={Colors.primary300} />
+          </View>
+          <View style={styles.step}>
+            <View style={styles.stepIcon}>
+              <FontAwesome5 name="handshake" size={24} color={Colors.neutral50} />
+            </View>
+            <Typography variant="body" style={styles.stepTitle}>
+              Hire with Confidence
+            </Typography>
+            <Typography variant="caption" style={styles.stepText}>
+              Connect directly with verified professionals
+            </Typography>
           </View>
         </View>
       </View>
 
-      {/* For Contractors Section */}
-      <View style={styles.section}>
-        <Typography variant="h4" style={styles.sectionTitle}>Are You a Contractor?</Typography>
-        <Typography variant="body" style={styles.contractorText}>Join Ratedeed to showcase your work and grow your business.</Typography>
+      <View style={styles.contractorCTA}>
+        <Typography variant="h5" style={styles.ctaTitle}>
+          Are You a Contractor?
+        </Typography>
+        <Typography variant="body" style={styles.ctaText}>
+          Join Ratedeed to showcase your work and grow your business.
+        </Typography>
         <Button
           title="Sign Up as Contractor"
           onPress={() => navigation.navigate('ContractorSignup')}
-          style={styles.contractorButton}
+          style={styles.ctaButton}
         />
       </View>
 
-      {/* Testimonials Section */}
-      <View style={styles.section}>
-        <Typography variant="h4" style={styles.sectionTitle}>What Our Users Say</Typography>
+      <View style={styles.testimonialsSection}>
+        <Typography variant="h5" style={styles.sectionHeaderTitle}>
+          What Our Users Say
+        </Typography>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.testimonialsContainer}>
-          <Card style={styles.testimonialCard}>
-            {renderStarRating(5)}
-            <Typography variant="body" style={styles.testimonialText}>"Found an amazing electrician through Ratedeed. The reviews were spot on and he did a fantastic job rewiring our home."</Typography>
-            <View style={styles.testimonialAuthor}>
-              <Avatar source={{ uri: 'https://randomuser.me/api/portraits/women/32.jpg' }} size={Spacing.xxl} />
-              <View>
-                <Typography variant="h6" style={styles.testimonialName}>Sarah Johnson</Typography>
-                <Typography variant="caption" style={styles.testimonialRole}>Homeowner</Typography>
+          {TESTIMONIALS.map((testimonial, index) => (
+            <Card key={index} style={styles.testimonialCard}>
+              {renderStars(testimonial.rating, 14)}
+              <Typography variant="body" style={styles.testimonialText}>
+                "{testimonial.text}"
+              </Typography>
+              <View style={styles.testimonialAuthor}>
+                <Avatar source={{ uri: testimonial.avatar }} size={40} />
+                <View style={styles.testimonialAuthorInfo}>
+                  <Typography variant="body" style={styles.testimonialName}>
+                    {testimonial.name}
+                  </Typography>
+                  <Typography variant="caption" style={styles.testimonialRole}>
+                    {testimonial.role}
+                  </Typography>
+                </View>
               </View>
-            </View>
-          </Card>
-          <Card style={styles.testimonialCard}>
-            {renderStarRating(4.5)}
-            <Typography variant="body" style={styles.testimonialText}>"As a contractor, Ratedeed has helped me connect with so many new clients. The platform is easy to use and the verification badge gives me credibility."</Typography>
-            <View style={styles.testimonialAuthor}>
-              <Avatar source={{ uri: 'https://randomuser.me/api/portraits/men/45.jpg' }} size={Spacing.xxl} />
-              <View>
-                <Typography variant="h6" style={styles.testimonialName}>Michael Rodriguez</Typography>
-                <Typography variant="caption" style={styles.testimonialRole}>General Contractor</Typography>
-              </View>
-            </View>
-          </Card>
+            </Card>
+          ))}
         </ScrollView>
       </View>
 
-      {/* CTA Section */}
-      <View style={[styles.section, styles.ctaSection]}>
-        <Typography variant="h3" style={styles.ctaTitle}>Ready to Find Your Perfect Contractor?</Typography>
-        <Typography variant="subtitle1" style={styles.ctaSubtitle}>Join thousands of satisfied customers who found reliable professionals through Ratedeed.</Typography>
+      <View style={styles.footer}>
+        <Typography variant="h5" style={styles.footerTitle}>
+          Ready to Find Your Perfect Contractor?
+        </Typography>
         <Button
-          title="Search Contractors"
+          title="Search Now"
           onPress={() => navigation.navigate('Main', { screen: 'Search' })}
-          style={styles.ctaButton}
-          textStyle={{ color: Colors.primary500 }} // Override button text color for this specific button
+          style={styles.footerButton}
         />
       </View>
-
     </ScrollView>
   );
 };
@@ -241,216 +463,303 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.neutral100,
   },
-  searchBarWrapper: {
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
+  searchContainer: {
+    flexDirection: 'row',
+    padding: Spacing.lg,
     backgroundColor: Colors.neutral50,
-    ...Shadows.sm,
-    marginBottom: Spacing.md,
+    gap: Spacing.sm,
   },
   searchBar: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.neutral100,
     borderRadius: Radii.md,
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.lg,
-    ...Shadows.xs,
+    paddingHorizontal: Spacing.md,
+    height: 48,
   },
   searchIcon: {
     marginRight: Spacing.sm,
   },
-  searchBarText: {
-    color: Colors.neutral800,
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    color: Colors.neutral900,
   },
-  searchBarSubText: {
-    color: Colors.neutral600,
-    marginTop: Spacing.xxs,
+  searchButton: {
+    backgroundColor: Colors.primary500,
+    width: 48,
+    height: 48,
+    borderRadius: Radii.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  locationBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.xs,
+    backgroundColor: Colors.primary50,
+    gap: Spacing.xs,
+  },
+  locationText: {
+    color: Colors.primary700,
   },
   categoriesSection: {
     paddingVertical: Spacing.md,
     backgroundColor: Colors.neutral50,
-    ...Shadows.sm,
     marginBottom: Spacing.md,
   },
-  categoriesScrollContainer: {
+  categoriesContainer: {
     paddingHorizontal: Spacing.lg,
+    gap: Spacing.lg,
   },
   categoryItem: {
     alignItems: 'center',
-    marginRight: Spacing.xl,
+    marginRight: Spacing.md,
   },
-  categoryItemText: {
+  categoryIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: Colors.primary100,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing.xs,
+  },
+  categoryText: {
     color: Colors.neutral700,
-    marginTop: Spacing.xs,
+    fontSize: 11,
+    textAlign: 'center',
   },
   section: {
-    paddingVertical: Spacing.xl,
-    paddingHorizontal: Spacing.lg,
+    padding: Spacing.lg,
     backgroundColor: Colors.neutral50,
-    marginTop: Spacing.md,
-    borderRadius: Radii.lg,
-    marginHorizontal: Spacing.md,
-    ...Shadows.md,
+    marginBottom: Spacing.md,
   },
-  sectionTitle: {
-    color: Colors.neutral900,
-    marginBottom: Spacing.lg,
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
   },
-  loadingIndicator: {
-    marginTop: Spacing.lg,
+  sectionHeaderTitle: {
+    paddingHorizontal: Spacing.lg,
+    marginBottom: Spacing.md,
   },
-  featuredContractorsGrid: {
+  viewAllLink: {
+    color: Colors.primary500,
+    fontWeight: '500',
+  },
+  contractorsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
   },
-  contractorGridCard: {
-    width: '48%', // Adjust for spacing
-    marginBottom: Spacing.lg,
-    padding: 0, // Card component already has padding, reset for image to fill
-    overflow: 'hidden', // Ensure image corners are rounded
+  contractorCard: {
+    width: '48%',
+    marginBottom: Spacing.md,
+    padding: 0,
+    overflow: 'hidden',
   },
-  contractorGridImage: {
+  contractorImage: {
     width: '100%',
-    height: 150,
+    height: 100,
     resizeMode: 'cover',
-    borderTopLeftRadius: Radii.md,
-    borderTopRightRadius: Radii.md,
   },
-  contractorGridInfo: {
-    padding: Spacing.md,
+  contractorInfo: {
+    padding: Spacing.sm,
   },
-  contractorGridName: {
-    color: Colors.neutral900,
-    marginBottom: Spacing.xxs,
-  },
-  contractorGridCategory: {
-    color: Colors.neutral600,
-    marginBottom: Spacing.xs,
-  },
-  ratingContainer: {
+  nameRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: Spacing.xs,
+    justifyContent: 'space-between',
   },
-  starRatingContainer: {
+  contractorName: {
+    color: Colors.neutral900,
+    fontSize: 14,
+    fontWeight: '600',
+    flex: 1,
+  },
+  contractorCategory: {
+    color: Colors.neutral600,
+    fontSize: 11,
+    marginTop: 2,
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  starsContainer: {
     flexDirection: 'row',
   },
   starIcon: {
-    marginRight: Spacing.xxs,
+    marginRight: 1,
   },
   ratingText: {
-    color: Colors.neutral700,
-    marginLeft: Spacing.xs,
+    color: Colors.neutral600,
+    fontSize: 10,
+    marginLeft: 4,
   },
-  verifiedBadge: {
-    backgroundColor: Colors.success,
-    paddingVertical: Spacing.xxs,
-    paddingHorizontal: Spacing.sm,
-    borderRadius: Radii.sm,
-    alignSelf: 'flex-start',
-    marginTop: Spacing.sm,
+  pricing: {
+    color: Colors.primary600,
+    fontSize: 11,
+    fontWeight: '500',
+    marginTop: 4,
   },
-  badgeText: {
-    fontSize: 11, // Keep small for badge
-    fontWeight: '700',
-    color: Colors.neutral50,
+  feedSection: {
+    padding: Spacing.lg,
+    backgroundColor: Colors.neutral50,
+    marginBottom: Spacing.md,
   },
-  viewAllButton: {
-    marginTop: Spacing.lg,
+  sectionTitle: {
+    marginBottom: Spacing.md,
+  },
+  postCard: {
+    marginBottom: Spacing.md,
+  },
+  postHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Spacing.sm,
+  },
+  postHeaderInfo: {
+    marginLeft: Spacing.sm,
+  },
+  postAuthorName: {
+    color: Colors.neutral900,
+    fontWeight: '600',
+  },
+  postDate: {
+    color: Colors.neutral500,
+  },
+  postCaption: {
+    color: Colors.neutral800,
+    marginBottom: Spacing.sm,
+    padding: 0,
+  },
+  postImages: {
+    marginBottom: Spacing.sm,
+  },
+  postImage: {
+    width: 200,
+    height: 150,
+    borderRadius: Radii.md,
+    marginRight: Spacing.sm,
+  },
+  postStats: {
+    flexDirection: 'row',
+    gap: Spacing.lg,
+    paddingTop: Spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: Colors.neutral200,
+  },
+  postStat: {
+    color: Colors.neutral600,
+    fontSize: 13,
   },
   howItWorksSection: {
+    padding: Spacing.xl,
     backgroundColor: Colors.primary500,
-    shadowColor: Colors.opacity20,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 10,
+    marginBottom: Spacing.md,
   },
   howItWorksTitle: {
     color: Colors.neutral50,
     textAlign: 'center',
     marginBottom: Spacing.xl,
   },
-  howItWorksGrid: {
+  stepsContainer: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-around',
-  },
-  howItWorksItem: {
-    width: '30%',
     alignItems: 'center',
-    marginBottom: Spacing.lg,
+    justifyContent: 'center',
   },
-  howItWorksIcon: {
+  step: {
+    alignItems: 'center',
+    width: 100,
+  },
+  stepIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: Colors.primary600,
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: Spacing.sm,
   },
-  howItWorksItemTitle: {
+  stepTitle: {
     color: Colors.neutral50,
+    fontWeight: '600',
     textAlign: 'center',
-    marginBottom: Spacing.xs,
+    marginBottom: 2,
   },
-  howItWorksItemText: {
+  stepText: {
     color: Colors.primary100,
     textAlign: 'center',
+    fontSize: 10,
   },
-  contractorText: {
-    color: Colors.neutral700,
-    marginBottom: Spacing.lg,
+  stepConnector: {
+    paddingHorizontal: Spacing.sm,
+  },
+  contractorCTA: {
+    padding: Spacing.xl,
+    backgroundColor: Colors.neutral50,
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+  },
+  ctaTitle: {
+    color: Colors.neutral900,
+    marginBottom: Spacing.sm,
+  },
+  ctaText: {
+    color: Colors.neutral600,
     textAlign: 'center',
+    marginBottom: Spacing.lg,
   },
-  contractorButton: {
-    alignSelf: 'center',
+  ctaButton: {},
+  testimonialsSection: {
+    paddingVertical: Spacing.lg,
+    backgroundColor: Colors.neutral50,
+    marginBottom: Spacing.md,
   },
   testimonialsContainer: {
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.xs,
+    paddingHorizontal: Spacing.lg,
+    gap: Spacing.md,
   },
   testimonialCard: {
+    width: 280,
     marginRight: Spacing.md,
-    width: 320,
-    padding: Spacing.lg,
   },
   testimonialText: {
     color: Colors.neutral700,
-    marginBottom: Spacing.md,
+    marginVertical: Spacing.md,
+    fontStyle: 'italic',
   },
   testimonialAuthor: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  testimonialAvatar: {
-    marginRight: Spacing.md,
-    borderWidth: 2,
-    borderColor: Colors.neutral200,
+  testimonialAuthorInfo: {
+    marginLeft: Spacing.sm,
   },
   testimonialName: {
     color: Colors.neutral900,
+    fontWeight: '600',
   },
   testimonialRole: {
-    color: Colors.neutral600,
-    marginTop: Spacing.xxs,
+    color: Colors.neutral500,
   },
-  ctaSection: {
+  footer: {
+    padding: Spacing.xl,
     backgroundColor: Colors.primary500,
-    shadowColor: Colors.opacity20,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 10,
+    alignItems: 'center',
   },
-  ctaTitle: {
+  footerTitle: {
     color: Colors.neutral50,
-    textAlign: 'center',
-    marginBottom: Spacing.sm,
-  },
-  ctaSubtitle: {
-    color: Colors.primary100,
     textAlign: 'center',
     marginBottom: Spacing.lg,
   },
-  ctaButton: {
+  footerButton: {
     backgroundColor: Colors.neutral50,
   },
 });

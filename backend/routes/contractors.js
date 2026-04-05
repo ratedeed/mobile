@@ -8,14 +8,15 @@ const { protect } = require('../middleware/authMiddleware'); // Import protect m
 // @route   GET /api/contractors?zip=:zipCode&type=:category&name=:name&isFeatured=true
 // @access  Public
 router.get('/', asyncHandler(async (req, res) => {
-  const { zip, type, name, isFeatured } = req.query;
-  console.log('Backend: Received query parameters:', { zip, type, name, isFeatured });
+  console.log('Backend: Raw req.query object:', req.query); // Re-adding this crucial log
+  const { zipCode, type, name, isFeatured } = req.query; // Changed 'zip' to 'zipCode'
+  console.log('Backend: Received query parameters:', { zipCode, type, name, isFeatured });
   let query = {};
   let sort = {};
   let limit = 0;
 
-  if (zip) {
-    query.zipCode = zip;
+  if (zipCode) { // Changed 'zip' to 'zipCode'
+    query.zipCode = zipCode;
   }
   if (type) {
     query.category = type;
@@ -50,7 +51,7 @@ router.get('/', asyncHandler(async (req, res) => {
       res.json(contractors);
     } else {
       // If no specific search parameters were provided, return an empty array (no 404)
-      if (!zip && !type && !name && isFeatured !== 'true') {
+      if (!zipCode && !type && !name && isFeatured !== 'true') {
         res.json([]);
       } else {
         // If search parameters were provided but no contractors matched, return 404

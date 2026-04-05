@@ -353,6 +353,11 @@ const MessagesScreen = () => {
       const isMessageForCurrentChat = currentSelectedConversation && currentSelectedConversation._id === message.conversationId;
       if (isMessageForCurrentChat) {
         setMessages((prevMessages) => {
+          const existingMessageIds = new Set(prevMessages.map(m => m._id));
+          if (existingMessageIds.has(message._id)) {
+            console.warn('DEBUG: handleNewMessage - Message with this ID already exists, skipping:', message._id);
+            return prevMessages;
+          }
           const updatedMsgs = [...prevMessages, message].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
           return updatedMsgs;
         });
@@ -374,7 +379,7 @@ const MessagesScreen = () => {
           );
           updatedConvos[conversationId] = {
             ...updatedConvos[conversationId],
-            messages: updatedMessages,
+            messages: updatedConvoMessages,
             // Optionally update lastMessage read status if it's the one being read
             lastMessage: updatedConvos[conversationId].lastMessage?._id === messageId
               ? { ...updatedConvos[conversationId].lastMessage, read: true }
@@ -654,7 +659,17 @@ const MessagesScreen = () => {
               unreadCount: 0,
             }
           };
+          // If it was a temporary conversation, remove the old temporary entry
+          if (selectedConversation.conversationId?.startsWith('temp-')) {
+            delete updatedConversationsMap[selectedConversation.conversationId];
+            console.log('DEBUG: handleSendMessage - Removed temporary conversation from map:', selectedConversation.conversationId);
+          }
           console.log('DEBUG: handleSendMessage - Added new conversation to conversations map:', JSON.stringify(updatedConversationsMap[newConvoId], null, 2));
+          // If it was a temporary conversation, remove the old temporary entry
+          if (prev[selectedConversation.conversationId]) {
+            delete updatedConversationsMap[selectedConversation.conversationId];
+            console.log('DEBUG: handleSendMessage - Removed temporary conversation from map:', selectedConversation.conversationId);
+          }
           return updatedConversationsMap;
         });
         joinConversationSocket(finalConversationId); // Join the new conversation room
@@ -739,13 +754,17 @@ const MessagesScreen = () => {
           console.log('DEBUG: handleSendMessage - Constructed otherParticipant for conversations map update:', JSON.stringify(otherParticipant));
         }
 
-        const updatedMessages = [...currentConvo.messages, sentMessage].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+        const updatedConvoMessages = [...currentConvo.messages];
+        if (!updatedConvoMessages.some(m => m._id === sentMessage._id)) {
+          updatedConvoMessages.push(sentMessage);
+        }
+        updatedConvoMessages.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
 
         return {
           ...prev,
           [sentMessage.conversationId]: {
             ...currentConvo,
-            messages: updatedMessages,
+            messages: updatedConvoMessages,
             lastMessage: sentMessage,
             otherParticipant: otherParticipant,
             unreadCount: 0,
@@ -753,7 +772,15 @@ const MessagesScreen = () => {
         };
       });
 
-      setMessages((prevMessages) => [...prevMessages, sentMessage]);
+      setMessages((prevMessages) => {
+        const existingMessageIds = new Set(prevMessages.map(m => m._id));
+        if (existingMessageIds.has(sentMessage._id)) {
+          console.warn('DEBUG: handleSendMessage - Optimistic message with this ID already exists, skipping:', sentMessage._id);
+          return prevMessages;
+        }
+        const updatedMsgs = [...prevMessages, sentMessage].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+        return updatedMsgs;
+      });
 
     } catch (error) {
       Alert.alert('Error', error.message || 'Failed to send message.');
@@ -851,13 +878,10 @@ const MessagesScreen = () => {
           <ScrollView style={styles.conversationList} contentContainerStyle={styles.conversationListContent}>
             {Object.values(conversations).length > 0 ?
               Object.values(conversations)
-                .sort((a, b) => new Date(b.lastMessage?.createdAt || 0) - new Date(a.lastMessage?.createdAt || 0)) // Sort by last message date
+                .filter(conv => conv.conversationId && conv.lastMessage && conv.otherParticipant) // Filter out invalid conversations
+                .sort((a, b) => new Date(b.lastMessage.createdAt) - new Date(a.lastMessage.createdAt)) // Sort by last message date
                 .map((conv) => {
-                  console.log('DEBUG: Rendering conversation card for:', JSON.stringify(conv)); // Log each conversation object
-                  if (!conv.lastMessage || !conv.otherParticipant) {
-                    console.warn('DEBUG: Skipping conversation card due to missing lastMessage or otherParticipant:', JSON.stringify(conv));
-                    return null; // Skip rendering if essential data is missing
-                  }
+                  console.log(`DEBUG: Conversation card rendering - Conversation ID: ${conv.conversationId}, Full Conv:`, JSON.stringify(conv)); // Added log
                   return (
                     <Card key={conv.conversationId} style={styles.conversationCard}>
                       <TouchableOpacity

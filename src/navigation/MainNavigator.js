@@ -5,16 +5,15 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import { Image, View, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-// Import screens
 import HomeScreen from '../screens/HomeScreen';
 import BusinessSearchScreen from '../screens/BusinessSearchScreen';
-import BusinessDetailScreen from '../screens/BusinessDetailScreen';
+import BusinessDetailScreen from '../screens/BusinessDetailScreen.tsx';
 import MessagesScreen from '../screens/MessagesScreen';
 import AdminDashboardScreen from '../screens/AdminDashboardScreen';
 import ContractorDashboardScreen from '../screens/ContractorDashboardScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import NotificationsScreen from '../screens/NotificationsScreen';
 
-// Import design tokens
 import { Spacing, Radii, Colors, Shadows } from '../constants/designTokens';
 import Typography from '../components/common/Typography';
 
@@ -80,7 +79,7 @@ function MainTabNavigator() {
           headerLeft: () => (
             <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: Spacing.lg }}>
               <Image
-                source={require('../../assets/faviiocon.png')} // Adjusted path for assets
+                source={require('../../assets/faviiocon.png')}
                 style={{ width: Spacing.xl, height: Spacing.xl, marginRight: Spacing.xs, borderRadius: Radii.xs }}
               />
               <Typography variant="h4" style={{ color: Colors.neutral50, letterSpacing: 0.5 }}>Ratedeed</Typography>
@@ -120,6 +119,8 @@ export default function MainNavigator() {
       <Stack.Screen name="BusinessDetail" component={BusinessDetailScreen} />
       <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
       <Stack.Screen name="ContractorDashboard" component={ContractorDashboardScreen} />
+      <Stack.Screen name="Notifications" component={NotificationsScreen} />
+      <Stack.Screen name="ChatScreen" component={MessagesScreen} />
     </Stack.Navigator>
   );
 }
