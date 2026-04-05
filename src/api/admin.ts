@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_BASE_URL } from '../../config';
+import { API_BASE_URL } from '../config';
 import {
   User,
   UsersResponse,
@@ -9,7 +9,7 @@ import {
   Post,
   FlaggedItem,
   PlatformStats,
-} from '../../types';
+} from '../types';
 
 const getAuthHeaders = async () => {
   const userInfo = JSON.parse(await AsyncStorage.getItem('userInfo') || '{}');
@@ -40,7 +40,7 @@ export const getAllUsers = async (params: {
     }
   });
   const res = await fetch(`${API_BASE_URL}/api/admin/users?${queryParams}`, {
-    headers: getAuthHeaders(),
+    headers: await getAuthHeaders(),
   });
   return handleResponse(res);
 };
@@ -48,7 +48,7 @@ export const getAllUsers = async (params: {
 export const updateUserStatus = async (userId: string, status: string): Promise<void> => {
   const res = await fetch(`${API_BASE_URL}/api/admin/users/${userId}`, {
     method: 'PUT',
-    headers: getAuthHeaders(),
+    headers: await getAuthHeaders(),
     body: JSON.stringify({ status }),
   });
   handleResponse(res);
@@ -57,7 +57,7 @@ export const updateUserStatus = async (userId: string, status: string): Promise<
 export const deleteUser = async (userId: string): Promise<void> => {
   const res = await fetch(`${API_BASE_URL}/api/admin/users/${userId}`, {
     method: 'DELETE',
-    headers: getAuthHeaders(),
+    headers: await getAuthHeaders(),
   });
   handleResponse(res);
 };
@@ -76,7 +76,7 @@ export const getAllContractors = async (params: {
     }
   });
   const res = await fetch(`${API_BASE_URL}/api/admin/contractors?${queryParams}`, {
-    headers: getAuthHeaders(),
+    headers: await getAuthHeaders(),
   });
   return handleResponse(res);
 };
@@ -84,7 +84,7 @@ export const getAllContractors = async (params: {
 export const approveContractor = async (contractorId: string): Promise<void> => {
   const res = await fetch(`${API_BASE_URL}/api/admin/contractors/${contractorId}/approve`, {
     method: 'PUT',
-    headers: getAuthHeaders(),
+    headers: await getAuthHeaders(),
   });
   handleResponse(res);
 };
@@ -92,7 +92,7 @@ export const approveContractor = async (contractorId: string): Promise<void> => 
 export const rejectContractor = async (contractorId: string, reason: string): Promise<void> => {
   const res = await fetch(`${API_BASE_URL}/api/admin/contractors/${contractorId}/reject`, {
     method: 'PUT',
-    headers: getAuthHeaders(),
+    headers: await getAuthHeaders(),
     body: JSON.stringify({ reason }),
   });
   handleResponse(res);
@@ -100,14 +100,14 @@ export const rejectContractor = async (contractorId: string, reason: string): Pr
 
 export const getFlaggedReviews = async (): Promise<FlaggedItem[]> => {
   const res = await fetch(`${API_BASE_URL}/api/admin/flagged/reviews`, {
-    headers: getAuthHeaders(),
+    headers: await getAuthHeaders(),
   });
   return handleResponse(res);
 };
 
 export const getFlaggedPosts = async (): Promise<FlaggedItem[]> => {
   const res = await fetch(`${API_BASE_URL}/api/admin/flagged/posts`, {
-    headers: getAuthHeaders(),
+    headers: await getAuthHeaders(),
   });
   return handleResponse(res);
 };
@@ -119,7 +119,7 @@ export const moderateContent = async (
 ): Promise<void> => {
   const res = await fetch(`${API_BASE_URL}/api/admin/moderate/${type}/${id}`, {
     method: 'PUT',
-    headers: getAuthHeaders(),
+    headers: await getAuthHeaders(),
     body: JSON.stringify({ action }),
   });
   handleResponse(res);
@@ -127,7 +127,7 @@ export const moderateContent = async (
 
 export const getPlatformStats = async (): Promise<PlatformStats> => {
   const res = await fetch(`${API_BASE_URL}/api/admin/stats`, {
-    headers: getAuthHeaders(),
+    headers: await getAuthHeaders(),
   });
   return handleResponse(res);
 };
@@ -140,7 +140,7 @@ export const getCloudinarySignature = async (folder: string): Promise<{
 }> => {
   const res = await fetch(`${API_BASE_URL}/api/admin/cloudinary-sign`, {
     method: 'POST',
-    headers: getAuthHeaders(),
+    headers: await getAuthHeaders(),
     body: JSON.stringify({ folder }),
   });
   return handleResponse(res);
@@ -149,7 +149,7 @@ export const getCloudinarySignature = async (folder: string): Promise<{
 export const updatePlatformSettings = async (settings: any): Promise<void> => {
   const res = await fetch(`${API_BASE_URL}/api/admin/settings`, {
     method: 'PUT',
-    headers: getAuthHeaders(),
+    headers: await getAuthHeaders(),
     body: JSON.stringify(settings),
   });
   handleResponse(res);
@@ -157,7 +157,7 @@ export const updatePlatformSettings = async (settings: any): Promise<void> => {
 
 export const getCategories = async (): Promise<any[]> => {
   const res = await fetch(`${API_BASE_URL}/api/categories`, {
-    headers: getAuthHeaders(),
+    headers: await getAuthHeaders(),
   });
   return handleResponse(res);
 };
@@ -165,7 +165,7 @@ export const getCategories = async (): Promise<any[]> => {
 export const createCategory = async (category: any): Promise<any> => {
   const res = await fetch(`${API_BASE_URL}/api/admin/categories`, {
     method: 'POST',
-    headers: getAuthHeaders(),
+    headers: await getAuthHeaders(),
     body: JSON.stringify(category),
   });
   return handleResponse(res);
@@ -174,7 +174,7 @@ export const createCategory = async (category: any): Promise<any> => {
 export const updateCategory = async (categoryId: string, category: any): Promise<any> => {
   const res = await fetch(`${API_BASE_URL}/api/admin/categories/${categoryId}`, {
     method: 'PUT',
-    headers: getAuthHeaders(),
+    headers: await getAuthHeaders(),
     body: JSON.stringify(category),
   });
   return handleResponse(res);
@@ -183,7 +183,7 @@ export const updateCategory = async (categoryId: string, category: any): Promise
 export const deleteCategory = async (categoryId: string): Promise<void> => {
   const res = await fetch(`${API_BASE_URL}/api/admin/categories/${categoryId}`, {
     method: 'DELETE',
-    headers: getAuthHeaders(),
+    headers: await getAuthHeaders(),
   });
   handleResponse(res);
 };

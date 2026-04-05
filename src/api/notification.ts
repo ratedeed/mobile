@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_BASE_URL } from '../../config';
-import { Notification } from '../../types';
+import { API_BASE_URL } from '../config';
+import { Notification } from '../types';
 
 const getAuthHeaders = async () => {
   const userInfo = JSON.parse(await AsyncStorage.getItem('userInfo') || '{}');

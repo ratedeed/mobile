@@ -1,8 +1,9 @@
-import { API_BASE_URL } from '../../config';
-import { Quote, Job, StripeConnectStatus, Earnings, QuoteLineItem } from '../../types';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_BASE_URL } from '../config';
+import { Quote, Job, StripeConnectStatus, Earnings, QuoteLineItem } from '../types';
 
-const getAuthHeaders = () => {
-  const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+const getAuthHeaders = async () => {
+  const userInfo = JSON.parse(await AsyncStorage.getItem('userInfo') || '{}');
   return {
     'Content-Type': 'application/json',
     ...(userInfo.token ? { Authorization: `Bearer ${userInfo.token}` } : {}),
@@ -19,14 +20,14 @@ const handleResponse = async (response: Response) => {
 
 export const getStripeConnectUrl = async (): Promise<{ url: string }> => {
   const res = await fetch(`${API_BASE_URL}/api/stripe/connect`, {
-    headers: getAuthHeaders(),
+    headers: await getAuthHeaders(),
   });
   return handleResponse(res);
 };
 
 export const getStripeAccountStatus = async (): Promise<StripeConnectStatus> => {
   const res = await fetch(`${API_BASE_URL}/api/stripe/status`, {
-    headers: getAuthHeaders(),
+    headers: await getAuthHeaders(),
   });
   return handleResponse(res);
 };
@@ -40,7 +41,7 @@ export const createQuote = async (quoteData: {
 }): Promise<Quote> => {
   const res = await fetch(`${API_BASE_URL}/api/quotes`, {
     method: 'POST',
-    headers: getAuthHeaders(),
+    headers: await getAuthHeaders(),
     body: JSON.stringify(quoteData),
   });
   return handleResponse(res);
@@ -48,7 +49,7 @@ export const createQuote = async (quoteData: {
 
 export const getContractorQuotes = async (): Promise<Quote[]> => {
   const res = await fetch(`${API_BASE_URL}/api/quotes/contractor`, {
-    headers: getAuthHeaders(),
+    headers: await getAuthHeaders(),
   });
   return handleResponse(res);
 };
@@ -59,7 +60,7 @@ export const updateQuoteStatus = async (
 ): Promise<Quote> => {
   const res = await fetch(`${API_BASE_URL}/api/quotes/${quoteId}/status`, {
     method: 'PUT',
-    headers: getAuthHeaders(),
+    headers: await getAuthHeaders(),
     body: JSON.stringify({ status }),
   });
   return handleResponse(res);
@@ -67,7 +68,7 @@ export const updateQuoteStatus = async (
 
 export const getContractorJobs = async (): Promise<Job[]> => {
   const res = await fetch(`${API_BASE_URL}/api/jobs/contractor`, {
-    headers: getAuthHeaders(),
+    headers: await getAuthHeaders(),
   });
   return handleResponse(res);
 };
@@ -78,7 +79,7 @@ export const updateJobStatus = async (
 ): Promise<Job> => {
   const res = await fetch(`${API_BASE_URL}/api/jobs/${jobId}/status`, {
     method: 'PUT',
-    headers: getAuthHeaders(),
+    headers: await getAuthHeaders(),
     body: JSON.stringify({ status }),
   });
   return handleResponse(res);
@@ -86,7 +87,7 @@ export const updateJobStatus = async (
 
 export const getContractorEarnings = async (): Promise<Earnings> => {
   const res = await fetch(`${API_BASE_URL}/api/contractors/earnings`, {
-    headers: getAuthHeaders(),
+    headers: await getAuthHeaders(),
   });
   return handleResponse(res);
 };
