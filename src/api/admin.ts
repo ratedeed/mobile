@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../../config';
 import {
   User,
@@ -10,8 +11,8 @@ import {
   PlatformStats,
 } from '../../types';
 
-const getAuthHeaders = () => {
-  const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+const getAuthHeaders = async () => {
+  const userInfo = JSON.parse(await AsyncStorage.getItem('userInfo') || '{}');
   return {
     'Content-Type': 'application/json',
     ...(userInfo.token ? { Authorization: `Bearer ${userInfo.token}` } : {}),
