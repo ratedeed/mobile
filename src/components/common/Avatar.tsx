@@ -1,29 +1,36 @@
-// src/components/common/Avatar.js
 import React from 'react';
-import { Image, View, Text, StyleSheet } from 'react-native';
+import { Image, View, Text, StyleSheet, ImageSourcePropType, StyleProp, ViewStyle, ImageStyle } from 'react-native';
 import { Radii, Colors } from '../../constants/designTokens';
 
-const Avatar = ({ source, size = 48, style, text, ...props }) => {
+export interface AvatarProps {
+  source?: ImageSourcePropType;
+  size?: number;
+  style?: StyleProp<ViewStyle | ImageStyle>;
+  text?: string;
+  [key: string]: any;
+}
+
+const Avatar: React.FC<AvatarProps> = ({ source, size = 48, style, text, ...props }) => {
   const avatarStyle = {
     width: size,
     height: size,
     borderRadius: Radii.round,
-    backgroundColor: Colors.neutral300, // Default background for text avatar
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: Colors.neutral300,
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
   };
 
   const textStyle = {
-    fontSize: size * 0.4, // Scale font size with avatar size
+    fontSize: size * 0.4,
     color: Colors.neutral800,
-    fontWeight: '600',
+    fontWeight: '600' as const,
   };
 
   if (source) {
     return (
       <Image
         source={source}
-        style={[styles.avatarImage, avatarStyle, style]}
+        style={[styles.avatarImage, avatarStyle, style as StyleProp<ImageStyle>]}
         {...props}
       />
     );
@@ -40,7 +47,6 @@ const Avatar = ({ source, size = 48, style, text, ...props }) => {
 
   return (
     <View style={[styles.avatarPlaceholder, avatarStyle, style]} {...props}>
-      {/* Default fallback icon or empty state */}
       <Text style={textStyle}>?</Text>
     </View>
   );
@@ -51,7 +57,6 @@ const styles = StyleSheet.create({
     resizeMode: 'cover',
   },
   avatarPlaceholder: {
-    // Styles defined inline in avatarStyle
   },
 });
 

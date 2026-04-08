@@ -1,19 +1,13 @@
-import React, { useEffect } from 'react';
-import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
-import { Colors, Spacing } from '../constants/designTokens'; // Assuming designTokens are available
+import React from 'react';
+import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { Colors, Spacing } from '../constants/designTokens';
+import Typography from '../components/common/Typography';
 
 const LoadingScreen = () => {
-  useEffect(() => {
-    console.log('LoadingScreen mounted.');
-    return () => {
-      console.log('LoadingScreen unmounted.');
-    };
-  }, []);
-
   return (
     <View style={styles.container}>
       <ActivityIndicator size="large" color={Colors.primary500} />
-      <Text style={styles.loadingText}>Loading...</Text>
+      <Typography variant="body" style={styles.loadingText}>Loading...</Typography>
     </View>
   );
 };
@@ -27,7 +21,6 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: Spacing.md,
-    fontSize: 18,
     color: Colors.neutral700,
   },
 });

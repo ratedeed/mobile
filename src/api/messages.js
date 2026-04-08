@@ -2,9 +2,18 @@
 import { API_BASE_URL } from '../config';
 import { getAuthHeaders, handleResponse } from '../utils/apiClient';
 import io from 'socket.io-client';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 
 let socket = null; // Initialize socket as null
+
+const getToken = async () => {
+  const userInfo = await SecureStore.getItemAsync('userInfo');
+  if (userInfo) {
+    const parsed = JSON.parse(userInfo);
+    return parsed.token;
+  }
+  return null;
+};
 
 const initializeSocket = async () => {
   if (socket && socket.connected) {
@@ -12,7 +21,7 @@ const initializeSocket = async () => {
     return;
   }
 
-  const token = await AsyncStorage.getItem('userToken');
+  const token = await getToken();
   if (!token) {
     console.warn("Frontend: No token found for socket connection. Socket will connect without authentication.");
     // If no token, connect without auth, but expect authentication errors from backend

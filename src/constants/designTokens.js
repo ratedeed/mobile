@@ -29,7 +29,7 @@ export const Colors = {
   primary200: '#C7D2FE',
   primary300: '#A5B4FC',
   primary400: '#818CF8',
-  primary500: '#6366F1', // Current primary color, slightly adjusted
+  primary500: '#6366F1',
   primary600: '#4F46E5',
   primary700: '#4338CA',
   primary800: '#3730A3',
@@ -47,13 +47,61 @@ export const Colors = {
   neutral800: '#1F2937',
   neutral900: '#111827',
 
-  // Accent/Feedback Colors
-  success: '#10B981', // Green
-  warning: '#F59E0B', // Amber
-  error: '#EF4444',   // Red
-  info: '#3B82F6',    // Blue
+  // Success Palette (Green)
+  success50: '#ECFDF5',
+  success100: '#D1FAE5',
+  success200: '#A7F3D0',
+  success300: '#6EE7B7',
+  success400: '#34D399',
+  success500: '#10B981',
+  success600: '#059669',
+  success700: '#047857',
+  success800: '#065F46',
+  success900: '#064E3B',
 
-  // Gradients (example, can be expanded)
+  // Warning Palette (Amber)
+  warning50: '#FFFBEB',
+  warning100: '#FEF3C7',
+  warning200: '#FDE68A',
+  warning300: '#FCD34D',
+  warning400: '#FBBF24',
+  warning500: '#F59E0B',
+  warning600: '#D97706',
+  warning700: '#B45309',
+  warning800: '#92400E',
+  warning900: '#78350F',
+
+  // Error Palette (Red)
+  error50: '#FEF2F2',
+  error100: '#FEE2E2',
+  error200: '#FECACA',
+  error300: '#FCA5A5',
+  error400: '#F87171',
+  error500: '#EF4444',
+  error600: '#DC2626',
+  error700: '#B91C1C',
+  error800: '#991B1B',
+  error900: '#7F1D1D',
+
+  // Info Palette (Blue)
+  info50: '#EFF6FF',
+  info100: '#DBEAFE',
+  info200: '#BFDBFE',
+  info300: '#93C5FD',
+  info400: '#60A5FA',
+  info500: '#3B82F6',
+  info600: '#2563EB',
+  info700: '#1D4ED8',
+  info800: '#1E40AF',
+  info900: '#1E3A8A',
+
+  // Accent/Feedback Colors (Legacy support)
+  success: '#10B981',
+  warning: '#F59E0B',
+  error: '#EF4444',
+  info: '#3B82F6',
+
+  // Gradients
   gradientPrimary: ['#6366F1', '#4F46E5'],
   gradientNeutral: ['#F9FAFB', '#E5E7EB'],
 
@@ -99,12 +147,86 @@ export const Shadows = {
     shadowRadius: 10,
     elevation: 12,
   },
+  none: {
+    shadowColor: 'transparent',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
+  },
 };
 
-// Example of a global font family, assuming a system font or custom font is loaded
 export const FontFamilies = {
-  // You would typically load custom fonts here, e.g., 'Inter-Regular', 'Inter-Bold'
-  // For now, using system defaults
   primary: 'System',
   secondary: 'System',
+};
+
+export const FontSizes = {
+  xs: 12,
+  sm: 14,
+  md: 16,
+  lg: 18,
+  xl: 20,
+  xxl: 24,
+  xxxl: 30,
+};
+
+export const FontWeights = {
+  regular: '400',
+  medium: '500',
+  semibold: '600',
+  bold: '700',
+};
+
+export const Animation = {
+  duration: {
+    fast: 150,
+    normal: 300,
+    slow: 500,
+  },
+  easing: {
+    spring: {
+      damping: 20,
+      stiffness: 150,
+    },
+    easeInOut: {
+      duration: 300,
+    },
+    easeOut: {
+      duration: 250,
+    },
+  },
+};
+
+export const Typography = {
+  h1: {
+    fontSize: FontSizes.xxxl,
+    fontWeight: FontWeights.bold,
+    lineHeight: 38,
+  },
+  h2: {
+    fontSize: FontSizes.xxl,
+    fontWeight: FontWeights.bold,
+    lineHeight: 32,
+  },
+  h3: {
+    fontSize: FontSizes.xl,
+    fontWeight: FontWeights.semibold,
+    lineHeight: 28,
+  },
+  body: {
+    fontSize: FontSizes.md,
+    fontWeight: FontWeights.regular,
+    lineHeight: 24,
+  },
+  bodySmall: {
+    fontSize: FontSizes.sm,
+    fontWeight: FontWeights.regular,
+    lineHeight: 20,
+  },
+  caption: {
+    fontSize: FontSizes.xs,
+    fontWeight: FontWeights.regular,
+    lineHeight: 16,
+  },
 };

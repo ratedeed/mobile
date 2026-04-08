@@ -1,5 +1,5 @@
 import React from 'react';
-import { createStackNavigator } from '@react-navigation/stack';
+import { createStackNavigator, CardStyleInterpolators } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { Image, View, TouchableOpacity } from 'react-native';
@@ -9,19 +9,40 @@ import HomeScreen from '../screens/HomeScreen';
 import BusinessSearchScreen from '../screens/BusinessSearchScreen';
 import BusinessDetailScreen from '../screens/BusinessDetailScreen.tsx';
 import MessagesScreen from '../screens/MessagesScreen';
-import AdminDashboardScreen from '../screens/AdminDashboardScreen';
 import ContractorDashboardScreen from '../screens/ContractorDashboardScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 
 import { Spacing, Radii, Colors, Shadows } from '../constants/designTokens';
 import Typography from '../components/common/Typography';
+import { useAuth } from '../context/AuthContext';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
+const screenOptions = {
+  headerStyle: {
+    backgroundColor: Colors.neutral50,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.neutral200,
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  headerTitleStyle: {
+    fontWeight: '700',
+    fontSize: 18,
+    color: Colors.neutral900,
+  },
+  headerTintColor: Colors.primary500,
+  headerBackTitleVisible: false,
+  cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
+  gestureEnabled: true,
+  gestureDirection: 'horizontal',
+};
+
 function MainTabNavigator() {
   const insets = useSafeAreaInsets();
+  const { userRole } = useAuth();
 
   return (
     <Tab.Navigator
@@ -36,6 +57,8 @@ function MainTabNavigator() {
             iconName = 'comments';
           } else if (route.name === 'Profile') {
             iconName = 'user-circle';
+          } else if (route.name === 'Dashboard') {
+            iconName = 'chart-bar';
           }
           return <FontAwesome5 name={iconName} size={size} color={color} solid={focused} />;
         },
@@ -74,7 +97,7 @@ function MainTabNavigator() {
       <Tab.Screen
         name="Home"
         component={HomeScreen}
-        options={{
+        options={({ navigation }) => ({
           title: 'Home',
           headerLeft: () => (
             <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: Spacing.lg }}>
@@ -87,11 +110,14 @@ function MainTabNavigator() {
           ),
           headerTitle: '',
           headerRight: () => (
-            <TouchableOpacity style={{ marginRight: Spacing.lg, padding: Spacing.xs }}>
+            <TouchableOpacity 
+              style={{ marginRight: Spacing.lg, padding: Spacing.xs }}
+              onPress={() => navigation.navigate('Notifications')}
+            >
               <FontAwesome5 name="bell" size={Spacing.lg} color={Colors.neutral50} />
             </TouchableOpacity>
           ),
-        }}
+        })}
       />
       <Tab.Screen
         name="Search"
@@ -103,6 +129,13 @@ function MainTabNavigator() {
         component={MessagesScreen}
         options={{ title: 'Messages', headerShown: false }}
       />
+      {userRole === 'contractor' && (
+        <Tab.Screen
+          name="Dashboard"
+          component={ContractorDashboardScreen}
+          options={{ title: 'Dashboard', headerShown: false }}
+        />
+      )}
       <Tab.Screen
         name="Profile"
         component={ProfileScreen}
@@ -114,13 +147,12 @@ function MainTabNavigator() {
 
 export default function MainNavigator() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="Main" component={MainTabNavigator} />
-      <Stack.Screen name="BusinessDetail" component={BusinessDetailScreen} />
-      <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
-      <Stack.Screen name="ContractorDashboard" component={ContractorDashboardScreen} />
+    <Stack.Navigator screenOptions={screenOptions}>
+      <Stack.Screen name="Main" component={MainTabNavigator} options={{ headerShown: false }} />
+      <Stack.Screen name="BusinessDetail" component={BusinessDetailScreen} options={{ title: '' }} />
+      <Stack.Screen name="ContractorDashboard" component={ContractorDashboardScreen} options={{ title: '' }} />
       <Stack.Screen name="Notifications" component={NotificationsScreen} />
-      <Stack.Screen name="ChatScreen" component={MessagesScreen} />
+      <Stack.Screen name="ChatScreen" component={MessagesScreen} options={{ title: 'Chat' }} />
     </Stack.Navigator>
   );
 }

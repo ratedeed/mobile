@@ -12,9 +12,9 @@ import {
   Dimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { FontAwesome5 } from '@expo/vector-icons';
-import { getTopRatedContractors, getNearbyTopRatedContractors } from '../api/contractor';
-import { getFeedPosts } from '../api/post';
+import { getTopRatedContractors, getNearbyTopRatedContractors, getFeedPosts } from '../utils/apiClient';
 import Header from '../components/common/Header';
 import Button from '../components/common/Button';
 import Card from '../components/common/Card';
@@ -23,6 +23,7 @@ import Typography from '../components/common/Typography';
 import { Spacing, Radii, Colors, Shadows } from '../constants/designTokens';
 import { SkeletonLoader } from '../components/common/SkeletonLoader';
 import { EmptyState } from '../components/common/EmptyState';
+import { Contractor, Post, RootStackParamList } from '../types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -39,46 +40,24 @@ const CATEGORIES = [
   { name: 'Cleaners', icon: 'broom' },
 ];
 
-const TESTIMONIALS = [
-  {
-    name: 'Sarah Johnson',
-    role: 'Homeowner',
-    avatar: 'https://randomuser.me/api/portraits/women/32.jpg',
-    rating: 5,
-    text: 'Found an amazing electrician through Ratedeed. The reviews were spot on and he did a fantastic job rewiring our home.',
-  },
-  {
-    name: 'Michael Rodriguez',
-    role: 'General Contractor',
-    avatar: 'https://randomuser.me/api/portraits/men/45.jpg',
-    rating: 5,
-    text: 'As a contractor, Ratedeed has helped me connect with so many new clients. The platform is easy to use.',
-  },
-  {
-    name: 'Jennifer Lee',
-    role: 'Homeowner',
-    avatar: 'https://randomuser.me/api/portraits/women/44.jpg',
-    rating: 4,
-    text: 'Great platform for finding reliable contractors. The verification badge gives me peace of mind.',
-  },
-];
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 const HomeScreen = () => {
-  const navigation = useNavigation();
-  const [zipCode, setZipCode] = useState('');
-  const [ipZipCode, setIpZipCode] = useState(null);
-  const [featuredContractors, setFeaturedContractors] = useState([]);
-  const [feedPosts, setFeedPosts] = useState([]);
-  const [loadingFeatured, setLoadingFeatured] = useState(true);
-  const [loadingFeed, setLoadingFeed] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState(null);
+  const navigation = useNavigation<NavigationProp>();
+  const [zipCode, setZipCode] = useState<string>('');
+  const [ipZipCode, setIpZipCode] = useState<string | null>(null);
+  const [featuredContractors, setFeaturedContractors] = useState<Contractor[]>([]);
+  const [feedPosts, setFeedPosts] = useState<Post[]>([]);
+  const [loadingFeatured, setLoadingFeatured] = useState<boolean>(true);
+  const [loadingFeed, setLoadingFeed] = useState<boolean>(true);
+  const [refreshing, setRefreshing] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchLocationAndData();
   }, []);
 
-  const fetchLocationAndData = async () => {
+  const fetchLocationAndData = async (): Promise<void> => {
     try {
       setError(null);
       const response = await fetch('https://free.freeipapi.com/api/json');
@@ -93,7 +72,7 @@ const HomeScreen = () => {
     }
   };
 
-  const loadFeaturedContractors = async (zip) => {
+  const loadFeaturedContractors = async (zip: string | null): Promise<void> => {
     if (!zip) {
       setLoadingFeatured(false);
       return;
@@ -116,10 +95,10 @@ const HomeScreen = () => {
     }
   };
 
-  const loadFeedPosts = async () => {
+  const loadFeedPosts = async (): Promise<void> => {
     setLoadingFeed(true);
     try {
-      const data = await getFeedPosts(ipZipCode);
+      const data = await getFeedPosts(ipZipCode || undefined);
       setFeedPosts(data?.posts || []);
     } catch (err) {
       console.error('Error fetching feed posts:', err);
@@ -135,37 +114,37 @@ const HomeScreen = () => {
     }
   }, [ipZipCode]);
 
-  const onRefresh = useCallback(async () => {
+  const onRefresh = useCallback(async (): Promise<void> => {
     setRefreshing(true);
     await fetchLocationAndData();
     await loadFeedPosts();
     setRefreshing(false);
   }, [ipZipCode]);
 
-  const handleSearch = () => {
+  const handleSearch = (): void => {
     const searchZip = zipCode.trim() || ipZipCode;
     navigation.navigate('Main', {
       screen: 'Search',
       params: { query: searchZip, searchType: 'zipCode' },
-    });
+    } as any);
   };
 
-  const handleCategoryPress = (category) => {
+  const handleCategoryPress = (category: string): void => {
     navigation.navigate('Main', {
       screen: 'Search',
       params: { query: category, searchType: 'category' },
-    });
+    } as any);
   };
 
-  const handleContractorPress = (contractor) => {
+  const handleContractorPress = (contractor: Contractor): void => {
     if (contractor.slug) {
-      navigation.navigate('BusinessDetail', { slug: contractor.slug });
+      navigation.navigate('BusinessDetail', { id: contractor._id, slug: contractor.slug });
     } else {
-      navigation.navigate('BusinessDetail', { contractorId: contractor._id });
+      navigation.navigate('BusinessDetail', { id: contractor._id });
     }
   };
 
-  const renderStars = (rating, size = 12) => (
+  const renderStars = (rating: number, size: number = 12) => (
     <View style={styles.starsContainer}>
       {[1, 2, 3, 4, 5].map((i) => (
         <FontAwesome5
@@ -345,7 +324,7 @@ const HomeScreen = () => {
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Typography variant="h5">Featured Contractors</Typography>
-          <TouchableOpacity onPress={() => navigation.navigate('Main', { screen: 'Search' })}>
+          <TouchableOpacity onPress={() => navigation.navigate('Main', { screen: 'Search' } as any)}>
             <Typography variant="body" style={styles.viewAllLink}>
               View All
             </Typography>
@@ -417,40 +396,13 @@ const HomeScreen = () => {
         />
       </View>
 
-      <View style={styles.testimonialsSection}>
-        <Typography variant="h5" style={styles.sectionHeaderTitle}>
-          What Our Users Say
-        </Typography>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.testimonialsContainer}>
-          {TESTIMONIALS.map((testimonial, index) => (
-            <Card key={index} style={styles.testimonialCard}>
-              {renderStars(testimonial.rating, 14)}
-              <Typography variant="body" style={styles.testimonialText}>
-                "{testimonial.text}"
-              </Typography>
-              <View style={styles.testimonialAuthor}>
-                <Avatar source={{ uri: testimonial.avatar }} size={40} />
-                <View style={styles.testimonialAuthorInfo}>
-                  <Typography variant="body" style={styles.testimonialName}>
-                    {testimonial.name}
-                  </Typography>
-                  <Typography variant="caption" style={styles.testimonialRole}>
-                    {testimonial.role}
-                  </Typography>
-                </View>
-              </View>
-            </Card>
-          ))}
-        </ScrollView>
-      </View>
-
       <View style={styles.footer}>
         <Typography variant="h5" style={styles.footerTitle}>
           Ready to Find Your Perfect Contractor?
         </Typography>
         <Button
           title="Search Now"
-          onPress={() => navigation.navigate('Main', { screen: 'Search' })}
+          onPress={() => navigation.navigate('Main', { screen: 'Search' } as any)}
           style={styles.footerButton}
         />
       </View>
@@ -717,38 +669,6 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
   },
   ctaButton: {},
-  testimonialsSection: {
-    paddingVertical: Spacing.lg,
-    backgroundColor: Colors.neutral50,
-    marginBottom: Spacing.md,
-  },
-  testimonialsContainer: {
-    paddingHorizontal: Spacing.lg,
-    gap: Spacing.md,
-  },
-  testimonialCard: {
-    width: 280,
-    marginRight: Spacing.md,
-  },
-  testimonialText: {
-    color: Colors.neutral700,
-    marginVertical: Spacing.md,
-    fontStyle: 'italic',
-  },
-  testimonialAuthor: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  testimonialAuthorInfo: {
-    marginLeft: Spacing.sm,
-  },
-  testimonialName: {
-    color: Colors.neutral900,
-    fontWeight: '600',
-  },
-  testimonialRole: {
-    color: Colors.neutral500,
-  },
   footer: {
     padding: Spacing.xl,
     backgroundColor: Colors.primary500,

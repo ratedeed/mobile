@@ -37,7 +37,7 @@ const TABS = [
 
 const ProfileScreen: React.FC = () => {
   const navigation = useNavigation();
-  const { logout, user: authUser } = useAuth();
+  const { logout, firebaseUser: authUser } = useAuth();
 
   const [activeTab, setActiveTab] = useState('overview');
   const [user, setUser] = useState<User | null>(null);
@@ -77,7 +77,7 @@ const ProfileScreen: React.FC = () => {
         zipCode: userData.zipCode || '',
         address: userData.address || '',
       });
-      setIs2FAEnabled(userData.is2FAEnabled || false);
+      setIs2FAEnabled((userData as any).is2FAEnabled || false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load profile');
     } finally {
@@ -199,7 +199,7 @@ const ProfileScreen: React.FC = () => {
   if (loading && !user) {
     return (
       <View style={styles.fullScreenContainer}>
-        <Header title="Profile" />
+        <Header title="Profile" onBackPress={() => {}} rightComponent={null} />
         <View style={styles.loadingContainer}>
           <SkeletonLoader type="profile" />
         </View>
@@ -210,7 +210,7 @@ const ProfileScreen: React.FC = () => {
   if (error) {
     return (
       <View style={styles.fullScreenContainer}>
-        <Header title="Profile" />
+        <Header title="Profile" onBackPress={() => {}} rightComponent={null} />
         <ErrorState message={error} onRetry={loadProfile} />
       </View>
     );
@@ -218,7 +218,7 @@ const ProfileScreen: React.FC = () => {
 
   return (
     <View style={styles.fullScreenContainer}>
-      <Header title="Profile" />
+      <Header title="Profile" onBackPress={() => {}} rightComponent={null} />
       <Tabs tabs={TABS} activeTab={activeTab} onTabChange={setActiveTab} />
 
       <ScrollView

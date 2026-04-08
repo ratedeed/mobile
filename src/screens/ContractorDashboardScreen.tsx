@@ -14,23 +14,27 @@ import {
   Linking,
 } from 'react-native';
 import {
+  getPortfolio,
+  addPortfolioItem,
+  updatePortfolioItem,
+  deletePortfolioItem,
+  updateContractorProfile,
+} from '../api/contractor';
+import {
   getContractorPosts,
   createPost,
   likePost,
   unlikePost,
   deletePost,
-  getPortfolio,
-  addPortfolioItem,
-  updatePortfolioItem,
-  deletePortfolioItem,
+} from '../api/post';
+import {
   getContractorEarnings,
   getContractorLeads,
   getContractorQuotes,
   getContractorJobs,
   getStripeConnectUrl,
   getStripeAccountStatus,
-  updateContractorProfile,
-} from '../api/contractor';
+} from '../api/stripe';
 import { getContractorReviews } from '../api/review';
 import { useImagePicker } from '../hooks/useImagePicker';
 import { Tabs, TabPanel } from '../components/common/Tabs';
@@ -45,7 +49,6 @@ import Card from '../components/common/Card';
 import Typography from '../components/common/Typography';
 import { Spacing, Radii, Colors, Shadows } from '../constants/designTokens';
 import { Post, Review, PortfolioItem, Quote, Lead, Job, Contractor, Earnings, StripeConnectStatus } from '../types';
-
 const TABS = [
   { key: 'posts', label: 'Posts' },
   { key: 'about', label: 'About' },
@@ -521,7 +524,7 @@ const ContractorDashboardScreen: React.FC = () => {
                 leads.map(lead => (
                   <View key={lead._id} style={styles.leadItem}>
                     <View>
-                      <Text style={styles.leadName}>{lead.user?.firstName} {lead.user?.lastName}</Text>
+                      <Text style={styles.leadName}>{(lead.user as any)?.firstName} {(lead.user as any)?.lastName}</Text>
                       <Text style={styles.leadProject}>{lead.projectTitle}</Text>
                     </View>
                     <Text style={styles.leadDate}>{formatDate(lead.createdAt)}</Text>
@@ -538,8 +541,8 @@ const ContractorDashboardScreen: React.FC = () => {
                 quotes.map(quote => (
                   <View key={quote._id} style={styles.quoteItem}>
                     <View>
-                      <Text style={styles.quoteClient}>{quote.clientName}</Text>
-                      <Text style={styles.quoteAmount}>{formatCurrency(quote.total)}</Text>
+                      <Text style={styles.quoteClient}>{(quote.user as any)?.firstName} {(quote.user as any)?.lastName}</Text>
+                      <Text style={styles.quoteAmount}>{formatCurrency(quote.totalAmount / 100)}</Text>
                     </View>
                     <View style={[styles.quoteStatus, { backgroundColor: getQuoteStatusColor(quote.status) + '20' }]}>
                       <Text style={[styles.quoteStatusText, { color: getQuoteStatusColor(quote.status) }]}>
@@ -801,7 +804,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary100,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
-    borderRadius: Radii.full,
+    borderRadius: Radii.round,
   },
   serviceTagText: {
     color: Colors.primary700,
@@ -868,7 +871,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: Colors.secondary500,
+    backgroundColor: Colors.primary500,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: Spacing.sm,

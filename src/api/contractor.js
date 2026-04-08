@@ -1,52 +1,99 @@
-import {
-  browseContractors as apiClientBrowseContractors,
-  getContractorDetails as apiClientGetContractorDetails,
-  updateContractorProfile as apiClientUpdateContractorProfile,
-  createPost as apiClientCreatePost,
-  listPosts as apiClientListPosts,
-  listContractorPosts as apiClientListContractorPosts,
-  likePost as apiClientLikePost,
-  commentOnPost as apiClientCommentOnPost,
-  submitReview as apiClientSubmitReview,
-  listContractorReviews as apiClientListContractorReviews, // Import the new function
-} from '../utils/apiClient';
+import { get, post, put, del, browseContractors as apiClientBrowse, getContractorDetails as apiClientGetContractorDetails, updateContractorProfile as apiClientUpdateContractorProfile, submitReview as apiClientSubmitReview, listContractorReviews as apiClientListContractorReviews, listContractorPosts as apiClientListContractorPosts, getAuthHeaders } from '../utils/apiClient';
+import { API_BASE_URL } from '../config';
 
-// This file will now act as a wrapper or a place for business logic
-// that might involve multiple API calls or data transformations before
-// calling the generic apiClient functions.
-
-export const fetchContractorDetails = async (contractorId) => {
-  return apiClientGetContractorDetails(contractorId);
+export const fetchContractorDetails = async (contractorId, token) => {
+  return apiClientGetContractorDetails(contractorId, token);
 };
 
 export const fetchFeaturedContractors = async (zipCode = null) => {
-  console.log('contractor.js: fetchFeaturedContractors received zipCode:', zipCode);
   const filters = { isFeatured: true };
   if (zipCode) {
-    filters.zip = zipCode; // Changed from filters.zipCode to filters.zip
+    filters.zipCode = zipCode;
   }
-  console.log('contractor.js: Filters object passed to apiClientBrowseContractors (sending "zip"):', filters);
-  return apiClientBrowseContractors(filters);
+  return browseContractors(filters);
 };
 
 export const searchContractors = async (filters) => {
-  return apiClientBrowseContractors(filters);
+  return browseContractors(filters);
+};
+
+export const browseContractors = async (queryParams = {}) => {
+  return apiClientBrowse(queryParams);
 };
 
 export const submitReview = async (contractorId, reviewData) => {
   return apiClientSubmitReview(contractorId, reviewData);
 };
 
-export const fetchContractorPosts = async (contractorId, queryParams = {}) => {
-  return apiClientListContractorPosts(contractorId, queryParams);
-};
-
 export const fetchContractorReviews = async (contractorId, queryParams = {}) => {
   return apiClientListContractorReviews(contractorId, queryParams);
 };
 
-export const updateContractorProfile = async (profileData) => {
-  // The backend route for updateContractorProfile is /api/contractors/profile (PUT)
-  // It does not take contractorId as a URL param, but infers from JWT.
-  return apiClientUpdateContractorProfile(profileData);
+export const updateContractorProfile = async (profileData, token) => {
+  return apiClientUpdateContractorProfile(profileData, token);
+};
+
+// Additional functions that HomeScreen and other screens may need
+export const getTopRatedContractors = async (zipCode, limit = 6) => {
+  const authHeaders = await getAuthHeaders();
+  return get(`${API_BASE_URL}/api/contractors?zipCode=${zipCode}&limit=${limit}&sortBy=rating`, authHeaders);
+};
+
+export const getNearbyTopRatedContractors = async (zipCode, excludeId) => {
+  const authHeaders = await getAuthHeaders();
+  let url = `${API_BASE_URL}/api/contractors?zipCode=${zipCode}&limit=6&sortBy=rating`;
+  if (excludeId) {
+    url += `&excludeId=${excludeId}`;
+  }
+  return get(url, authHeaders);
+};
+
+export const getContractorBySlug = async (slug) => {
+  const authHeaders = await getAuthHeaders();
+  return get(`${API_BASE_URL}/api/contractors/slug/${slug}`, authHeaders);
+};
+
+export const getContractorById = async (id) => {
+  const authHeaders = await getAuthHeaders();
+  return get(`${API_BASE_URL}/api/contractors/${id}`, authHeaders);
+};
+
+export const followContractor = async (contractorId) => {
+  const authHeaders = await getAuthHeaders();
+  return post(`${API_BASE_URL}/api/contractors/${contractorId}/follow`, {}, authHeaders);
+};
+
+export const unfollowContractor = async (contractorId) => {
+  const authHeaders = await getAuthHeaders();
+  return del(`${API_BASE_URL}/api/contractors/${contractorId}/follow`, authHeaders);
+};
+
+export const getPortfolio = async (contractorId) => {
+  const authHeaders = await getAuthHeaders();
+  return get(`${API_BASE_URL}/api/contractors/${contractorId}/portfolio`, authHeaders);
+};
+
+export const addPortfolioItem = async (item) => {
+  const authHeaders = await getAuthHeaders();
+  return post(`${API_BASE_URL}/api/contractors/portfolio`, item, authHeaders);
+};
+
+export const updatePortfolioItem = async (itemId, item) => {
+  const authHeaders = await getAuthHeaders();
+  return put(`${API_BASE_URL}/api/contractors/portfolio/${itemId}`, item, authHeaders);
+};
+
+export const deletePortfolioItem = async (itemId) => {
+  const authHeaders = await getAuthHeaders();
+  return del(`${API_BASE_URL}/api/contractors/portfolio/${itemId}`, authHeaders);
+};
+
+export const getContractorLeads = async () => {
+  const authHeaders = await getAuthHeaders();
+  return get(`${API_BASE_URL}/api/contractors/leads`, authHeaders);
+};
+
+export const getContractorEarnings = async () => {
+  const authHeaders = await getAuthHeaders();
+  return get(`${API_BASE_URL}/api/contractors/earnings`, authHeaders);
 };

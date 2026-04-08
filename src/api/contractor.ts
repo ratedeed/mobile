@@ -1,9 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { API_BASE_URL } from '../config';
 import { Contractor, ContractorsResponse } from '../types';
 
 const getAuthHeaders = async () => {
-  const token = await AsyncStorage.getItem('userToken');
+  const token = await SecureStore.getItemAsync('userToken');
   return {
     'Content-Type': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -122,40 +123,12 @@ export const deletePortfolioItem = async (itemId: string): Promise<void> => {
   handleResponse(res);
 };
 
-export const getContractorLeads = async (): Promise<any[]> => {
-  const headers = await getAuthHeaders();
-  const res = await fetch(`${API_BASE_URL}/api/contractors/leads`, {
-    headers,
-  });
-  return handleResponse(res);
-};
-
-export const getContractorEarnings = async (): Promise<any> => {
-  const headers = await getAuthHeaders();
-  const res = await fetch(`${API_BASE_URL}/api/contractors/earnings`, {
-    headers,
-  });
-  return handleResponse(res);
-};
-
 export const fetchContractorDetails = async (contractorId: string): Promise<Contractor> => {
   const headers = await getAuthHeaders();
   const res = await fetch(`${API_BASE_URL}/api/contractors/${contractorId}`, {
     headers,
   });
   return handleResponse(res);
-};
-
-export const fetchContractorPosts = async (contractorId: string): Promise<{ posts: any[] }> => {
-  const res = await fetch(`${API_BASE_URL}/api/posts/contractor/${contractorId}`);
-  const data = await handleResponse(res);
-  return Array.isArray(data) ? { posts: data } : data;
-};
-
-export const fetchContractorReviews = async (contractorId: string): Promise<any[]> => {
-  const res = await fetch(`${API_BASE_URL}/api/reviews/contractor/${contractorId}`);
-  const data = await handleResponse(res);
-  return data.reviews || data;
 };
 
 export const submitReview = async (contractorId: string, reviewData: { rating: number; title: string; comment: string }): Promise<any> => {

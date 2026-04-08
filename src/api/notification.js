@@ -1,56 +1,22 @@
-import axios from 'axios';
+import { get, put, del, getAuthHeaders } from '../utils/apiClient';
 import { API_BASE_URL } from '../config';
 
-export const fetchNotifications = async (token) => {
-  try {
-    const config = {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    };
-    const { data } = await axios.get(`${API_BASE_URL}/api/notifications`, config);
-    return data;
-  } catch (error) {
-    const message =
-      error.response && error.response.data.message
-        ? error.response.data.message
-        : error.message;
-    throw new Error(message);
-  }
+export const getNotifications = async () => {
+  const authHeaders = await getAuthHeaders();
+  return get(`${API_BASE_URL}/api/notifications`, authHeaders);
 };
 
-export const markNotificationAsRead = async (notificationId, token) => {
-  try {
-    const config = {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    };
-    const { data } = await axios.put(`${API_BASE_URL}/api/notifications/${notificationId}/read`, {}, config);
-    return data;
-  } catch (error) {
-    const message =
-      error.response && error.response.data.message
-        ? error.response.data.message
-        : error.message;
-    throw new Error(message);
-  }
+export const markNotificationRead = async (notificationId) => {
+  const authHeaders = await getAuthHeaders();
+  return put(`${API_BASE_URL}/api/notifications/${notificationId}/read`, {}, authHeaders);
 };
 
-export const deleteNotification = async (notificationId, token) => {
-  try {
-    const config = {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    };
-    const { data } = await axios.delete(`${API_BASE_URL}/api/notifications/${notificationId}`, config);
-    return data;
-  } catch (error) {
-    const message =
-      error.response && error.response.data.message
-        ? error.response.data.message
-        : error.message;
-    throw new Error(message);
-  }
+export const markAllNotificationsRead = async () => {
+  const authHeaders = await getAuthHeaders();
+  return put(`${API_BASE_URL}/api/notifications/read-all`, {}, authHeaders);
+};
+
+export const deleteNotification = async (notificationId) => {
+  const authHeaders = await getAuthHeaders();
+  return del(`${API_BASE_URL}/api/notifications/${notificationId}`, authHeaders);
 };

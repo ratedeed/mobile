@@ -137,8 +137,39 @@ const styles = StyleSheet.create({
     left: 16,
     right: 16,
     zIndex: 99999,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 4,
   },
   container2: {
     flex: 1,
+  },
+  iconContainer: {
+    marginRight: 12,
+  },
+  icon: {
+    fontSize: 18,
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  message: {
+    flex: 1,
+    color: '#fff',
+    fontSize: 14,
+  },
+  closeButton: {
+    marginLeft: 12,
+    padding: 4,
+  },
+  closeText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
 });

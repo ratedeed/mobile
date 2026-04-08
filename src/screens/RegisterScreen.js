@@ -52,8 +52,8 @@ const RegisterScreen = () => {
 
       // Ensure any existing backend token is cleared before registering with backend
       console.log('RegisterScreen: Checking AsyncStorage availability before removeItem:', typeof AsyncStorage);
-      await AsyncStorage.removeItem('userToken');
-      console.log('RegisterScreen: Cleared any existing userToken from AsyncStorage before backend registration.');
+      await AsyncStorage.removeItem('userInfo');
+      console.log('RegisterScreen: Cleared any existing userInfo from AsyncStorage before backend registration.');
 
       await register(firstName, lastName, email, password, zipCode, user.uid); // Pass Firebase UID to backend
 

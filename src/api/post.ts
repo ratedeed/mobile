@@ -1,9 +1,9 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { API_BASE_URL } from '../config';
 import { Post, PostComment } from '../types';
 
 const getAuthHeaders = async () => {
-  const token = await AsyncStorage.getItem('userToken');
+  const token = await SecureStore.getItemAsync('userToken');
   return {
     'Content-Type': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -102,6 +102,12 @@ export const reportPost = async (postId: string, reason: string): Promise<void> 
   handleResponse(res);
 };
 
+export const getContractorPostsForFeed = async (contractorId: string): Promise<Post[]> => {
+  const res = await fetch(`${API_BASE_URL}/api/posts/contractor/${contractorId}`);
+  const data = await handleResponse(res);
+  return Array.isArray(data) ? data : (data.posts || []);
+};
+
 export const fetchContractorPosts = async (contractorId: string): Promise<{ posts: Post[] }> => {
-  return getContractorPosts(contractorId).then(posts => ({ posts }));
+  return getContractorPostsForFeed(contractorId).then(posts => ({ posts }));
 };

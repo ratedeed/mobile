@@ -156,7 +156,8 @@ const NotificationsScreen: React.FC = () => {
     <View style={styles.fullScreenContainer}>
       <Header
         title="Notifications"
-        rightAction={
+        onBackPress={() => {}}
+        rightComponent={
           unreadCount > 0 ? (
             <TouchableOpacity onPress={handleMarkAllAsRead}>
               <Text style={styles.markAllText}>Mark all read</Text>

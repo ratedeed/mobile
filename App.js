@@ -1,23 +1,50 @@
 import { NavigationContainer } from '@react-navigation/native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AuthNavigator from './src/navigation/AuthNavigator';
 import MainNavigator from './src/navigation/MainNavigator';
 import LoadingScreen from './src/screens/LoadingScreen';
-import { auth } from './src/firebaseConfig';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
-import { useEffect } from 'react';
+import { ContractorProvider } from './src/context/ContractorContext';
+import { NotificationsProvider } from './src/context/NotificationsContext';
+import ErrorBoundary from './src/components/ErrorBoundary';
+import * as Sentry from '@sentry/react-native';
+import { usePushNotifications } from './src/hooks/usePushNotifications';
+
+Sentry.init({
+  dsn: 'https://placeholder@sentry.io/1234567', // Replace with your actual Sentry DSN
+  debug: false,
+});
+
+const linking = {
+  prefixes: ['ratedeed://', 'https://ratedeed.com'],
+  config: {
+    screens: {
+      Main: {
+        screens: {
+          Home: '',
+          Search: 'search',
+          Messages: 'messages',
+          Profile: 'profile',
+          Dashboard: 'dashboard',
+        },
+      },
+      BusinessDetail: 'contractor/:slug',
+      ChatScreen: 'chat/:recipientId',
+      Notifications: 'notifications',
+    },
+  },
+};
 
 function AppContent() {
-  const { isAuthenticated, loading } = useAuth();
-  console.log('AppContent: loading state from useAuth():', loading);
-  console.log('AppContent: isAuthenticated state from useAuth():', isAuthenticated);
+  const { isAuthenticated, isLoading } = useAuth();
+  usePushNotifications(); // Initialize push notification listeners
 
-  // Use the loading state from AuthContext
-  if (loading) {
+  if (isLoading) {
     return <LoadingScreen />;
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer linking={linking}>
       {isAuthenticated ? <MainNavigator /> : <AuthNavigator />}
     </NavigationContainer>
   );
@@ -25,10 +52,19 @@ function AppContent() {
 
 function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <SafeAreaProvider>
+      <ErrorBoundary>
+        <AuthProvider>
+          <NotificationsProvider>
+            <ContractorProvider>
+              <AppContent />
+            </ContractorProvider>
+          </NotificationsProvider>
+        </AuthProvider>
+      </ErrorBoundary>
+    </SafeAreaProvider>
   );
 }
 
-export default App;
+export default Sentry.wrap(App);
+

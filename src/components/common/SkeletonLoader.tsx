@@ -45,11 +45,11 @@ export const Skeleton: React.FC<SkeletonProps> = ({
     <Animated.View
       style={[
         {
-          width,
+          width: width as any,
           height,
           borderRadius,
           backgroundColor: Colors.neutral300,
-          opacity,
+          opacity: opacity as any,
         },
         style,
       ]}

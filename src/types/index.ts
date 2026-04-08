@@ -1,4 +1,4 @@
-// Core interfaces matching web js/script.ts
+// Core interfaces matching backend models
 
 export interface LocationData {
   zip: string;
@@ -34,28 +34,50 @@ export interface ContractorUser {
 
 export interface Contractor {
   _id: string;
-  companyName: string;
+  user?: {
+    _id: string;
+    firstName: string;
+    lastName: string;
+    profilePicture?: string;
+  };
+  businessName?: string;
+  companyName?: string;
   slug?: string;
   profilePicture?: string;
   bannerImage?: string;
+  licenseDocumentUrl?: string;
   category?: string;
   contactInfo?: ContactInfo;
+  contact?: {
+    phone?: string;
+    email?: string;
+    website?: string;
+    address?: string;
+  };
   zipCodesCovered?: string[];
+  zipCode?: string;
   averageRating?: number;
   numReviews?: number;
+  rating?: number;
+  reviews?: number;
   isVerified?: boolean;
   isSponsored?: boolean;
+  isPremium?: boolean;
   tags?: Array<Tag | string>;
   servicesOffered?: Array<Service | string>;
+  services?: string[];
   description?: string;
+  bio?: string;
   pricing?: string;
   certifications?: string[];
+  yearsInBusiness?: number;
   businessHours?: Record<string, { start: string; end: string }>;
   licenseNumber?: string;
   licenseStatus?: string;
   status?: string;
   portfolio?: PortfolioItem[];
-  user?: ContractorUser;
+  posts?: Post[];
+  reviewsList?: Review[];
 }
 
 export interface PortfolioItem {
@@ -77,6 +99,7 @@ export interface ContractorsResponse {
 export interface Review {
   _id: string;
   user?: {
+    _id?: string;
     firstName?: string;
     lastName?: string;
     profilePicture?: string;
@@ -91,25 +114,30 @@ export interface Post {
   _id: string;
   caption: string;
   images: string[];
-  likes: string[];
+  likes: Array<{ _id: string } | string>;
   comments: PostComment[];
   contractor: {
+    _id: string;
     user: ContractorUser;
     contactInfo?: ContactInfo;
     slug?: string;
+    businessName?: string;
+    companyName?: string;
   };
   createdAt: string;
 }
 
 export interface PostComment {
-  user: {
+  _id?: string;
+  user?: {
+    _id?: string;
     profilePicture?: string;
     firstName?: string;
     lastName?: string;
   };
-  userName: string;
+  userName?: string;
   text: string;
-  createdAt: string;
+  createdAt?: string;
 }
 
 export interface Notification {
@@ -117,6 +145,7 @@ export interface Notification {
   message: string;
   link?: string;
   read: boolean;
+  type?: 'new_message' | 'new_review' | 'admin_alert' | 'system_update' | 'new_quote' | 'quote_accepted' | 'quote_rejected' | 'new_lead' | 'job_update' | 'job_funded';
   createdAt?: string;
 }
 
@@ -149,53 +178,71 @@ export interface Category {
   bgImage: string;
 }
 
-// Stripe/Payment types from js/stripe-contractor.ts
+// Quote/Job/Lead types - matching backend models
 
 export interface QuoteLineItem {
   description: string;
-  quantity: number;
-  unitPrice: number;
+  amount?: number; // in cents (backend stores cents)
+  quantity?: number;
+  unitPrice?: number;
 }
 
 export interface Quote {
   _id: string;
-  contractorId: string;
-  clientId: string;
-  clientName: string;
+  contractor: string | Contractor;
+  user: string | User;
+  description?: string;
   lineItems: QuoteLineItem[];
-  subtotal: number;
-  platformFee: number;
-  total: number;
-  status: 'pending_user_approval' | 'accepted' | 'rejected';
-  estimatedCompletion?: string;
-  notes?: string;
+  subtotal: number; // Contractor payout (in cents)
+  platformFee: number; // Platform profit (in cents)
+  totalAmount: number; // What customer pays (in cents)
+  estimatedCompletionDate?: string;
+  contractorNotes?: string;
+  status: 'pending_user_approval' | 'accepted' | 'rejected' | 'expired';
+  expiresAt?: string;
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface Job {
   _id: string;
-  quoteId: string;
-  clientId: string;
-  contractorId: string;
-  fundedAmount: number;
-  status: 'funded_in_progress' | 'completed_paid' | 'awaiting_payment';
+  quote: string | Quote;
+  contractor: string | Contractor;
+  user: string | User;
+  amountFunded: number;
+  status: 'awaiting_payment' | 'funded_in_progress' | 'completed_pending_release' | 'completed_paid' | 'cancelled' | 'disputed';
+  stripeTransferId?: string;
+  completionNotes?: string;
+  completionDate?: string;
+  startedAt?: string;
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface Lead {
   _id: string;
-  contractorId: string;
-  user?: ContractorUser;
+  contractor: string | Contractor;
+  user: string | User;
   projectTitle: string;
   description: string;
-  contactPreference?: string;
+  contactPreference?: 'email' | 'phone' | 'message' | 'any';
+  status: 'new' | 'contacted' | 'quoted' | 'in_progress' | 'completed' | 'lost';
+  budget?: string;
+  timeline?: string;
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface Earnings {
   totalEarnings: number;
   pendingEscrow: number;
   monthlyEarnings: MonthlyEarning[];
+  totalJobs?: number;
+  completedJobs?: number;
+  pendingJobs?: number;
+  totalQuotes?: number;
+  acceptedQuotes?: number;
+  pendingQuotes?: number;
 }
 
 export interface MonthlyEarning {
@@ -256,22 +303,27 @@ export interface ContractorQueryParams {
   limit?: number;
   search?: string;
   zip?: string;
+  zipCode?: string;
   category?: string;
+  type?: string;
+  name?: string;
   status?: string;
   isVerified?: boolean;
   minRating?: number;
   sortBy?: string;
+  isFeatured?: boolean;
 }
 
 export interface PostQueryParams {
   page?: number;
   limit?: number;
   zip?: string;
+  contractor?: string;
 }
 
 // Navigation types
 
-export interface RootStackParamList {
+export type RootStackParamList = {
   Auth: undefined;
   Main: undefined;
   Login: undefined;
@@ -281,15 +333,17 @@ export interface RootStackParamList {
   Search: undefined;
   Messages: undefined;
   Profile: undefined;
-  BusinessDetail: { contractorId: string; slug?: string };
+  BusinessDetail: { id: string; slug?: string };
   ContractorDashboard: undefined;
-  AdminDashboard: undefined;
-  Chat: { recipientId: string; recipientName?: string };
+  ChatScreen: { recipientId?: string; recipientName?: string };
   Notifications: undefined;
-  BusinessSearch: { category?: string };
+  BusinessSearch: { query?: string; searchType?: string; category?: string };
   ReviewForm: { contractorId: string };
   EditProfile: undefined;
   Settings: undefined;
-}
+  QuoteDetail: { quoteId: string };
+  JobDetail: { jobId: string };
+  LeadDetail: { leadId: string };
+};
 
 export type UserRole = 'user' | 'contractor' | 'admin';

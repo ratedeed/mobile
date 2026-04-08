@@ -6,23 +6,32 @@ import {
   TouchableOpacity,
   Image,
   ActivityIndicator,
-  Alert,
   TextInput,
   RefreshControl,
+  ListRenderItemInfo,
 } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 import { FontAwesome5 } from '@expo/vector-icons';
-import { browseContractors, getContractorById } from '../api/contractor';
+import { browseContractors } from '../api/contractor';
+import { Contractor } from '../types';
 import { Spacing, Radii, Colors, Shadows } from '../constants/designTokens';
 import Header from '../components/common/Header';
-import Input from '../components/common/Input';
 import Card from '../components/common/Card';
 import Typography from '../components/common/Typography';
 import { SkeletonLoader } from '../components/common/SkeletonLoader';
 import { EmptyState } from '../components/common/EmptyState';
 import { Badge } from '../components/common/Badge';
 
-const CATEGORIES = [
+type RootStackParamList = {
+  BusinessSearch: { query?: string; searchType?: string };
+  BusinessDetail: { contractorId?: string; slug?: string };
+};
+
+type BusinessSearchScreenRouteProp = RouteProp<RootStackParamList, 'BusinessSearch'>;
+type BusinessSearchScreenNavigationProp = StackNavigationProp<RootStackParamList, 'BusinessSearch'>;
+
+const CATEGORIES: string[] = [
   'All',
   'Home Builders',
   'Plumbers',
@@ -36,34 +45,39 @@ const CATEGORIES = [
   'Cleaners',
 ];
 
-const SORT_OPTIONS = [
+export interface SortOption {
+  key: string;
+  label: string;
+}
+
+const SORT_OPTIONS: SortOption[] = [
   { key: 'rating', label: 'Highest Rated' },
   { key: 'reviews', label: 'Most Reviews' },
   { key: 'distance', label: 'Nearest' },
 ];
 
-const BusinessSearchScreen = () => {
-  const navigation = useNavigation();
-  const route = useRoute();
+const BusinessSearchScreen: React.FC = () => {
+  const navigation = useNavigation<BusinessSearchScreenNavigationProp>();
+  const route = useRoute<BusinessSearchScreenRouteProp>();
   const { query, searchType } = route.params || {};
 
-  const [searchQuery, setSearchQuery] = useState(query || '');
-  const [selectedCategory, setSelectedCategory] = useState(
-    searchType === 'category' ? query : ''
+  const [searchQuery, setSearchQuery] = useState<string>(query || '');
+  const [selectedCategory, setSelectedCategory] = useState<string>(
+    searchType === 'category' ? (query || '') : ''
   );
-  const [sortBy, setSortBy] = useState('rating');
-  const [contractors, setContractors] = useState([]);
-  const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
-  const [totalResults, setTotalResults] = useState(0);
-  const [refreshing, setRefreshing] = useState(false);
+  const [sortBy, setSortBy] = useState<string>('rating');
+  const [contractors, setContractors] = useState<Contractor[]>([]);
+  const [page, setPage] = useState<number>(1);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [loadingMore, setLoadingMore] = useState<boolean>(false);
+  const [hasMore, setHasMore] = useState<boolean>(true);
+  const [totalResults, setTotalResults] = useState<number>(0);
+  const [refreshing, setRefreshing] = useState<boolean>(false);
 
-  const isFirstRender = useRef(true);
+  const isFirstRender = useRef<boolean>(true);
 
   const fetchContractors = useCallback(
-    async (pageNum = 1, append = false) => {
+    async (pageNum: number = 1, append: boolean = false) => {
       try {
         if (pageNum === 1) {
           setLoading(true);
@@ -71,7 +85,7 @@ const BusinessSearchScreen = () => {
           setLoadingMore(true);
         }
 
-        const filters = {
+        const filters: any = {
           page: pageNum,
           limit: 20,
           sortBy: sortBy,
@@ -90,7 +104,7 @@ const BusinessSearchScreen = () => {
         const data = await browseContractors(filters);
 
         if (append) {
-          setContractors(prev => [...prev, ...data.contractors]);
+          setContractors(prev => [...prev, ...(data.contractors || [])]);
         } else {
           setContractors(data.contractors || []);
         }
@@ -119,14 +133,16 @@ const BusinessSearchScreen = () => {
       return;
     }
     fetchContractors(1, false);
-  }, [selectedCategory, sortBy]);
+  }, [selectedCategory, sortBy, fetchContractors]);
 
   useEffect(() => {
     const debounceTimer = setTimeout(() => {
-      fetchContractors(1, false);
+      if (!isFirstRender.current) {
+        fetchContractors(1, false);
+      }
     }, 500);
     return () => clearTimeout(debounceTimer);
-  }, [searchQuery]);
+  }, [searchQuery, fetchContractors]);
 
   const handleSearch = () => {
     fetchContractors(1, false);
@@ -143,12 +159,12 @@ const BusinessSearchScreen = () => {
     fetchContractors(1, false);
   };
 
-  const handleCategorySelect = (category) => {
+  const handleCategorySelect = (category: string) => {
     setSelectedCategory(category === 'All' ? '' : category);
     setSearchQuery('');
   };
 
-  const renderStarRating = (rating) => {
+  const renderStarRating = (rating?: number) => {
     if (!rating) return null;
     const fullStars = Math.floor(rating);
     const hasHalf = rating % 1 >= 0.5;
@@ -162,15 +178,15 @@ const BusinessSearchScreen = () => {
             solid={i <= fullStars}
             size={12}
             color={Colors.warning500}
-            style={styles.starIcon}
+            style={styles.starIcon as any}
           />
         ))}
       </View>
     );
   };
 
-  const renderContractorCard = ({ item }) => (
-    <Card style={styles.contractorCard}>
+  const renderContractorCard = ({ item }: ListRenderItemInfo<Contractor>) => (
+    <Card style={styles.contractorCard as any}>
       <TouchableOpacity
         onPress={() => {
           if (item._id) {
@@ -183,7 +199,7 @@ const BusinessSearchScreen = () => {
       >
         <Image
           source={{ uri: item.profilePicture || 'https://via.placeholder.com/300x200' }}
-          style={styles.contractorImage}
+          style={styles.contractorImage as any}
         />
         <View style={styles.contractorInfo}>
           <View style={styles.nameRow}>
@@ -266,6 +282,8 @@ const BusinessSearchScreen = () => {
     );
   }
 
+  const categoryListData = [{ key: 'categories' }, ...CATEGORIES.map((c) => ({ key: c }))];
+
   return (
     <View style={styles.fullScreenContainer}>
       <Header title="Search Contractors" showBackButton />
@@ -273,7 +291,7 @@ const BusinessSearchScreen = () => {
       <View style={styles.searchContainer}>
         <View style={styles.searchRow}>
           <View style={styles.searchInputContainer}>
-            <FontAwesome5 name="search" size={16} color={Colors.neutral500} style={styles.searchIcon} />
+            <FontAwesome5 name="search" size={16} color={Colors.neutral500} style={styles.searchIcon as any} />
             <TextInput
               style={styles.searchInput}
               placeholder="Search by name, zip code..."
@@ -292,7 +310,7 @@ const BusinessSearchScreen = () => {
         </View>
 
         <FlatList
-          data={[{ key: 'categories' }, ...CATEGORIES.map((c) => ({ key: c }))]}
+          data={categoryListData}
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.categoryContainer}
@@ -322,7 +340,7 @@ const BusinessSearchScreen = () => {
       <FlatList
         data={contractors}
         renderItem={renderContractorCard}
-        keyExtractor={(item) => item._id || item.slug}
+        keyExtractor={(item) => item._id || item.slug || Math.random().toString()}
         numColumns={2}
         columnWrapperStyle={styles.row}
         contentContainerStyle={styles.listContainer}
@@ -389,7 +407,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.neutral200,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
-    borderRadius: Radii.full,
+    borderRadius: Radii.round,
     marginRight: Spacing.sm,
   },
   categoryChipActive: {

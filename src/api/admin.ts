@@ -187,3 +187,12 @@ export const deleteCategory = async (categoryId: string): Promise<void> => {
   });
   handleResponse(res);
 };
+
+export const uploadToCloudinary = async (file: File | Blob, folder: string): Promise<string> => {
+  // Mock upload implementation
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve('https://res.cloudinary.com/demo/image/upload/sample.jpg');
+    }, 1000);
+  });
+};

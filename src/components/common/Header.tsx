@@ -5,7 +5,14 @@ import { Spacing, Colors, Shadows } from '../../constants/designTokens';
 import { useNavigation } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 
-const Header = ({ title, showBackButton = false, onBackPress, rightComponent }) => {
+export interface HeaderProps {
+  title: string;
+  showBackButton?: boolean;
+  onBackPress?: () => void;
+  rightComponent?: React.ReactNode;
+}
+
+const Header: React.FC<HeaderProps> = ({ title, showBackButton = false, onBackPress, rightComponent }) => {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
 
@@ -30,27 +37,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    ...Shadows.lg, // Apply large shadow for layered depth
-    zIndex: 10, // Ensure header is above other content
+    ...Shadows.lg,
+    zIndex: 10,
   },
   backButton: {
     position: 'absolute',
     left: Spacing.lg,
-    // Top will be handled by safeAreaInsets
     padding: Spacing.xs,
   },
   headerTitle: {
     color: Colors.neutral50,
-    fontSize: 22, // Consider defining font sizes in designTokens
+    fontSize: 22,
     fontWeight: '800',
     letterSpacing: 0.8,
     textAlign: 'center',
-    flex: 1, // Allow title to take available space
+    flex: 1,
   },
   rightComponent: {
     position: 'absolute',
     right: Spacing.lg,
-    // Top will be handled by safeAreaInsets
   },
 });
 
