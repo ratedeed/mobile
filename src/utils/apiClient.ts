@@ -1,5 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../config';
+import io, { Socket } from 'socket.io-client';
+import { auth as firebaseAuth } from '../firebaseConfig';
 import {
   Contractor,
   Post,
@@ -19,47 +21,24 @@ import {
   UserQueryParams,
   ContractorQueryParams,
   PostComment,
+  QuoteLineItem,
 } from '../types/index';
 
 const API_BASE = API_BASE_URL;
 
-export interface CreatePostData {
-  caption: string;
-  images?: string[];
-  [key: string]: any;
-}
+// ==========================================
+// Base API Client Functions
+// ==========================================
 
-export interface CreateQuoteData {
-  contractorId: string;
-  clientId: string;
-  clientName?: string;
-  lineItems: Array<{ description: string; quantity: number; unitPrice: number }>;
-  [key: string]: any;
-}
-
-/**
- * Helper function to get authorization headers with JWT token.
- * @param {string} [externalToken] - Optional external token to use instead of stored token.
- * @returns {Promise<Record<string, string>>} Headers object with Authorization if token exists.
- */
 export const getAuthHeaders = async (externalToken?: string): Promise<Record<string, string>> => {
   if (externalToken) {
     return { 'Authorization': `Bearer ${externalToken}` };
   }
   const userInfo = await AsyncStorage.getItem('userInfo');
   const token = userInfo ? JSON.parse(userInfo).token : null;
-  if (!token) {
-    console.warn("Authentication token not found in AsyncStorage. API requests may fail.");
-  }
   return token ? { 'Authorization': `Bearer ${token}` } : {};
 };
 
-/**
- * Handles API responses, checking for errors and parsing JSON.
- * @param {Response} response - The fetch API response object.
- * @returns {Promise<any>} The parsed JSON data or text.
- * @throws {Error} If the response is not OK.
- */
 export const handleResponse = async (response: Response): Promise<any> => {
   if (!response.ok) {
     const errorText = await response.text();
@@ -82,42 +61,26 @@ export const handleResponse = async (response: Response): Promise<any> => {
   }
 };
 
-/**
- * Generic GET request.
- */
 export const get = async (url: string, headers: Record<string, string> = {}): Promise<any> => {
   const response = await fetch(url, {
     method: 'GET',
-    headers: {
-      ...headers,
-    },
+    headers: { ...headers },
   });
   return handleResponse(response);
 };
 
-/**
- * Generic POST request.
- */
 export const post = async (url: string, data: any, headers: Record<string, string> = {}): Promise<any> => {
-  try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...headers,
-      },
-      body: JSON.stringify(data),
-    });
-    return handleResponse(response);
-  } catch (error) {
-    console.error('apiClient.ts: Network or Fetch Error during POST to', url, ':', error);
-    throw error;
-  }
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...headers,
+    },
+    body: JSON.stringify(data),
+  });
+  return handleResponse(response);
 };
 
-/**
- * Generic PUT request.
- */
 export const put = async (url: string, data: any, headers: Record<string, string> = {}): Promise<any> => {
   const response = await fetch(url, {
     method: 'PUT',
@@ -130,60 +93,124 @@ export const put = async (url: string, data: any, headers: Record<string, string
   return handleResponse(response);
 };
 
-/**
- * Generic DELETE request.
- */
 export const del = async (url: string, headers: Record<string, string> = {}): Promise<any> => {
   const response = await fetch(url, {
     method: 'DELETE',
-    headers: {
-      ...headers,
-    },
+    headers: { ...headers },
   });
   return handleResponse(response);
 };
 
 // ==========================================
-// Existing Contractor API implementations
+// Auth API
 // ==========================================
 
-export const browseContractors = async (queryParams: Record<string, any> = {}): Promise<ContractorsResponse> => {
-  const queryString = new URLSearchParams(queryParams as Record<string, string>).toString();
-  const url = `${API_BASE}/api/contractors?${queryString}`;
-  const authHeaders = await getAuthHeaders();
-  return get(url, authHeaders);
-};
-
-export const createContractor = async (contractorData: Partial<Contractor>): Promise<Contractor> => {
-  const authHeaders = await getAuthHeaders();
-  return post(`${API_BASE}/api/contractors`, contractorData, authHeaders);
-};
-
-export const getMyContractorProfile = async (token?: string): Promise<Contractor> => {
-  const authHeaders = await getAuthHeaders(token);
-  return get(`${API_BASE}/api/contractors/profile`, authHeaders);
-};
-
-export const updateContractorProfile = async (profileData: Partial<Contractor>, token?: string): Promise<Contractor> => {
-  const authHeaders = await getAuthHeaders(token);
-  return put(`${API_BASE}/api/contractors/profile`, profileData, authHeaders);
-};
-
-export const getContractorDetails = async (contractorId: string, token?: string): Promise<Contractor> => {
-  const authHeaders = await getAuthHeaders(token);
-  if (contractorId === 'profile') {
-    return get(`${API_BASE}/api/contractors/profile`, authHeaders);
+export const login = async (email: string, password: string): Promise<any> => {
+  const data = await post(`${API_BASE}/api/users/login`, { email, password });
+  if (data && data.token) {
+    await AsyncStorage.setItem('userInfo', JSON.stringify({ token: data.token, ...data.user }));
   }
+  return data;
+};
+
+export const logout = async (): Promise<void> => {
+  await AsyncStorage.removeItem('userInfo');
+};
+
+export const register = async (data: any): Promise<any> => {
+  return post(`${API_BASE}/api/users/signup`, data);
+};
+
+export const verifyEmailBackend = async (email: string): Promise<any> => {
+  return post(`${API_BASE}/api/users/verify-email`, { email });
+};
+
+export const forgotPassword = async (email: string): Promise<any> => {
+  return post(`${API_BASE}/api/auth/forgot-password`, { email });
+};
+
+export const contractorSignup = async (data: any): Promise<any> => {
+  return post(`${API_BASE}/api/auth/contractor-signup`, data);
+};
+
+export const backendLoginFirebase = async (idToken: string, email: string): Promise<any> => {
+  const headers = { 'Authorization': `Bearer ${idToken}` };
+  const data = await post(`${API_BASE}/api/users/login`, { email, firebaseUid: firebaseAuth.currentUser?.uid }, headers);
+  if (data && data.token) {
+    await AsyncStorage.setItem('userInfo', JSON.stringify({ token: data.token, ...data.user }));
+  }
+  return data;
+};
+
+export const syncEmailVerificationStatus = async (idToken: string, email: string, isVerified: boolean): Promise<any> => {
+  const headers = { 'Authorization': `Bearer ${idToken}` };
+  return post(`${API_BASE}/api/users/verify-email`, { email, isVerified, firebaseUid: firebaseAuth.currentUser?.uid }, headers);
+};
+
+// ==========================================
+// Contractor API
+// ==========================================
+
+export const browseContractors = async (queryParams: ContractorQueryParams = {}): Promise<ContractorsResponse> => {
+  const queryString = new URLSearchParams(queryParams as any).toString();
+  return get(`${API_BASE}/api/contractors?${queryString}`);
+};
+
+export const getTopRatedContractors = async (zipCode: string, limit: number = 6): Promise<Contractor[]> => {
+  return get(`${API_BASE}/api/contractors/top-rated?zipCode=${zipCode}&limit=${limit}`);
+};
+
+export const getNearbyTopRatedContractors = async (zipCode: string, excludeId?: string): Promise<Contractor[]> => {
+  let url = `${API_BASE}/api/contractors/nearby?zipCode=${zipCode}`;
+  if (excludeId) url += `&excludeId=${excludeId}`;
+  return get(url);
+};
+
+export const getContractorBySlug = async (slug: string): Promise<Contractor> => {
+  return get(`${API_BASE}/api/contractors/slug/${slug}`);
+};
+
+export const getContractorDetails = async (contractorId: string): Promise<Contractor> => {
+  const authHeaders = await getAuthHeaders();
   return get(`${API_BASE}/api/contractors/${contractorId}`, authHeaders);
 };
 
+export const fetchContractorDetails = getContractorDetails;
+
+export const updateContractorProfile = async (data: Partial<Contractor>): Promise<Contractor> => {
+  const authHeaders = await getAuthHeaders();
+  return put(`${API_BASE}/api/contractors/profile`, data, authHeaders);
+};
+
 // ==========================================
-// Messaging API
+// Messaging & Socket API
 // ==========================================
 
-export const sendMessage = async (messageData: any): Promise<any> => {
+let socket: Socket | null = null;
+
+export const initializeSocket = async () => {
+  if (socket?.connected) return;
+
+  const userInfo = await AsyncStorage.getItem('userInfo');
+  const token = userInfo ? JSON.parse(userInfo).token : null;
+
+  socket = io(API_BASE, {
+    transports: ['websocket'],
+    withCredentials: true,
+    auth: token ? { token } : undefined,
+  });
+
+  socket.on('connect', () => console.log('Socket connected:', socket?.id));
+};
+
+export const registerSocket = async (userId: string) => {
+  await initializeSocket();
+  socket?.emit('register', userId);
+};
+
+export const sendMessage = async (conversationId: string, recipientId: string, messageText: string): Promise<any> => {
   const authHeaders = await getAuthHeaders();
-  return post(`${API_BASE}/api/messages`, messageData, authHeaders);
+  return post(`${API_BASE}/api/messages`, { conversationId, recipientId, messageText }, authHeaders);
 };
 
 export const listConversations = async (): Promise<any[]> => {
@@ -191,35 +218,39 @@ export const listConversations = async (): Promise<any[]> => {
   return get(`${API_BASE}/api/messages/conversations`, authHeaders);
 };
 
-export const getConversationWithUser = async (otherUserId: string): Promise<any[]> => {
+export const fetchConversations = listConversations;
+
+export const fetchMessages = async (conversationId: string): Promise<any[]> => {
   const authHeaders = await getAuthHeaders();
-  return get(`${API_BASE}/api/messages/conversation/${otherUserId}`, authHeaders);
+  return get(`${API_BASE}/api/messages/conversation/${conversationId}`, authHeaders);
 };
 
-export const markMessageRead = async (messageId: string): Promise<void> => {
+export const findOrCreateConversation = async (participantIds: string[]): Promise<any> => {
   const authHeaders = await getAuthHeaders();
-  return put(`${API_BASE}/api/messages/read/${messageId}`, {}, authHeaders);
+  return post(`${API_BASE}/api/messages/find-or-create-conversation`, { participantIds }, authHeaders);
 };
 
+export const createConversation = findOrCreateConversation;
+
 // ==========================================
-// Existing Posts & Reviews APIs
+// Posts & Reviews API
 // ==========================================
 
-export const createPost = async (postData: CreatePostData): Promise<Post> => {
+export const listPosts = async (queryParams: any = {}): Promise<{ posts: Post[] }> => {
+  const queryString = new URLSearchParams(queryParams).toString();
+  return get(`${API_BASE}/api/posts?${queryString}`);
+};
+
+export const getFeedPosts = listPosts;
+
+export const fetchContractorPosts = async (contractorId: string): Promise<{ posts: Post[] }> => {
+  const posts = await get(`${API_BASE}/api/posts/contractor/${contractorId}`);
+  return { posts: Array.isArray(posts) ? posts : (posts.posts || []) };
+};
+
+export const createPost = async (postData: any): Promise<Post> => {
   const authHeaders = await getAuthHeaders();
   return post(`${API_BASE}/api/posts`, postData, authHeaders);
-};
-
-export const listPosts = async (queryParams: Record<string, any> = {}): Promise<{ posts: Post[] }> => {
-  const queryString = new URLSearchParams(queryParams as Record<string, string>).toString();
-  const authHeaders = await getAuthHeaders();
-  return get(`${API_BASE}/api/posts?${queryString}`, authHeaders);
-};
-
-export const listContractorPosts = async (contractorId: string, queryParams: Record<string, any> = {}): Promise<Post[]> => {
-  const queryString = new URLSearchParams(queryParams as Record<string, string>).toString();
-  const authHeaders = await getAuthHeaders();
-  return get(`${API_BASE}/api/posts/contractor/${contractorId}?${queryString}`, authHeaders);
 };
 
 export const likePost = async (postId: string): Promise<void> => {
@@ -227,15 +258,29 @@ export const likePost = async (postId: string): Promise<void> => {
   return put(`${API_BASE}/api/posts/${postId}/like`, {}, authHeaders);
 };
 
+export const unlikePost = async (postId: string): Promise<void> => {
+  const authHeaders = await getAuthHeaders();
+  return put(`${API_BASE}/api/posts/${postId}/unlike`, {}, authHeaders);
+};
+
 export const commentOnPost = async (postId: string, commentData: any): Promise<PostComment> => {
   const authHeaders = await getAuthHeaders();
   return post(`${API_BASE}/api/posts/${postId}/comments`, commentData, authHeaders);
 };
 
-export const listContractorReviews = async (contractorId: string, queryParams: Record<string, any> = {}): Promise<{ reviews: Review[], page: number, total: number }> => {
-  const queryString = new URLSearchParams(queryParams as Record<string, string>).toString();
+export const deletePost = async (postId: string): Promise<void> => {
   const authHeaders = await getAuthHeaders();
-  return get(`${API_BASE}/api/contractors/${contractorId}/reviews?${queryString}`, authHeaders);
+  return del(`${API_BASE}/api/posts/${postId}`, authHeaders);
+};
+
+export const listContractorReviews = async (contractorId: string, params: any = {}): Promise<any> => {
+  const queryString = new URLSearchParams(params).toString();
+  return get(`${API_BASE}/api/contractors/${contractorId}/reviews?${queryString}`);
+};
+
+export const fetchContractorReviews = async (contractorId: string): Promise<Review[]> => {
+  const data = await listContractorReviews(contractorId);
+  return data.reviews || data || [];
 };
 
 export const submitReview = async (contractorId: string, reviewData: Partial<Review>): Promise<Review> => {
@@ -243,15 +288,9 @@ export const submitReview = async (contractorId: string, reviewData: Partial<Rev
   return post(`${API_BASE}/api/contractors/${contractorId}/reviews`, reviewData, authHeaders);
 };
 
-export const submitReport = async (reportData: any): Promise<any> => {
-  const authHeaders = await getAuthHeaders();
-  return post(`${API_BASE}/api/reports`, reportData, authHeaders);
-};
-
-export const getReports = async (): Promise<any[]> => {
-  const authHeaders = await getAuthHeaders();
-  return get(`${API_BASE}/api/reports`, authHeaders);
-};
+// ==========================================
+// Notifications API
+// ==========================================
 
 export const getNotifications = async (): Promise<Notification[]> => {
   const authHeaders = await getAuthHeaders();
@@ -274,87 +313,20 @@ export const deleteNotification = async (notificationId: string): Promise<void> 
 };
 
 // ==========================================
-// NEW Contractor APIs
+// User API
 // ==========================================
 
-export const getTopRatedContractors = async (zipCode: string, limit?: number): Promise<Contractor[]> => {
-  const queryString = new URLSearchParams();
-  queryString.append('zipCode', zipCode);
-  if (limit) queryString.append('limit', limit.toString());
+export const getUserProfile = async (): Promise<User> => {
   const authHeaders = await getAuthHeaders();
-  return get(`${API_BASE}/api/contractors/top-rated?${queryString.toString()}`, authHeaders);
+  return get(`${API_BASE}/api/users/profile`, authHeaders);
 };
 
-export const getNearbyTopRatedContractors = async (zipCode: string, excludeId?: string): Promise<Contractor[]> => {
-  const queryString = new URLSearchParams();
-  queryString.append('zipCode', zipCode);
-  if (excludeId) queryString.append('excludeId', excludeId);
+export const fetchUserProfile = getUserProfile;
+
+export const updateUserProfile = async (data: Partial<User>): Promise<User> => {
   const authHeaders = await getAuthHeaders();
-  return get(`${API_BASE}/api/contractors/nearby?${queryString.toString()}`, authHeaders);
+  return put(`${API_BASE}/api/users/profile`, data, authHeaders);
 };
-
-export const getContractorBySlug = async (slug: string): Promise<Contractor> => {
-  const authHeaders = await getAuthHeaders();
-  return get(`${API_BASE}/api/contractors/slug/${slug}`, authHeaders);
-};
-
-// ==========================================
-// NEW Post APIs
-// ==========================================
-
-export const getFeedPosts = async (zipCode?: string): Promise<{ posts: Post[] }> => {
-  const queryString = zipCode ? `?zipCode=${zipCode}` : '';
-  const authHeaders = await getAuthHeaders();
-  return get(`${API_BASE}/api/posts/feed${queryString}`, authHeaders);
-};
-
-export const getContractorPosts = async (contractorId: string): Promise<Post[]> => {
-  const authHeaders = await getAuthHeaders();
-  return get(`${API_BASE}/api/posts/contractor/${contractorId}`, authHeaders);
-};
-
-export const getUserPosts = async (userId: string): Promise<{ posts: Post[] }> => {
-  const authHeaders = await getAuthHeaders();
-  return get(`${API_BASE}/api/posts/user/${userId}`, authHeaders);
-};
-
-export const unlikePost = async (postId: string): Promise<void> => {
-  const authHeaders = await getAuthHeaders();
-  return put(`${API_BASE}/api/posts/${postId}/unlike`, {}, authHeaders);
-};
-
-export const deletePost = async (postId: string): Promise<void> => {
-  const authHeaders = await getAuthHeaders();
-  return del(`${API_BASE}/api/posts/${postId}`, authHeaders);
-};
-
-export const reportPost = async (postId: string, reason: string): Promise<void> => {
-  const authHeaders = await getAuthHeaders();
-  return post(`${API_BASE}/api/reports`, { type: 'post', itemId: postId, reason }, authHeaders);
-};
-
-// ==========================================
-// NEW Portfolio APIs
-// ==========================================
-
-export const addPortfolioItem = async (item: PortfolioItem): Promise<PortfolioItem> => {
-  const authHeaders = await getAuthHeaders();
-  return post(`${API_BASE}/api/contractors/portfolio`, item, authHeaders);
-};
-
-export const updatePortfolioItem = async (itemId: string, item: Partial<PortfolioItem>): Promise<PortfolioItem> => {
-  const authHeaders = await getAuthHeaders();
-  return put(`${API_BASE}/api/contractors/portfolio/${itemId}`, item, authHeaders);
-};
-
-export const deletePortfolioItem = async (itemId: string): Promise<void> => {
-  const authHeaders = await getAuthHeaders();
-  return del(`${API_BASE}/api/contractors/portfolio/${itemId}`, authHeaders);
-};
-
-// ==========================================
-// NEW User APIs
-// ==========================================
 
 export const updateProfilePicture = async (pictureUrl: string): Promise<User> => {
   const authHeaders = await getAuthHeaders();
@@ -366,18 +338,8 @@ export const updateBannerImage = async (imageUrl: string): Promise<User> => {
   return put(`${API_BASE}/api/users/banner-image`, { imageUrl }, authHeaders);
 };
 
-export const getUserReviews = async (userId: string): Promise<Review[]> => {
-  const authHeaders = await getAuthHeaders();
-  return get(`${API_BASE}/api/users/${userId}/reviews`, authHeaders);
-};
-
-export const getUserProjects = async (userId: string): Promise<Post[]> => {
-  const authHeaders = await getAuthHeaders();
-  return get(`${API_BASE}/api/users/${userId}/projects`, authHeaders);
-};
-
 // ==========================================
-// NEW Stripe/Payment APIs
+// Payments & Stripe API
 // ==========================================
 
 export const getStripeConnectUrl = async (): Promise<{ url: string }> => {
@@ -390,7 +352,7 @@ export const getStripeAccountStatus = async (): Promise<StripeConnectStatus> => 
   return get(`${API_BASE}/api/stripe/account-status`, authHeaders);
 };
 
-export const createQuote = async (quoteData: CreateQuoteData): Promise<Quote> => {
+export const createQuote = async (quoteData: any): Promise<Quote> => {
   const authHeaders = await getAuthHeaders();
   return post(`${API_BASE}/api/quotes`, quoteData, authHeaders);
 };
@@ -416,52 +378,27 @@ export const getContractorEarnings = async (): Promise<Earnings> => {
 };
 
 // ==========================================
-// NEW Admin APIs
+// Admin API
 // ==========================================
 
 export const getAllUsers = async (params: UserQueryParams): Promise<UsersResponse> => {
-  const queryString = new URLSearchParams(params as Record<string, string>).toString();
+  const queryString = new URLSearchParams(params as any).toString();
   const authHeaders = await getAuthHeaders();
   return get(`${API_BASE}/api/admin/users?${queryString}`, authHeaders);
 };
 
-export const updateUserStatus = async (userId: string, status: string): Promise<void> => {
-  const authHeaders = await getAuthHeaders();
-  return put(`${API_BASE}/api/admin/users/${userId}/status`, { status }, authHeaders);
-};
-
-export const deleteUser = async (userId: string): Promise<void> => {
-  const authHeaders = await getAuthHeaders();
-  return del(`${API_BASE}/api/admin/users/${userId}`, authHeaders);
-};
-
 export const getAllContractors = async (params: ContractorQueryParams): Promise<ContractorsResponse> => {
-  const queryString = new URLSearchParams(params as Record<string, string>).toString();
+  const queryString = new URLSearchParams(params as any).toString();
   const authHeaders = await getAuthHeaders();
   return get(`${API_BASE}/api/admin/contractors?${queryString}`, authHeaders);
-};
-
-export const approveContractor = async (contractorId: string): Promise<void> => {
-  const authHeaders = await getAuthHeaders();
-  return put(`${API_BASE}/api/admin/contractors/${contractorId}/approve`, {}, authHeaders);
-};
-
-export const rejectContractor = async (contractorId: string, reason: string): Promise<void> => {
-  const authHeaders = await getAuthHeaders();
-  return put(`${API_BASE}/api/admin/contractors/${contractorId}/reject`, { reason }, authHeaders);
-};
-
-export const getFlaggedContent = async (type: 'reviews' | 'posts'): Promise<FlaggedItem[]> => {
-  const authHeaders = await getAuthHeaders();
-  return get(`${API_BASE}/api/admin/flagged?type=${type}`, authHeaders);
-};
-
-export const moderateContent = async (type: string, id: string, action: string): Promise<void> => {
-  const authHeaders = await getAuthHeaders();
-  return put(`${API_BASE}/api/admin/moderate`, { type, id, action }, authHeaders);
 };
 
 export const getPlatformStats = async (): Promise<PlatformStats> => {
   const authHeaders = await getAuthHeaders();
   return get(`${API_BASE}/api/admin/stats`, authHeaders);
+};
+
+export const createLead = async (leadData: any): Promise<any> => {
+  const authHeaders = await getAuthHeaders();
+  return post(`${API_BASE}/api/leads`, leadData, authHeaders);
 };

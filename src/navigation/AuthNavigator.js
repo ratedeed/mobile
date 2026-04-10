@@ -6,23 +6,22 @@ import RegisterScreen from '../screens/RegisterScreen';
 import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
 import ContractorSignupScreen from '../screens/ContractorSignupScreen';
 
-import { Colors } from '../constants/designTokens';
-
 const Stack = createStackNavigator();
 
 const screenOptions = {
   headerStyle: {
-    backgroundColor: Colors.neutral50,
-    borderBottomWidth: 0,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E4E4E7', // shadcn border
     shadowOpacity: 0,
     elevation: 0,
   },
   headerTitleStyle: {
     fontWeight: '600',
     fontSize: 18,
-    color: Colors.neutral900,
+    color: '#09090B', // shadcn foreground
   },
-  headerTintColor: Colors.primary500,
+  headerTintColor: '#2563EB', // shadcn primary
   headerBackTitleVisible: false,
   cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
   gestureEnabled: true,

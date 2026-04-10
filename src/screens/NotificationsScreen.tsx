@@ -8,7 +8,8 @@ import {
   RefreshControl,
   Alert,
 } from 'react-native';
-import Header from '../components/common/Header';
+import { FontAwesome5 } from '@expo/vector-icons';
+import { AppHeader } from '../components/layout/AppHeader';
 import { SkeletonLoader } from '../components/common/SkeletonLoader';
 import { EmptyState } from '../components/common/EmptyState';
 import { ErrorState } from '../components/common/ErrorState';
@@ -90,52 +91,55 @@ const NotificationsScreen: React.FC = () => {
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
-  const getNotificationIcon = (message: string) => {
+  const getNotificationIcon = (message: string): { name: string; color: string } => {
     const lowerMsg = message.toLowerCase();
-    if (lowerMsg.includes('review') || lowerMsg.includes('rating')) return '⭐';
-    if (lowerMsg.includes('message') || lowerMsg.includes('chat')) return '💬';
-    if (lowerMsg.includes('quote') || lowerMsg.includes('payment')) return '💰';
-    if (lowerMsg.includes('job') || lowerMsg.includes('project')) return '📋';
-    if (lowerMsg.includes('follow')) return '👤';
-    if (lowerMsg.includes('lead') || lowerMsg.includes('inquiry')) return '📬';
-    return '🔔';
+    if (lowerMsg.includes('review') || lowerMsg.includes('rating')) return { name: 'star', color: '#f59e0b' };
+    if (lowerMsg.includes('message') || lowerMsg.includes('chat')) return { name: 'comment', color: '#3b82f6' };
+    if (lowerMsg.includes('quote') || lowerMsg.includes('payment')) return { name: 'dollar-sign', color: '#10b981' };
+    if (lowerMsg.includes('job') || lowerMsg.includes('project')) return { name: 'briefcase', color: '#8b5cf6' };
+    if (lowerMsg.includes('follow')) return { name: 'user-plus', color: '#ec4899' };
+    if (lowerMsg.includes('lead') || lowerMsg.includes('inquiry')) return { name: 'envelope', color: '#06b6d4' };
+    return { name: 'bell', color: '#4F46E5' };
   };
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  const renderNotification = ({ item }: { item: Notification }) => (
-    <TouchableOpacity
-      style={[styles.notificationItem, !item.read && styles.unreadItem]}
-      onPress={() => {
-        if (!item.read) {
-          handleMarkAsRead(item._id);
-        }
-      }}
-      onLongPress={() => {
-        Alert.alert('Notification Actions', '', [
-          { text: 'Mark as Read', onPress: () => handleMarkAsRead(item._id) },
-          { text: 'Delete', style: 'destructive', onPress: () => handleDelete(item._id) },
-          { text: 'Cancel', style: 'cancel' },
-        ]);
-      }}
-    >
-      <View style={styles.iconContainer}>
-        <Text style={styles.icon}>{getNotificationIcon(item.message)}</Text>
-      </View>
-      <View style={styles.contentContainer}>
-        <Text style={[styles.message, !item.read && styles.unreadMessage]} numberOfLines={2}>
-          {item.message}
-        </Text>
-        <Text style={styles.timestamp}>{formatDate(item.createdAt)}</Text>
-      </View>
-      {!item.read && <View style={styles.unreadDot} />}
-    </TouchableOpacity>
-  );
+  const renderNotification = ({ item }: { item: Notification }) => {
+    const icon = getNotificationIcon(item.message);
+    return (
+      <TouchableOpacity
+        style={[styles.notificationItem, !item.read && styles.unreadItem]}
+        onPress={() => {
+          if (!item.read) {
+            handleMarkAsRead(item._id);
+          }
+        }}
+        onLongPress={() => {
+          Alert.alert('Notification Actions', '', [
+            { text: 'Mark as Read', onPress: () => handleMarkAsRead(item._id) },
+            { text: 'Delete', style: 'destructive', onPress: () => handleDelete(item._id) },
+            { text: 'Cancel', style: 'cancel' },
+          ]);
+        }}
+      >
+        <View style={[styles.iconContainer, { backgroundColor: icon.color + '15' }]}>
+          <FontAwesome5 name={icon.name as any} size={18} color={icon.color} />
+        </View>
+        <View style={styles.contentContainer}>
+          <Text style={[styles.message, !item.read && styles.unreadMessage]} numberOfLines={2}>
+            {item.message}
+          </Text>
+          <Text style={styles.timestamp}>{formatDate(item.createdAt)}</Text>
+        </View>
+        {!item.read && <View style={styles.unreadDot} />}
+      </TouchableOpacity>
+    );
+  };
 
   if (loading) {
     return (
       <View style={styles.fullScreenContainer}>
-        <Header title="Notifications" />
+        <AppHeader title="Notifications" showBack />
         <View style={styles.loadingContainer}>
           <SkeletonLoader type="list" count={5} />
         </View>
@@ -146,7 +150,7 @@ const NotificationsScreen: React.FC = () => {
   if (error) {
     return (
       <View style={styles.fullScreenContainer}>
-        <Header title="Notifications" />
+        <AppHeader title="Notifications" showBack />
         <ErrorState message={error} onRetry={loadNotifications} />
       </View>
     );
@@ -154,9 +158,9 @@ const NotificationsScreen: React.FC = () => {
 
   return (
     <View style={styles.fullScreenContainer}>
-      <Header
+      <AppHeader
         title="Notifications"
-        onBackPress={() => {}}
+        showBack
         rightComponent={
           unreadCount > 0 ? (
             <TouchableOpacity onPress={handleMarkAllAsRead}>
@@ -190,7 +194,7 @@ const NotificationsScreen: React.FC = () => {
 const styles = StyleSheet.create({
   fullScreenContainer: {
     flex: 1,
-    backgroundColor: Colors.neutral100,
+    backgroundColor: Colors.neutral50,
   },
   loadingContainer: {
     flex: 1,
@@ -203,37 +207,38 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.neutral50,
-    padding: Spacing.md,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.neutral200,
   },
   unreadItem: {
-    backgroundColor: Colors.primary50,
+    backgroundColor: '#f0f9ff',
+    borderLeftWidth: 3,
+    borderLeftColor: Colors.primary500,
   },
   iconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: Colors.neutral200,
+    width: 48,
+    height: 48,
+    borderRadius: Radii.round,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: Spacing.md,
-  },
-  icon: {
-    fontSize: 20,
   },
   contentContainer: {
     flex: 1,
   },
   message: {
-    color: Colors.neutral700,
-    fontSize: 14,
-    lineHeight: 20,
+    color: Colors.neutral600,
+    fontSize: 15,
+    lineHeight: 22,
   },
   unreadMessage: {
     color: Colors.neutral900,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   timestamp: {
-    color: Colors.neutral500,
+    color: Colors.neutral400,
     fontSize: 12,
     marginTop: Spacing.xs,
   },
@@ -251,7 +256,7 @@ const styles = StyleSheet.create({
   markAllText: {
     color: Colors.primary500,
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
   },
 });
 

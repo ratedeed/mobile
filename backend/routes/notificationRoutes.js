@@ -3,7 +3,7 @@ const router = express.Router();
 const { protect, authorize } = require('../middleware/authMiddleware');
 const Notification = require('../models/Notification');
 
-// @desc    Get notifications for a user
+// @desc    Retrieve all notifications for a specific user
 // @route   GET /api/notifications
 // @access  Private
 router.get('/', protect, async (req, res) => {

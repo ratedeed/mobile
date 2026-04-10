@@ -1,14 +1,17 @@
 import React, { useState, useRef } from 'react';
 import {
   TextInput,
-  StyleSheet,
   Text,
   View,
   Animated,
   TouchableOpacity,
   TextInputProps,
+  StyleSheet,
+  StyleProp,
+  ViewStyle,
+  TextStyle
 } from 'react-native';
-import { Spacing, Radii, Colors, Shadows } from '../../constants/designTokens';
+import { Colors, Spacing, Radii } from '../../constants/designTokens';
 
 interface InputProps extends Omit<TextInputProps, 'style'> {
   label?: string;
@@ -17,8 +20,8 @@ interface InputProps extends Omit<TextInputProps, 'style'> {
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
   onRightIconPress?: () => void;
-  containerStyle?: any;
-  style?: any;
+  containerStyle?: StyleProp<ViewStyle>;
+  style?: StyleProp<TextStyle>;
 }
 
 const Input: React.FC<InputProps> = ({
@@ -36,6 +39,8 @@ const Input: React.FC<InputProps> = ({
   ...props
 }) => {
   const [isFocused, setIsFocused] = useState(false);
+
+  // Focus tracking for animation
   const labelAnimation = useRef(new Animated.Value(value ? 1 : 0)).current;
 
   const handleFocus = (e: any) => {
@@ -60,16 +65,9 @@ const Input: React.FC<InputProps> = ({
     onBlur?.(e);
   };
 
-  const getBorderColor = () => {
-    if (error) return Colors.error;
-    if (success) return Colors.success;
-    if (isFocused) return Colors.primary500;
-    return Colors.neutral200;
-  };
-
   const labelTop = labelAnimation.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, -Spacing.xs],
+    outputRange: [0, -4],
   });
 
   const labelFontSize = labelAnimation.interpolate({
@@ -77,23 +75,30 @@ const Input: React.FC<InputProps> = ({
     outputRange: [15, 12],
   });
 
-  const labelColor = error
-    ? Colors.error
-    : isFocused
-    ? Colors.primary500
-    : Colors.neutral700;
+  const getBorderColor = () => {
+    if (error) return Colors.error500;
+    if (success) return Colors.success500;
+    if (isFocused) return Colors.primary600;
+    return Colors.neutral200;
+  };
+
+  const getLabelColor = () => {
+    if (error) return Colors.error600;
+    if (isFocused) return Colors.neutral900;
+    return Colors.neutral500;
+  };
 
   return (
-    <View style={[styles.inputGroup, containerStyle]}>
+    <View style={[styles.container, containerStyle]}>
       {label && (
         <Animated.Text
           style={[
             styles.label,
             {
-              top: labelTop,
+              transform: [{ translateY: labelTop }],
               fontSize: labelFontSize,
-              color: labelColor,
-            },
+              color: getLabelColor(),
+            }
           ]}
         >
           {label}
@@ -103,17 +108,16 @@ const Input: React.FC<InputProps> = ({
         style={[
           styles.inputWrapper,
           { borderColor: getBorderColor() },
-          isFocused && styles.inputFocused,
-          error && styles.inputError,
+          isFocused && styles.inputWrapperFocused
         ]}
       >
         {leftIcon && <View style={styles.leftIcon}>{leftIcon}</View>}
         <TextInput
           style={[
-            styles.input,
-            leftIcon && styles.inputWithLeftIcon,
-            rightIcon && styles.inputWithRightIcon,
-            style,
+            styles.textInput,
+            leftIcon ? styles.textInputWithLeftIcon : null,
+            rightIcon ? styles.textInputWithRightIcon : null,
+            style
           ]}
           placeholderTextColor={Colors.neutral400}
           onFocus={handleFocus}
@@ -140,49 +144,29 @@ const Input: React.FC<InputProps> = ({
 };
 
 const styles = StyleSheet.create({
-  inputGroup: {
+  container: {
     width: '100%',
     marginBottom: Spacing.md,
     paddingTop: Spacing.md,
   },
   label: {
     position: 'absolute',
-    left: Spacing.md,
-    top: Spacing.md + 4,
+    left: 16,
+    top: 20,
     fontWeight: '600',
     zIndex: 1,
     backgroundColor: Colors.neutral50,
-    paddingHorizontal: Spacing.xs,
+    paddingHorizontal: 4,
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1.5,
-    borderRadius: Radii.lg,
+    borderWidth: 1,
+    borderRadius: Radii.md,
     backgroundColor: Colors.neutral50,
-    ...Shadows.xs,
   },
-  inputFocused: {
-    shadowColor: Colors.primary500,
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  inputError: {
-    borderColor: Colors.error,
-  },
-  input: {
-    flex: 1,
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.md,
-    fontSize: 18,
-    color: Colors.neutral800,
-  },
-  inputWithLeftIcon: {
-    paddingLeft: Spacing.xs,
-  },
-  inputWithRightIcon: {
-    paddingRight: Spacing.xs,
+  inputWrapperFocused: {
+    borderWidth: 1,
   },
   leftIcon: {
     paddingLeft: Spacing.md,
@@ -190,17 +174,32 @@ const styles = StyleSheet.create({
   rightIcon: {
     paddingRight: Spacing.md,
   },
+  textInput: {
+    flex: 1,
+    height: 48,
+    paddingHorizontal: Spacing.md,
+    fontSize: 16,
+    color: Colors.neutral900,
+  },
+  textInputWithLeftIcon: {
+    paddingLeft: Spacing.xs,
+  },
+  textInputWithRightIcon: {
+    paddingRight: Spacing.xs,
+  },
   errorText: {
     fontSize: 12,
-    color: Colors.error,
-    marginTop: Spacing.xs,
-    marginLeft: Spacing.md,
+    fontWeight: '500',
+    color: Colors.error500,
+    marginTop: 4,
+    marginLeft: 4,
   },
   successText: {
     fontSize: 12,
-    color: Colors.success,
-    marginTop: Spacing.xs,
-    marginLeft: Spacing.md,
+    fontWeight: '500',
+    color: Colors.success500,
+    marginTop: 4,
+    marginLeft: 4,
   },
 });
 

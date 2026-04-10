@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
-  StyleSheet,
   ScrollView,
   Image,
   TouchableOpacity,
@@ -11,6 +10,9 @@ import {
   Share,
   Linking,
   Platform,
+  StyleSheet,
+  Text,
+  Dimensions,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -18,7 +20,6 @@ import { RootStackParamList } from '../types';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { fetchContractorDetails, submitReview, fetchContractorPosts, createLead } from '../api';
 import { fetchContractorReviews } from '../api/review';
-import { API_BASE_URL } from '../config';
 import { Tabs, TabPanel } from '../components/common/Tabs';
 import { Modal } from '../components/common/Modal';
 import Input from '../components/common/Input';
@@ -28,8 +29,9 @@ import Card from '../components/common/Card';
 import Avatar from '../components/common/Avatar';
 import Typography from '../components/common/Typography';
 import ReportButton from '../components/ReportButton';
-import { Spacing, Radii, Colors, Shadows } from '../constants/designTokens';
 import { Contractor, Post, Review } from '../types';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const TABS = [
   { key: 'about', label: 'About' },
@@ -59,6 +61,7 @@ const BusinessDetailScreen: React.FC = () => {
   const [quoteProjectTitle, setQuoteProjectTitle] = useState('');
   const [quoteDescription, setQuoteDescription] = useState('');
   const [quoteContactPreference, setQuoteContactPreference] = useState('email');
+  const [isSaved, setIsSaved] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -69,7 +72,32 @@ const BusinessDetailScreen: React.FC = () => {
     }
   }, [id]);
 
-  
+  const loadContractorDetails = async () => {
+    try {
+      setLoading(true);
+      const data = await fetchContractorDetails(id);
+      setContractor(data);
+
+      // Load posts and reviews in parallel
+      const [postsData, reviewsData] = await Promise.all([
+        fetchContractorPosts(id),
+        fetchContractorReviews(id),
+      ]);
+      setContractorPosts(postsData?.posts || []);
+      setContractorReviews(reviewsData || []);
+    } catch (error) {
+      console.error('Error loading contractor details:', error);
+      Alert.alert('Error', 'Failed to load contractor details');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    loadContractorDetails().finally(() => setRefreshing(false));
+  }, [id]);
+
   const handleCall = () => {
     const phone = contractor?.contactInfo?.phoneNumber;
     if (phone) Linking.openURL(`tel:${phone}`);
@@ -101,16 +129,12 @@ const BusinessDetailScreen: React.FC = () => {
 
   const handleShare = async () => {
     try {
-      const state = contractor?.contactInfo?.state?.toLowerCase() || 'usa';
-      const zip = contractor?.contactInfo?.zipCode || '00000';
-      const slug = contractor?.slug || contractor?._id;
-      const url = `https://ratedeed.com/contractor/${state}/${zip}/${slug}`;
-      await Share.share({
-        message: `Check out ${contractor?.companyName} on RateDeed! ${url}`,
-        url: url,
+      const result = await Share.share({
+        message: `Check out ${contractor?.companyName} on RateDeed!`,
+        title: contractor?.companyName,
       });
     } catch (error) {
-      console.error('Share error:', error);
+      console.error('Error sharing:', error);
     }
   };
 
@@ -119,52 +143,34 @@ const BusinessDetailScreen: React.FC = () => {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
+
     try {
       await createLead({
         contractorId: id,
         projectTitle: quoteProjectTitle,
         description: quoteDescription,
-        contactPreference: quoteContactPreference
+        contactPreference: quoteContactPreference,
       });
-      Alert.alert('Success', 'Your quote request has been sent!');
+      Alert.alert('Success', 'Quote request sent successfully!');
       setIsQuoteModalVisible(false);
       setQuoteProjectTitle('');
       setQuoteDescription('');
-      setQuoteContactPreference('email');
     } catch (error) {
+      console.error('Error requesting quote:', error);
       Alert.alert('Error', 'Failed to send quote request');
     }
   };
 
-  const loadContractorDetails = async () => {
-    try {
-      const [contractorData, postsData, reviewsData] = await Promise.all([
-        fetchContractorDetails(id),
-        fetchContractorPosts(id),
-        fetchContractorReviews(id),
-      ]);
-      setContractor(contractorData);
-      setContractorPosts(postsData.posts || []);
-      setContractorReviews(reviewsData || []);
-    } catch (error) {
-      console.error('Error loading contractor:', error);
-      Alert.alert('Error', 'Failed to load contractor details');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
-
-  const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    loadContractorDetails();
-  }, [id]);
-
   const handleReviewSubmit = async () => {
     if (reviewRating === 0) {
-      Alert.alert('Error', 'Please provide a rating');
+      Alert.alert('Error', 'Please select a rating');
       return;
     }
+    if (!reviewComment.trim()) {
+      Alert.alert('Error', 'Please write a review');
+      return;
+    }
+
     setSubmittingReview(true);
     try {
       await submitReview(id, {
@@ -172,439 +178,488 @@ const BusinessDetailScreen: React.FC = () => {
         title: reviewTitle,
         comment: reviewComment,
       });
-      Alert.alert('Success', 'Your review has been submitted!');
+      Alert.alert('Success', 'Review submitted successfully!');
       setReviewRating(0);
       setReviewTitle('');
       setReviewComment('');
-      loadContractorDetails();
+      // Reload reviews
+      const reviewsData = await fetchContractorReviews(id);
+      setContractorReviews(reviewsData || []);
     } catch (error) {
+      console.error('Error submitting review:', error);
       Alert.alert('Error', 'Failed to submit review');
     } finally {
       setSubmittingReview(false);
     }
   };
 
-  const getAssetUrl = (filename: string | undefined): string => {
-    if (!filename) return 'https://via.placeholder.com/150';
-    return `${API_BASE_URL}/uploads/${filename}`;
+  const getAssetUrl = (filename: string | undefined, fallback: string = 'https://via.placeholder.com/150'): string => {
+    if (!filename) return fallback;
+    if (filename.startsWith('http')) return filename;
+    return `${filename}`;
   };
 
   const getUserProfilePictureUrl = (profilePicture: string | undefined, fullName: string): string => {
-    if (profilePicture) return getAssetUrl(profilePicture);
-    const initials = fullName?.split(' ').map(n => n[0]).join('').toUpperCase() || 'UN';
-    return `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName || 'Unknown')}&background=random&color=fff&size=128`;
+    if (profilePicture) {
+      return profilePicture.startsWith('http') ? profilePicture : profilePicture;
+    }
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=random`;
   };
 
-  const renderStarRating = (rating: number, size: number = 16) => {
+  const renderStarRating = (rating: number, size: number = 12) => {
     const stars = [];
     for (let i = 1; i <= 5; i++) {
       stars.push(
         <FontAwesome5
           key={i}
-          name={rating >= i ? 'star' : 'star'}
+          name="star"
           solid={rating >= i}
           size={size}
-          color={rating >= i ? Colors.warning : Colors.neutral300}
+          color={rating >= i ? "#f59e0b" : "#d4d4d8"}
+          style={styles.starIcon}
         />
       );
     }
-    return <View style={styles.starRatingContainer}>{stars}</View>;
+    return <View style={styles.starsContainer}>{stars}</View>;
   };
 
-  const renderHeaderSection = () => (
+  const renderHeader = () => (
     <View style={styles.headerSection}>
-      <View style={styles.bannerContainer}>
-        <Image
-          source={{ uri: contractor?.licenseDocumentUrl || 'https://via.placeholder.com/600x200?text=No+Banner' }}
-          style={styles.bannerImage}
-        />
-      </View>
-      <View style={styles.profileImageContainer}>
-        <Avatar
-          source={{ uri: contractor?.licenseDocumentUrl || 'https://via.placeholder.com/100' }}
-          size={100}
-          style={styles.profilePicture}
-        />
-      </View>
-      <View style={styles.headerInfo}>
-        <View style={styles.nameRow}>
-          <Typography variant="h2" style={styles.contractorName}>{contractor?.companyName}</Typography>
-          <ReportButton
-            reportedItemId={contractor?._id || id}
-            onModel="Contractor"
-            renderTrigger={({ onPress }) => (
-              <TouchableOpacity
-                onPress={onPress}
-                style={styles.reportTrigger}
-                accessibilityLabel="Report this contractor"
-              >
-                <FontAwesome5 name="flag" size={16} color={Colors.neutral500} />
-              </TouchableOpacity>
-            )}
-          />
-        </View>
-        <View style={styles.ratingRow}>
-          {renderStarRating(contractor?.averageRating || 0, 18)}
-          <Typography variant="body" style={styles.ratingText}>
-            {contractor?.averageRating?.toFixed(1) || 'N/A'} ({contractor?.numReviews || 0} reviews)
-          </Typography>
-        </View>
-        <View style={styles.badgeRow}>
-          {contractor?.isVerified && (
-            <View style={[styles.badge, styles.verifiedBadge]}>
-              <Typography variant="caption" style={styles.badgeText}>LICENSE VERIFIED</Typography>
-            </View>
-          )}
-          {contractor?.isSponsored && (
-            <View style={[styles.badge, styles.sponsoredBadge]}>
-              <Typography variant="caption" style={styles.badgeText}>SPONSORED</Typography>
-            </View>
-          )}
-        </View>
-        <View style={styles.actionButtonsRow}>
-          <TouchableOpacity style={styles.actionIconButton} onPress={handleCall}>
-            <View style={styles.actionIconCircle}>
-              <FontAwesome5 name="phone" size={16} color={Colors.primary500} />
-            </View>
-            <Typography variant="caption" style={styles.actionIconText}>Call</Typography>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.actionIconButton} onPress={handleDirections}>
-            <View style={styles.actionIconCircle}>
-              <FontAwesome5 name="directions" size={16} color={Colors.primary500} />
-            </View>
-            <Typography variant="caption" style={styles.actionIconText}>Directions</Typography>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.actionIconButton} onPress={handleWebsite}>
-            <View style={styles.actionIconCircle}>
-              <FontAwesome5 name="globe" size={16} color={Colors.primary500} />
-            </View>
-            <Typography variant="caption" style={styles.actionIconText}>Website</Typography>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.actionIconButton} onPress={handleShare}>
-            <View style={styles.actionIconCircle}>
-              <FontAwesome5 name="share" size={16} color={Colors.primary500} />
-            </View>
-            <Typography variant="caption" style={styles.actionIconText}>Share</Typography>
-          </TouchableOpacity>
-        </View>
-        <View style={styles.mainActionButtonsRow}>
-          <Button
-            title="Message"
-            variant="outline"
+      {/* Floating Action Buttons */}
+      <View style={styles.floatingActions}>
+        <TouchableOpacity style={styles.floatingButton} onPress={() => navigation.goBack()}>
+          <FontAwesome5 name="chevron-left" size={20} color="#374151" />
+        </TouchableOpacity>
+        <View style={styles.floatingActionsRight}>
+          <TouchableOpacity 
+            style={styles.floatingButton}
             onPress={() => navigation.navigate('ChatScreen', {
               recipientId: contractor?.user?._id,
               recipientName: contractor?.companyName,
             })}
-            style={styles.halfButton}
-          />
-          <Button
-            title="Request Quote"
-            onPress={() => setIsQuoteModalVisible(true)}
-            style={styles.halfButton}
-          />
+          >
+            <FontAwesome5 name="comment" size={16} color="#374151" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.floatingButton} onPress={handleShare}>
+            <FontAwesome5 name="share" size={16} color="#374151" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.floatingButton} onPress={() => setIsSaved(!isSaved)}>
+            <FontAwesome5 name="heart" size={16} color={isSaved ? "#f43f5e" : "#374151"} solid={isSaved} />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Hero Banner Image */}
+      <View style={styles.heroBanner}>
+        <Image
+          source={{ uri: getAssetUrl(contractor?.bannerImage, 'https://via.placeholder.com/600x337?text=No+Banner') }}
+          style={styles.heroImage}
+          resizeMode="cover"
+        />
+      </View>
+
+      {/* Content */}
+      <View style={styles.contentContainer}>
+        {/* Company Info */}
+        <View style={styles.companyInfo}>
+          <Text style={styles.companyName}>{contractor?.companyName}</Text>
+          <View style={styles.ratingRow}>
+            {renderStarRating(contractor?.averageRating || 0, 14)}
+            <Text style={styles.ratingText}>
+              {contractor?.averageRating?.toFixed(2) || 'N/A'} ({contractor?.numReviews || 0} reviews)
+            </Text>
+          </View>
+          {contractor?.isVerified && (
+            <View style={styles.verifiedBadge}>
+              <FontAwesome5 name="shield-alt" size={10} color="#4F46E5" />
+              <Text style={styles.verifiedBadgeText}>License Verified</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Location & Distance */}
+        <View style={styles.locationRow}>
+          <FontAwesome5 name="map-marker-alt" size={14} color="#6b7280" />
+          <Text style={styles.locationText}>
+            {contractor?.contactInfo?.city}, {contractor?.contactInfo?.state}
+          </Text>
+          <Text style={styles.locationDivider}>·</Text>
+          <Text style={styles.locationText}>{contractor?.category || 'General Contractor'}</Text>
+        </View>
+
+        {/* Stats Section */}
+        <View style={styles.statsSection}>
+          <View style={styles.statItem}>
+            <FontAwesome5 name="award" size={20} color="#111827" />
+            <Text style={styles.statValue}>{contractor?.yearsInBusiness || contractor?.numReviews || 'N/A'}</Text>
+            <Text style={styles.statLabel}>Years Exp.</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <FontAwesome5 name="star" size={20} color="#111827" />
+            <Text style={styles.statValue}>{contractor?.numReviews || 0}</Text>
+            <Text style={styles.statLabel}>Reviews</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <FontAwesome5 name="clock" size={20} color="#111827" />
+            <Text style={styles.statValue}>{contractor?.businessHours ? 'Available' : 'N/A'}</Text>
+            <Text style={styles.statLabel}>Response</Text>
+          </View>
         </View>
       </View>
     </View>
   );
 
-  const renderAboutTab = () => (
-    <Card style={styles.card}>
-      {contractor?.description && (
-        <>
-          <Typography variant="h4" style={styles.sectionTitle}>About</Typography>
-          <Typography variant="body" style={styles.bioText}>{contractor.description}</Typography>
-        </>
-      )}
-      <View style={styles.detailsGrid}>
-        {contractor?.yearsInBusiness && (
-          <View style={styles.detailItem}>
-            <Typography variant="label" style={styles.detailLabel}>Years in Business</Typography>
-            <Typography variant="body">{contractor.yearsInBusiness}</Typography>
-          </View>
-        )}
-        {contractor?.certifications && contractor.certifications.length > 0 && (
-          <View style={styles.detailItem}>
-            <Typography variant="label" style={styles.detailLabel}>Certifications</Typography>
-            <Typography variant="body">{contractor.certifications.join(', ')}</Typography>
+  const renderAboutSection = () => (
+    <View style={styles.section}>
+      <Text style={styles.sectionTitle}>About Us</Text>
+      <Text style={styles.aboutText}>{contractor?.description || 'No description available.'}</Text>
+      
+      <View style={styles.infoList}>
+        {contractor?.licenseNumber && (
+          <View style={styles.infoRow}>
+            <FontAwesome5 name="shield-alt" size={16} color="#059669" />
+            <Text style={styles.infoText}><Text style={styles.infoLabel}>License:</Text> {contractor.licenseNumber}</Text>
           </View>
         )}
         {contractor?.pricing && (
-          <View style={styles.detailItem}>
-            <Typography variant="label" style={styles.detailLabel}>Pricing</Typography>
-            <Typography variant="body">{contractor.pricing}</Typography>
+          <View style={styles.infoRow}>
+            <FontAwesome5 name="dollar-sign" size={16} color="#059669" />
+            <Text style={styles.infoText}><Text style={styles.infoLabel}>Pricing:</Text> {contractor.pricing}</Text>
           </View>
         )}
-        {contractor?.zipCodesCovered && contractor.zipCodesCovered.length > 0 && (
-          <View style={styles.detailItem}>
-            <Typography variant="label" style={styles.detailLabel}>Areas Served</Typography>
-            <Typography variant="body">{contractor.zipCodesCovered.join(', ')}</Typography>
+        {contractor?.contactInfo?.address && (
+          <View style={styles.infoRow}>
+            <FontAwesome5 name="map-marker-alt" size={16} color="#059669" />
+            <Text style={styles.infoText}><Text style={styles.infoLabel}>Service Area:</Text> {contractor.contactInfo.city}, {contractor.contactInfo.state}</Text>
           </View>
         )}
       </View>
-    </Card>
+    </View>
   );
 
-  const renderServicesTab = () => (
-    <Card style={styles.card}>
-      <Typography variant="h4" style={styles.sectionTitle}>Services Offered</Typography>
+  const renderServicesSection = () => (
+    <View style={styles.section}>
+      <Text style={styles.sectionTitle}>Services</Text>
       {contractor?.servicesOffered && contractor.servicesOffered.length > 0 ? (
-        <View style={styles.servicesContainer}>
-          {contractor.servicesOffered.map((service, index) => (
-            <View key={index} style={styles.serviceTag}>
-              <Typography variant="body" style={styles.serviceTagText}>
+        contractor.servicesOffered.map((service, index) => (
+          <View key={index} style={styles.serviceCard}>
+            <View style={styles.serviceInfo}>
+              <Text style={styles.serviceName}>
                 {typeof service === 'string' ? service : service.name}
-              </Typography>
+              </Text>
+            </View>
+          </View>
+        ))
+      ) : (
+        <Text style={styles.emptyText}>No services listed</Text>
+      )}
+    </View>
+  );
+
+  const renderPortfolioSection = () => (
+    <View style={styles.section}>
+      <Text style={styles.sectionTitle}>Portfolio</Text>
+      {contractor?.portfolio && contractor.portfolio.length > 0 ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.portfolioScroll}>
+          {contractor.portfolio.map((item, index) => (
+            <View key={index} style={styles.portfolioItem}>
+              <Image
+                source={{ uri: item.imageUrl || 'https://via.placeholder.com/180x135' }}
+                style={styles.portfolioImage}
+                resizeMode="cover"
+              />
+              {item.caption && (
+                <Text style={styles.portfolioCaption} numberOfLines={2}>{item.caption}</Text>
+              )}
             </View>
           ))}
-        </View>
-      ) : (
-        <Typography variant="body" style={styles.emptyText}>No services listed</Typography>
-      )}
-    </Card>
-  );
-
-  const renderPortfolioTab = () => (
-    <Card style={styles.card}>
-      <Typography variant="h4" style={styles.sectionTitle}>Portfolio</Typography>
-      {contractor?.portfolio && contractor.portfolio.length > 0 ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <View style={styles.portfolioGallery}>
-            {contractor.portfolio.map((item, index) => (
-              <View key={index} style={styles.portfolioItem}>
-                <Image
-                  source={{ uri: item.imageUrl || 'https://via.placeholder.com/180x120' }}
-                  style={styles.portfolioImage}
-                />
-                {item.caption && (
-                  <Typography variant="caption" style={styles.portfolioCaption}>{item.caption}</Typography>
-                )}
-              </View>
-            ))}
-          </View>
         </ScrollView>
       ) : (
-        <Typography variant="body" style={styles.emptyText}>No portfolio items</Typography>
+        <Text style={styles.emptyText}>No portfolio items</Text>
       )}
-    </Card>
+    </View>
   );
 
-  const renderPostsTab = () => (
-    <Card style={styles.card}>
-      <Typography variant="h4" style={styles.sectionTitle}>Posts</Typography>
+  const renderPostsSection = () => (
+    <View style={styles.section}>
+      <Text style={styles.sectionTitle}>Posts</Text>
       {contractorPosts.length > 0 ? (
         contractorPosts.map((post, index) => (
-          <View key={post._id || index} style={styles.postCard}>
+          <Card key={post._id || index} style={styles.postCard}>
             <View style={styles.postHeader}>
               <Avatar
-                source={{ uri: getUserProfilePictureUrl(post.contractor?.user?.profilePicture, `${post.contractor?.user?.firstName || ''} ${post.contractor?.user?.lastName || ''}`) }}
+                source={{ uri: getUserProfilePictureUrl(
+                  post.contractor?.user?.profilePicture, 
+                  `${post.contractor?.user?.firstName || ''} ${post.contractor?.user?.lastName || ''}`
+                )}}
                 size={40}
               />
-              <View style={styles.postHeaderInfo}>
-                <Typography variant="h6">{`${post.contractor?.user?.firstName || ''} ${post.contractor?.user?.lastName || ''}`}</Typography>
-                <Typography variant="caption" style={styles.dateText}>
+              <View style={styles.postHeaderText}>
+                <Text style={styles.postAuthor}>
+                  {post.contractor?.user?.firstName} {post.contractor?.user?.lastName}
+                </Text>
+                <Text style={styles.postDate}>
                   {new Date(post.createdAt).toLocaleDateString()}
-                </Typography>
+                </Text>
               </View>
               <ReportButton
                 reportedItemId={post._id || `post-${index}`}
                 onModel="Post"
                 renderTrigger={({ onPress }) => (
-                  <TouchableOpacity onPress={onPress} style={styles.reportTriggerSmall}>
-                    <FontAwesome5 name="flag" size={12} color={Colors.neutral400} />
+                  <TouchableOpacity onPress={onPress} style={styles.reportButton}>
+                    <FontAwesome5 name="flag" size={12} color="#a3a3a3" />
                   </TouchableOpacity>
                 )}
               />
             </View>
-            <Typography variant="body" style={styles.postCaption}>{post.caption}</Typography>
+            <Text style={styles.postCaption}>{post.caption}</Text>
             {post.images && post.images.length > 0 && (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.postImageScroll}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.postImages}>
                 {post.images.map((image, imgIndex) => (
-                  <Image key={imgIndex} source={{ uri: getAssetUrl(image) }} style={styles.postImage} />
+                  <Image 
+                    key={imgIndex} 
+                    source={{ uri: getAssetUrl(image) }} 
+                    style={styles.postImage}
+                  />
                 ))}
               </ScrollView>
             )}
-            <View style={styles.postActions}>
-              <View style={styles.actionItem}>
-                <FontAwesome5 name="heart" solid size={16} color={Colors.neutral600} />
-                <Typography variant="caption" style={styles.actionText}>{post.likes?.length || 0} Likes</Typography>
+            <View style={styles.postFooter}>
+              <View style={styles.postStat}>
+                <FontAwesome5 name="heart" solid size={14} color="#525252" />
+                <Text style={styles.postStatText}>{post.likes?.length || 0} Likes</Text>
               </View>
-              <View style={styles.actionItem}>
-                <FontAwesome5 name="comment" solid size={16} color={Colors.neutral600} />
-                <Typography variant="caption" style={styles.actionText}>{post.comments?.length || 0} Comments</Typography>
+              <View style={styles.postStat}>
+                <FontAwesome5 name="comment" solid size={14} color="#525252" />
+                <Text style={styles.postStatText}>{post.comments?.length || 0} Comments</Text>
               </View>
             </View>
-          </View>
+          </Card>
         ))
       ) : (
-        <Typography variant="body" style={styles.emptyText}>No posts yet</Typography>
+        <Text style={styles.emptyText}>No posts yet</Text>
       )}
-    </Card>
+    </View>
   );
 
-  const renderReviewsTab = () => (
-    <Card style={styles.card}>
-      <Typography variant="h4" style={styles.sectionTitle}>Reviews</Typography>
+  const renderReviewsSection = () => (
+    <View style={styles.section}>
+      <Text style={styles.sectionTitle}>Reviews</Text>
       {contractorReviews.length > 0 ? (
         contractorReviews.map((review, index) => (
-          <View key={review._id || index} style={styles.reviewCard}>
+          <Card key={review._id || index} style={styles.reviewCard}>
             <View style={styles.reviewHeader}>
               <Avatar
-                source={{ uri: getUserProfilePictureUrl(review.user?.profilePicture, `${review.user?.firstName || ''} ${review.user?.lastName || ''}`) }}
+                source={{ uri: getUserProfilePictureUrl(
+                  review.user?.profilePicture,
+                  review.user?.firstName && review.user?.lastName 
+                    ? `${review.user.firstName} ${review.user.lastName}` 
+                    : 'Anonymous'
+                )}}
                 size={40}
               />
-              <View style={styles.reviewHeaderInfo}>
-                <Typography variant="h6">
-                  {review.user ? `${review.user.firstName} ${review.user.lastName}` : 'Anonymous'}
-                </Typography>
-                {renderStarRating(review.rating, 14)}
-              </View>
-              <View style={styles.reviewActions}>
-                <ReportButton
-                  reportedItemId={review._id || `review-${index}`}
-                  onModel="Review"
-                  renderTrigger={({ onPress }) => (
-                    <TouchableOpacity onPress={onPress} style={styles.reportTriggerSmall}>
-                      <FontAwesome5 name="flag" size={12} color={Colors.neutral400} />
-                    </TouchableOpacity>
-                  )}
-                />
+              <View style={styles.reviewHeaderText}>
+                <Text style={styles.reviewAuthor}>
+                  {review.user?.firstName} {review.user?.lastName}
+                </Text>
+                <View style={styles.reviewRatingRow}>
+                  {renderStarRating(review.rating, 12)}
+                  <Text style={styles.reviewDate}>
+                    {new Date(review.createdAt).toLocaleDateString()}
+                  </Text>
+                </View>
               </View>
             </View>
-            {review.title && <Typography variant="subtitle2" style={styles.reviewTitle}>{review.title}</Typography>}
-            {review.comment && <Typography variant="body" style={styles.reviewComment}>{review.comment}</Typography>}
-            <Typography variant="caption" style={styles.dateText}>
-              {new Date(review.createdAt).toLocaleDateString()}
-            </Typography>
-          </View>
+            {review.title && <Text style={styles.reviewTitle}>{review.title}</Text>}
+            <Text style={styles.reviewComment}>{review.comment}</Text>
+          </Card>
         ))
       ) : (
-        <Typography variant="body" style={styles.emptyText}>No reviews yet</Typography>
+        <Text style={styles.emptyText}>No reviews yet</Text>
       )}
 
-      <View style={styles.leaveReviewSection}>
-        <Typography variant="h5" style={styles.leaveReviewTitle}>Leave a Review</Typography>
-        <View style={styles.ratingInputContainer}>
-          <Typography variant="label">Your Rating</Typography>
-          <View style={styles.ratingInput}>
-            {[1, 2, 3, 4, 5].map((star) => (
-              <TouchableOpacity key={star} onPress={() => setReviewRating(star)}>
-                <FontAwesome5
-                  name="star"
-                  solid={reviewRating >= star}
-                  size={28}
-                  color={reviewRating >= star ? Colors.warning : Colors.neutral300}
-                  style={styles.starInput}
-                />
-              </TouchableOpacity>
-            ))}
-          </View>
+      {/* Write Review Section */}
+      <Card style={styles.writeReviewCard}>
+        <Text style={styles.writeReviewTitle}>Write a Review</Text>
+        <View style={styles.ratingInputRow}>
+          {[1, 2, 3, 4, 5].map((star) => (
+            <TouchableOpacity key={star} onPress={() => setReviewRating(star)}>
+              <FontAwesome5
+                name="star"
+                solid={star <= reviewRating}
+                size={24}
+                color="#f59e0b"
+                style={styles.ratingStar}
+              />
+            </TouchableOpacity>
+          ))}
         </View>
         <Input
-          label="Review Title"
-          placeholder="Summarize your experience"
+          placeholder="Review title (optional)"
           value={reviewTitle}
           onChangeText={setReviewTitle}
-          style={styles.inputField}
+          style={styles.reviewInput}
         />
         <Input
-          label="Your Comment"
-          placeholder="Share details about your experience"
-          multiline
-          numberOfLines={4}
+          placeholder="Write your review..."
           value={reviewComment}
           onChangeText={setReviewComment}
-          style={[styles.inputField, styles.textArea]}
+          multiline
+          numberOfLines={4}
+          style={styles.reviewInput}
         />
         <Button
-          title={submittingReview ? 'Submitting...' : 'Submit Review'}
+          title={submittingReview ? "Submitting..." : "Submit Review"}
           onPress={handleReviewSubmit}
           disabled={submittingReview}
         />
-      </View>
-    </Card>
+      </Card>
+    </View>
   );
 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={Colors.primary500} />
-        <Typography variant="body" style={styles.loadingText}>Loading contractor profile...</Typography>
+        <ActivityIndicator size="large" color="#4F46E5" />
       </View>
     );
   }
 
   if (!contractor) {
     return (
-      <View style={styles.loadingContainer}>
-        <Typography variant="h6" style={styles.errorText}>Contractor not found</Typography>
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>Contractor not found</Text>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <Header title={contractor.companyName || 'Business Profile'} showBackButton onBackPress={() => navigation.goBack()} rightComponent={null} />
-      <Tabs tabs={TABS} activeTab={activeTab} onTabChange={setActiveTab} />
+      <Header title="" showBackButton />
+      
       <ScrollView
-        style={styles.content}
+        style={styles.scrollView}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        showsVerticalScrollIndicator={false}
       >
-        {activeTab === 'about' && renderAboutTab()}
-        {activeTab === 'services' && renderServicesTab()}
-        {activeTab === 'portfolio' && renderPortfolioTab()}
-        {activeTab === 'posts' && renderPostsTab()}
-        {activeTab === 'reviews' && renderReviewsTab()}
+        {renderHeader()}
+
+        {/* Action Buttons Row */}
+        <View style={styles.actionButtonsRow}>
+          <TouchableOpacity style={styles.actionButton} onPress={handleCall}>
+            <View style={styles.actionIconContainer}>
+              <FontAwesome5 name="phone" size={16} color="#0284c7" />
+            </View>
+            <Text style={styles.actionButtonText}>Call</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionButton} onPress={handleDirections}>
+            <View style={styles.actionIconContainer}>
+              <FontAwesome5 name="directions" size={16} color="#0284c7" />
+            </View>
+            <Text style={styles.actionButtonText}>Directions</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionButton} onPress={handleWebsite}>
+            <View style={styles.actionIconContainer}>
+              <FontAwesome5 name="globe" size={16} color="#0284c7" />
+            </View>
+            <Text style={styles.actionButtonText}>Website</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
+            <View style={styles.actionIconContainer}>
+              <FontAwesome5 name="share" size={16} color="#0284c7" />
+            </View>
+            <Text style={styles.actionButtonText}>Share</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Tab Navigation */}
+        <View style={styles.tabContainer}>
+          <Tabs tabs={TABS} activeTab={activeTab} onTabChange={setActiveTab} />
+        </View>
+
+        {/* Tab Content */}
+        <View style={styles.tabContent}>
+          {activeTab === 'about' && renderAboutSection()}
+          {activeTab === 'services' && renderServicesSection()}
+          {activeTab === 'portfolio' && renderPortfolioSection()}
+          {activeTab === 'posts' && renderPostsSection()}
+          {activeTab === 'reviews' && renderReviewsSection()}
+        </View>
       </ScrollView>
+
+      {/* Bottom Action Bar */}
+      <View style={styles.bottomActionBar}>
+        <Button
+          title="Message"
+          variant="outline"
+          onPress={() => navigation.navigate('ChatScreen', {
+            recipientId: contractor?.user?._id,
+            recipientName: contractor?.companyName,
+          })}
+          style={styles.bottomActionButton}
+        />
+        <Button
+          title="Request Quote"
+          onPress={() => setIsQuoteModalVisible(true)}
+          style={styles.bottomActionButtonPrimary}
+        />
+      </View>
+
+      {/* Quote Request Modal */}
       <Modal
         visible={isQuoteModalVisible}
         onClose={() => setIsQuoteModalVisible(false)}
         title="Request a Quote"
       >
-        <Typography variant="body" style={styles.modalSubtitle}>
-          Tell the contractor about your project to get an accurate estimate.
-        </Typography>
         <Input
-          label="Project Title"
-          placeholder="e.g., Bathroom Remodel"
+          placeholder="Project title"
           value={quoteProjectTitle}
           onChangeText={setQuoteProjectTitle}
-          style={styles.inputField}
+          style={styles.modalInput}
         />
         <Input
-          label="Description"
-          placeholder="Describe your project details..."
-          multiline
-          numberOfLines={4}
+          placeholder="Describe your project..."
           value={quoteDescription}
           onChangeText={setQuoteDescription}
-          style={[styles.inputField, styles.textArea]}
+          multiline
+          numberOfLines={4}
+          style={styles.modalInput}
         />
-        <Typography variant="label" style={styles.contactPrefLabel}>Contact Preference</Typography>
-        <View style={styles.radioGroup}>
+        <View style={styles.contactPreferenceRow}>
           <TouchableOpacity
-            style={[styles.radioItem, quoteContactPreference === 'email' && styles.radioItemSelected]}
+            style={[styles.preferenceButton, quoteContactPreference === 'email' && styles.preferenceButtonActive]}
             onPress={() => setQuoteContactPreference('email')}
           >
-            <Typography variant="body" style={quoteContactPreference === 'email' ? styles.radioTextSelected : styles.radioText}>Email</Typography>
+            <Text style={[styles.preferenceText, quoteContactPreference === 'email' && styles.preferenceTextActive]}>Email</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.radioItem, quoteContactPreference === 'phone' && styles.radioItemSelected]}
+            style={[styles.preferenceButton, quoteContactPreference === 'phone' && styles.preferenceButtonActive]}
             onPress={() => setQuoteContactPreference('phone')}
           >
-            <Typography variant="body" style={quoteContactPreference === 'phone' ? styles.radioTextSelected : styles.radioText}>Phone</Typography>
+            <Text style={[styles.preferenceText, quoteContactPreference === 'phone' && styles.preferenceTextActive]}>Phone</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.radioItem, quoteContactPreference === 'in_app' && styles.radioItemSelected]}
-            onPress={() => setQuoteContactPreference('in_app')}
+            style={[styles.preferenceButton, quoteContactPreference === 'either' && styles.preferenceButtonActive]}
+            onPress={() => setQuoteContactPreference('either')}
           >
-            <Typography variant="body" style={quoteContactPreference === 'in_app' ? styles.radioTextSelected : styles.radioText}>In App Chat</Typography>
+            <Text style={[styles.preferenceText, quoteContactPreference === 'either' && styles.preferenceTextActive]}>Either</Text>
           </TouchableOpacity>
         </View>
-        <Button
-          title="Send Request"
-          onPress={handleRequestQuote}
-          style={styles.modalSubmitButton}
-        />
+        <View style={styles.modalButtons}>
+          <Button
+            title="Cancel"
+            variant="outline"
+            onPress={() => setIsQuoteModalVisible(false)}
+            style={styles.modalButton}
+          />
+          <Button
+            title="Send Request"
+            onPress={handleRequestQuote}
+            style={styles.modalButton}
+          />
+        </View>
       </Modal>
     </View>
   );
@@ -613,327 +668,450 @@ const BusinessDetailScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.neutral100,
-  },
-  content: {
-    flex: 1,
+    backgroundColor: '#FFFFFF',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: Colors.neutral100,
   },
-  loadingText: {
-    marginTop: Spacing.sm,
-    color: Colors.neutral600,
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
   },
   errorText: {
-    color: Colors.error,
+    fontSize: 16,
+    color: '#6b7280',
   },
+  scrollView: {
+    flex: 1,
+  },
+  // Header Section
   headerSection: {
-    backgroundColor: Colors.neutral50,
+    backgroundColor: '#FFFFFF',
   },
-  bannerContainer: {
-    height: 180,
-    backgroundColor: Colors.neutral300,
+  floatingActions: {
+    position: 'absolute',
+    top: 8,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
   },
-  bannerImage: {
+  floatingButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  floatingActionsRight: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  heroBanner: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    backgroundColor: '#f3f4f6',
+  },
+  heroImage: {
     width: '100%',
     height: '100%',
-    resizeMode: 'cover',
   },
-  profileImageContainer: {
-    alignItems: 'center',
-    marginTop: -50,
+  contentContainer: {
+    paddingHorizontal: 16,
   },
-  profilePicture: {
-    borderWidth: 4,
-    borderColor: Colors.neutral50,
+  companyInfo: {
+    marginTop: 12,
   },
-  headerInfo: {
-    alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.lg,
-  },
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: Spacing.sm,
-  },
-  contractorName: {
-    color: Colors.neutral900,
-    textAlign: 'center',
-  },
-  reportTrigger: {
-    marginLeft: Spacing.md,
-    padding: Spacing.xs,
+  companyName: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#111827',
   },
   ratingRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: Spacing.sm,
+    marginTop: 6,
+    gap: 6,
   },
-  starRatingContainer: {
+  starsContainer: {
     flexDirection: 'row',
+  },
+  starIcon: {
+    marginRight: 2,
   },
   ratingText: {
-    marginLeft: Spacing.sm,
-    color: Colors.neutral700,
-  },
-  badgeRow: {
-    flexDirection: 'row',
-    marginTop: Spacing.sm,
-  },
-  badge: {
-    paddingVertical: Spacing.xxs,
-    paddingHorizontal: Spacing.sm,
-    borderRadius: Radii.sm,
-    marginRight: Spacing.sm,
+    fontSize: 14,
+    color: '#6b7280',
   },
   verifiedBadge: {
-    backgroundColor: Colors.success,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#eef2ff',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    alignSelf: 'flex-start',
+    marginTop: 8,
+    gap: 4,
   },
-  sponsoredBadge: {
-    backgroundColor: Colors.warning,
-  },
-  badgeText: {
-    fontSize: 10,
+  verifiedBadgeText: {
+    fontSize: 11,
     fontWeight: '700',
-    color: Colors.neutral50,
+    color: '#4F46E5',
   },
-  
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    gap: 6,
+  },
+  locationText: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  locationDivider: {
+    color: '#d1d5db',
+  },
+  // Stats Section
+  statsSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    paddingVertical: 16,
+    marginTop: 16,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  statItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  statValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+    marginTop: 6,
+  },
+  statLabel: {
+    fontSize: 11,
+    color: '#6b7280',
+    marginTop: 2,
+  },
+  statDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: '#e5e7eb',
+  },
+  // Action Buttons
   actionButtonsRow: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    width: '100%',
-    marginTop: Spacing.md,
-    marginBottom: Spacing.sm,
+    paddingVertical: 16,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
   },
-  actionIconButton: {
+  actionButton: {
     alignItems: 'center',
   },
-  actionIconCircle: {
+  actionIconContainer: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: Colors.primary100,
+    backgroundColor: 'rgba(2, 132, 199, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: Spacing.xxs,
+    marginBottom: 6,
   },
-  actionIconText: {
-    color: Colors.neutral700,
+  actionButtonText: {
+    fontSize: 12,
+    color: '#374151',
   },
-  mainActionButtonsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-    marginTop: Spacing.sm,
+  // Tabs
+  tabContainer: {
+    backgroundColor: '#FFFFFF',
   },
-  halfButton: {
-    flex: 1,
-    marginHorizontal: Spacing.xs,
+  tabContent: {
+    paddingBottom: 100,
   },
-  modalSubtitle: {
-    color: Colors.neutral600,
-    marginBottom: Spacing.md,
-  },
-  contactPrefLabel: {
-    marginBottom: Spacing.xs,
-  },
-  radioGroup: {
-    flexDirection: 'row',
-    marginBottom: Spacing.lg,
-  },
-  radioItem: {
-    flex: 1,
-    paddingVertical: Spacing.sm,
-    borderWidth: 1,
-    borderColor: Colors.neutral300,
-    borderRadius: Radii.md,
-    alignItems: 'center',
-    marginRight: Spacing.sm,
-  },
-  radioItemSelected: {
-    borderColor: Colors.primary500,
-    backgroundColor: Colors.primary50,
-  },
-  radioText: {
-    color: Colors.neutral700,
-  },
-  radioTextSelected: {
-    color: Colors.primary700,
-    fontWeight: 'bold',
-  },
-  modalSubmitButton: {
-    marginTop: Spacing.md,
-  },
-
-  card: {
-    margin: Spacing.md,
-    padding: Spacing.lg,
+  // Sections
+  section: {
+    padding: 16,
   },
   sectionTitle: {
-    color: Colors.neutral900,
-    marginBottom: Spacing.md,
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 12,
   },
-  bioText: {
-    color: Colors.neutral700,
-    marginBottom: Spacing.md,
+  aboutText: {
+    fontSize: 14,
+    color: '#374151',
+    lineHeight: 22,
   },
-  detailsGrid: {
-    marginTop: Spacing.sm,
+  infoList: {
+    marginTop: 16,
+    gap: 12,
   },
-  detailItem: {
-    marginBottom: Spacing.md,
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
-  detailLabel: {
+  infoText: {
+    fontSize: 14,
+    color: '#374151',
+  },
+  infoLabel: {
     fontWeight: '600',
-    color: Colors.neutral800,
-    marginBottom: Spacing.xxs,
   },
-  servicesContainer: {
+  // Services
+  serviceCard: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    backgroundColor: '#f9fafb',
+    padding: 14,
+    borderRadius: 12,
+    marginBottom: 10,
   },
-  serviceTag: {
-    backgroundColor: Colors.primary100,
-    paddingVertical: Spacing.xs,
-    paddingHorizontal: Spacing.md,
-    borderRadius: Radii.xl,
-    marginRight: Spacing.sm,
-    marginBottom: Spacing.sm,
+  serviceInfo: {
+    flex: 1,
   },
-  serviceTagText: {
-    color: Colors.primary700,
+  serviceName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
   },
-  portfolioGallery: {
-    flexDirection: 'row',
-    paddingVertical: Spacing.xs,
+  serviceDescription: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginTop: 4,
+  },
+  servicePrice: {
+    backgroundColor: '#eef2ff',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  servicePriceText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#4F46E5',
+  },
+  // Portfolio
+  portfolioScroll: {
+    marginHorizontal: -16,
+    paddingHorizontal: 16,
   },
   portfolioItem: {
-    marginRight: Spacing.md,
+    width: 176,
+    marginRight: 12,
   },
   portfolioImage: {
-    width: 180,
-    height: 120,
-    borderRadius: Radii.md,
-    resizeMode: 'cover',
+    width: 176,
+    height: 132,
+    borderRadius: 12,
+    backgroundColor: '#f3f4f6',
   },
   portfolioCaption: {
-    marginTop: Spacing.xs,
-    textAlign: 'center',
+    fontSize: 12,
+    color: '#6b7280',
+    marginTop: 8,
   },
+  // Posts
   postCard: {
-    backgroundColor: Colors.neutral50,
-    borderRadius: Radii.md,
-    padding: Spacing.md,
-    marginBottom: Spacing.md,
-    ...Shadows.sm,
+    marginBottom: 16,
   },
   postHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: Spacing.sm,
+    marginBottom: 12,
   },
-  postHeaderInfo: {
+  postHeaderText: {
     flex: 1,
-    marginLeft: Spacing.sm,
+    marginLeft: 10,
+  },
+  postAuthor: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  postDate: {
+    fontSize: 12,
+    color: '#6b7280',
+  },
+  reportButton: {
+    padding: 8,
   },
   postCaption: {
-    color: Colors.neutral800,
-    marginBottom: Spacing.sm,
+    fontSize: 14,
+    color: '#374151',
+    marginBottom: 12,
   },
-  postImageScroll: {
-    marginBottom: Spacing.sm,
+  postImages: {
+    marginBottom: 12,
   },
   postImage: {
     width: 200,
     height: 150,
-    borderRadius: Radii.sm,
-    marginRight: Spacing.sm,
-    resizeMode: 'cover',
+    borderRadius: 8,
+    marginRight: 8,
   },
-  postActions: {
+  postFooter: {
     flexDirection: 'row',
+    gap: 20,
+    paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: Colors.neutral200,
-    paddingTop: Spacing.sm,
+    borderTopColor: '#e5e7eb',
   },
-  actionItem: {
+  postStat: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginRight: Spacing.lg,
+    gap: 6,
   },
-  actionText: {
-    marginLeft: Spacing.xxs,
-    color: Colors.neutral600,
+  postStatText: {
+    fontSize: 13,
+    color: '#6b7280',
   },
+  // Reviews
   reviewCard: {
-    backgroundColor: Colors.neutral50,
-    borderRadius: Radii.md,
-    padding: Spacing.md,
-    marginBottom: Spacing.md,
+    marginBottom: 16,
   },
   reviewHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: Spacing.sm,
+    marginBottom: 10,
   },
-  reviewHeaderInfo: {
+  reviewHeaderText: {
     flex: 1,
-    marginLeft: Spacing.sm,
+    marginLeft: 10,
   },
-  reviewActions: {
+  reviewAuthor: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  reviewRatingRow: {
     flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 4,
   },
-  reportTriggerSmall: {
-    padding: Spacing.xs,
+  reviewDate: {
+    fontSize: 12,
+    color: '#6b7280',
   },
   reviewTitle: {
-    color: Colors.neutral800,
-    marginBottom: Spacing.xxs,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 6,
   },
   reviewComment: {
-    color: Colors.neutral700,
-    marginBottom: Spacing.xs,
+    fontSize: 14,
+    color: '#374151',
+    lineHeight: 20,
   },
-  emptyText: {
-    color: Colors.neutral600,
-    textAlign: 'center',
-    paddingVertical: Spacing.lg,
+  // Write Review
+  writeReviewCard: {
+    marginTop: 16,
+    padding: 16,
   },
-  leaveReviewSection: {
-    marginTop: Spacing.xl,
-    paddingTop: Spacing.xl,
-    borderTopWidth: 1,
-    borderTopColor: Colors.neutral200,
+  writeReviewTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 16,
   },
-  leaveReviewTitle: {
-    color: Colors.neutral900,
-    marginBottom: Spacing.lg,
-  },
-  ratingInputContainer: {
-    marginBottom: Spacing.lg,
-  },
-  ratingInput: {
+  ratingInputRow: {
     flexDirection: 'row',
-    marginTop: Spacing.xs,
+    justifyContent: 'center',
+    gap: 8,
+    marginBottom: 16,
   },
-  starInput: {
-    marginRight: Spacing.sm,
+  ratingStar: {
+    marginHorizontal: 4,
   },
-  inputField: {
-    marginBottom: Spacing.md,
+  reviewInput: {
+    marginBottom: 12,
   },
-  textArea: {
-    minHeight: 100,
-    textAlignVertical: 'top',
+  // Empty State
+  emptyText: {
+    fontSize: 14,
+    color: '#6b7280',
+    textAlign: 'center',
+    paddingVertical: 20,
   },
-  dateText: {
-    color: Colors.neutral500,
+  // Bottom Action Bar
+  bottomActionBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
+    gap: 12,
+  },
+  bottomActionButton: {
+    flex: 1,
+  },
+  bottomActionButtonPrimary: {
+    flex: 1,
+    backgroundColor: '#4F46E5',
+  },
+  // Modal
+  modalInput: {
+    marginBottom: 12,
+  },
+  contactPreferenceRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 20,
+  },
+  preferenceButton: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    alignItems: 'center',
+  },
+  preferenceButtonActive: {
+    backgroundColor: '#4F46E5',
+    borderColor: '#4F46E5',
+  },
+  preferenceText: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  preferenceTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalButton: {
+    flex: 1,
   },
 });
 

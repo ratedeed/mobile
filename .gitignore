@@ -30,8 +30,14 @@ yarn-error.*
 .DS_Store
 *.pem
 
+# Sentry
+sentry.properties
+
 # local env files
 .env*.local
 
 # typescript
 *.tsbuildinfo
+
+.env.local
+.env

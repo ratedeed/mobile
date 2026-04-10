@@ -1,6 +1,6 @@
 import React from 'react';
-import { Text, StyleSheet, TextProps, StyleProp, TextStyle } from 'react-native';
-import { Colors, Spacing } from '../../constants/designTokens';
+import { Text, TextProps, StyleProp, TextStyle, StyleSheet } from 'react-native';
+import { Colors, FontSizes, FontWeights } from '../../constants/designTokens';
 
 export interface TypographyProps extends TextProps {
   variant?: 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'subtitle1' | 'subtitle2' | 'body' | 'caption' | 'button' | 'label';
@@ -8,14 +8,8 @@ export interface TypographyProps extends TextProps {
   children?: React.ReactNode;
 }
 
-const baseTextStyle = {
-  fontFamily: 'System',
-  color: Colors.neutral800,
-  lineHeight: 1.4 * 16,
-};
-
 const Typography: React.FC<TypographyProps> = ({ variant = 'body', children, style, ...props }) => {
-  const getTextStyle = () => {
+  const getVariantStyle = () => {
     switch (variant) {
       case 'h1': return styles.h1;
       case 'h2': return styles.h2;
@@ -34,25 +28,82 @@ const Typography: React.FC<TypographyProps> = ({ variant = 'body', children, sty
   };
 
   return (
-    <Text style={[baseTextStyle, getTextStyle(), style]} {...props}>
+    <Text 
+      style={[getVariantStyle(), style]} 
+      {...props}
+    >
       {children}
     </Text>
   );
 };
 
 const styles = StyleSheet.create({
-  h1: { fontSize: 36, fontWeight: '800', lineHeight: 44, letterSpacing: -0.5, color: Colors.neutral900, marginBottom: Spacing.md },
-  h2: { fontSize: 30, fontWeight: '800', lineHeight: 38, letterSpacing: -0.4, color: Colors.neutral900, marginBottom: Spacing.md },
-  h3: { fontSize: 24, fontWeight: '700', lineHeight: 32, letterSpacing: -0.3, color: Colors.neutral900, marginBottom: Spacing.sm },
-  h4: { fontSize: 20, fontWeight: '700', lineHeight: 28, letterSpacing: -0.2, color: Colors.neutral800, marginBottom: Spacing.sm },
-  h5: { fontSize: 18, fontWeight: '600', lineHeight: 26, letterSpacing: -0.1, color: Colors.neutral800, marginBottom: Spacing.xs },
-  h6: { fontSize: 16, fontWeight: '600', lineHeight: 24, letterSpacing: 0, color: Colors.neutral800, marginBottom: Spacing.xs },
-  subtitle1: { fontSize: 18, fontWeight: '400', lineHeight: 26, color: Colors.neutral700 },
-  subtitle2: { fontSize: 16, fontWeight: '400', lineHeight: 24, color: Colors.neutral600 },
-  body: { fontSize: 16, fontWeight: '400', lineHeight: 24, color: Colors.neutral800 },
-  caption: { fontSize: 13, fontWeight: '400', lineHeight: 18, color: Colors.neutral500 },
-  button: { fontSize: 17, fontWeight: '700', letterSpacing: 0.5 },
-  label: { fontSize: 15, fontWeight: '600', color: Colors.neutral700 },
+  h1: {
+    fontSize: FontSizes.xxxl,
+    fontWeight: FontWeights.bold as any,
+    color: Colors.neutral900,
+    marginBottom: 16,
+  },
+  h2: {
+    fontSize: FontSizes.xxl,
+    fontWeight: FontWeights.bold as any,
+    color: Colors.neutral900,
+    marginBottom: 16,
+  },
+  h3: {
+    fontSize: FontSizes.xl,
+    fontWeight: FontWeights.semibold as any,
+    color: Colors.neutral900,
+    marginBottom: 8,
+  },
+  h4: {
+    fontSize: FontSizes.lg,
+    fontWeight: FontWeights.semibold as any,
+    color: Colors.neutral900,
+    marginBottom: 8,
+  },
+  h5: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: Colors.neutral900,
+    marginBottom: 4,
+  },
+  h6: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.neutral900,
+    marginBottom: 4,
+  },
+  subtitle1: {
+    fontSize: 18,
+    fontWeight: '400',
+    color: Colors.neutral900,
+  },
+  subtitle2: {
+    fontSize: 16,
+    fontWeight: '400',
+    color: Colors.neutral500,
+  },
+  body: {
+    fontSize: 16,
+    fontWeight: '400',
+    color: Colors.neutral900,
+    lineHeight: 24,
+  },
+  caption: {
+    fontSize: 14,
+    fontWeight: '400',
+    color: Colors.neutral500,
+  },
+  button: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: Colors.neutral900,
+  },
 });
 
 export default Typography;

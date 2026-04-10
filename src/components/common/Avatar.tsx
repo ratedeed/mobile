@@ -1,6 +1,6 @@
 import React from 'react';
-import { Image, View, Text, StyleSheet, ImageSourcePropType, StyleProp, ViewStyle, ImageStyle } from 'react-native';
-import { Radii, Colors } from '../../constants/designTokens';
+import { Image, View, Text, ImageSourcePropType, StyleProp, ViewStyle, ImageStyle, StyleSheet } from 'react-native';
+import { Colors, Spacing, Radii } from '../../constants/designTokens';
 
 export interface AvatarProps {
   source?: ImageSourcePropType;
@@ -11,26 +11,18 @@ export interface AvatarProps {
 }
 
 const Avatar: React.FC<AvatarProps> = ({ source, size = 48, style, text, ...props }) => {
-  const avatarStyle = {
+  const avatarSizeStyle = {
     width: size,
     height: size,
-    borderRadius: Radii.round,
-    backgroundColor: Colors.neutral300,
-    justifyContent: 'center' as const,
-    alignItems: 'center' as const,
-  };
-
-  const textStyle = {
-    fontSize: size * 0.4,
-    color: Colors.neutral800,
-    fontWeight: '600' as const,
+    borderRadius: size / 2,
   };
 
   if (source) {
     return (
       <Image
         source={source}
-        style={[styles.avatarImage, avatarStyle, style as StyleProp<ImageStyle>]}
+        style={[styles.base, avatarSizeStyle, style as StyleProp<ImageStyle>]}
+        resizeMode="cover"
         {...props}
       />
     );
@@ -39,24 +31,39 @@ const Avatar: React.FC<AvatarProps> = ({ source, size = 48, style, text, ...prop
   if (text) {
     const initials = text.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
     return (
-      <View style={[styles.avatarPlaceholder, avatarStyle, style]} {...props}>
-        <Text style={textStyle}>{initials}</Text>
+      <View style={[styles.base, styles.placeholder, avatarSizeStyle, style as StyleProp<ViewStyle>]} {...props}>
+        <Text 
+          style={[styles.initials, { fontSize: size * 0.4 }]}
+        >
+          {initials}
+        </Text>
       </View>
     );
   }
 
   return (
-    <View style={[styles.avatarPlaceholder, avatarStyle, style]} {...props}>
-      <Text style={textStyle}>?</Text>
+    <View style={[styles.base, styles.placeholder, avatarSizeStyle, style as StyleProp<ViewStyle>]} {...props}>
+      <Text 
+        style={[styles.initials, { fontSize: size * 0.4 }]}
+      >
+        ?
+      </Text>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  avatarImage: {
-    resizeMode: 'cover',
+  base: {
+    overflow: 'hidden',
   },
-  avatarPlaceholder: {
+  placeholder: {
+    backgroundColor: Colors.neutral200,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  initials: {
+    color: Colors.neutral500,
+    fontWeight: '600',
   },
 });
 

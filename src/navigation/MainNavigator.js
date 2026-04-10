@@ -13,7 +13,6 @@ import ContractorDashboardScreen from '../screens/ContractorDashboardScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 
-import { Spacing, Radii, Colors, Shadows } from '../constants/designTokens';
 import Typography from '../components/common/Typography';
 import { useAuth } from '../context/AuthContext';
 
@@ -22,18 +21,18 @@ const Tab = createBottomTabNavigator();
 
 const screenOptions = {
   headerStyle: {
-    backgroundColor: Colors.neutral50,
+    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: Colors.neutral200,
+    borderBottomColor: '#E4E4E7', // shadcn border
     shadowOpacity: 0,
     elevation: 0,
   },
   headerTitleStyle: {
-    fontWeight: '700',
+    fontWeight: '600',
     fontSize: 18,
-    color: Colors.neutral900,
+    color: '#09090B', // shadcn foreground
   },
-  headerTintColor: Colors.primary500,
+  headerTintColor: '#2563EB', // shadcn primary
   headerBackTitleVisible: false,
   cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
   gestureEnabled: true,
@@ -62,35 +61,34 @@ function MainTabNavigator() {
           }
           return <FontAwesome5 name={iconName} size={size} color={color} solid={focused} />;
         },
-        tabBarActiveTintColor: Colors.primary500,
-        tabBarInactiveTintColor: Colors.neutral400,
+        tabBarActiveTintColor: '#2563EB', // shadcn primary
+        tabBarInactiveTintColor: '#71717A', // shadcn muted foreground
         tabBarStyle: {
-          backgroundColor: Colors.neutral50,
-          borderTopWidth: 0,
-          ...Shadows.lg,
-          height: Spacing.xxxl + insets.bottom,
-          paddingBottom: insets.bottom + Spacing.xs,
-          paddingTop: Spacing.sm,
-          borderTopLeftRadius: Radii.lg,
-          borderTopRightRadius: Radii.lg,
-          overflow: 'hidden',
+          backgroundColor: '#FFFFFF',
+          borderTopWidth: 1,
+          borderTopColor: '#E4E4E7',
+          height: 60 + insets.bottom,
+          paddingBottom: insets.bottom + 8,
+          paddingTop: 8,
+          elevation: 0,
+          shadowOpacity: 0,
         },
         tabBarLabelStyle: {
-          fontSize: 13,
-          fontWeight: '700',
-          marginTop: Spacing.xxs,
+          fontSize: 12,
+          fontWeight: '500',
+          marginTop: 4,
         },
         headerStyle: {
-          backgroundColor: Colors.primary500,
-          borderBottomWidth: 0,
+          backgroundColor: '#FFFFFF',
+          borderBottomWidth: 1,
+          borderBottomColor: '#E4E4E7',
           shadowOpacity: 0,
           elevation: 0,
         },
         headerTitleStyle: {
-          fontWeight: '800',
-          fontSize: 22,
-          color: Colors.neutral50,
-          letterSpacing: 0.8,
+          fontWeight: '600',
+          fontSize: 18,
+          color: '#09090B',
         },
       })}
     >
@@ -100,21 +98,21 @@ function MainTabNavigator() {
         options={({ navigation }) => ({
           title: 'Home',
           headerLeft: () => (
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: Spacing.lg }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 16 }}>
               <Image
                 source={require('../../assets/faviiocon.png')}
-                style={{ width: Spacing.xl, height: Spacing.xl, marginRight: Spacing.xs, borderRadius: Radii.xs }}
+                style={{ width: 28, height: 28, marginRight: 8, borderRadius: 6 }}
               />
-              <Typography variant="h4" style={{ color: Colors.neutral50, letterSpacing: 0.5 }}>Ratedeed</Typography>
+              <Typography variant="h4" style={{ color: '#09090B' }}>Ratedeed</Typography>
             </View>
           ),
           headerTitle: '',
           headerRight: () => (
             <TouchableOpacity 
-              style={{ marginRight: Spacing.lg, padding: Spacing.xs }}
+              style={{ marginRight: 16, padding: 8 }}
               onPress={() => navigation.navigate('Notifications')}
             >
-              <FontAwesome5 name="bell" size={Spacing.lg} color={Colors.neutral50} />
+              <FontAwesome5 name="bell" size={20} color="#09090B" />
             </TouchableOpacity>
           ),
         })}

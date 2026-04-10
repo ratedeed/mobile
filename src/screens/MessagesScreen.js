@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Dimensions } from 'react-native';
+import { View, ScrollView, TouchableOpacity, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Dimensions } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { jwtDecode } from 'jwt-decode';
 import {
@@ -733,14 +733,14 @@ const MessagesScreen = () => {
                   <Card key={conv.conversationId} style={styles.conversationCard}>
                     <TouchableOpacity
                       onPress={() => setSelectedConversation(conv)}
-                      style={styles.conversationTouchable}
+                      style={styles.conversationHeader}
                     >
-                      <Avatar text={getParticipantDisplayName(conv.otherParticipant, currentUserId)} size={Spacing.xxl} style={styles.conversationAvatar} />
-                      <View style={styles.conversationTextContent}>
+                      <Avatar text={getParticipantDisplayName(conv.otherParticipant, currentUserId)} size={Spacing.xxl} style={styles.avatar} />
+                      <View style={styles.flex1}>
                         <Typography variant="h6" style={styles.conversationName}>
                           {getParticipantDisplayName(conv.otherParticipant, currentUserId)}
                         </Typography>
-                        <Typography variant="body" style={styles.lastMessage} numberOfLines={1}>
+                        <Typography variant="body" style={styles.conversationSnippet} numberOfLines={1}>
                           {conv.lastMessage.messageText || 'No messages yet.'}
                         </Typography>
                         {conv.unreadCount > 0 && (
@@ -756,13 +756,13 @@ const MessagesScreen = () => {
                   </Card>
                 ))
             : (
-              <Typography variant="body" style={styles.noContentText}>No conversations yet. Start a new chat!</Typography>
+              <Typography variant="body" style={styles.emptyStateText}>No conversations yet. Start a new chat!</Typography>
             )}
           </ScrollView>
         ) : (
           <ScrollView
             ref={messagesScrollViewRef}
-            style={styles.messagesList}
+            style={styles.flex1}
             contentContainerStyle={styles.messagesListContent}
             onContentSizeChange={() => messagesScrollViewRef.current.scrollToEnd({ animated: true })}
           >
@@ -774,21 +774,18 @@ const MessagesScreen = () => {
                 return (
                   <View
                     key={msg._id}
-                    style={[
-                      styles.messageBubble,
-                      isMyMessage ? styles.myMessage : styles.otherMessage
-                    ]}
+                    style={[styles.messageBubble, isMyMessage ? styles.myMessageBubble : styles.theirMessageBubble]}
                   >
-                    <View style={styles.messageContentWrapper}>
-                      <Typography variant="body" style={isMyMessage ? styles.myMessageText : styles.otherMessageText}>
+                    <View style={styles.flex1}>
+                      <Typography variant="body" style={[styles.messageText, isMyMessage ? styles.myMessageText : styles.theirMessageText]}>
                         {msg.messageText}
                       </Typography>
                       <View style={styles.messageFooter}>
-                        <Typography variant="caption" style={isMyMessage ? styles.myMessageTime : styles.otherMessageTime}>
+                        <Typography variant="caption" style={[styles.messageTime, isMyMessage ? styles.myMessageTime : styles.theirMessageTime]}>
                           {formatMessageTime(msg.createdAt)}
                         </Typography>
                         {isMyMessage && isRead && (
-                          <FontAwesome5 name="check-double" size={12} color={Colors.primary100} style={styles.readIcon} />
+                          <FontAwesome5 name="check-double" size={12} color={Colors.primary100} style={styles.readReceipt} />
                         )}
                       </View>
                     </View>
@@ -797,7 +794,7 @@ const MessagesScreen = () => {
                         reportedItemId={msg._id}
                         onModel="Message"
                         renderTrigger={({ onPress }) => (
-                          <TouchableOpacity onPress={onPress} style={styles.reportTriggerMessage}>
+                          <TouchableOpacity onPress={onPress} style={styles.flagIcon}>
                             <FontAwesome5 name="flag" size={10} color={Colors.neutral400} />
                           </TouchableOpacity>
                         )}
@@ -807,7 +804,7 @@ const MessagesScreen = () => {
                 );
               })
             ) : (
-              <Typography variant="body" style={styles.noContentText}>No messages in this conversation yet. Say hello!</Typography>
+              <Typography variant="body" style={styles.emptyStateText}>No messages in this conversation yet. Say hello!</Typography>
             )}
             {selectedConversation && typingUsers[selectedConversation.conversationId] &&
               Object.entries(typingUsers[selectedConversation.conversationId]).map(([userId, isTypingStatus]) => {
@@ -815,7 +812,7 @@ const MessagesScreen = () => {
                   const typingParticipant = selectedConversation.participants.find(p => p._id === userId);
                   if (typingParticipant) {
                     return (
-                      <Typography key={userId} variant="caption" style={styles.typingIndicator}>
+                      <Typography key={userId} variant="caption" style={styles.typingIndicatorText}>
                         {getParticipantDisplayName(typingParticipant, currentUserId)} is typing...
                       </Typography>
                     );
@@ -827,9 +824,9 @@ const MessagesScreen = () => {
         )}
 
         {selectedConversation && (
-          <View style={styles.messageInputContainer}>
+          <View style={styles.inputContainer}>
             <Input
-              style={styles.messageInput}
+              style={styles.inputField}
               placeholder="Type your message..."
               placeholderTextColor={Colors.neutral500}
               value={newMessage}
@@ -1018,6 +1015,183 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: Spacing.md,
     bottom: 25,
+  },
+
+  flex1: {
+    flex: 1,
+  },
+  loadingText: {
+    marginTop: Spacing.xs,
+    color: Colors.neutral500,
+  },
+  conversationList: {
+    flex: 1,
+    width: '100%',
+  },
+  conversationListContent: {
+    paddingHorizontal: Spacing.md,
+    paddingBottom: Spacing.md,
+  },
+  conversationCard: {
+    backgroundColor: Colors.neutral50,
+    borderWidth: 1,
+    borderColor: Colors.neutral200,
+    borderRadius: Radii.xl,
+    padding: Spacing.md,
+    marginBottom: Spacing.sm,
+  },
+  conversationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  avatar: {
+    marginRight: Spacing.md,
+  },
+  conversationName: {
+    color: Colors.neutral900,
+    marginBottom: Spacing.xs,
+  },
+  conversationSnippet: {
+    color: Colors.neutral500,
+  },
+  unreadBadge: {
+    backgroundColor: Colors.primary500,
+    borderRadius: Radii.round,
+    paddingHorizontal: Spacing.xs,
+    paddingVertical: 2,
+    marginLeft: Spacing.sm,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  unreadText: {
+    color: Colors.neutral50,
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  conversationTime: {
+    color: Colors.neutral500,
+    marginLeft: Spacing.md,
+  },
+  emptyStateText: {
+    color: Colors.neutral500,
+    textAlign: 'center',
+    marginTop: Spacing.xxl,
+    paddingHorizontal: Spacing.md,
+  },
+  messagesList: {
+    flex: 1,
+  },
+  messagesListContent: {
+    flexGrow: 1,
+    justifyContent: 'flex-end',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md,
+  },
+  messageBubble: {
+    maxWidth: '80%',
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    marginBottom: Spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    shadowColor: Colors.neutral900,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 1,
+    elevation: 1,
+  },
+  myMessageBubble: {
+    alignSelf: 'flex-end',
+    backgroundColor: Colors.primary500,
+    borderTopLeftRadius: Radii.xl,
+    borderTopRightRadius: Radii.xl,
+    borderBottomLeftRadius: Radii.xl,
+    borderBottomRightRadius: 0,
+  },
+  theirMessageBubble: {
+    alignSelf: 'flex-start',
+    backgroundColor: Colors.neutral200,
+    borderTopLeftRadius: Radii.xl,
+    borderTopRightRadius: Radii.xl,
+    borderBottomRightRadius: Radii.xl,
+    borderBottomLeftRadius: 0,
+  },
+  messageText: {
+    flex: 1,
+  },
+  myMessageText: {
+    color: Colors.neutral50,
+    textAlign: 'right',
+  },
+  theirMessageText: {
+    color: Colors.neutral900,
+    textAlign: 'left',
+  },
+  messageFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  messageTime: {
+    marginTop: 2,
+  },
+  myMessageTime: {
+    color: 'rgba(255,255,255,0.8)',
+    alignSelf: 'flex-end',
+  },
+  theirMessageTime: {
+    color: Colors.neutral500,
+    alignSelf: 'flex-start',
+  },
+  readReceipt: {
+    marginLeft: 2,
+  },
+  flagIcon: {
+    padding: 2,
+    marginLeft: 2,
+  },
+  typingIndicatorText: {
+    color: Colors.neutral500,
+    textAlign: 'center',
+    marginTop: Spacing.sm,
+    fontStyle: 'italic',
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: Spacing.sm,
+    backgroundColor: Colors.neutral50,
+    paddingHorizontal: Spacing.md,
+    shadowColor: Colors.neutral900,
+    shadowOffset: { width: 0, height: -1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+    borderTopLeftRadius: Radii.lg,
+    borderTopRightRadius: Radii.lg,
+    height: 80,
+    width: '100%',
+  },
+  inputField: {
+    flex: 1,
+    marginRight: Spacing.sm,
+    maxHeight: 150,
+  },
+  sendButton: {
+    backgroundColor: Colors.primary500,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: Colors.neutral900,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
+    position: 'absolute',
+    right: Spacing.md,
+    bottom: Spacing.lg,
   },
 });
 

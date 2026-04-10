@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
-  StyleSheet,
   FlatList,
   TouchableOpacity,
   Image,
@@ -9,6 +8,8 @@ import {
   TextInput,
   RefreshControl,
   ListRenderItemInfo,
+  StyleSheet,
+  Text,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -24,7 +25,7 @@ import { EmptyState } from '../components/common/EmptyState';
 import { Badge } from '../components/common/Badge';
 
 type RootStackParamList = {
-  BusinessSearch: { query?: string; searchType?: string };
+  BusinessSearch: { query?: string; searchType?: string; name?: string };
   BusinessDetail: { contractorId?: string; slug?: string };
 };
 
@@ -59,9 +60,10 @@ const SORT_OPTIONS: SortOption[] = [
 const BusinessSearchScreen: React.FC = () => {
   const navigation = useNavigation<BusinessSearchScreenNavigationProp>();
   const route = useRoute<BusinessSearchScreenRouteProp>();
-  const { query, searchType } = route.params || {};
+  const { query, searchType, name } = route.params || {};
 
-  const [searchQuery, setSearchQuery] = useState<string>(query || '');
+  const [searchZip, setSearchZip] = useState<string>(query || '');
+  const [searchName, setSearchName] = useState<string>(name || '');
   const [selectedCategory, setSelectedCategory] = useState<string>(
     searchType === 'category' ? (query || '') : ''
   );
@@ -91,10 +93,13 @@ const BusinessSearchScreen: React.FC = () => {
           sortBy: sortBy,
         };
 
-        if (searchQuery && /^\d{5}$/.test(searchQuery)) {
-          filters.zip = searchQuery;
-        } else if (searchQuery) {
-          filters.search = searchQuery;
+        // Use zip code if provided, otherwise use name search
+        if (searchZip && /^\d{5}$/.test(searchZip)) {
+          filters.zip = searchZip;
+        } else if (searchName) {
+          filters.search = searchName;
+        } else if (searchZip) {
+          filters.search = searchZip;
         }
 
         if (selectedCategory && selectedCategory !== 'All') {
@@ -124,7 +129,7 @@ const BusinessSearchScreen: React.FC = () => {
         setRefreshing(false);
       }
     },
-    [searchQuery, selectedCategory, sortBy]
+    [searchZip, searchName, selectedCategory, sortBy]
   );
 
   useEffect(() => {
@@ -142,7 +147,7 @@ const BusinessSearchScreen: React.FC = () => {
       }
     }, 500);
     return () => clearTimeout(debounceTimer);
-  }, [searchQuery, fetchContractors]);
+  }, [searchZip, searchName, fetchContractors]);
 
   const handleSearch = () => {
     fetchContractors(1, false);
@@ -161,7 +166,8 @@ const BusinessSearchScreen: React.FC = () => {
 
   const handleCategorySelect = (category: string) => {
     setSelectedCategory(category === 'All' ? '' : category);
-    setSearchQuery('');
+    setSearchZip('');
+    setSearchName('');
   };
 
   const renderStarRating = (rating?: number) => {
@@ -170,15 +176,15 @@ const BusinessSearchScreen: React.FC = () => {
     const hasHalf = rating % 1 >= 0.5;
 
     return (
-      <View style={styles.starContainer}>
+      <View style={styles.starsContainer}>
         {[1, 2, 3, 4, 5].map((i) => (
           <FontAwesome5
             key={i}
             name={i <= fullStars ? 'star' : i === fullStars + 1 && hasHalf ? 'star-half-alt' : 'star'}
             solid={i <= fullStars}
             size={12}
-            color={Colors.warning500}
-            style={styles.starIcon as any}
+            color="#f59e0b"
+            style={styles.starIcon}
           />
         ))}
       </View>
@@ -186,85 +192,102 @@ const BusinessSearchScreen: React.FC = () => {
   };
 
   const renderContractorCard = ({ item }: ListRenderItemInfo<Contractor>) => (
-    <Card style={styles.contractorCard as any}>
-      <TouchableOpacity
-        onPress={() => {
-          if (item._id) {
-            navigation.navigate('BusinessDetail', { contractorId: item._id });
-          } else if (item.slug) {
-            navigation.navigate('BusinessDetail', { slug: item.slug });
-          }
-        }}
-        activeOpacity={0.8}
-      >
+    <TouchableOpacity
+      style={styles.listingCard}
+      onPress={() => {
+        if (item._id) {
+          navigation.navigate('BusinessDetail', { contractorId: item._id });
+        } else if (item.slug) {
+          navigation.navigate('BusinessDetail', { slug: item.slug });
+        }
+      }}
+      activeOpacity={0.8}
+    >
+      <View style={styles.imageContainer}>
         <Image
-          source={{ uri: item.profilePicture || 'https://via.placeholder.com/300x200' }}
-          style={styles.contractorImage as any}
+          source={{ uri: item.profilePicture || 'https://via.placeholder.com/200' }}
+          style={styles.contractorImage}
+          resizeMode="cover"
         />
-        <View style={styles.contractorInfo}>
-          <View style={styles.nameRow}>
-            <Typography variant="h6" style={styles.contractorName} numberOfLines={1}>
-              {item.companyName}
-            </Typography>
-            {item.isVerified && (
-              <Badge label="Verified" variant="success" size="sm" />
-            )}
+        {item.isVerified && (
+          <View style={styles.verifiedBadge}>
+            <FontAwesome5 name="shield-alt" size={10} color="#4F46E5" />
+            <Text style={styles.verifiedText}>Verified</Text>
           </View>
-          <Typography variant="caption" style={styles.contractorCategory}>
-            {item.category || 'General Contractor'}
-          </Typography>
-          <View style={styles.ratingRow}>
-            {renderStarRating(item.averageRating)}
-            <Typography variant="caption" style={styles.ratingText}>
-              {item.averageRating?.toFixed(1) || '0.0'} ({item.numReviews || 0})
-            </Typography>
+        )}
+        <TouchableOpacity style={styles.favoriteButton}>
+          <FontAwesome5 name="heart" size={16} color="rgba(0,0,0,0.5)" />
+        </TouchableOpacity>
+      </View>
+      <View style={styles.cardContent}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.companyName} numberOfLines={1}>
+            {item.companyName}
+          </Text>
+          <View style={styles.ratingContainer}>
+            <FontAwesome5 name="star" size={10} color="#111827" />
+            <Text style={styles.ratingText}>
+              {item.averageRating?.toFixed(2) || '0.00'}
+            </Text>
           </View>
-          {item.pricing && (
-            <Typography variant="caption" style={styles.pricing}>
-              {item.pricing}
-            </Typography>
-          )}
-          {item.contactInfo?.city && (
-            <View style={styles.locationRow}>
-              <FontAwesome5 name="map-marker-alt" size={10} color={Colors.neutral500} />
-              <Typography variant="caption" style={styles.locationText}>
-                {item.contactInfo.city}, {item.contactInfo.state}
-              </Typography>
-            </View>
-          )}
         </View>
-      </TouchableOpacity>
-    </Card>
+        <Text style={styles.categoryText}>
+          {item.category || 'General Contractor'}
+        </Text>
+        <View style={styles.ratingRow}>
+          {renderStarRating(item.averageRating)}
+          <Text style={styles.reviewCount}>
+            ({item.numReviews || 0})
+          </Text>
+        </View>
+        {item.pricing && (
+          <Text style={styles.pricingText}>{item.pricing}</Text>
+        )}
+        {item.contactInfo?.city && (
+          <View style={styles.locationRow}>
+            <FontAwesome5 name="map-marker-alt" size={10} color="#6b7280" />
+            <Text style={styles.locationText}>
+              {item.contactInfo.city}, {item.contactInfo.state}
+            </Text>
+          </View>
+        )}
+      </View>
+    </TouchableOpacity>
   );
 
   const renderFooter = () => {
     if (!loadingMore) return null;
     return (
       <View style={styles.footerLoader}>
-        <ActivityIndicator size="small" color={Colors.primary500} />
+        <ActivityIndicator size="small" color="#4F46E5" />
       </View>
     );
   };
 
   const renderHeader = () => (
     <View style={styles.listHeader}>
-      <Typography variant="caption" style={styles.resultsCount}>
+      <Text style={styles.resultsCount}>
         {totalResults} contractor{totalResults !== 1 ? 's' : ''} found
-      </Typography>
+      </Text>
       <View style={styles.sortContainer}>
-        <Typography variant="caption" style={styles.sortLabel}>Sort:</Typography>
+        <Text style={styles.sortLabel}>Sort:</Text>
         {SORT_OPTIONS.map((option) => (
           <TouchableOpacity
             key={option.key}
-            style={[styles.sortOption, sortBy === option.key && styles.sortOptionActive]}
+            style={[
+              styles.sortOption,
+              sortBy === option.key && styles.sortOptionActive
+            ]}
             onPress={() => setSortBy(option.key)}
           >
-            <Typography
-              variant="caption"
-              style={[styles.sortOptionText, sortBy === option.key && styles.sortOptionTextActive]}
+            <Text
+              style={[
+                styles.sortOptionText,
+                sortBy === option.key && styles.sortOptionTextActive
+              ]}
             >
               {option.label}
-            </Typography>
+            </Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -273,10 +296,20 @@ const BusinessSearchScreen: React.FC = () => {
 
   if (loading && contractors.length === 0) {
     return (
-      <View style={styles.fullScreenContainer}>
+      <View style={styles.container}>
         <Header title="Search Contractors" showBackButton />
         <View style={styles.loadingContainer}>
-          <SkeletonLoader type="card" count={4} />
+          <View style={styles.gridContainer}>
+            {[1, 2, 3, 4].map((i) => (
+              <View key={i} style={styles.skeletonCard}>
+                <View style={styles.skeletonImage} />
+                <View style={styles.skeletonText}>
+                  <View style={styles.skeletonLine} />
+                  <View style={styles.skeletonLineShort} />
+                </View>
+              </View>
+            ))}
+          </View>
         </View>
       </View>
     );
@@ -285,58 +318,80 @@ const BusinessSearchScreen: React.FC = () => {
   const categoryListData = [{ key: 'categories' }, ...CATEGORIES.map((c) => ({ key: c }))];
 
   return (
-    <View style={styles.fullScreenContainer}>
+    <View style={styles.container}>
       <Header title="Search Contractors" showBackButton />
 
-      <View style={styles.searchContainer}>
-        <View style={styles.searchRow}>
-          <View style={styles.searchInputContainer}>
-            <FontAwesome5 name="search" size={16} color={Colors.neutral500} style={styles.searchIcon as any} />
+      {/* Split Search Bar - Design from reference */}
+      <View style={styles.searchSection}>
+        <TouchableOpacity 
+          style={styles.searchButton}
+          onPress={handleSearch}
+        >
+          <View style={styles.searchField}>
+            <Text style={styles.searchFieldLabel}>Zip code</Text>
             <TextInput
-              style={styles.searchInput}
-              placeholder="Search by name, zip code..."
-              placeholderTextColor={Colors.neutral500}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              onSubmitEditing={handleSearch}
-              returnKeyType="search"
+              style={styles.searchFieldInput}
+              placeholder="Enter zip"
+              placeholderTextColor="#9ca3af"
+              value={searchZip}
+              onChangeText={setSearchZip}
+              keyboardType="numeric"
+              maxLength={5}
             />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
-                <FontAwesome5 name="times-circle" size={16} color={Colors.neutral500} />
-              </TouchableOpacity>
-            )}
           </View>
-        </View>
-
-        <FlatList
-          data={categoryListData}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.categoryContainer}
-          keyExtractor={(item) => item.key}
-          renderItem={({ item }) => {
-            if (item.key === 'categories') {
-              return null;
-            }
-            const isSelected = (selectedCategory === '' && item.key === 'All') || selectedCategory === item.key;
-            return (
-              <TouchableOpacity
-                style={[styles.categoryChip, isSelected && styles.categoryChipActive]}
-                onPress={() => handleCategorySelect(item.key)}
-              >
-                <Typography
-                  variant="caption"
-                  style={[styles.categoryChipText, isSelected && styles.categoryChipTextActive]}
-                >
-                  {item.key}
-                </Typography>
-              </TouchableOpacity>
-            );
-          }}
-        />
+          <View style={styles.searchFieldDivider} />
+          <View style={styles.searchFieldRight}>
+            <Text style={styles.searchFieldLabel}>Name</Text>
+            <TextInput
+              style={styles.searchFieldInput}
+              placeholder="Contractor name..."
+              placeholderTextColor="#9ca3af"
+              value={searchName}
+              onChangeText={setSearchName}
+            />
+          </View>
+          <View style={styles.searchIconContainer}>
+            <FontAwesome5 name="search" size={14} color="#FFFFFF" />
+          </View>
+        </TouchableOpacity>
       </View>
 
+      {/* Category Bar */}
+      <FlatList
+        data={categoryListData}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.categoryScroll}
+        keyExtractor={(item) => item.key}
+        renderItem={({ item }) => {
+          if (item.key === 'categories') {
+            return null;
+          }
+          const isSelected = (selectedCategory === '' && item.key === 'All') || selectedCategory === item.key;
+          return (
+            <TouchableOpacity
+              style={[
+                styles.categoryChip,
+                isSelected && styles.categoryChipActive
+              ]}
+              onPress={() => handleCategorySelect(item.key)}
+            >
+              <Text
+                style={[
+                  styles.categoryChipText,
+                  isSelected && styles.categoryChipTextActive
+                ]}
+              >
+                {item.key}
+              </Text>
+            </TouchableOpacity>
+          );
+        }}
+      />
+
+      <View style={styles.divider} />
+
+      {/* Results List */}
       <FlatList
         data={contractors}
         renderItem={renderContractorCard}
@@ -349,7 +404,7 @@ const BusinessSearchScreen: React.FC = () => {
           <EmptyState
             title="No contractors found"
             message="Try adjusting your search or filters"
-            icon="🔍"
+            icon="search"
           />
         }
         ListFooterComponent={renderFooter}
@@ -362,169 +417,276 @@ const BusinessSearchScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  fullScreenContainer: {
+  container: {
     flex: 1,
-    backgroundColor: Colors.neutral100,
+    backgroundColor: '#FFFFFF',
   },
   loadingContainer: {
     flex: 1,
-    padding: Spacing.lg,
+    padding: 16,
   },
-  searchContainer: {
-    backgroundColor: Colors.neutral50,
-    paddingTop: Spacing.md,
-    paddingBottom: Spacing.sm,
-    ...Shadows.sm,
+  searchSection: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 8,
+    backgroundColor: '#f9fafb',
   },
-  searchRow: {
-    paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.sm,
-  },
-  searchInputContainer: {
+  searchButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.neutral100,
-    borderRadius: Radii.md,
-    paddingHorizontal: Spacing.md,
-    height: 44,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 999,
+    overflow: 'hidden',
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
-  searchIcon: {
-    marginRight: Spacing.sm,
-  },
-  searchInput: {
+  searchField: {
     flex: 1,
-    fontSize: 15,
-    color: Colors.neutral900,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
   },
-  clearButton: {
-    padding: Spacing.xs,
+  searchFieldDivider: {
+    width: 1,
+    height: '100%',
+    backgroundColor: '#e5e7eb',
   },
-  categoryContainer: {
-    paddingHorizontal: Spacing.lg,
-    gap: Spacing.sm,
+  searchFieldRight: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  searchFieldLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#6b7280',
+    marginBottom: 2,
+  },
+  searchFieldInput: {
+    fontSize: 14,
+    color: '#111827',
+    padding: 0,
+  },
+  searchIconContainer: {
+    backgroundColor: '#4F46E5',
+    borderRadius: 999,
+    padding: 10,
+    marginRight: 6,
+  },
+  categoryScroll: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 8,
   },
   categoryChip: {
-    backgroundColor: Colors.neutral200,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: Radii.round,
-    marginRight: Spacing.sm,
+    backgroundColor: '#f3f4f6',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 999,
+    marginRight: 8,
   },
   categoryChipActive: {
-    backgroundColor: Colors.primary500,
+    backgroundColor: '#4F46E5',
   },
   categoryChipText: {
-    color: Colors.neutral700,
+    color: '#6b7280',
     fontWeight: '500',
+    fontSize: 14,
   },
   categoryChipTextActive: {
-    color: Colors.neutral50,
+    color: '#FFFFFF',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#e5e7eb',
   },
   listContainer: {
-    padding: Spacing.md,
+    padding: 16,
     flexGrow: 1,
   },
   listHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: Spacing.sm,
-    marginBottom: Spacing.sm,
+    paddingVertical: 8,
+    marginBottom: 12,
   },
   resultsCount: {
-    color: Colors.neutral600,
+    color: '#6b7280',
+    fontSize: 14,
   },
   sortContainer: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   sortLabel: {
-    color: Colors.neutral500,
-    marginRight: Spacing.xs,
+    color: '#6b7280',
+    fontSize: 12,
+    marginRight: 4,
   },
   sortOption: {
-    paddingHorizontal: Spacing.xs,
-    paddingVertical: 2,
-    borderRadius: Radii.sm,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
   },
   sortOptionActive: {
-    backgroundColor: Colors.primary100,
+    backgroundColor: 'rgba(79, 70, 229, 0.1)',
   },
   sortOptionText: {
-    color: Colors.neutral600,
-    fontSize: 11,
+    color: '#6b7280',
+    fontSize: 12,
   },
   sortOptionTextActive: {
-    color: Colors.primary600,
+    color: '#4F46E5',
     fontWeight: '600',
   },
   row: {
     justifyContent: 'space-between',
   },
-  contractorCard: {
+  // Listing Card styles from reference
+  listingCard: {
     width: '48%',
-    marginBottom: Spacing.md,
-    padding: 0,
+    marginBottom: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  imageContainer: {
+    position: 'relative',
+    aspectRatio: 1,
+    backgroundColor: '#f3f4f6',
   },
   contractorImage: {
     width: '100%',
-    height: 100,
-    resizeMode: 'cover',
+    height: '100%',
   },
-  contractorInfo: {
-    padding: Spacing.sm,
-  },
-  nameRow: {
+  verifiedBadge: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 999,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 1,
+    elevation: 1,
   },
-  contractorName: {
-    flex: 1,
-    color: Colors.neutral900,
+  verifiedText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#111827',
+    marginLeft: 4,
+  },
+  favoriteButton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+  },
+  cardContent: {
+    padding: 10,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  companyName: {
     fontSize: 14,
     fontWeight: '600',
+    color: '#111827',
+    flex: 1,
   },
-  contractorCategory: {
-    color: Colors.neutral600,
-    fontSize: 11,
-    marginBottom: 4,
+  ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  ratingText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#111827',
+  },
+  categoryText: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginTop: 2,
   },
   ratingRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginTop: 4,
   },
-  starContainer: {
+  starsContainer: {
     flexDirection: 'row',
-    marginRight: 4,
   },
   starIcon: {
-    marginRight: 1,
+    marginRight: 2,
   },
-  ratingText: {
-    color: Colors.neutral600,
+  reviewCount: {
     fontSize: 10,
+    color: '#6b7280',
+    marginLeft: 4,
   },
-  pricing: {
-    color: Colors.primary600,
-    fontSize: 11,
+  pricingText: {
+    fontSize: 12,
     fontWeight: '500',
+    color: '#4F46E5',
     marginTop: 4,
   },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 4,
+    gap: 4,
   },
   locationText: {
-    color: Colors.neutral500,
-    fontSize: 10,
-    marginLeft: 4,
+    fontSize: 11,
+    color: '#6b7280',
+  },
+  // Skeleton styles
+  gridContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  skeletonCard: {
+    width: '48%',
+    marginBottom: 16,
+  },
+  skeletonImage: {
+    aspectRatio: 1,
+    backgroundColor: '#f3f4f6',
+    borderRadius: 12,
+  },
+  skeletonText: {
+    padding: 10,
+    gap: 6,
+  },
+  skeletonLine: {
+    height: 12,
+    backgroundColor: '#f3f4f6',
+    borderRadius: 4,
+    width: '75%',
+  },
+  skeletonLineShort: {
+    height: 12,
+    backgroundColor: '#f3f4f6',
+    borderRadius: 4,
+    width: '50%',
   },
   footerLoader: {
-    paddingVertical: Spacing.lg,
+    paddingVertical: 16,
     alignItems: 'center',
   },
 });

@@ -1,57 +1,142 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
-  StyleSheet,
   ScrollView,
-  TouchableOpacity,
+  Pressable,
   Image,
-  ActivityIndicator,
-  Alert,
+  Text,
   RefreshControl,
-  TextInput,
   Dimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { FontAwesome5 } from '@expo/vector-icons';
-import { getTopRatedContractors, getNearbyTopRatedContractors, getFeedPosts } from '../utils/apiClient';
-import Header from '../components/common/Header';
-import Button from '../components/common/Button';
-import Card from '../components/common/Card';
-import Avatar from '../components/common/Avatar';
-import Typography from '../components/common/Typography';
-import { Spacing, Radii, Colors, Shadows } from '../constants/designTokens';
-import { SkeletonLoader } from '../components/common/SkeletonLoader';
-import { EmptyState } from '../components/common/EmptyState';
-import { Contractor, Post, RootStackParamList } from '../types';
+import { getTopRatedContractors, getNearbyTopRatedContractors } from '../utils/apiClient';
+import { Contractor, RootStackParamList } from '../types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
+// Category icon configuration from reference design
+const catGradients: Record<string, { from: string; to: string; bg: string }> = {
+  'th-large':   { from: '#1f2937', to: '#111827', bg: '#f3f4f6' },
+  home:         { from: '#f59e0b', to: '#d97706', bg: '#fef3c7' },
+  bath:         { from: '#3b82f6', to: '#2563eb', bg: '#dbeafe' },
+  bolt:         { from: '#eab308', to: '#ca8a04', bg: '#fef9c3' },
+  'paint-roller': { from: '#8b5cf6', to: '#7c3aed', bg: '#ede9fe' },
+  tree:         { from: '#10b981', to: '#059669', bg: '#d1fae5' },
+  tools:        { from: '#64748b', to: '#475569', bg: '#f1f5f9' },
+  'house-damage': { from: '#f97316', to: '#ea580c', bg: '#ffedd5' },
+  fan:          { from: '#06b6d4', to: '#0891b2', bg: '#cffafe' },
+  hammer:       { from: '#71717a', to: '#52525b', bg: '#f4f4f5' },
+  broom:        { from: '#ec4899', to: '#db2777', bg: '#fce7f3' },
+};
+
+const catActiveBg: Record<string, string> = {
+  'th-large':   '#111827',
+  home:         '#d97706',
+  bath:         '#2563eb',
+  bolt:         '#ca8a04',
+  'paint-roller': '#7c3aed',
+  tree:         '#059669',
+  tools:        '#475569',
+  'house-damage': '#ea580c',
+  fan:          '#0891b2',
+  hammer:       '#52525b',
+  broom:        '#db2777',
+};
+
 const CATEGORIES = [
-  { name: 'Home Builders', icon: 'home' },
-  { name: 'Plumbers', icon: 'bath' },
-  { name: 'Electricians', icon: 'bolt' },
-  { name: 'Painters', icon: 'paint-roller' },
-  { name: 'Landscapers', icon: 'tree' },
-  { name: 'Handymen', icon: 'tools' },
-  { name: 'Roofers', icon: 'house-damage' },
-  { name: 'HVAC', icon: 'fan' },
-  { name: 'Carpenters', icon: 'hammer' },
-  { name: 'Cleaners', icon: 'broom' },
+  { id: 'all', name: 'All', icon: 'th-large' },
+  { id: 'builders', name: 'Home Builders', icon: 'home' },
+  { id: 'plumbers', name: 'Plumbers', icon: 'bath' },
+  { id: 'electricians', name: 'Electricians', icon: 'bolt' },
+  { id: 'painters', name: 'Painters', icon: 'paint-roller' },
+  { id: 'landscapers', name: 'Landscapers', icon: 'tree' },
+  { id: 'handymen', name: 'Handymen', icon: 'tools' },
+  { id: 'roofers', name: 'Roofers', icon: 'house-damage' },
+  { id: 'hvac', name: 'HVAC', icon: 'fan' },
+  { id: 'carpenters', name: 'Carpenters', icon: 'hammer' },
+  { id: 'cleaners', name: 'Cleaners', icon: 'broom' },
 ];
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
+function ListingCard({
+  listing,
+  isFavorite,
+  onToggleFavorite,
+  detectedZip,
+  onPress
+}: {
+  listing: Contractor;
+  isFavorite: boolean;
+  onToggleFavorite: () => void;
+  detectedZip: string | null;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable className="group mb-4" onPress={onPress}>
+      <View className="relative rounded-xl overflow-hidden bg-neutral-100 aspect-square">
+        <Image
+          source={{ uri: listing.profilePicture || 'https://via.placeholder.com/200' }}
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+        {listing.isVerified && (
+          <View className="absolute top-2 left-2 bg-white rounded-full px-2 py-0.5 shadow-sm flex-row items-center" style={{ gap: 4 }}>
+            <FontAwesome5 name="shield-alt" size={10} color="#4F46E5" />
+            <Text className="text-[10px] font-bold text-neutral-900">License Verified</Text>
+          </View>
+        )}
+        <Pressable
+          onPress={(e) => { e.stopPropagation(); onToggleFavorite(); }}
+          className="absolute top-2 right-2"
+        >
+          <FontAwesome5 name="heart" solid={isFavorite} size={24} color={isFavorite ? 'rgba(225,29,72,1)' : 'rgba(0,0,0,0.5)'} />
+        </Pressable>
+      </View>
+      <View className="mt-2">
+        <View className="flex-row items-start justify-between" style={{ gap: 4 }}>
+          <Text className="text-[13px] font-semibold text-neutral-900 leading-tight flex-1" numberOfLines={1}>
+            {listing.contactInfo?.city || 'Local Area'}
+          </Text>
+          <View className="flex-row items-center shrink-0" style={{ gap: 2 }}>
+            <FontAwesome5 name="star" solid size={12} color="#eab308" />
+            <Text className="text-xs font-bold text-slate-600">
+              {listing.averageRating?.toFixed(2) || '0.00'}
+            </Text>
+          </View>
+        </View>
+        <Text className="text-xs text-neutral-500 mt-0.5" numberOfLines={1}>
+          {listing.companyName}
+        </Text>
+        <Text className="text-xs text-neutral-500" numberOfLines={1}>
+          {listing.category || 'General Contractor'}
+        </Text>
+        {detectedZip && listing.zipCodesCovered?.includes(detectedZip) && (
+          <View className="flex-row items-center mt-0.5" style={{ gap: 2 }}>
+            <FontAwesome5 name="map-marker-alt" size={10} color="#059669" />
+            <Text className="text-[10px] font-semibold text-emerald-700">Serves your area</Text>
+          </View>
+        )}
+        {listing.pricing && (
+          <Text className="text-[13px] font-semibold text-neutral-900 mt-0.5">
+            From {listing.pricing.split('–')[0]?.trim()} <Text className="font-normal text-neutral-500">project</Text>
+          </Text>
+        )}
+      </View>
+    </Pressable>
+  );
+}
+
 const HomeScreen = () => {
   const navigation = useNavigation<NavigationProp>();
-  const [zipCode, setZipCode] = useState<string>('');
   const [ipZipCode, setIpZipCode] = useState<string | null>(null);
-  const [featuredContractors, setFeaturedContractors] = useState<Contractor[]>([]);
-  const [feedPosts, setFeedPosts] = useState<Post[]>([]);
+  const [allContractors, setAllContractors] = useState<Contractor[]>([]);
   const [loadingFeatured, setLoadingFeatured] = useState<boolean>(true);
-  const [loadingFeed, setLoadingFeed] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
+  const [activeCategory, setActiveCategory] = useState<string>('all');
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     fetchLocationAndData();
@@ -59,7 +144,6 @@ const HomeScreen = () => {
 
   const fetchLocationAndData = async (): Promise<void> => {
     try {
-      setError(null);
       const response = await fetch('https://free.freeipapi.com/api/json');
       const data = await response.json();
       const detectedZip = data.zipCode;
@@ -79,61 +163,34 @@ const HomeScreen = () => {
     }
     setLoadingFeatured(true);
     try {
-      const data = await getTopRatedContractors(zip, 6);
-      setFeaturedContractors(data || []);
+      const data = await getTopRatedContractors(zip, 100); // Higher limit to group
+      setAllContractors(data || []);
     } catch (err) {
       console.error('Error fetching featured contractors:', err);
       try {
         const nearbyData = await getNearbyTopRatedContractors(zip);
-        setFeaturedContractors(nearbyData || []);
+        setAllContractors(nearbyData || []);
       } catch (nearbyErr) {
         console.error('Error fetching nearby contractors:', nearbyErr);
-        setFeaturedContractors([]);
+        setAllContractors([]);
       }
     } finally {
       setLoadingFeatured(false);
     }
   };
 
-  const loadFeedPosts = async (): Promise<void> => {
-    setLoadingFeed(true);
-    try {
-      const data = await getFeedPosts(ipZipCode || undefined);
-      setFeedPosts(data?.posts || []);
-    } catch (err) {
-      console.error('Error fetching feed posts:', err);
-      setFeedPosts([]);
-    } finally {
-      setLoadingFeed(false);
-    }
-  };
-
-  useEffect(() => {
-    if (ipZipCode) {
-      loadFeedPosts();
-    }
-  }, [ipZipCode]);
-
   const onRefresh = useCallback(async (): Promise<void> => {
     setRefreshing(true);
     await fetchLocationAndData();
-    await loadFeedPosts();
     setRefreshing(false);
-  }, [ipZipCode]);
+  }, []);
 
-  const handleSearch = (): void => {
-    const searchZip = zipCode.trim() || ipZipCode;
-    navigation.navigate('Main', {
-      screen: 'Search',
-      params: { query: searchZip, searchType: 'zipCode' },
-    } as any);
-  };
-
-  const handleCategoryPress = (category: string): void => {
-    navigation.navigate('Main', {
-      screen: 'Search',
-      params: { query: category, searchType: 'category' },
-    } as any);
+  const toggleFav = (id: string) => {
+    setFavorites(prev => {
+      const n = new Set(prev);
+      if (n.has(id)) { n.delete(id); } else { n.add(id); }
+      return n;
+    });
   };
 
   const handleContractorPress = (contractor: Contractor): void => {
@@ -144,544 +201,212 @@ const HomeScreen = () => {
     }
   };
 
-  const renderStars = (rating: number, size: number = 12) => (
-    <View style={styles.starsContainer}>
-      {[1, 2, 3, 4, 5].map((i) => (
-        <FontAwesome5
-          key={i}
-          name={i <= rating ? 'star' : 'star'}
-          solid={i <= rating}
-          size={size}
-          color={Colors.warning500}
-          style={styles.starIcon}
-        />
-      ))}
-    </View>
-  );
+  const filtered = useMemo(() => {
+    if (activeCategory === 'all') return allContractors;
+    
+    const cat = CATEGORIES.find(c => c.id === activeCategory);
+    const searchTerm = activeCategory.toLowerCase();
+    const singularSearch = searchTerm.endsWith('s') ? searchTerm.slice(0, -1) : searchTerm;
+    const labelTerm = cat?.name.toLowerCase() || '';
+    const singularLabel = labelTerm.endsWith('s') ? labelTerm.slice(0, -1) : labelTerm;
 
-  const renderFeaturedContractors = () => {
-    if (loadingFeatured) {
-      return <SkeletonLoader type="card" count={4} />;
-    }
-
-    if (featuredContractors.length === 0) {
-      return (
-        <EmptyState
-          title="No contractors found"
-          message="Try a different zip code or check back later"
-          icon="🔍"
-        />
-      );
-    }
-
-    return (
-      <View style={styles.contractorsGrid}>
-        {featuredContractors.map((contractor) => (
-          <Card key={contractor._id} style={styles.contractorCard}>
-            <TouchableOpacity onPress={() => handleContractorPress(contractor)} activeOpacity={0.8}>
-              <Image
-                source={{ uri: contractor.profilePicture || 'https://via.placeholder.com/200x150' }}
-                style={styles.contractorImage}
-              />
-              <View style={styles.contractorInfo}>
-                <View style={styles.nameRow}>
-                  <Typography variant="h6" style={styles.contractorName} numberOfLines={1}>
-                    {contractor.companyName}
-                  </Typography>
-                  {contractor.isVerified && (
-                    <FontAwesome5 name="check-circle" size={14} color={Colors.success500} />
-                  )}
-                </View>
-                <Typography variant="caption" style={styles.contractorCategory}>
-                  {contractor.category || 'General Contractor'}
-                </Typography>
-                <View style={styles.ratingRow}>
-                  {renderStars(Math.round(contractor.averageRating || 0))}
-                  <Typography variant="caption" style={styles.ratingText}>
-                    {contractor.averageRating?.toFixed(1) || '0.0'} ({contractor.numReviews || 0})
-                  </Typography>
-                </View>
-                {contractor.pricing && (
-                  <Typography variant="caption" style={styles.pricing}>
-                    {contractor.pricing}
-                  </Typography>
-                )}
-              </View>
-            </TouchableOpacity>
-          </Card>
-        ))}
-      </View>
-    );
-  };
-
-  const renderFeedPosts = () => {
-    if (loadingFeed) {
-      return <SkeletonLoader type="post" count={2} />;
-    }
-
-    if (feedPosts.length === 0) {
-      return null;
-    }
-
-    return (
-      <View style={styles.feedSection}>
-        <Typography variant="h5" style={styles.sectionTitle}>
-          Community Updates
-        </Typography>
-        {feedPosts.slice(0, 3).map((post) => (
-          <Card key={post._id} style={styles.postCard}>
-            <View style={styles.postHeader}>
-              <Avatar
-                source={{ uri: post.contractor?.user?.profilePicture || 'https://via.placeholder.com/40' }}
-                size={40}
-              />
-              <View style={styles.postHeaderInfo}>
-                <Typography variant="body" style={styles.postAuthorName}>
-                  {post.contractor?.user?.firstName} {post.contractor?.user?.lastName}
-                </Typography>
-                <Typography variant="caption" style={styles.postDate}>
-                  {new Date(post.createdAt).toLocaleDateString()}
-                </Typography>
-              </View>
-            </View>
-            <TextInput
-              style={styles.postCaption}
-              value={post.caption}
-              editable={false}
-              multiline
-            />
-            {post.images?.length > 0 && (
-              <ScrollView horizontal style={styles.postImages} showsHorizontalScrollIndicator={false}>
-                {post.images.map((img, idx) => (
-                  <Image key={idx} source={{ uri: img }} style={styles.postImage} />
-                ))}
-              </ScrollView>
-            )}
-            <View style={styles.postStats}>
-              <TextInput style={styles.postStat}>❤️ {post.likes?.length || 0}</TextInput>
-              <TextInput style={styles.postStat}>💬 {post.comments?.length || 0}</TextInput>
-            </View>
-          </Card>
-        ))}
-      </View>
-    );
-  };
+    return allContractors.filter(c => {
+      const cCat = c.category?.toLowerCase() || '';
+      return cCat.includes(searchTerm) || 
+             searchTerm.includes(cCat) || 
+             cCat.includes(singularSearch) ||
+             cCat.includes(labelTerm) ||
+             labelTerm.includes(cCat) ||
+             cCat.includes(singularLabel);
+    });
+  }, [allContractors, activeCategory]);
 
   return (
-    <ScrollView
-      style={styles.container}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-    >
-      <View style={styles.searchContainer}>
-        <View style={styles.searchBar}>
-          <FontAwesome5 name="search" size={18} color={Colors.neutral500} style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search by name, zip code..."
-            placeholderTextColor={Colors.neutral500}
-            value={zipCode}
-            onChangeText={setZipCode}
-            onSubmitEditing={handleSearch}
-            returnKeyType="search"
-          />
-          {zipCode.length > 0 && (
-            <TouchableOpacity onPress={() => setZipCode('')}>
-              <FontAwesome5 name="times-circle" size={18} color={Colors.neutral500} />
-            </TouchableOpacity>
+    <View className="flex-1 bg-white">
+      <ScrollView
+        className="flex-1"
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Search Bar */}
+        <View className="px-4 pt-1 pb-1 w-full max-w-7xl mx-auto">
+          <Pressable 
+            onPress={() => navigation.navigate('Main', { screen: 'Search' } as any)} 
+            className="w-full border border-neutral-200 rounded-full bg-white shadow-sm flex-row items-center"
+          >
+            <Text className="flex-1 text-left text-sm font-medium px-5 py-3 border-r border-neutral-200" numberOfLines={1}>
+              {ipZipCode || 'Zip code'}
+            </Text>
+            <Text className="flex-1 text-left text-sm text-neutral-400 px-5 py-3" numberOfLines={1}>
+              Contractor name...
+            </Text>
+            <View className="bg-indigo-600 rounded-full p-2.5 mr-1.5 shrink-0">
+              <FontAwesome5 name="search" size={14} color="#ffffff" />
+            </View>
+          </Pressable>
+        </View>
+
+        {/* Category Bar */}
+        <View className="relative mt-2 flex-row sm:justify-center">
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            className="flex-row overflow-visible px-4"
+            contentContainerStyle={{ alignItems: 'center', gap: 16, paddingRight: 100 }}
+          >
+            {CATEGORIES.map((cat, i) => {
+              const isActive = activeCategory === cat.id;
+              const gradient = catGradients[cat.icon] || { bg: '#f3f4f6', from: '#9ca3af' };
+              const activeBg = catActiveBg[cat.icon] || '#52525b';
+              
+              return (
+                <Pressable
+                  key={cat.id}
+                  className="flex-col items-center shrink-0 pt-1.5 pb-1.5 min-w-[60px]"
+                  style={{ gap: 6 }}
+                  onPress={() => setActiveCategory(cat.id)}
+                >
+                  <View 
+                    className="w-12 h-12 rounded-2xl items-center justify-center"
+                    style={{ backgroundColor: isActive ? activeBg : gradient.bg }}
+                  >
+                    <FontAwesome5 
+                      name={cat.icon} 
+                      size={20} 
+                      color={isActive ? '#FFFFFF' : gradient.from} 
+                    />
+                  </View>
+                  <Text 
+                    className={`text-[10px] font-semibold whitespace-nowrap ${isActive ? 'text-neutral-900' : 'text-neutral-500'}`}
+                  >
+                    {cat.name}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+          <Pressable 
+            onPress={() => setShowFilters(!showFilters)}
+            className="absolute right-4 top-2.5 border border-neutral-200 rounded-xl px-3 py-2 flex-row items-center bg-white/90 z-10 shadow-sm"
+            style={{ elevation: 2, shadowColor: '#000', shadowOffset: {width: 0, height: 1}, shadowOpacity: 0.05, shadowRadius: 2, gap: 8 }}
+          >
+            <FontAwesome5 name="sliders-h" size={14} color="#737373" />
+            <Text className="text-xs font-semibold text-neutral-900">Filters</Text>
+          </Pressable>
+        </View>
+
+        <View className="h-[1px] bg-neutral-200 -mx-4 mt-2" />
+
+        {/* Listings Content */}
+        <View className="px-4 pt-4 pb-24 w-full max-w-7xl mx-auto">
+          {loadingFeatured ? (
+            <View className="flex-row flex-wrap justify-between">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <View key={i} className="w-[48%] mb-4">
+                  <View className="aspect-square bg-neutral-100 rounded-xl mb-2" />
+                  <View className="h-3 bg-neutral-100 rounded w-3/4 mb-1.5" />
+                  <View className="h-3 bg-neutral-100 rounded w-1/2 mb-1.5" />
+                  <View className="h-3 bg-neutral-100 rounded w-1/3" />
+                </View>
+              ))}
+            </View>
+          ) : activeCategory === 'all' ? (
+            <View className="flex-col" style={{ gap: 40 }}>
+              {CATEGORIES.filter(cat => cat.id !== 'all').map(cat => {
+                const catContractors = allContractors.filter(c => {
+                  const cCat = c.category?.toLowerCase() || '';
+                  const searchTerm = cat.id.toLowerCase();
+                  const singularSearch = searchTerm.endsWith('s') ? searchTerm.slice(0, -1) : searchTerm;
+                  const labelTerm = cat.name.toLowerCase();
+                  const singularLabel = labelTerm.endsWith('s') ? labelTerm.slice(0, -1) : labelTerm;
+                  return cCat.includes(searchTerm) || cCat.includes(singularSearch) || cCat.includes(labelTerm) || cCat.includes(singularLabel);
+                }).slice(0, 8);
+
+                if (catContractors.length === 0) return null;
+
+                return (
+                  <View key={cat.id} className="flex-col" style={{ gap: 16 }}>
+                    <View className="flex-row items-center justify-between">
+                      <Text className="text-xl font-bold text-neutral-900">{cat.name}</Text>
+                      <Pressable onPress={() => setActiveCategory(cat.id)}>
+                        <Text className="text-sm font-semibold text-indigo-500">Show all</Text>
+                      </Pressable>
+                    </View>
+                    <View className="flex-row flex-wrap justify-between">
+                      {catContractors.map(c => (
+                        <View key={c._id} className="w-[48%]">
+                          <ListingCard 
+                            listing={c} 
+                            isFavorite={favorites.has(c._id)} 
+                            onToggleFavorite={() => toggleFav(c._id)} 
+                            detectedZip={ipZipCode}
+                            onPress={() => handleContractorPress(c)}
+                          />
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          ) : filtered.length > 0 ? (
+            <View className="flex-row flex-wrap justify-between">
+              {filtered.map((c) => (
+                <View key={c._id} className="w-[48%]">
+                  <ListingCard 
+                    listing={c} 
+                    isFavorite={favorites.has(c._id)} 
+                    onToggleFavorite={() => toggleFav(c._id)} 
+                    detectedZip={ipZipCode}
+                    onPress={() => handleContractorPress(c)}
+                  />
+                </View>
+              ))}
+            </View>
+          ) : (
+            <View className="items-center justify-center py-20">
+              <Text className="text-lg font-medium text-neutral-500">No contractors found</Text>
+            </View>
           )}
         </View>
-        <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
-          <FontAwesome5 name="arrow-right" size={20} color={Colors.neutral50} />
-        </TouchableOpacity>
-      </View>
+      </ScrollView>
 
-      <View style={styles.locationBanner}>
-        <FontAwesome5 name="map-marker-alt" size={14} color={Colors.primary500} />
-        <Typography variant="caption" style={styles.locationText}>
-          {ipZipCode ? `Showing contractors near ${ipZipCode}` : 'Detecting location...'}
-        </Typography>
-      </View>
-
-      <View style={styles.categoriesSection}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoriesContainer}>
-          {CATEGORIES.map((category) => (
-            <TouchableOpacity
-              key={category.name}
-              style={styles.categoryItem}
-              onPress={() => handleCategoryPress(category.name)}
-            >
-              <View style={styles.categoryIcon}>
-                <FontAwesome5 name={category.icon} size={20} color={Colors.primary500} />
-              </View>
-              <Typography variant="caption" style={styles.categoryText}>
-                {category.name}
-              </Typography>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
-
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Typography variant="h5">Featured Contractors</Typography>
-          <TouchableOpacity onPress={() => navigation.navigate('Main', { screen: 'Search' } as any)}>
-            <Typography variant="body" style={styles.viewAllLink}>
-              View All
-            </Typography>
-          </TouchableOpacity>
-        </View>
-        {renderFeaturedContractors()}
-      </View>
-
-      {renderFeedPosts()}
-
-      <View style={styles.howItWorksSection}>
-        <Typography variant="h5" style={styles.howItWorksTitle}>
-          How Ratedeed Works
-        </Typography>
-        <View style={styles.stepsContainer}>
-          <View style={styles.step}>
-            <View style={styles.stepIcon}>
-              <FontAwesome5 name="search" size={24} color={Colors.neutral50} />
+      {/* Filter Modal Overlay */}
+      {showFilters && (
+        <View className="absolute inset-0 z-[60] justify-end" style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
+          <Pressable className="flex-1" onPress={() => setShowFilters(false)} />
+          <View className="bg-white rounded-t-3xl w-full px-5 pt-4 pb-8">
+            <View className="w-10 h-1 bg-neutral-300 rounded-full mx-auto mb-5" />
+            <Text className="text-lg font-bold text-neutral-900 mb-4">Filters</Text>
+            <View className="flex-col" style={{ gap: 16 }}>
+              {['License Verified', 'Available This Week', 'Under $10,000', 'Top Rated (4.5+)', 'Has Portfolio'].map((f) => (
+                <Pressable key={f} className="flex-row items-center" style={{ gap: 12, paddingVertical: 8 }}>
+                  <View className="w-6 h-6 rounded-full border-2 border-neutral-900 items-center justify-center">
+                    <View className="w-3 h-3 rounded-full bg-neutral-900" />
+                  </View>
+                  <Text className="text-sm font-medium text-neutral-900">{f}</Text>
+                </Pressable>
+              ))}
             </View>
-            <Typography variant="body" style={styles.stepTitle}>
-              Find Contractors
-            </Typography>
-            <Typography variant="caption" style={styles.stepText}>
-              Search by location, service, or rating
-            </Typography>
-          </View>
-          <View style={styles.stepConnector}>
-            <FontAwesome5 name="chevron-right" size={16} color={Colors.primary300} />
-          </View>
-          <View style={styles.step}>
-            <View style={styles.stepIcon}>
-              <FontAwesome5 name="star" size={24} color={Colors.neutral50} />
+            <View className="flex-row mt-6" style={{ gap: 12 }}>
+              <Pressable 
+                onPress={() => setShowFilters(false)} 
+                className="flex-1 py-3 border border-neutral-900 rounded-xl items-center"
+              >
+                <Text className="text-sm font-semibold text-neutral-900">Clear all</Text>
+              </Pressable>
+              <Pressable 
+                onPress={() => setShowFilters(false)} 
+                className="flex-1 py-3 bg-neutral-900 rounded-xl items-center"
+              >
+                <Text className="text-sm font-semibold text-white">Show results</Text>
+              </Pressable>
             </View>
-            <Typography variant="body" style={styles.stepTitle}>
-              Read Reviews
-            </Typography>
-            <Typography variant="caption" style={styles.stepText}>
-              Check detailed ratings from real customers
-            </Typography>
-          </View>
-          <View style={styles.stepConnector}>
-            <FontAwesome5 name="chevron-right" size={16} color={Colors.primary300} />
-          </View>
-          <View style={styles.step}>
-            <View style={styles.stepIcon}>
-              <FontAwesome5 name="handshake" size={24} color={Colors.neutral50} />
-            </View>
-            <Typography variant="body" style={styles.stepTitle}>
-              Hire with Confidence
-            </Typography>
-            <Typography variant="caption" style={styles.stepText}>
-              Connect directly with verified professionals
-            </Typography>
           </View>
         </View>
-      </View>
-
-      <View style={styles.contractorCTA}>
-        <Typography variant="h5" style={styles.ctaTitle}>
-          Are You a Contractor?
-        </Typography>
-        <Typography variant="body" style={styles.ctaText}>
-          Join Ratedeed to showcase your work and grow your business.
-        </Typography>
-        <Button
-          title="Sign Up as Contractor"
-          onPress={() => navigation.navigate('ContractorSignup')}
-          style={styles.ctaButton}
-        />
-      </View>
-
-      <View style={styles.footer}>
-        <Typography variant="h5" style={styles.footerTitle}>
-          Ready to Find Your Perfect Contractor?
-        </Typography>
-        <Button
-          title="Search Now"
-          onPress={() => navigation.navigate('Main', { screen: 'Search' } as any)}
-          style={styles.footerButton}
-        />
-      </View>
-    </ScrollView>
+      )}
+    </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.neutral100,
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    padding: Spacing.lg,
-    backgroundColor: Colors.neutral50,
-    gap: Spacing.sm,
-  },
-  searchBar: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.neutral100,
-    borderRadius: Radii.md,
-    paddingHorizontal: Spacing.md,
-    height: 48,
-  },
-  searchIcon: {
-    marginRight: Spacing.sm,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 15,
-    color: Colors.neutral900,
-  },
-  searchButton: {
-    backgroundColor: Colors.primary500,
-    width: 48,
-    height: 48,
-    borderRadius: Radii.md,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  locationBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: Spacing.xs,
-    backgroundColor: Colors.primary50,
-    gap: Spacing.xs,
-  },
-  locationText: {
-    color: Colors.primary700,
-  },
-  categoriesSection: {
-    paddingVertical: Spacing.md,
-    backgroundColor: Colors.neutral50,
-    marginBottom: Spacing.md,
-  },
-  categoriesContainer: {
-    paddingHorizontal: Spacing.lg,
-    gap: Spacing.lg,
-  },
-  categoryItem: {
-    alignItems: 'center',
-    marginRight: Spacing.md,
-  },
-  categoryIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: Colors.primary100,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: Spacing.xs,
-  },
-  categoryText: {
-    color: Colors.neutral700,
-    fontSize: 11,
-    textAlign: 'center',
-  },
-  section: {
-    padding: Spacing.lg,
-    backgroundColor: Colors.neutral50,
-    marginBottom: Spacing.md,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.md,
-  },
-  sectionHeaderTitle: {
-    paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.md,
-  },
-  viewAllLink: {
-    color: Colors.primary500,
-    fontWeight: '500',
-  },
-  contractorsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  contractorCard: {
-    width: '48%',
-    marginBottom: Spacing.md,
-    padding: 0,
-    overflow: 'hidden',
-  },
-  contractorImage: {
-    width: '100%',
-    height: 100,
-    resizeMode: 'cover',
-  },
-  contractorInfo: {
-    padding: Spacing.sm,
-  },
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  contractorName: {
-    color: Colors.neutral900,
-    fontSize: 14,
-    fontWeight: '600',
-    flex: 1,
-  },
-  contractorCategory: {
-    color: Colors.neutral600,
-    fontSize: 11,
-    marginTop: 2,
-  },
-  ratingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  starsContainer: {
-    flexDirection: 'row',
-  },
-  starIcon: {
-    marginRight: 1,
-  },
-  ratingText: {
-    color: Colors.neutral600,
-    fontSize: 10,
-    marginLeft: 4,
-  },
-  pricing: {
-    color: Colors.primary600,
-    fontSize: 11,
-    fontWeight: '500',
-    marginTop: 4,
-  },
-  feedSection: {
-    padding: Spacing.lg,
-    backgroundColor: Colors.neutral50,
-    marginBottom: Spacing.md,
-  },
-  sectionTitle: {
-    marginBottom: Spacing.md,
-  },
-  postCard: {
-    marginBottom: Spacing.md,
-  },
-  postHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: Spacing.sm,
-  },
-  postHeaderInfo: {
-    marginLeft: Spacing.sm,
-  },
-  postAuthorName: {
-    color: Colors.neutral900,
-    fontWeight: '600',
-  },
-  postDate: {
-    color: Colors.neutral500,
-  },
-  postCaption: {
-    color: Colors.neutral800,
-    marginBottom: Spacing.sm,
-    padding: 0,
-  },
-  postImages: {
-    marginBottom: Spacing.sm,
-  },
-  postImage: {
-    width: 200,
-    height: 150,
-    borderRadius: Radii.md,
-    marginRight: Spacing.sm,
-  },
-  postStats: {
-    flexDirection: 'row',
-    gap: Spacing.lg,
-    paddingTop: Spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: Colors.neutral200,
-  },
-  postStat: {
-    color: Colors.neutral600,
-    fontSize: 13,
-  },
-  howItWorksSection: {
-    padding: Spacing.xl,
-    backgroundColor: Colors.primary500,
-    marginBottom: Spacing.md,
-  },
-  howItWorksTitle: {
-    color: Colors.neutral50,
-    textAlign: 'center',
-    marginBottom: Spacing.xl,
-  },
-  stepsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  step: {
-    alignItems: 'center',
-    width: 100,
-  },
-  stepIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: Colors.primary600,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: Spacing.sm,
-  },
-  stepTitle: {
-    color: Colors.neutral50,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginBottom: 2,
-  },
-  stepText: {
-    color: Colors.primary100,
-    textAlign: 'center',
-    fontSize: 10,
-  },
-  stepConnector: {
-    paddingHorizontal: Spacing.sm,
-  },
-  contractorCTA: {
-    padding: Spacing.xl,
-    backgroundColor: Colors.neutral50,
-    alignItems: 'center',
-    marginBottom: Spacing.md,
-  },
-  ctaTitle: {
-    color: Colors.neutral900,
-    marginBottom: Spacing.sm,
-  },
-  ctaText: {
-    color: Colors.neutral600,
-    textAlign: 'center',
-    marginBottom: Spacing.lg,
-  },
-  ctaButton: {},
-  footer: {
-    padding: Spacing.xl,
-    backgroundColor: Colors.primary500,
-    alignItems: 'center',
-  },
-  footerTitle: {
-    color: Colors.neutral50,
-    textAlign: 'center',
-    marginBottom: Spacing.lg,
-  },
-  footerButton: {
-    backgroundColor: Colors.neutral50,
-  },
-});
 
 export default HomeScreen;

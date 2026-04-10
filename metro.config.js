@@ -1,6 +1,9 @@
-const { getDefaultConfig } = require("expo/metro-config");
+const {
+  getSentryExpoConfig
+} = require("@sentry/react-native/metro");
+const { withNativeWind } = require("nativewind/metro");
 
-const config = getDefaultConfig(__dirname);
+const config = getSentryExpoConfig(__dirname);
 
 // -----------------------------------------------------------------------------
 // Firebase / Expo SDK 53: allow “.cjs” files and use classic Node “exports”
@@ -18,4 +21,4 @@ config.resolver.unstable_enablePackageExports = false;
 // -----------------------------------------------------------------------------
 // That’s it – export the tweaked config.
 // -----------------------------------------------------------------------------
-module.exports = config;
+module.exports = withNativeWind(config, { input: "./global.css" });

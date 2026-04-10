@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
+import { View, ScrollView } from 'react-native';
 import Header from '../components/common/Header';
 import Card from '../components/common/Card';
 import Typography from '../components/common/Typography';
@@ -10,31 +10,31 @@ const AdminDashboardScreen = () => {
   return (
     <View style={styles.fullScreenContainer}>
       <Header title="Admin Dashboard" />
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView contentContainerClassName="flex-grow px-4 py-8">
         <Typography variant="h3" style={styles.title}>Admin Dashboard</Typography>
         <Typography variant="subtitle1" style={styles.subtitle}>Manage users, contractors, and content.</Typography>
         
-        <Card style={styles.section}>
-          <Typography variant="h5" style={styles.sectionTitle}>User Management</Typography>
-          <Typography variant="body" style={styles.sectionText}>View and manage user accounts, roles, and permissions.</Typography>
+        <Card style={styles.cardContainer}>
+          <Typography variant="h5" style={styles.cardTitle}>User Management</Typography>
+          <Typography variant="body" style={styles.mutedText}>View and manage user accounts, roles, and permissions.</Typography>
           {/* Add user management components here */}
         </Card>
 
-        <Card style={styles.section}>
-          <Typography variant="h5" style={styles.sectionTitle}>Contractor Management</Typography>
-          <Typography variant="body" style={styles.sectionText}>Approve, suspend, or manage contractor profiles and listings.</Typography>
+        <Card style={styles.cardContainer}>
+          <Typography variant="h5" style={styles.cardTitle}>Contractor Management</Typography>
+          <Typography variant="body" style={styles.mutedText}>Approve, suspend, or manage contractor profiles and listings.</Typography>
           {/* Add contractor management components here */}
         </Card>
 
-        <Card style={styles.section}>
-          <Typography variant="h5" style={styles.sectionTitle}>Content Moderation</Typography>
-          <Typography variant="body" style={styles.sectionText}>Review and moderate user-generated content, such as reviews and posts.</Typography>
+        <Card style={styles.cardContainer}>
+          <Typography variant="h5" style={styles.cardTitle}>Content Moderation</Typography>
+          <Typography variant="body" style={styles.mutedText}>Review and moderate user-generated content, such as reviews and posts.</Typography>
           {/* Add content moderation components here */}
         </Card>
 
-        <Card style={styles.section}>
-          <Typography variant="h5" style={styles.sectionTitle}>Reports & Analytics</Typography>
-          <Typography variant="body" style={styles.sectionText}>Access system reports and analytics for insights into app usage.</Typography>
+        <Card style={styles.cardContainer}>
+          <Typography variant="h5" style={styles.cardTitle}>Reports & Analytics</Typography>
+          <Typography variant="body" style={styles.mutedText}>Access system reports and analytics for insights into app usage.</Typography>
           {/* Add reports/analytics components here */}
         </Card>
 

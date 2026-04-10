@@ -2,28 +2,28 @@ import React, { useRef } from 'react';
 import {
   TouchableOpacity,
   Text,
-  StyleSheet,
   ActivityIndicator,
   Animated,
   ViewStyle,
   TextStyle,
   View,
+  TouchableOpacityProps,
+  StyleSheet,
+  StyleProp
 } from 'react-native';
-import { Spacing, Radii, Colors, Shadows } from '../../constants/designTokens';
+import { Colors, Spacing, Radii } from '../../constants/designTokens';
 
 type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
 type ButtonSize = 'sm' | 'md' | 'lg';
 
-interface ButtonProps {
+interface ButtonProps extends TouchableOpacityProps {
   title: string;
-  onPress: () => void;
   variant?: ButtonVariant;
   size?: ButtonSize;
   loading?: boolean;
-  disabled?: boolean;
   fullWidth?: boolean;
-  style?: ViewStyle;
-  textStyle?: TextStyle;
+  style?: StyleProp<ViewStyle>;
+  textStyle?: StyleProp<TextStyle>;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
 }
@@ -44,108 +44,89 @@ const Button: React.FC<ButtonProps> = ({
 }) => {
   const animatedScale = useRef(new Animated.Value(1)).current;
 
-  const handlePressIn = () => {
+  const handlePressIn = (e: any) => {
     Animated.spring(animatedScale, {
       toValue: 0.98,
       useNativeDriver: true,
       friction: 8,
       tension: 100,
     }).start();
+    props.onPressIn?.(e);
   };
 
-  const handlePressOut = () => {
+  const handlePressOut = (e: any) => {
     Animated.spring(animatedScale, {
       toValue: 1,
       friction: 3,
       tension: 40,
       useNativeDriver: true,
     }).start();
+    props.onPressOut?.(e);
   };
 
-  const getVariantStyles = (): ViewStyle => {
+  const getVariantStyle = (): StyleProp<ViewStyle> => {
     switch (variant) {
-      case 'secondary':
-        return {
-          backgroundColor: Colors.neutral200,
-        };
-      case 'outline':
-        return {
-          backgroundColor: 'transparent',
-          borderWidth: 1.5,
-          borderColor: Colors.primary500,
-        };
-      case 'ghost':
-        return {
-          backgroundColor: 'transparent',
-        };
-      case 'danger':
-        return {
-          backgroundColor: Colors.error,
-        };
-      default:
-        return {
-          backgroundColor: Colors.primary500,
-        };
+      case 'secondary': return styles.secondary;
+      case 'outline': return styles.outline;
+      case 'ghost': return styles.ghost;
+      case 'danger': return styles.danger;
+      case 'primary':
+      default: return styles.primary;
     }
   };
 
-  const getTextColor = (): string => {
+  const getTextColorStyle = (): StyleProp<TextStyle> => {
     switch (variant) {
-      case 'secondary':
-        return Colors.neutral800;
+      case 'secondary': return styles.textSecondary;
       case 'outline':
-      case 'ghost':
-        return Colors.primary500;
-      case 'danger':
-        return Colors.neutral50;
-      default:
-        return Colors.neutral50;
+      case 'ghost': return styles.textGhost;
+      case 'danger': return styles.textDanger;
+      case 'primary':
+      default: return styles.textPrimary;
     }
   };
 
-  const getSizeStyles = (): ViewStyle => {
+  const getSizeStyle = (): StyleProp<ViewStyle> => {
     switch (size) {
-      case 'sm':
-        return {
-          paddingVertical: Spacing.sm,
-          paddingHorizontal: Spacing.md,
-        };
-      case 'lg':
-        return {
-          paddingVertical: Spacing.lg,
-          paddingHorizontal: Spacing.xl,
-        };
-      default:
-        return {
-          paddingVertical: Spacing.md,
-          paddingHorizontal: Spacing.lg,
-        };
+      case 'sm': return styles.sizeSm;
+      case 'lg': return styles.sizeLg;
+      case 'md':
+      default: return styles.sizeMd;
     }
   };
 
-  const getFontSize = (): number => {
+  const getTextSizeStyle = (): StyleProp<TextStyle> => {
     switch (size) {
-      case 'sm':
-        return 14;
-      case 'lg':
-        return 18;
-      default:
-        return 16;
+      case 'sm': return styles.textSizeSm;
+      case 'lg': return styles.textSizeLg;
+      case 'md':
+      default: return styles.textSizeMd;
     }
   };
 
   const isDisabled = disabled || loading;
 
+  const getSpinnerColor = () => {
+    switch (variant) {
+      case 'secondary':
+      case 'outline':
+      case 'ghost': return Colors.neutral900;
+      case 'danger':
+      case 'primary':
+      default: return Colors.neutral50;
+    }
+  };
+
   return (
     <TouchableOpacity
       style={[
-        styles.button,
-        getVariantStyles(),
-        getSizeStyles(),
+        styles.base,
+        getVariantStyle(),
+        getSizeStyle(),
         fullWidth && styles.fullWidth,
         isDisabled && styles.disabled,
-        { transform: [{ scale: animatedScale }] },
-        style,
+        { transform: [{ scale: animatedScale }] } as any,
+        style
       ]}
       onPress={onPress}
       disabled={isDisabled}
@@ -155,20 +136,21 @@ const Button: React.FC<ButtonProps> = ({
       {...props}
     >
       {loading ? (
-        <ActivityIndicator color={getTextColor()} size="small" />
+        <ActivityIndicator color={getSpinnerColor()} size="small" />
       ) : (
         <>
-          {leftIcon && <View style={styles.iconLeft}>{leftIcon}</View>}
+          {leftIcon && <View style={styles.leftIconContainer}>{leftIcon}</View>}
           <Text
             style={[
-              styles.buttonText,
-              { color: getTextColor(), fontSize: getFontSize() },
-              textStyle,
+              styles.textBase,
+              getTextColorStyle(),
+              getTextSizeStyle(),
+              textStyle
             ]}
           >
             {title}
           </Text>
-          {rightIcon && <View style={styles.iconRight}>{rightIcon}</View>}
+          {rightIcon && <View style={styles.rightIconContainer}>{rightIcon}</View>}
         </>
       )}
     </TouchableOpacity>
@@ -176,12 +158,65 @@ const Button: React.FC<ButtonProps> = ({
 };
 
 const styles = StyleSheet.create({
-  button: {
+  base: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: Radii.md,
-    ...Shadows.sm,
+  },
+  primary: {
+    backgroundColor: Colors.primary600,
+  },
+  secondary: {
+    backgroundColor: Colors.neutral200,
+  },
+  outline: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: Colors.neutral300,
+  },
+  ghost: {
+    backgroundColor: 'transparent',
+  },
+  danger: {
+    backgroundColor: Colors.error600,
+  },
+  textPrimary: {
+    color: Colors.neutral50,
+  },
+  textSecondary: {
+    color: Colors.neutral900,
+  },
+  textGhost: {
+    color: Colors.neutral900,
+  },
+  textDanger: {
+    color: Colors.neutral50,
+  },
+  sizeSm: {
+    height: 36,
+    paddingHorizontal: Spacing.md,
+  },
+  sizeMd: {
+    height: 48,
+    paddingHorizontal: Spacing.lg,
+  },
+  sizeLg: {
+    height: 56,
+    paddingHorizontal: Spacing.xl,
+  },
+  textBase: {
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  textSizeSm: {
+    fontSize: 14,
+  },
+  textSizeMd: {
+    fontSize: 16,
+  },
+  textSizeLg: {
+    fontSize: 18,
   },
   fullWidth: {
     width: '100%',
@@ -189,15 +224,10 @@ const styles = StyleSheet.create({
   disabled: {
     opacity: 0.5,
   },
-  buttonText: {
-    fontWeight: '600',
-    letterSpacing: 0.3,
-    textAlign: 'center',
-  },
-  iconLeft: {
+  leftIconContainer: {
     marginRight: Spacing.sm,
   },
-  iconRight: {
+  rightIconContainer: {
     marginLeft: Spacing.sm,
   },
 });

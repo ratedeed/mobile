@@ -5,8 +5,8 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./icon.png",
+    "newArchEnabled": true,
     "userInterfaceStyle": "light",
-    "newArchEnabled": false,
     "splash": {
       "image": "./hammer-solid.png",
       "resizeMode": "contain",
@@ -20,7 +20,8 @@
           "fetch",
           "remote-notification"
         ]
-      }
+      },
+      "googleServicesFile": "./GoogleService-Info.plist"
     },
     "android": {
       "adaptiveIcon": {
@@ -28,7 +29,8 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.ratedeed.app"
+      "package": "com.ratedeed.app",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "favicon": "./icon.png"
@@ -54,6 +56,16 @@
         {
           "icon": "./icon.png",
           "color": "#ffffff"
+        }
+      ],
+      "@sentry/react-native",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static",
+            "compilerFlags": "-DFMT_CONSTEXPR=constexpr"
+          }
         }
       ]
     ]

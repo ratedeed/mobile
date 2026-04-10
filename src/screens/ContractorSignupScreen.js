@@ -1,15 +1,14 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Alert, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Alert, ScrollView, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { contractorSignup } from '../api/auth';
 import { auth } from '../firebaseConfig';
-import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
+import { createUserWithEmailAndPassword, sendEmailVerification, deleteUser } from 'firebase/auth';
 console.log('ContractorSignupScreen: auth imported.');
 console.log('ContractorSignupScreen: Firebase Auth module loaded.');
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
 import Header from '../components/common/Header';
-import { Spacing, Radii, Colors, Shadows } from '../constants/designTokens';
 import Typography from '../components/common/Typography';
 
 const ContractorSignupScreen = () => {
@@ -35,18 +34,17 @@ const ContractorSignupScreen = () => {
     }
 
     setLoading(true);
+    let userCreated = null;
     try {
-      // 1. Create user with Firebase Authentication
       console.log('ContractorSignupScreen: Attempting to create user with email and password.');
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
+      userCreated = userCredential.user;
       console.log('ContractorSignupScreen: User created, attempting to send email verification.');
-      // 2. Send email verification
-      await sendEmailVerification(user);
+      await sendEmailVerification(userCreated);
 
-      // 3. Register contractor details in your backend (if needed, pass Firebase UID or email)
-      // Assuming contractorSignup handles the backend registration and might use the email
       const data = await contractorSignup(businessName, contactPerson, email, phone, password, zipCode, category);
+
+      await auth.signOut();
 
       Alert.alert(
         'Success',
@@ -54,6 +52,14 @@ const ContractorSignupScreen = () => {
       );
       navigation.navigate('Login');
     } catch (error) {
+      if (userCreated) {
+        try {
+           await deleteUser(userCreated);
+           console.log('ContractorSignupScreen: Rollback successful. Deleted orphaned Firebase user.');
+        } catch (rollbackError) {
+           console.error('ContractorSignupScreen: Failed to rollback Firebase user:', rollbackError);
+        }
+      }
       let errorMessage = 'An error occurred during registration.';
       if (error.code) {
         switch (error.code) {
@@ -84,8 +90,8 @@ const ContractorSignupScreen = () => {
   return (
     <View style={styles.fullScreenContainer}>
       <Header title="Contractor Sign Up" showBackButton />
-      <ScrollView contentContainerStyle={styles.scrollViewContent}>
-        <View style={styles.formContainer}>
+      <ScrollView contentContainerClassName="flex-grow justify-center p-4">
+        <View style={styles.cardContainer}>
           <Typography variant="h3" style={styles.title}>Join RateDeed as a Contractor</Typography>
           <Typography variant="subtitle1" style={styles.subtitle}>
             Showcase your expertise and connect with clients seeking quality services.
@@ -159,11 +165,11 @@ const ContractorSignupScreen = () => {
             title="Sign Up as Contractor"
             onPress={handleContractorSignup}
             loading={loading}
-            style={styles.signupButton}
+            style={styles.registerButton}
           />
-          <TouchableOpacity onPress={() => navigation.navigate('Login')} style={styles.loginPrompt}>
-            <Typography variant="body" style={styles.loginText}>
-              Already have an account? <Typography variant="button" style={styles.loginLink}>Sign In</Typography>
+          <TouchableOpacity onPress={() => navigation.navigate('Login')} style={styles.linkButton}>
+            <Typography variant="body" style={styles.mutedText}>
+              Already have an account? <Typography variant="button" style={styles.primaryLinkText}>Sign In</Typography>
             </Typography>
           </TouchableOpacity>
         </View>
@@ -171,53 +177,5 @@ const ContractorSignupScreen = () => {
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  fullScreenContainer: {
-    flex: 1,
-    backgroundColor: Colors.neutral100,
-  },
-  scrollViewContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    padding: Spacing.lg,
-  },
-  formContainer: {
-    backgroundColor: Colors.neutral50,
-    borderRadius: Radii.lg,
-    padding: Spacing.xl,
-    ...Shadows.md,
-    alignItems: 'center',
-  },
-  title: {
-    marginBottom: Spacing.xs,
-    color: Colors.neutral900,
-    textAlign: 'center',
-  },
-  subtitle: {
-    marginBottom: Spacing.xl,
-    color: Colors.neutral600,
-    textAlign: 'center',
-    paddingHorizontal: Spacing.md,
-  },
-  inputField: {
-    marginBottom: Spacing.md,
-  },
-  signupButton: {
-    marginTop: Spacing.lg,
-    marginBottom: Spacing.md,
-  },
-  loginPrompt: {
-    marginTop: Spacing.md,
-    padding: Spacing.xs,
-  },
-  loginText: {
-    color: Colors.neutral700,
-  },
-  loginLink: {
-    color: Colors.primary500,
-    fontWeight: '700',
-  },
-});
 
 export default ContractorSignupScreen;

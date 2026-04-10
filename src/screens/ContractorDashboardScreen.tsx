@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
-  StyleSheet,
   ScrollView,
   TouchableOpacity,
   Alert,
@@ -12,7 +11,9 @@ import {
   Image,
   Share,
   Linking,
+  StyleSheet,
 } from 'react-native';
+import { FontAwesome5 } from '@expo/vector-icons';
 import {
   getPortfolio,
   addPortfolioItem,
@@ -44,9 +45,9 @@ import { ErrorState } from '../components/common/ErrorState';
 import { Modal } from '../components/common/Modal';
 import Input from '../components/common/Input';
 import Button from '../components/common/Button';
-import Header from '../components/common/Header';
 import Card from '../components/common/Card';
 import Typography from '../components/common/Typography';
+import { AppHeader } from '../components/layout/AppHeader';
 import { Spacing, Radii, Colors, Shadows } from '../constants/designTokens';
 import { Post, Review, PortfolioItem, Quote, Lead, Job, Contractor, Earnings, StripeConnectStatus } from '../types';
 const TABS = [
@@ -246,7 +247,7 @@ const ContractorDashboardScreen: React.FC = () => {
   if (loading) {
     return (
       <View style={styles.fullScreenContainer}>
-        <Header title="Contractor Dashboard" />
+        <AppHeader title="Contractor Dashboard" />
         <View style={styles.loadingContainer}>
           <SkeletonLoader type="card" count={3} />
         </View>
@@ -257,7 +258,7 @@ const ContractorDashboardScreen: React.FC = () => {
   if (error) {
     return (
       <View style={styles.fullScreenContainer}>
-        <Header title="Contractor Dashboard" />
+        <AppHeader title="Contractor Dashboard" />
         <ErrorState message={error} onRetry={loadData} />
       </View>
     );
@@ -265,7 +266,7 @@ const ContractorDashboardScreen: React.FC = () => {
 
   return (
     <View style={styles.fullScreenContainer}>
-      <Header title="Contractor Dashboard" />
+      <AppHeader title="Contractor Dashboard" />
       <Tabs tabs={TABS} activeTab={activeTab} onTabChange={setActiveTab} />
 
       <ScrollView
@@ -282,11 +283,11 @@ const ContractorDashboardScreen: React.FC = () => {
               </TouchableOpacity>
               <View style={styles.createPostActions}>
                 <TouchableOpacity style={styles.createPostAction} onPress={() => setShowCreatePostModal(true)}>
-                  <Text style={styles.createPostActionIcon}>📷</Text>
+                  <FontAwesome5 name="camera" size={18} color={Colors.neutral600} />
                   <Text style={styles.createPostActionText}>Photo</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.createPostAction}>
-                  <Text style={styles.createPostActionIcon}>📍</Text>
+                  <FontAwesome5 name="map-marker-alt" size={18} color={Colors.neutral600} />
                   <Text style={styles.createPostActionText}>Location</Text>
                 </TouchableOpacity>
               </View>
@@ -304,45 +305,48 @@ const ContractorDashboardScreen: React.FC = () => {
               posts.map(post => (
                 <Card key={post._id} style={styles.postCard}>
                   <View style={styles.postHeader}>
-                    <View style={styles.postAuthor}>
-                      <View style={styles.postAvatar}>
-                        <Text>{post.contractor?.user?.firstName?.[0] || 'C'}</Text>
-                      </View>
-                      <View>
-                        <Typography variant="body" style={styles.postAuthorName}>
-                          {post.contractor?.user?.firstName} {post.contractor?.user?.lastName}
-                        </Typography>
-                        <Typography variant="caption" style={styles.postDate}>
-                          {formatDate(post.createdAt)}
-                        </Typography>
-                      </View>
+                    <View style={styles.postAvatar}>
+                      <Text style={styles.postAvatarText}>{post.contractor?.user?.firstName?.[0] || 'C'}</Text>
+                    </View>
+                    <View style={styles.postAuthorInfo}>
+                      <Typography variant="body" style={styles.postAuthorName}>
+                        {post.contractor?.user?.firstName} {post.contractor?.user?.lastName}
+                      </Typography>
+                      <Text style={styles.postDate}>{formatDate(post.createdAt)}</Text>
                     </View>
                     <TouchableOpacity onPress={() => handleDeletePost(post._id)}>
-                      <Text style={styles.deleteButton}>🗑️</Text>
+                      <FontAwesome5 name="trash" size={16} color={Colors.neutral400} />
                     </TouchableOpacity>
                   </View>
                   <Text style={styles.postCaption}>{post.caption}</Text>
                   {post.images?.length > 0 && (
-                    <ScrollView horizontal style={styles.postImages} showsHorizontalScrollIndicator={false}>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.postImages}>
                       {post.images.map((img, idx) => (
                         <Image key={idx} source={{ uri: img }} style={styles.postImage} />
                       ))}
                     </ScrollView>
                   )}
-                  <View style={styles.postActions}>
+                  <View style={styles.postFooter}>
                     <TouchableOpacity
                       style={styles.postAction}
                       onPress={() => handleLikePost(post._id, post.likes.includes('current'))}
                     >
-                      <Text style={[styles.postActionIcon, post.likes.includes('current') && styles.liked]}>
-                        {post.likes.includes('current') ? '❤️' : '🤍'} {post.likes.length}
+                      <FontAwesome5 
+                        name="heart" 
+                        size={16} 
+                        color={post.likes.includes("current") ? '#ef4444' : Colors.neutral500} 
+                      />
+                      <Text style={[styles.postActionText, post.likes.includes("current") && styles.postActionTextActive]}>
+                        {post.likes.length}
                       </Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.postAction}>
-                      <Text style={styles.postActionIcon}>💬 {post.comments?.length || 0}</Text>
+                      <FontAwesome5 name="comment" size={16} color={Colors.neutral500} />
+                      <Text style={styles.postActionText}>{post.comments?.length || 0}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.postAction}>
-                      <Text style={styles.postActionIcon}>📤 Share</Text>
+                      <FontAwesome5 name="share" size={16} color={Colors.neutral500} />
+                      <Text style={styles.postActionText}>Share</Text>
                     </TouchableOpacity>
                   </View>
                 </Card>
@@ -353,25 +357,25 @@ const ContractorDashboardScreen: React.FC = () => {
 
         <TabPanel isActive={activeTab === 'about'}>
           <View style={styles.tabContent}>
-            <Card>
+            <Card style={styles.aboutCard}>
               <Typography variant="h5" style={styles.sectionTitle}>About Us</Typography>
               <Typography variant="body" style={styles.aboutText}>
                 {editableData.description || 'Write a compelling bio about your business...'}
               </Typography>
-              <View style={styles.aboutGrid}>
-                <View style={styles.aboutItem}>
-                  <Text style={styles.aboutLabel}>Pricing</Text>
-                  <Text style={styles.aboutValue}>{editableData.pricing || 'Contact for quote'}</Text>
+              <View style={styles.aboutStatsRow}>
+                <View style={styles.aboutStatBox}>
+                  <Text style={styles.aboutStatLabel}>Pricing</Text>
+                  <Text style={styles.aboutStatValue}>{editableData.pricing || 'Contact for quote'}</Text>
                 </View>
-                <View style={styles.aboutItem}>
-                  <Text style={styles.aboutLabel}>Certifications</Text>
-                  <Text style={styles.aboutValue}>{editableData.certifications || 'Licensed, Bonded, Insured'}</Text>
+                <View style={styles.aboutStatBox}>
+                  <Text style={styles.aboutStatLabel}>Certifications</Text>
+                  <Text style={styles.aboutStatValue}>{editableData.certifications || 'Licensed, Bonded, Insured'}</Text>
                 </View>
               </View>
               <Button title="Edit Profile" onPress={() => setIsEditingProfile(true)} style={styles.editButton} />
             </Card>
 
-            <Card style={styles.marginTop}>
+            <Card style={styles.hoursCard}>
               <Typography variant="h5" style={styles.sectionTitle}>Business Hours</Typography>
               {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].map(day => (
                 <View key={day} style={styles.hoursRow}>
@@ -407,7 +411,7 @@ const ContractorDashboardScreen: React.FC = () => {
 
         <TabPanel isActive={activeTab === 'portfolio'}>
           <View style={styles.tabContent}>
-            <View style={styles.portfolioHeader}>
+            <View style={styles.reviewsHeader}>
               <Typography variant="h5">Our Portfolio</Typography>
               <Button title="Add Project" onPress={() => setShowAddPortfolioModal(true)} size="sm" />
             </View>
@@ -422,11 +426,11 @@ const ContractorDashboardScreen: React.FC = () => {
             ) : (
               <View style={styles.portfolioGrid}>
                 {portfolio.map(item => (
-                  <Card key={item.imageUrl} style={styles.portfolioItem}>
+                  <Card key={item.imageUrl} style={styles.portfolioCard}>
                     <Image source={{ uri: item.imageUrl }} style={styles.portfolioImage} />
                     <View style={styles.portfolioInfo}>
-                      <Typography variant="body" style={styles.portfolioName}>{item.name}</Typography>
-                      <Typography variant="caption" style={styles.portfolioDesc} numberOfLines={2}>
+                      <Typography variant="body" style={styles.leadName}>{item.name}</Typography>
+                      <Typography variant="caption" style={styles.leadDate} numberOfLines={2}>
                         {item.description}
                       </Typography>
                     </View>
@@ -443,11 +447,11 @@ const ContractorDashboardScreen: React.FC = () => {
               <View>
                 <Typography variant="h5">Customer Reviews</Typography>
               </View>
-              <View style={styles.ratingBadge}>
-                <Text style={styles.ratingValue}>
+              <View style={styles.reviewsOverview}>
+                <Text style={styles.reviewsRating}>
                   {reviews.length > 0 ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1) : '0.0'}
                 </Text>
-                <Text style={styles.ratingStars}>{renderStars(reviews.length > 0 ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length : 0)}</Text>
+                <Text style={styles.reviewsStars}>{renderStars(reviews.length > 0 ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length : 0)}</Text>
               </View>
             </View>
             {reviews.length === 0 ? (
@@ -464,7 +468,7 @@ const ContractorDashboardScreen: React.FC = () => {
                       <Text>{review.user?.firstName?.[0] || 'U'}</Text>
                     </View>
                     <View>
-                      <Typography variant="body" style={styles.reviewAuthor}>
+                      <Typography variant="body" style={styles.leadName}>
                         {review.user?.firstName} {review.user?.lastName}
                       </Typography>
                       <Text style={styles.reviewStars}>{renderStars(review.rating)}</Text>
@@ -472,7 +476,7 @@ const ContractorDashboardScreen: React.FC = () => {
                   </View>
                   {review.title && <Text style={styles.reviewTitle}>{review.title}</Text>}
                   <Text style={styles.reviewComment}>{review.comment}</Text>
-                  <Text style={styles.reviewDate}>{formatDate(review.createdAt)}</Text>
+                  <Text style={styles.leadDate}>{formatDate(review.createdAt)}</Text>
                 </Card>
               ))
             )}
@@ -485,7 +489,7 @@ const ContractorDashboardScreen: React.FC = () => {
               <Card style={styles.stripeCard}>
                 <Text style={styles.stripeIcon}>💳</Text>
                 <Typography variant="h6">Payments via Stripe</Typography>
-                <Typography variant="body" style={styles.stripeText}>
+                <Typography variant="body" style={styles.stripeDescription}>
                   Set up your Stripe account to send professional quotes and receive secure payments.
                 </Typography>
                 <Button title="Connect Stripe Account" onPress={async () => {
@@ -499,30 +503,30 @@ const ContractorDashboardScreen: React.FC = () => {
               </Card>
             )}
 
-            <View style={styles.statsGrid}>
-              <Card style={styles.statCard}>
-                <Text style={styles.statLabel}>Total Earnings</Text>
-                <Text style={styles.statValue}>{formatCurrency(earnings?.totalEarnings || 0)}</Text>
+            <View style={styles.earningsRow}>
+              <Card style={styles.earningsCard}>
+                <Text style={styles.earningsLabel}>Total Earnings</Text>
+                <Text style={styles.reviewsRating}>{formatCurrency(earnings?.totalEarnings || 0)}</Text>
               </Card>
-              <Card style={styles.statCard}>
-                <Text style={styles.statLabel}>Pending Escrow</Text>
-                <Text style={[styles.statValue, { color: Colors.primary500 }]}>
+              <Card style={styles.earningsCard}>
+                <Text style={styles.earningsLabel}>Pending Escrow</Text>
+                <Text style={[styles.earningsValue, styles.earningsPending]}>
                   {formatCurrency(earnings?.pendingEscrow || 0)}
                 </Text>
               </Card>
-              <Card style={styles.statCard}>
-                <Text style={styles.statLabel}>Active Jobs</Text>
-                <Text style={styles.statValue}>{jobs.filter(j => j.status === 'funded_in_progress').length}</Text>
+              <Card style={styles.earningsCard}>
+                <Text style={styles.earningsLabel}>Active Jobs</Text>
+                <Text style={styles.reviewsRating}>{jobs.filter(j => j.status === 'funded_in_progress').length}</Text>
               </Card>
             </View>
 
-            <Card style={styles.marginTop}>
+            <Card style={styles.leadsSection}>
               <Typography variant="h6" style={styles.sectionTitle}>New Inquiries (Leads)</Typography>
               {leads.length === 0 ? (
                 <Text style={styles.emptyText}>No new inquiries yet.</Text>
               ) : (
                 leads.map(lead => (
-                  <View key={lead._id} style={styles.leadItem}>
+                  <View key={lead._id} style={styles.leadRow}>
                     <View>
                       <Text style={styles.leadName}>{(lead.user as any)?.firstName} {(lead.user as any)?.lastName}</Text>
                       <Text style={styles.leadProject}>{lead.projectTitle}</Text>
@@ -533,18 +537,18 @@ const ContractorDashboardScreen: React.FC = () => {
               )}
             </Card>
 
-            <Card style={styles.marginTop}>
+            <Card style={styles.leadsSection}>
               <Typography variant="h6" style={styles.sectionTitle}>Quotes Sent</Typography>
               {quotes.length === 0 ? (
                 <Text style={styles.emptyText}>No quotes sent yet.</Text>
               ) : (
                 quotes.map(quote => (
-                  <View key={quote._id} style={styles.quoteItem}>
+                  <View key={quote._id} style={styles.leadRow}>
                     <View>
-                      <Text style={styles.quoteClient}>{(quote.user as any)?.firstName} {(quote.user as any)?.lastName}</Text>
-                      <Text style={styles.quoteAmount}>{formatCurrency(quote.totalAmount / 100)}</Text>
+                      <Text style={styles.leadName}>{(quote.user as any)?.firstName} {(quote.user as any)?.lastName}</Text>
+                      <Text style={styles.leadProject}>{formatCurrency(quote.totalAmount / 100)}</Text>
                     </View>
-                    <View style={[styles.quoteStatus, { backgroundColor: getQuoteStatusColor(quote.status) + '20' }]}>
+                    <View style={[styles.quoteStatusBadge, { backgroundColor: getQuoteStatusColor(quote.status) + "20" }]}>
                       <Text style={[styles.quoteStatusText, { color: getQuoteStatusColor(quote.status) }]}>
                         {quote.status.replace('_', ' ')}
                       </Text>
@@ -565,7 +569,7 @@ const ContractorDashboardScreen: React.FC = () => {
               </Typography>
               <View style={styles.shareUrlContainer}>
                 <Text style={styles.shareUrl} numberOfLines={1}>https://ratedeed.com/contractor/your-profile</Text>
-                <TouchableOpacity style={styles.copyButton} onPress={() => Alert.alert('Copied!', 'Link copied to clipboard')}>
+                <TouchableOpacity style={styles.portfolioInfo} onPress={() => Alert.alert('Copied!', 'Link copied to clipboard')}>
                   <Text style={styles.copyButtonText}>📋</Text>
                 </TouchableOpacity>
               </View>
@@ -615,7 +619,7 @@ const ContractorDashboardScreen: React.FC = () => {
             <Text style={styles.imageUploadText}>{imageLoading ? 'Uploading...' : 'Add Photos'}</Text>
           </TouchableOpacity>
           {postImages.length > 0 && (
-            <ScrollView horizontal style={styles.imagePreviewList}>
+            <ScrollView horizontal style={styles.leadsSection}>
               {postImages.map((img, idx) => (
                 <View key={idx} style={styles.imagePreviewItem}>
                   <Image source={{ uri: img }} style={styles.imagePreview} />
@@ -639,7 +643,7 @@ const ContractorDashboardScreen: React.FC = () => {
 const styles = StyleSheet.create({
   fullScreenContainer: {
     flex: 1,
-    backgroundColor: Colors.neutral100,
+    backgroundColor: Colors.neutral50,
   },
   loadingContainer: {
     flex: 1,
@@ -690,13 +694,8 @@ const styles = StyleSheet.create({
   },
   postHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: Spacing.md,
-  },
-  postAuthor: {
-    flexDirection: 'row',
-    alignItems: 'center',
   },
   postAvatar: {
     width: 40,
@@ -706,6 +705,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: Spacing.sm,
+  },
+  postAvatarText: {
+    color: Colors.neutral50,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  postAuthorInfo: {
+    flex: 1,
   },
   postAuthorName: {
     fontWeight: '600',
@@ -733,7 +740,7 @@ const styles = StyleSheet.create({
     borderRadius: Radii.md,
     marginRight: Spacing.sm,
   },
-  postActions: {
+  postFooter: {
     flexDirection: 'row',
     gap: Spacing.xl,
     paddingTop: Spacing.sm,
@@ -743,42 +750,50 @@ const styles = StyleSheet.create({
   postAction: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: Spacing.xs,
   },
-  postActionIcon: {
+  postActionText: {
+    color: Colors.neutral600,
     fontSize: 14,
   },
+  postActionTextActive: {
+    color: '#ef4444',
+  },
   liked: {
-    color: Colors.error500,
+    color: '#ef4444',
   },
   sectionTitle: {
     marginBottom: Spacing.md,
+  },
+  aboutCard: {
+    marginBottom: Spacing.lg,
   },
   aboutText: {
     color: Colors.neutral700,
     lineHeight: 24,
     marginBottom: Spacing.lg,
   },
-  aboutGrid: {
+  aboutStatsRow: {
     flexDirection: 'row',
     gap: Spacing.lg,
   },
-  aboutItem: {
+  aboutStatBox: {
     flex: 1,
     backgroundColor: Colors.neutral100,
     padding: Spacing.md,
     borderRadius: Radii.md,
   },
-  aboutLabel: {
+  aboutStatLabel: {
     fontSize: 12,
     color: Colors.neutral500,
     textTransform: 'uppercase',
     marginBottom: Spacing.xs,
   },
-  aboutValue: {
+  aboutStatValue: {
     color: Colors.neutral900,
     fontWeight: '600',
   },
-  editButton: {
+  hoursCard: {
     marginTop: Spacing.lg,
   },
   hoursRow: {
@@ -786,14 +801,17 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: Spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.neutral100,
+    borderBottomColor: Colors.neutral200,
   },
   hoursDay: {
-    color: Colors.neutral700,
+    color: Colors.neutral600,
   },
   hoursTime: {
     color: Colors.neutral900,
     fontWeight: '500',
+  },
+  editButton: {
+    marginTop: Spacing.lg,
   },
   servicesGrid: {
     flexDirection: 'row',
@@ -803,28 +821,22 @@ const styles = StyleSheet.create({
   serviceTag: {
     backgroundColor: Colors.primary100,
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
+    paddingVertical: Spacing.xs,
     borderRadius: Radii.round,
   },
   serviceTagText: {
     color: Colors.primary700,
     fontWeight: '500',
   },
-  portfolioHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.lg,
-  },
   portfolioGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: Spacing.md,
   },
-  portfolioItem: {
+  portfolioCard: {
     width: '48%',
-    padding: 0,
     overflow: 'hidden',
+    marginBottom: Spacing.md,
   },
   portfolioImage: {
     width: '100%',
@@ -839,7 +851,7 @@ const styles = StyleSheet.create({
   },
   portfolioDesc: {
     fontSize: 12,
-    color: Colors.neutral600,
+    color: Colors.neutral500,
   },
   reviewsHeader: {
     flexDirection: 'row',
@@ -847,20 +859,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: Spacing.lg,
   },
-  ratingBadge: {
+  reviewsOverview: {
     alignItems: 'center',
   },
-  ratingValue: {
+  reviewsRating: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: '700',
     color: Colors.neutral900,
   },
-  ratingStars: {
-    color: Colors.warning500,
+  reviewsStars: {
+    color: '#f59e0b',
     fontSize: 14,
   },
   reviewCard: {
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.lg,
   },
   reviewHeader: {
     flexDirection: 'row',
@@ -876,12 +888,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: Spacing.sm,
   },
+  reviewAvatarText: {
+    color: Colors.neutral50,
+    fontSize: 14,
+    fontWeight: '600',
+  },
   reviewAuthor: {
     fontWeight: '600',
     color: Colors.neutral900,
   },
   reviewStars: {
-    color: Colors.warning500,
+    color: '#f59e0b',
     fontSize: 12,
   },
   reviewTitle: {
@@ -890,102 +907,189 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xs,
   },
   reviewComment: {
-    color: Colors.neutral700,
+    color: Colors.neutral600,
     lineHeight: 20,
     marginBottom: Spacing.sm,
   },
   reviewDate: {
-    color: Colors.neutral500,
+    color: Colors.neutral400,
     fontSize: 12,
   },
   stripeCard: {
     alignItems: 'center',
     padding: Spacing.xl,
     marginBottom: Spacing.lg,
-    backgroundColor: Colors.primary50,
   },
   stripeIcon: {
     fontSize: 48,
     marginBottom: Spacing.md,
   },
-  stripeText: {
-    textAlign: 'center',
-    marginBottom: Spacing.lg,
-    color: Colors.neutral600,
-  },
-  statsGrid: {
+  earningsRow: {
     flexDirection: 'row',
-    gap: Spacing.md,
+    gap: Spacing.lg,
     marginBottom: Spacing.lg,
   },
-  statCard: {
+  earningsCard: {
     flex: 1,
     alignItems: 'center',
   },
-  statLabel: {
+  earningsLabel: {
     fontSize: 12,
     color: Colors.neutral500,
     textTransform: 'uppercase',
     marginBottom: Spacing.xs,
   },
-  statValue: {
+  earningsValue: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: '700',
     color: Colors.neutral900,
   },
-  marginTop: {
+  earningsPending: {
+    color: Colors.primary600,
+  },
+  leadsSection: {
     marginTop: Spacing.lg,
   },
-  emptyText: {
-    color: Colors.neutral500,
-    textAlign: 'center',
-    paddingVertical: Spacing.lg,
-  },
-  leadItem: {
+  leadRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: Spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.neutral100,
+    borderBottomColor: Colors.neutral200,
   },
+  leadInfo: {},
   leadName: {
     fontWeight: '600',
     color: Colors.neutral900,
   },
   leadProject: {
-    color: Colors.neutral600,
+    color: Colors.neutral500,
     fontSize: 13,
   },
   leadDate: {
-    color: Colors.neutral500,
+    color: Colors.neutral400,
     fontSize: 12,
   },
-  quoteItem: {
+  quoteRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: Spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.neutral100,
+    borderBottomColor: Colors.neutral200,
   },
-  quoteClient: {
-    fontWeight: '600',
-    color: Colors.neutral900,
-  },
-  quoteAmount: {
-    color: Colors.neutral700,
-    fontSize: 13,
-  },
-  quoteStatus: {
+  quoteStatusBadge: {
     paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
+    paddingVertical: 2,
     borderRadius: Radii.sm,
   },
   quoteStatusText: {
     fontSize: 12,
     fontWeight: '600',
     textTransform: 'capitalize',
+  },
+  promoteCard: {
+    marginBottom: Spacing.lg,
+  },
+  profileLinkBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.neutral100,
+    borderRadius: Radii.md,
+    paddingHorizontal: Spacing.md,
+    marginBottom: Spacing.lg,
+  },
+  profileLinkText: {
+    flex: 1,
+    color: Colors.neutral500,
+    fontSize: 13,
+    paddingVertical: Spacing.md,
+  },
+  copyButton: {
+    padding: Spacing.sm,
+  },
+  socialButtons: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: Spacing.lg,
+  },
+  socialButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  createPostModal: {
+    padding: Spacing.lg,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: Colors.neutral900,
+    marginBottom: Spacing.lg,
+  },
+  inputGroup: {
+    marginBottom: Spacing.lg,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: Colors.neutral700,
+    marginBottom: Spacing.xs,
+  },
+  imageUploadButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: Spacing.lg,
+    borderWidth: 2,
+    borderColor: Colors.neutral300,
+    borderRadius: Radii.md,
+    borderStyle: 'dashed',
+  },
+  imageUploadText: {
+    color: Colors.neutral500,
+    fontWeight: '500',
+  },
+  imagePreviewScroll: {
+    marginTop: Spacing.md,
+  },
+  imagePreview: {
+    marginRight: Spacing.sm,
+    position: 'relative',
+  },
+  imageRemoveButton: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: Colors.error500,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+  },
+  modalButton: {
+    flex: 1,
+  },
+
+  stripeDescription: {
+    textAlign: 'center',
+    marginBottom: Spacing.md,
+    color: Colors.neutral500,
+  },
+
+
+  emptyText: {
+    color: Colors.neutral500,
+    textAlign: 'center',
+    paddingVertical: Spacing.lg,
   },
   promoteText: {
     color: Colors.neutral600,
@@ -1005,23 +1109,8 @@ const styles = StyleSheet.create({
     fontSize: 13,
     paddingVertical: Spacing.md,
   },
-  copyButton: {
-    padding: Spacing.sm,
-  },
   copyButtonText: {
     fontSize: 18,
-  },
-  socialButtons: {
-    flexDirection: 'row',
-    gap: Spacing.md,
-    justifyContent: 'center',
-  },
-  socialButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   socialIcon: {
     fontSize: 20,
@@ -1029,46 +1118,13 @@ const styles = StyleSheet.create({
   imageUploadSection: {
     marginVertical: Spacing.md,
   },
-  imageUploadButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: Spacing.lg,
-    borderWidth: 2,
-    borderColor: Colors.neutral300,
-    borderRadius: Radii.md,
-    borderStyle: 'dashed',
-  },
   imageUploadIcon: {
     fontSize: 24,
     marginRight: Spacing.sm,
   },
-  imageUploadText: {
-    color: Colors.neutral600,
-    fontWeight: '500',
-  },
-  imagePreviewList: {
-    marginTop: Spacing.md,
-  },
   imagePreviewItem: {
     marginRight: Spacing.sm,
     position: 'relative',
-  },
-  imagePreview: {
-    width: 80,
-    height: 80,
-    borderRadius: Radii.sm,
-  },
-  imageRemoveButton: {
-    position: 'absolute',
-    top: -8,
-    right: -8,
-    backgroundColor: Colors.error500,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
 });
 

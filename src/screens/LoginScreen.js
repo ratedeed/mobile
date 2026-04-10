@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, ScrollView, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { backendLoginFirebase, syncEmailVerificationStatus } from '../api/auth';
 import { auth } from '../firebaseConfig';
@@ -7,10 +7,9 @@ import { sendEmailVerification, signInWithEmailAndPassword } from 'firebase/auth
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
 import Header from '../components/common/Header';
-import { Spacing, Colors, Radii, Shadows } from '../constants/designTokens';
 import Typography from '../components/common/Typography';
 import Toast from 'react-native-toast-message';
-import { useAuth } from '../context/AuthContext'; // Import useAuth
+import { useAuth } from '../context/AuthContext';
 
 const LoginScreen = () => {
   const [email, setEmail] = useState('');
@@ -18,7 +17,7 @@ const LoginScreen = () => {
   const [loading, setLoading] = useState(false);
   const [showVerificationMessage, setShowVerificationMessage] = useState(false);
   const navigation = useNavigation();
-  const { updateBackendToken } = useAuth(); // Get updateBackendToken from AuthContext
+  const { updateBackendToken } = useAuth();
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(user => {
@@ -69,10 +68,9 @@ const LoginScreen = () => {
         });
         setShowVerificationMessage(true);
         console.log('LoginScreen: Email not verified. Preventing navigation to Main.');
-        return; // Prevent navigation if email is not verified
+        return; 
       }
 
-      // If email is verified, proceed with backend login
       const idToken = await reloadedUser.getIdToken();
       console.log('LoginScreen: Firebase ID Token generated (first 20 chars):', idToken ? idToken.substring(0, 20) + '...' : 'No');
 
@@ -82,13 +80,12 @@ const LoginScreen = () => {
         console.log('LoginScreen: Backend login response:', JSON.stringify(backendResponse, null, 2));
 
         if (backendResponse && backendResponse.token) {
-          await updateBackendToken(backendResponse.token, backendResponse.emailVerified); // Update backend token and emailVerified in AuthContext
+          await updateBackendToken(backendResponse.token, backendResponse.emailVerified);
           Toast.show({
             type: 'success',
             text1: 'Success',
             text2: 'Logged in successfully!',
           });
-          // Navigation to Main is handled by AuthContext's isAuthenticated state change
         } else {
           Toast.show({
             type: 'error',
@@ -110,7 +107,7 @@ const LoginScreen = () => {
         console.error('LoginScreen: Error during backend login:', backendError);
       }
 
-    } catch (error) { // Catch all errors from Firebase signInWithEmailAndPassword and subsequent operations
+    } catch (error) { 
       let errorMessage = 'An unexpected error occurred. Please try again.';
       if (error.code) {
         switch (error.code) {
@@ -183,12 +180,9 @@ const LoginScreen = () => {
             text2: 'Your email has been successfully verified! You can now log in.',
           });
           setShowVerificationMessage(false);
-          // After successful verification and sync, attempt backend login again to get a fresh token
-          // and trigger AuthContext update
           const backendResponse = await backendLoginFirebase(idToken, auth.currentUser.email);
           if (backendResponse && backendResponse.token) {
-            await updateBackendToken(backendResponse.token, backendResponse.emailVerified); // Update backend token and emailVerified in AuthContext
-            // Navigation to Main is handled by AuthContext's isAuthenticated state change
+            await updateBackendToken(backendResponse.token, backendResponse.emailVerified); 
           } else {
             Toast.show({
               type: 'error',
@@ -221,10 +215,10 @@ const LoginScreen = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={styles.fullScreenContainer}>
       <Header title="Welcome Back" />
-      <ScrollView contentContainerStyle={styles.scrollViewContent}>
-        <View style={styles.formContainer}>
+      <ScrollView contentContainerClassName="flex-grow justify-center p-4">
+        <View style={styles.cardContainer}>
           <Typography variant="h3" style={styles.title}>Sign In</Typography>
           <Typography variant="subtitle1" style={styles.subtitle}>
             Access your RateDeed account to manage your projects.
@@ -256,25 +250,25 @@ const LoginScreen = () => {
             style={styles.loginButton}
           />
 
-          <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')} style={styles.forgotPasswordPrompt}>
-            <Typography variant="body" style={styles.linkText}>
-              Forgot your password? <Typography variant="button" style={styles.linkLink}>Reset Password</Typography>
+          <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')} style={styles.linkButton}>
+            <Typography variant="body" style={styles.mutedText}>
+              Forgot your password? <Typography variant="button" style={styles.primaryLinkText}>Reset Password</Typography>
             </Typography>
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={() => navigation.navigate('Register')} style={styles.registerPrompt}>
-            <Typography variant="body" style={styles.linkText}>
-              Don't have an account? <Typography variant="button" style={styles.linkLink}>Sign Up</Typography>
+          <TouchableOpacity onPress={() => navigation.navigate('Register')} style={styles.linkButton}>
+            <Typography variant="body" style={styles.mutedText}>
+              Don't have an account? <Typography variant="button" style={styles.primaryLinkText}>Sign Up</Typography>
             </Typography>
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={() => navigation.navigate('ContractorSignup')} style={styles.contractorPrompt}>
-            <Typography variant="body" style={styles.linkText}>
-              Are you a contractor? <Typography variant="button" style={styles.linkLink}>Sign Up as a Contractor</Typography>
+          <TouchableOpacity onPress={() => navigation.navigate('ContractorSignup')} style={styles.linkButton}>
+            <Typography variant="body" style={styles.mutedText}>
+              Are you a contractor? <Typography variant="button" style={styles.primaryLinkText}>Sign Up as a Contractor</Typography>
             </Typography>
           </TouchableOpacity>
           {showVerificationMessage && (
-            <View style={styles.verificationContainer}>
+            <View style={styles.verificationCard}>
               <Typography variant="body" style={styles.verificationText}>
                 Your email is not verified. Please check your inbox for a verification link.
               </Typography>
@@ -283,8 +277,8 @@ const LoginScreen = () => {
                 onPress={handleResendVerification}
                 style={styles.resendButton}
               />
-              <TouchableOpacity onPress={handleVerifiedCheck} style={styles.verifiedCheckPrompt}>
-                <Typography variant="button" style={styles.linkLink}>
+              <TouchableOpacity onPress={handleVerifiedCheck} style={styles.linkButton}>
+                <Typography variant="button" style={styles.primaryLinkText}>
                   I have verified my email
                 </Typography>
               </TouchableOpacity>
@@ -295,81 +289,5 @@ const LoginScreen = () => {
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.neutral100,
-  },
-  scrollViewContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    padding: Spacing.lg,
-  },
-  formContainer: {
-    backgroundColor: Colors.neutral50,
-    borderRadius: Radii.lg,
-    padding: Spacing.xl,
-    ...Shadows.md,
-    alignItems: 'center',
-  },
-  title: {
-    marginBottom: Spacing.xs,
-    color: Colors.neutral900,
-    textAlign: 'center',
-  },
-  subtitle: {
-    marginBottom: Spacing.xl,
-    color: Colors.neutral600,
-    textAlign: 'center',
-    paddingHorizontal: Spacing.md,
-  },
-  inputField: {
-    marginBottom: Spacing.md,
-  },
-  loginButton: {
-    marginTop: Spacing.lg,
-    marginBottom: Spacing.md,
-  },
-  forgotPasswordPrompt: {
-    marginTop: Spacing.md,
-    padding: Spacing.xs,
-  },
-  registerPrompt: {
-    marginTop: Spacing.sm,
-    padding: Spacing.xs,
-  },
-  contractorPrompt: {
-    marginTop: Spacing.sm,
-    padding: Spacing.xs,
-  },
-  verificationContainer: {
-    marginTop: Spacing.xl,
-    padding: Spacing.md,
-    backgroundColor: Colors.warning100,
-    borderRadius: Radii.md,
-    alignItems: 'center',
-    width: '100%',
-  },
-  verificationText: {
-    color: Colors.warning900,
-    textAlign: 'center',
-    marginBottom: Spacing.md,
-  },
-  resendButton: {
-    width: '100%',
-    marginBottom: Spacing.sm,
-  },
-  verifiedCheckPrompt: {
-    padding: Spacing.xs,
-  },
-  linkText: {
-    color: Colors.neutral700,
-  },
-  linkLink: {
-    color: Colors.primary500,
-    fontWeight: '700',
-  },
-});
 
 export default LoginScreen;

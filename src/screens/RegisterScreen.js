@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, ScrollView, TouchableOpacity } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { register } from '../api/auth';
 import { auth } from '../firebaseConfig';
-import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
+import { createUserWithEmailAndPassword, sendEmailVerification, deleteUser } from 'firebase/auth';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
 import Header from '../components/common/Header';
-import { Spacing, Colors, Radii, Shadows } from '../constants/designTokens';
 import Typography from '../components/common/Typography';
 import Toast from 'react-native-toast-message';
 
@@ -41,21 +40,22 @@ const RegisterScreen = () => {
     }
 
     setLoading(true);
+    let userCreated = null;
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-      console.log('RegisterScreen: Firebase createUserWithEmailAndPassword successful. User UID:', user.uid, 'Email:', user.email);
-      await sendEmailVerification(user);
+      userCreated = userCredential.user;
+      console.log('RegisterScreen: Firebase createUserWithEmailAndPassword successful. User UID:', userCreated.uid, 'Email:', userCreated.email);
+      await sendEmailVerification(userCreated);
       console.log('RegisterScreen: Verification email sent.');
-      await auth.signOut(); // Sign out the newly registered user from Firebase immediately
-      console.log('RegisterScreen: Firebase user signed out after registration.');
 
-      // Ensure any existing backend token is cleared before registering with backend
       console.log('RegisterScreen: Checking AsyncStorage availability before removeItem:', typeof AsyncStorage);
       await AsyncStorage.removeItem('userInfo');
       console.log('RegisterScreen: Cleared any existing userInfo from AsyncStorage before backend registration.');
 
-      await register(firstName, lastName, email, password, zipCode, user.uid); // Pass Firebase UID to backend
+      await register(firstName, lastName, email, password, zipCode, userCreated.uid); 
+
+      await auth.signOut(); 
+      console.log('RegisterScreen: Firebase user signed out after registration.');
 
       Toast.show({
         type: 'success',
@@ -64,6 +64,14 @@ const RegisterScreen = () => {
       });
       navigation.navigate('Login');
     } catch (error) {
+      if (userCreated) {
+        try {
+           await deleteUser(userCreated);
+           console.log('RegisterScreen: Rollback successful. Deleted orphaned Firebase user.');
+        } catch (rollbackError) {
+           console.error('RegisterScreen: Failed to rollback Firebase user:', rollbackError);
+        }
+      }
       let errorMessage = 'An error occurred during registration.';
       if (error.code) {
         switch (error.code) {
@@ -98,10 +106,10 @@ const RegisterScreen = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={styles.fullScreenContainer}>
       <Header title="Create Account" showBackButton />
-      <ScrollView contentContainerStyle={styles.scrollViewContent}>
-        <View style={styles.formContainer}>
+      <ScrollView contentContainerClassName="flex-grow justify-center p-4">
+        <View style={styles.cardContainer}>
           <Typography variant="h3" style={styles.title}>Join RateDeed</Typography>
           <Typography variant="subtitle1" style={styles.subtitle}>
             Sign up to connect with top contractors and manage your projects.
@@ -165,14 +173,14 @@ const RegisterScreen = () => {
             style={styles.registerButton}
           />
 
-          <TouchableOpacity onPress={() => navigation.navigate('Login')} style={styles.loginPrompt}>
-            <Typography variant="body" style={styles.loginText}>
-              Already have an account? <Typography variant="button" style={styles.loginLink}>Login</Typography>
+          <TouchableOpacity onPress={() => navigation.navigate('Login')} style={styles.linkButton}>
+            <Typography variant="body" style={styles.mutedText}>
+              Already have an account? <Typography variant="button" style={styles.primaryLinkText}>Login</Typography>
             </Typography>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate('ContractorSignup')} style={styles.contractorPrompt}>
-            <Typography variant="body" style={styles.loginText}>
-              Are you a contractor? <Typography variant="button" style={styles.loginLink}>Sign Up as a Contractor</Typography>
+          <TouchableOpacity onPress={() => navigation.navigate('ContractorSignup')} style={styles.linkButton}>
+            <Typography variant="body" style={styles.mutedText}>
+              Are you a contractor? <Typography variant="button" style={styles.primaryLinkText}>Sign Up as a Contractor</Typography>
             </Typography>
           </TouchableOpacity>
         </View>
@@ -180,57 +188,5 @@ const RegisterScreen = () => {
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.neutral100,
-  },
-  scrollViewContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    padding: Spacing.lg,
-  },
-  formContainer: {
-    backgroundColor: Colors.neutral50,
-    borderRadius: Radii.lg,
-    padding: Spacing.xl,
-    ...Shadows.md,
-    alignItems: 'center',
-  },
-  title: {
-    marginBottom: Spacing.xs,
-    color: Colors.neutral900,
-    textAlign: 'center',
-  },
-  subtitle: {
-    marginBottom: Spacing.xl,
-    color: Colors.neutral600,
-    textAlign: 'center',
-    paddingHorizontal: Spacing.md,
-  },
-  inputField: {
-    marginBottom: Spacing.md,
-  },
-  registerButton: {
-    marginTop: Spacing.lg,
-    marginBottom: Spacing.md,
-  },
-  loginPrompt: {
-    marginTop: Spacing.md,
-    padding: Spacing.xs,
-  },
-  contractorPrompt: {
-    marginTop: Spacing.sm,
-    padding: Spacing.xs,
-  },
-  loginText: {
-    color: Colors.neutral700,
-  },
-  loginLink: {
-    color: Colors.primary500,
-    fontWeight: '700',
-  },
-});
 
 export default RegisterScreen;

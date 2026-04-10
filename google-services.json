@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "946224105580",
+    "project_id": "rateauth",
+    "storage_bucket": "rateauth.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:946224105580:android:28bdf9e0b15a240470b049",
+        "android_client_info": {
+          "package_name": "com.ratedeed.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCrhmPyyuwqSuk5_sOXhwlHt_fH26IgS_M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

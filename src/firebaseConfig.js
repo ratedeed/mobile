@@ -9,12 +9,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // environment variables (e.g., using Expo's `app.config.js` or `expo-constants`).
 // This example uses hardcoded values for demonstration purposes as per task instructions.
 const firebaseConfig = {
-  apiKey: 'AIzaSyCN-guWJ0r2lqk0kVB8Mjj0eESNVKZ5c7c',
-  authDomain: 'rateauth.firebaseapp.com',
-  projectId: 'rateauth',
-  storageBucket: 'rateauth.firebasestorage.app',
-  messagingSenderId: '946224105580',
-  appId: '1:946224105580:web:5e28ef916c44d3b270b049',
+  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
 };
 
 // Initialize Firebase App:

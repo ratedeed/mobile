@@ -1,12 +1,13 @@
 import React, { useRef } from 'react';
 import {
   View,
-  StyleSheet,
   TouchableOpacity,
   Animated,
   ViewStyle,
+  StyleSheet,
+  StyleProp
 } from 'react-native';
-import { Spacing, Radii, Colors, Shadows } from '../../constants/designTokens';
+import { Colors, Spacing, Radii, Shadows } from '../../constants/designTokens';
 
 type CardVariant = 'elevated' | 'outlined' | 'filled';
 
@@ -15,8 +16,8 @@ interface CardProps {
   variant?: CardVariant;
   pressable?: boolean;
   onPress?: () => void;
-  style?: ViewStyle;
-  contentStyle?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
+  contentStyle?: StyleProp<ViewStyle>;
 }
 
 const Card: React.FC<CardProps> = ({
@@ -51,71 +52,66 @@ const Card: React.FC<CardProps> = ({
     }
   };
 
-  const getVariantStyles = (): ViewStyle => {
+  const getVariantStyle = (): StyleProp<ViewStyle> => {
     switch (variant) {
       case 'outlined':
-        return {
-          backgroundColor: Colors.neutral50,
-          borderWidth: 1,
-          borderColor: Colors.neutral200,
-          ...Shadows.xs,
-        };
+        return styles.outlined;
       case 'filled':
-        return {
-          backgroundColor: Colors.neutral100,
-          borderWidth: 0,
-          ...Shadows.none,
-        };
+        return styles.filled;
+      case 'elevated':
       default:
-        return {
-          backgroundColor: Colors.neutral50,
-          borderWidth: 1,
-          borderColor: Colors.neutral100,
-          ...Shadows.sm,
-        };
+        return styles.elevated;
     }
   };
 
-  const cardStyles = [
-    styles.card,
-    getVariantStyles(),
-    { transform: [{ scale: animatedScale }] },
+  const containerStyle = [
+    styles.base,
+    getVariantStyle(),
     style,
-  ];
-
-  const contentStyles = [
-    styles.content,
-    contentStyle,
+    { transform: [{ scale: animatedScale }] } as any
   ];
 
   if (pressable && onPress) {
     return (
       <TouchableOpacity
-        style={cardStyles}
+        style={containerStyle}
         onPress={onPress}
         activeOpacity={0.95}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
       >
-        <View style={contentStyles}>{children}</View>
+        <View style={contentStyle}>{children}</View>
       </TouchableOpacity>
     );
   }
 
   return (
-    <Animated.View style={cardStyles}>
-      <View style={contentStyles}>{children}</View>
+    <Animated.View style={containerStyle}>
+      <View style={contentStyle}>{children}</View>
     </Animated.View>
   );
 };
 
 const styles = StyleSheet.create({
-  card: {
-    borderRadius: Radii.md,
+  base: {
+    borderRadius: Radii.xl,
     padding: Spacing.md,
-    marginVertical: Spacing.sm,
+    marginVertical: Spacing.xs,
+    backgroundColor: Colors.neutral50,
   },
-  content: {},
+  elevated: {
+    borderWidth: 1,
+    borderColor: Colors.neutral200,
+    ...Shadows.xs,
+  },
+  outlined: {
+    borderWidth: 1,
+    borderColor: Colors.neutral200,
+  },
+  filled: {
+    backgroundColor: Colors.neutral100,
+    borderWidth: 0,
+  },
 });
 
 export default Card;
