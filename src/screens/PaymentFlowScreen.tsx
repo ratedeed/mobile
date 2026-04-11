@@ -1,9 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, TextInput, ActivityIndicator, StyleSheet } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, Pressable, ScrollView, TextInput, ActivityIndicator } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
-import Header from '../components/common/Header';
-import { Colors, Spacing, Radii } from '../constants/designTokens';
 
 const STEP_LABELS = ['Payment', 'Review', 'Processing', 'Confirmed'];
 
@@ -12,519 +10,209 @@ export default function PaymentFlowScreen() {
   const route = useRoute<any>();
   const quoteId = route.params?.quoteId || '1';
 
-  const [isLoading, setIsLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
-
-  // Form State
   const [cardNumber, setCardNumber] = useState('');
   const [expiry, setExpiry] = useState('');
   const [cvv, setCvv] = useState('');
   const [cardName, setCardName] = useState('');
 
-  // Auto-advance processing to confirmed
   useEffect(() => {
     if (currentStep === 2) {
-      const timer = setTimeout(() => {
-        setCurrentStep(3);
-      }, 3000);
+      const timer = setTimeout(() => setCurrentStep(3), 3000);
       return () => clearTimeout(timer);
     }
   }, [currentStep]);
 
-  const handleCardSubmit = () => {
-    // Basic validation skip for demo
-    setCurrentStep(1);
-  };
-
-  const handlePayNow = () => {
-    setCurrentStep(2);
-  };
-
-  if (isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#09090B" />
-      </View>
-    );
-  }
-
   const quoteTotal = 450;
-  const contractorName = "Acme Plumbing";
+  const contractorName = 'Acme Plumbing';
 
   return (
-    <View style={styles.container}>
-      <Header title={currentStep === 3 ? 'Payment Complete' : 'Payment'} showBackButton={currentStep <= 1} />
+    <View className="flex-1 bg-white">
+      {/* Header */}
+      <View className="flex-row items-center px-4 py-3 border-b border-neutral-200">
+        {currentStep <= 1 && (
+          <Pressable onPress={() => currentStep === 0 ? navigation.goBack() : setCurrentStep(0)} className="w-8 h-8 items-center justify-center">
+            <FontAwesome5 name="chevron-left" size={18} color="#171717" />
+          </Pressable>
+        )}
+        <Text className="text-sm font-bold text-neutral-900 flex-1 text-center">
+          {currentStep === 3 ? 'Payment Complete' : 'Payment'}
+        </Text>
+        <View className="w-8" />
+      </View>
 
-      {/* Progress Bar */}
-      <View style={styles.progressBarContainer}>
+      {/* Progress Steps */}
+      <View className="flex-row items-center justify-between px-6 py-4">
         {STEP_LABELS.map((label, i) => {
           const isActive = i === currentStep;
           const isDone = i < currentStep;
           return (
-            <View key={label} style={styles.stepContainer}>
-              <View style={[styles.stepCircle, isDone ? styles.stepCircleDone : isActive ? styles.stepCircleActive : styles.stepCircleInactive]}>
+            <View key={label} className="flex-1 items-center">
+              <View className={`w-7 h-7 rounded-full items-center justify-center ${
+                isDone ? 'bg-emerald-500' : isActive ? 'bg-neutral-900' : 'bg-neutral-100'
+              }`}>
                 {isDone ? (
-                  <FontAwesome5 name="check" size={12} color="white" />
+                  <FontAwesome5 name="check" size={10} color="#fff" />
                 ) : (
-                  <Text style={[styles.stepNumber, isActive ? styles.stepNumberActive : styles.stepNumberInactive]}>{i + 1}</Text>
+                  <Text className={`text-xs font-bold ${isActive ? 'text-white' : 'text-neutral-400'}`}>{i + 1}</Text>
                 )}
               </View>
-              <Text style={[styles.stepLabel, isActive ? styles.stepLabelActive : styles.stepLabelInactive]}>{label}</Text>
+              <Text className={`text-[9px] mt-1 font-medium ${isActive ? 'text-neutral-900' : 'text-neutral-400'}`}>{label}</Text>
             </View>
           );
         })}
       </View>
 
-      <ScrollView style={styles.scrollContainer}>
+      <ScrollView className="flex-1 px-4">
+        {/* Step 0: Payment Method */}
         {currentStep === 0 && (
-          <View style={styles.formContainer}>
-            <View style={styles.cardContainer}>
-              <View style={styles.cardHeader}>
-                <FontAwesome5 name="credit-card" size={18} color="#09090B" style={{ marginRight: 8 }} />
-                <Text style={styles.cardTitle}>Payment Method</Text>
+          <View style={{ gap: 16 }}>
+            <View className="bg-white rounded-2xl border border-neutral-200 p-4">
+              <View className="flex-row items-center mb-4" style={{ gap: 8 }}>
+                <FontAwesome5 name="credit-card" size={16} color="#171717" />
+                <Text className="text-base font-bold text-neutral-900">Payment Method</Text>
               </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Card Number</Text>
-                <TextInput
-                  value={cardNumber}
-                  onChangeText={setCardNumber}
-                  placeholder="1234 5678 9012 3456"
-                  keyboardType="numeric"
-                  style={styles.inputField}
-                />
-              </View>
-
-              <View style={styles.inputRow}>
-                <View style={styles.flex1}>
-                  <Text style={styles.inputLabel}>Expiry</Text>
+              <Text className="text-xs font-semibold text-neutral-500 mb-1">Card Number</Text>
+              <TextInput
+                value={cardNumber}
+                onChangeText={setCardNumber}
+                placeholder="1234 5678 9012 3456"
+                placeholderTextColor="#a3a3a3"
+                keyboardType="numeric"
+                className="w-full border border-neutral-200 rounded-xl px-4 py-2.5 text-sm mb-3"
+              />
+              <View className="flex-row" style={{ gap: 12 }}>
+                <View className="flex-1">
+                  <Text className="text-xs font-semibold text-neutral-500 mb-1">Expiry</Text>
                   <TextInput
                     value={expiry}
                     onChangeText={setExpiry}
                     placeholder="MM/YY"
+                    placeholderTextColor="#a3a3a3"
                     keyboardType="numeric"
-                    style={styles.inputField}
+                    className="w-full border border-neutral-200 rounded-xl px-4 py-2.5 text-sm"
                   />
                 </View>
-                <View style={styles.flex1}>
-                  <Text style={styles.inputLabel}>CVV</Text>
+                <View className="flex-1">
+                  <Text className="text-xs font-semibold text-neutral-500 mb-1">CVV</Text>
                   <TextInput
                     value={cvv}
                     onChangeText={setCvv}
-                    placeholder="•••"
+                    placeholder="123"
+                    placeholderTextColor="#a3a3a3"
                     keyboardType="numeric"
                     secureTextEntry
-                    style={styles.inputField}
+                    className="w-full border border-neutral-200 rounded-xl px-4 py-2.5 text-sm"
                   />
                 </View>
               </View>
-
-              <View style={styles.inputGroupBottom}>
-                <Text style={styles.inputLabel}>Cardholder Name</Text>
-                <TextInput
-                  value={cardName}
-                  onChangeText={setCardName}
-                  placeholder="John Doe"
-                  style={styles.inputField}
-                />
-              </View>
+              <Text className="text-xs font-semibold text-neutral-500 mb-1 mt-3">Cardholder Name</Text>
+              <TextInput
+                value={cardName}
+                onChangeText={setCardName}
+                placeholder="John Doe"
+                placeholderTextColor="#a3a3a3"
+                className="w-full border border-neutral-200 rounded-xl px-4 py-2.5 text-sm"
+              />
             </View>
-
-            <TouchableOpacity
-              onPress={handleCardSubmit}
-              style={styles.continueButton}
+            <Pressable
+              onPress={() => setCurrentStep(1)}
+              className="w-full py-3.5 bg-indigo-600 rounded-xl items-center flex-row justify-center"
+              style={{ gap: 8 }}
             >
-              <Text style={styles.buttonTextRight}>Continue</Text>
-              <FontAwesome5 name="chevron-right" size={14} color="white" />
-            </TouchableOpacity>
+              <Text className="text-sm font-semibold text-white">Continue</Text>
+              <FontAwesome5 name="chevron-right" size={12} color="#fff" />
+            </Pressable>
           </View>
         )}
 
+        {/* Step 1: Review */}
         {currentStep === 1 && (
-          <View style={styles.formContainer}>
-            <View style={styles.cardContainerBottom}>
-              <View style={styles.summaryHeader}>
+          <View style={{ gap: 12 }}>
+            <View className="bg-white rounded-2xl border border-neutral-200 p-4">
+              <View className="flex-row justify-between items-center">
                 <View>
-                  <Text style={styles.contractorName}>{contractorName}</Text>
-                  <Text style={styles.serviceFeeText}>Service Fee Included</Text>
+                  <Text className="text-sm font-bold text-neutral-900">{contractorName}</Text>
+                  <Text className="text-xs text-neutral-500">Service Fee Included</Text>
                 </View>
-                <Text style={styles.quoteTotal}>${quoteTotal.toLocaleString()}</Text>
+                <Text className="text-lg font-bold text-neutral-900">${quoteTotal.toLocaleString()}</Text>
               </View>
             </View>
 
-            <View style={styles.totalAmountContainer}>
-              <Text style={styles.totalAmountLabel}>Total Amount</Text>
-              <Text style={styles.totalAmountValue}>${quoteTotal.toLocaleString()}</Text>
+            <View className="bg-neutral-900 rounded-2xl p-6 items-center">
+              <Text className="text-xs text-neutral-400 uppercase tracking-widest">Total Amount</Text>
+              <Text className="text-3xl font-bold text-white mt-1">${quoteTotal.toLocaleString()}</Text>
             </View>
 
-            <View style={styles.escrowContainer}>
-              <FontAwesome5 name="shield-alt" size={18} color="#059669" style={{ marginTop: 2, marginRight: 12 }} />
-              <View style={styles.flex1}>
-                <Text style={styles.escrowTitle}>Escrow Protection</Text>
-                <Text style={styles.escrowDesc}>Your payment will be held in escrow. Funds are only released to the contractor when you confirm the job is complete.</Text>
+            <View className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex-row items-start" style={{ gap: 12 }}>
+              <FontAwesome5 name="shield-alt" size={18} color="#059669" style={{ marginTop: 2 }} />
+              <View className="flex-1">
+                <Text className="text-sm font-semibold text-emerald-800">Escrow Protection</Text>
+                <Text className="text-xs text-emerald-700 mt-1 leading-4">
+                  Your payment will be held in escrow. Funds are only released when you confirm the job is complete.
+                </Text>
               </View>
             </View>
 
-            <TouchableOpacity
-              onPress={handlePayNow}
-              style={styles.payButton}
+            <Pressable
+              onPress={() => setCurrentStep(2)}
+              className="w-full py-3.5 bg-indigo-600 rounded-xl items-center flex-row justify-center"
+              style={{ gap: 8 }}
             >
-              <FontAwesome5 name="lock" size={14} color="white" style={{ marginRight: 8 }} />
-              <Text style={styles.payButtonText}>Pay ${quoteTotal.toLocaleString()}</Text>
-            </TouchableOpacity>
+              <FontAwesome5 name="lock" size={14} color="#fff" />
+              <Text className="text-base font-bold text-white">Pay ${quoteTotal.toLocaleString()}</Text>
+            </Pressable>
           </View>
         )}
 
+        {/* Step 2: Processing */}
         {currentStep === 2 && (
-          <View style={styles.processingContainer}>
-            <View style={styles.loadingCircle}>
-              <ActivityIndicator size="large" color="#A3A3A3" />
+          <View className="items-center justify-center py-20">
+            <View className="w-20 h-20 bg-neutral-100 rounded-full items-center justify-center mb-6">
+              <ActivityIndicator size="large" color="#a3a3a3" />
             </View>
-            <Text style={styles.statusTitle}>Processing your payment...</Text>
-            <Text style={styles.statusDesc}>
+            <Text className="text-xl font-bold text-neutral-900">Processing your payment...</Text>
+            <Text className="text-sm text-neutral-500 text-center mt-2 px-10">
               Please don't close this page. Your payment is being processed securely.
             </Text>
           </View>
         )}
 
+        {/* Step 3: Confirmed */}
         {currentStep === 3 && (
-          <View style={styles.confirmedContainer}>
-            <View style={styles.successCircle}>
-              <FontAwesome5 name="check" size={32} color="#10B981" />
+          <View className="items-center py-8">
+            <View className="w-20 h-20 bg-emerald-50 rounded-full items-center justify-center mb-6">
+              <FontAwesome5 name="check" size={32} color="#10b981" />
             </View>
-            <Text style={styles.statusTitle}>Payment Confirmed!</Text>
-            <Text style={styles.confirmedAmount}>${quoteTotal.toLocaleString()}</Text>
-            <Text style={styles.confirmedTo}>paid to {contractorName}</Text>
+            <Text className="text-xl font-bold text-neutral-900">Payment Confirmed!</Text>
+            <Text className="text-3xl font-bold text-neutral-900 mt-2">${quoteTotal.toLocaleString()}</Text>
+            <Text className="text-sm text-neutral-500">paid to {contractorName}</Text>
 
-            <View style={styles.escrowContainerConfirmed}>
-              <FontAwesome5 name="shield-alt" size={18} color="#059669" style={{ marginTop: 2, marginRight: 12 }} />
-              <View style={styles.flex1}>
-                <Text style={styles.escrowTitle}>Funds Held in Escrow</Text>
-                <Text style={styles.escrowDesc}>Your payment is securely held in escrow and will be released to the contractor once you confirm the job is complete.</Text>
+            <View className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex-row items-start mt-8 w-full" style={{ gap: 12 }}>
+              <FontAwesome5 name="shield-alt" size={18} color="#059669" style={{ marginTop: 2 }} />
+              <View className="flex-1">
+                <Text className="text-sm font-semibold text-emerald-800">Funds Held in Escrow</Text>
+                <Text className="text-xs text-emerald-700 mt-1 leading-4">
+                  Your payment is securely held and will be released once you confirm the job is complete.
+                </Text>
               </View>
             </View>
 
-            <TouchableOpacity
+            <Pressable
               onPress={() => navigation.navigate('ActiveJobs')}
-              style={styles.viewJobsButton}
+              className="w-full py-3.5 bg-indigo-600 rounded-xl items-center flex-row justify-center mt-6"
+              style={{ gap: 8 }}
             >
-              <FontAwesome5 name="briefcase" size={14} color="white" style={{ marginRight: 8 }} />
-              <Text style={styles.buttonText}>View My Jobs</Text>
-            </TouchableOpacity>
+              <FontAwesome5 name="briefcase" size={14} color="#fff" />
+              <Text className="text-sm font-semibold text-white">View My Jobs</Text>
+            </Pressable>
 
-            <TouchableOpacity
-              onPress={() => navigation.navigate('Home')}
-              style={styles.backHomeButton}
-            >
-              <Text style={styles.backHomeText}>Back to Home</Text>
-            </TouchableOpacity>
+            <Pressable onPress={() => navigation.navigate('Home')} className="mt-3 py-2">
+              <Text className="text-sm font-medium text-neutral-500">Back to Home</Text>
+            </Pressable>
           </View>
         )}
       </ScrollView>
     </View>
   );
 }
-
-
-const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: Colors.neutral50,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  container: {
-    flex: 1,
-    backgroundColor: Colors.neutral50,
-  },
-  progressBarContainer: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  stepContainer: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  stepCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepCircleDone: {
-    backgroundColor: Colors.success500,
-  },
-  stepCircleActive: {
-    backgroundColor: Colors.neutral900,
-  },
-  stepCircleInactive: {
-    backgroundColor: Colors.neutral100,
-  },
-  stepNumber: {
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  stepNumberActive: {
-    color: Colors.neutral50,
-  },
-  stepNumberInactive: {
-    color: Colors.neutral400,
-  },
-  stepLabel: {
-    fontSize: 9,
-    marginTop: Spacing.xs,
-    fontWeight: '500',
-  },
-  stepLabelActive: {
-    color: Colors.neutral900,
-  },
-  stepLabelInactive: {
-    color: Colors.neutral400,
-  },
-  scrollContainer: {
-    flex: 1,
-    paddingHorizontal: Spacing.md,
-  },
-  formContainer: {
-    paddingTop: Spacing.xs,
-    marginBottom: Spacing.lg,
-  },
-  cardContainer: {
-    backgroundColor: Colors.neutral50,
-    borderRadius: Radii.xl,
-    padding: Spacing.md,
-    borderWidth: 1,
-    borderColor: Colors.neutral200,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: Spacing.md,
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: Colors.neutral900,
-  },
-  inputGroup: {
-    marginBottom: Spacing.sm,
-  },
-  inputLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: Colors.neutral700,
-    marginBottom: 6,
-  },
-  inputField: {
-    width: '100%',
-    padding: Spacing.sm,
-    borderRadius: Radii.md,
-    borderWidth: 1,
-    borderColor: Colors.neutral200,
-    fontSize: 14,
-    color: Colors.neutral900,
-    backgroundColor: Colors.neutral50,
-  },
-  inputRow: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-    marginBottom: Spacing.sm,
-  },
-  flex1: {
-    flex: 1,
-  },
-  inputGroupBottom: {
-    marginBottom: Spacing.md,
-  },
-  continueButton: {
-    width: '100%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: Spacing.md,
-    borderRadius: Radii.xl,
-    backgroundColor: Colors.primary500,
-    marginTop: Spacing.md,
-  },
-  buttonTextRight: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: Colors.neutral50,
-    marginRight: Spacing.xs,
-  },
-  cardContainerBottom: {
-    backgroundColor: Colors.neutral50,
-    borderRadius: Radii.xl,
-    padding: Spacing.md,
-    borderWidth: 1,
-    borderColor: Colors.neutral200,
-    marginBottom: Spacing.md,
-  },
-  summaryHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  contractorName: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: Colors.neutral900,
-  },
-  serviceFeeText: {
-    fontSize: 12,
-    color: Colors.neutral500,
-  },
-  quoteTotal: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: Colors.neutral900,
-  },
-  totalAmountContainer: {
-    backgroundColor: Colors.neutral900,
-    borderRadius: Radii.xl,
-    padding: Spacing.xl,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: Spacing.md,
-  },
-  totalAmountLabel: {
-    fontSize: 12,
-    color: Colors.neutral400,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: Spacing.xs,
-  },
-  totalAmountValue: {
-    fontSize: 30,
-    fontWeight: 'bold',
-    color: Colors.neutral50,
-  },
-  escrowContainer: {
-    backgroundColor: '#ecfdf5',
-    borderRadius: Radii.xl,
-    padding: Spacing.md,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    borderWidth: 1,
-    borderColor: '#d1fae5',
-    marginBottom: Spacing.lg,
-  },
-  escrowTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#065f46',
-  },
-  escrowDesc: {
-    fontSize: 12,
-    color: '#047857',
-    marginTop: Spacing.xs,
-  },
-  payButton: {
-    width: '100%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: Spacing.md,
-    borderRadius: Radii.xl,
-    backgroundColor: Colors.primary500,
-  },
-  payButtonText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: Colors.neutral50,
-  },
-  processingContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 80,
-  },
-  loadingCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: Colors.neutral100,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: Spacing.lg,
-  },
-  statusTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: Colors.neutral900,
-    marginBottom: Spacing.xs,
-  },
-  statusDesc: {
-    fontSize: 14,
-    color: Colors.neutral500,
-    textAlign: 'center',
-    marginHorizontal: 40,
-  },
-  confirmedContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 40,
-  },
-  successCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#ecfdf5',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: Spacing.lg,
-  },
-  confirmedAmount: {
-    fontSize: 30,
-    fontWeight: 'bold',
-    color: Colors.neutral900,
-    marginBottom: Spacing.xs,
-  },
-  confirmedTo: {
-    fontSize: 14,
-    color: Colors.neutral500,
-    marginBottom: 32,
-  },
-  escrowContainerConfirmed: {
-    backgroundColor: '#ecfdf5',
-    borderRadius: Radii.xl,
-    padding: Spacing.md,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    borderWidth: 1,
-    borderColor: '#d1fae5',
-    marginBottom: 32,
-    width: '100%',
-  },
-  viewJobsButton: {
-    width: '100%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: Spacing.md,
-    borderRadius: Radii.xl,
-    backgroundColor: Colors.primary500,
-    marginBottom: Spacing.sm,
-  },
-  buttonText: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: Colors.neutral50,
-  },
-  backHomeButton: {
-    width: '100%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: Spacing.sm,
-    borderRadius: Radii.xl,
-  },
-  backHomeText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: Colors.neutral500,
-  },
-});

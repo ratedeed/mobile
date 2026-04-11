@@ -1,263 +1,157 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
-  StyleSheet,
   FlatList,
-  TouchableOpacity,
+  Pressable,
   Text,
   RefreshControl,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
-import { AppHeader } from '../components/layout/AppHeader';
-import { SkeletonLoader } from '../components/common/SkeletonLoader';
-import { EmptyState } from '../components/common/EmptyState';
-import { ErrorState } from '../components/common/ErrorState';
-import Typography from '../components/common/Typography';
-import { Spacing, Colors, Radii } from '../constants/designTokens';
-import { getNotifications, markNotificationRead, markAllNotificationsRead, deleteNotification } from '../api/notification';
-import { Notification } from '../types';
+import { getNotifications, markNotificationRead, markAllNotificationsRead, deleteNotification } from '../api';
 
 const NotificationsScreen: React.FC = () => {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const loadNotifications = useCallback(async () => {
     try {
-      setError(null);
       const data = await getNotifications();
       setNotifications(data || []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load notifications');
+      console.error('Failed to load notifications:', err);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   }, []);
 
-  useEffect(() => {
-    loadNotifications();
-  }, [loadNotifications]);
+  useEffect(() => { loadNotifications(); }, [loadNotifications]);
 
-  const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    loadNotifications();
-  }, [loadNotifications]);
+  const onRefresh = useCallback(() => { setRefreshing(true); loadNotifications(); }, [loadNotifications]);
 
-  const handleMarkAsRead = async (notificationId: string) => {
+  const handleMarkAsRead = async (id: string) => {
     try {
-      await markNotificationRead(notificationId);
-      setNotifications(prev =>
-        prev.map(n => (n._id === notificationId ? { ...n, read: true } : n))
-      );
-    } catch (err) {
-      Alert.alert('Error', 'Failed to mark notification as read');
-    }
+      await markNotificationRead(id);
+      setNotifications(prev => prev.map(n => (n._id === id ? { ...n, read: true } : n)));
+    } catch { Alert.alert('Error', 'Failed to mark as read'); }
   };
 
   const handleMarkAllAsRead = async () => {
     try {
       await markAllNotificationsRead();
       setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-    } catch (err) {
-      Alert.alert('Error', 'Failed to mark all as read');
-    }
+    } catch { Alert.alert('Error', 'Failed to mark all as read'); }
   };
 
-  const handleDelete = async (notificationId: string) => {
+  const handleDelete = async (id: string) => {
     try {
-      await deleteNotification(notificationId);
-      setNotifications(prev => prev.filter(n => n._id !== notificationId));
-    } catch (err) {
-      Alert.alert('Error', 'Failed to delete notification');
-    }
+      await deleteNotification(id);
+      setNotifications(prev => prev.filter(n => n._id !== id));
+    } catch { Alert.alert('Error', 'Failed to delete'); }
   };
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return '';
-    const date = new Date(dateStr);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'Just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    if (days < 7) return `${days}d ago`;
+    return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
-  const getNotificationIcon = (message: string): { name: string; color: string } => {
-    const lowerMsg = message.toLowerCase();
-    if (lowerMsg.includes('review') || lowerMsg.includes('rating')) return { name: 'star', color: '#f59e0b' };
-    if (lowerMsg.includes('message') || lowerMsg.includes('chat')) return { name: 'comment', color: '#3b82f6' };
-    if (lowerMsg.includes('quote') || lowerMsg.includes('payment')) return { name: 'dollar-sign', color: '#10b981' };
-    if (lowerMsg.includes('job') || lowerMsg.includes('project')) return { name: 'briefcase', color: '#8b5cf6' };
-    if (lowerMsg.includes('follow')) return { name: 'user-plus', color: '#ec4899' };
-    if (lowerMsg.includes('lead') || lowerMsg.includes('inquiry')) return { name: 'envelope', color: '#06b6d4' };
-    return { name: 'bell', color: '#4F46E5' };
+  const getNotificationIcon = (message: string) => {
+    const m = message.toLowerCase();
+    if (m.includes('review') || m.includes('rating')) return { name: 'star', color: '#f59e0b', bg: '#fef3c7' };
+    if (m.includes('message') || m.includes('chat')) return { name: 'comment', color: '#3b82f6', bg: '#dbeafe' };
+    if (m.includes('quote') || m.includes('payment')) return { name: 'dollar-sign', color: '#10b981', bg: '#d1fae5' };
+    if (m.includes('job') || m.includes('project')) return { name: 'briefcase', color: '#8b5cf6', bg: '#ede9fe' };
+    return { name: 'bell', color: '#4F46E5', bg: '#eef2ff' };
   };
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  const renderNotification = ({ item }: { item: Notification }) => {
+  if (loading) {
+    return (
+      <View className="flex-1 bg-white dark:bg-neutral-950 items-center justify-center">
+        <ActivityIndicator size="large" color="#a3a3a3" />
+        <Text className="text-sm text-neutral-400 mt-3">Loading notifications...</Text>
+      </View>
+    );
+  }
+
+  const renderNotification = ({ item }: { item: any }) => {
     const icon = getNotificationIcon(item.message);
     return (
-      <TouchableOpacity
-        style={[styles.notificationItem, !item.read && styles.unreadItem]}
-        onPress={() => {
-          if (!item.read) {
-            handleMarkAsRead(item._id);
-          }
-        }}
+      <Pressable
+        onPress={() => { if (!item.read) handleMarkAsRead(item._id); }}
         onLongPress={() => {
-          Alert.alert('Notification Actions', '', [
+          Alert.alert('Actions', '', [
             { text: 'Mark as Read', onPress: () => handleMarkAsRead(item._id) },
             { text: 'Delete', style: 'destructive', onPress: () => handleDelete(item._id) },
             { text: 'Cancel', style: 'cancel' },
           ]);
         }}
+        className={`flex-row items-center px-4 py-3.5 ${!item.read ? 'bg-sky-50 dark:bg-sky-950/40' : 'bg-white dark:bg-neutral-950'} border-b border-neutral-100 dark:border-neutral-800`}
+        style={{ gap: 12 }}
       >
-        <View style={[styles.iconContainer, { backgroundColor: icon.color + '15' }]}>
-          <FontAwesome5 name={icon.name as any} size={18} color={icon.color} />
+        <View className="w-11 h-11 rounded-full items-center justify-center shrink-0" style={{ backgroundColor: icon.bg }}>
+          <FontAwesome5 name={icon.name as any} size={16} color={icon.color} />
         </View>
-        <View style={styles.contentContainer}>
-          <Text style={[styles.message, !item.read && styles.unreadMessage]} numberOfLines={2}>
+        <View className="flex-1">
+          <Text className={`text-sm ${!item.read ? 'font-semibold text-neutral-900 dark:text-neutral-50' : 'text-neutral-600 dark:text-neutral-400'}`} numberOfLines={2}>
             {item.message}
           </Text>
-          <Text style={styles.timestamp}>{formatDate(item.createdAt)}</Text>
+          <Text className="text-xs text-neutral-400 mt-1">{formatDate(item.createdAt)}</Text>
         </View>
-        {!item.read && <View style={styles.unreadDot} />}
-      </TouchableOpacity>
+        {!item.read && <View className="w-2.5 h-2.5 rounded-full bg-indigo-500 shrink-0" />}
+      </Pressable>
     );
   };
 
-  if (loading) {
-    return (
-      <View style={styles.fullScreenContainer}>
-        <AppHeader title="Notifications" showBack />
-        <View style={styles.loadingContainer}>
-          <SkeletonLoader type="list" count={5} />
-        </View>
-      </View>
-    );
-  }
-
-  if (error) {
-    return (
-      <View style={styles.fullScreenContainer}>
-        <AppHeader title="Notifications" showBack />
-        <ErrorState message={error} onRetry={loadNotifications} />
-      </View>
-    );
-  }
-
   return (
-    <View style={styles.fullScreenContainer}>
-      <AppHeader
-        title="Notifications"
-        showBack
-        rightComponent={
-          unreadCount > 0 ? (
-            <TouchableOpacity onPress={handleMarkAllAsRead}>
-              <Text style={styles.markAllText}>Mark all read</Text>
-            </TouchableOpacity>
-          ) : null
-        }
-      />
+    <View className="flex-1 bg-white dark:bg-neutral-950">
+      {/* Header */}
+      <View className="px-4 pt-4 pb-2 flex-row items-center justify-between">
+        <View>
+          <Text className="text-2xl font-bold text-neutral-900 dark:text-neutral-50">Notifications</Text>
+          <Text className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">
+            {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up!'}
+          </Text>
+        </View>
+        {unreadCount > 0 && (
+          <Pressable onPress={handleMarkAllAsRead}>
+            <Text className="text-sm font-semibold text-indigo-600 dark:text-indigo-400">Mark all read</Text>
+          </Pressable>
+        )}
+      </View>
+
       {notifications.length === 0 ? (
-        <EmptyState
-          title="No notifications"
-          message="You're all caught up! We'll notify you when something new happens."
-          icon="🔔"
-        />
+        <View className="flex-1 items-center justify-center px-8">
+          <View className="w-16 h-16 bg-neutral-100 dark:bg-neutral-800 rounded-full items-center justify-center mb-4">
+            <FontAwesome5 name="bell" size={28} color="#d4d4d4" />
+          </View>
+          <Text className="text-lg font-bold text-neutral-900 dark:text-neutral-50">No notifications</Text>
+          <Text className="text-sm text-neutral-500 dark:text-neutral-400 mt-1 text-center">
+            You're all caught up! We'll notify you when something new happens.
+          </Text>
+        </View>
       ) : (
         <FlatList
           data={notifications}
           renderItem={renderNotification}
           keyExtractor={item => item._id}
-          contentContainerStyle={styles.listContent}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-          ItemSeparatorComponent={() => <View style={styles.separator} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         />
       )}
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  fullScreenContainer: {
-    flex: 1,
-    backgroundColor: Colors.neutral50,
-  },
-  loadingContainer: {
-    flex: 1,
-    padding: Spacing.lg,
-  },
-  listContent: {
-    flexGrow: 1,
-  },
-  notificationItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.neutral50,
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.neutral200,
-  },
-  unreadItem: {
-    backgroundColor: '#f0f9ff',
-    borderLeftWidth: 3,
-    borderLeftColor: Colors.primary500,
-  },
-  iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: Radii.round,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: Spacing.md,
-  },
-  contentContainer: {
-    flex: 1,
-  },
-  message: {
-    color: Colors.neutral600,
-    fontSize: 15,
-    lineHeight: 22,
-  },
-  unreadMessage: {
-    color: Colors.neutral900,
-    fontWeight: '600',
-  },
-  timestamp: {
-    color: Colors.neutral400,
-    fontSize: 12,
-    marginTop: Spacing.xs,
-  },
-  unreadDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: Colors.primary500,
-    marginLeft: Spacing.sm,
-  },
-  separator: {
-    height: 1,
-    backgroundColor: Colors.neutral200,
-  },
-  markAllText: {
-    color: Colors.primary500,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-});
 
 export default NotificationsScreen;

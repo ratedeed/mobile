@@ -2,997 +2,446 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   ScrollView,
-  TouchableOpacity,
+  Pressable,
   Alert,
   ActivityIndicator,
   Text,
   Image,
   RefreshControl,
-  StyleSheet,
+  TextInput,
+  SafeAreaView,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { getUserProfile, updateUserProfile, changePassword, enable2FA, disable2FA } from '../api/user';
-import { getUserReviews } from '../api/review';
-import { getUserPosts } from '../api/post';
+import { getUserProfile, updateUserProfile } from '../api';
+import { put, getAuthHeaders } from '../api';
+import { API_BASE_URL } from '../config';
+
+const changePassword = async (currentPassword: string, newPassword: string) => {
+  const headers = await getAuthHeaders();
+  return put(`${API_BASE_URL}/api/users/password`, { currentPassword, newPassword }, headers);
+};
 import { useAuth } from '../context/AuthContext';
-import { SkeletonLoader } from '../components/common/SkeletonLoader';
-import { EmptyState } from '../components/common/EmptyState';
-import { ErrorState } from '../components/common/ErrorState';
-import Input from '../components/common/Input';
-import Button from '../components/common/Button';
-import Header from '../components/common/Header';
-import Card from '../components/common/Card';
-import Avatar from '../components/common/Avatar';
-import Typography from '../components/common/Typography';
-import { Modal } from '../components/common/Modal';
-import { User, Review, Post } from '../types';
+import { User } from '../types';
 import { FontAwesome5 } from '@expo/vector-icons';
+import { useColorScheme } from 'nativewind';
+import { SvgImage } from '../components/common/SvgImage';
+import { getProfileImageUrl, isSvgUrl } from '../utils/avatarUtils';
 
 type RootStackParamList = {
   Profile: undefined;
   ContractorDashboard: undefined;
+  EditProfile: undefined;
+  Settings: undefined;
 };
 
+// ---- Toggle Component ----
+function Toggle({ label, description, defaultOn = false, onValueChange }: { label: string; description: string; defaultOn?: boolean; onValueChange?: (val: boolean) => void }) {
+  const [on, setOn] = useState(defaultOn);
+  const handleToggle = () => {
+    const next = !on;
+    setOn(next);
+    onValueChange?.(next);
+  };
+  return (
+    <View className="flex-row items-center justify-between py-3 border-b border-neutral-100 dark:border-neutral-800">
+      <View className="flex-1 mr-4">
+        <Text className="text-sm font-medium text-neutral-900 dark:text-neutral-50">{label}</Text>
+        <Text className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">{description}</Text>
+      </View>
+      <Pressable onPress={handleToggle}>
+        <View className={`w-12 h-7 rounded-full relative ${on ? 'bg-indigo-600' : 'bg-neutral-300'}`}>
+          <View className={`w-5 h-5 bg-white dark:bg-neutral-950 rounded-full absolute top-1 ${on ? 'right-1' : 'left-1'}`} style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 1, elevation: 1 }} />
+        </View>
+      </Pressable>
+    </View>
+  );
+}
+
+// ---- Settings Sheet ----
+function SettingsSheet({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+  return (
+    <View className="absolute inset-0 z-[90] justify-end" style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
+      <Pressable className="flex-1" onPress={onClose} />
+      <View className="bg-white dark:bg-neutral-950 rounded-t-3xl">
+        <View className="flex-row items-center justify-between px-5 pt-4 pb-2 border-b border-neutral-100 dark:border-neutral-800">
+          <Text className="text-lg font-bold text-neutral-900 dark:text-neutral-50">{title}</Text>
+          <Pressable onPress={onClose} className="w-8 h-8 items-center justify-center rounded-full">
+            <FontAwesome5 name="times" size={16} color="#737373" />
+          </Pressable>
+        </View>
+        <ScrollView className="px-5 py-4 pb-10 max-h-[70vh]">
+          {children}
+        </ScrollView>
+      </View>
+    </View>
+  );
+}
+
+// ---- Profile Screen ----
 const ProfileScreen: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { logout, firebaseUser: authUser } = useAuth();
+  const insets = useSafeAreaInsets();
+  const { logout, userId, firebaseUser: authUser } = useAuth();
 
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const [reviews, setReviews] = useState<Review[]>([]);
-  const [projects, setProjects] = useState<Post[]>([]);
-
-  const [isEditing, setIsEditing] = useState(false);
-  const [editableData, setEditableData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    zipCode: '',
-    address: '',
-  });
-
-  const [showChangePassword, setShowChangePassword] = useState(false);
-  const [passwords, setPasswords] = useState({
-    current: '',
-    new: '',
-    confirm: '',
-  });
-  const [is2FAEnabled, setIs2FAEnabled] = useState(false);
-
-  // Bottom sheet states
   const [activeSheet, setActiveSheet] = useState<string | null>(null);
+  const { colorScheme, setColorScheme } = useColorScheme();
 
-  // Notification toggles
-  const [notifications, setNotifications] = useState({
-    jobUpdates: true,
-    newMessages: true,
-    paymentStatus: true,
-    newReviews: false,
-    promotions: false,
-    emailSummary: true,
-    marketingEmails: false,
-  });
+
+  // Edit profile state
+  const [editData, setEditData] = useState({ firstName: '', lastName: '', email: '', zipCode: '' });
+  const [saving, setSaving] = useState(false);
+  const [editMessage, setEditMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Change password state
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [pwSaving, setPwSaving] = useState(false);
+  const [pwMessage, setPwMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // FAQ state
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   const loadProfile = useCallback(async () => {
     try {
-      setError(null);
       const userData = await getUserProfile();
       setUser(userData);
-      setEditableData({
+      setEditData({
         firstName: userData.firstName || '',
         lastName: userData.lastName || '',
         email: userData.email || '',
         zipCode: userData.zipCode || '',
-        address: userData.address || '',
       });
-      setIs2FAEnabled((userData as any).is2FAEnabled || false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load profile');
+      console.error('Failed to load profile:', err);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   }, []);
 
-  const loadUserContent = useCallback(async () => {
-    if (!user?._id) return;
-    try {
-      const [reviewsData, projectsData] = await Promise.all([
-        getUserReviews(user._id).catch(() => []),
-        getUserPosts(user._id).catch(() => ({ posts: [] })).then(r => r.posts || []),
-      ]);
-      setReviews(Array.isArray(reviewsData) ? reviewsData : []);
-      setProjects(Array.isArray(projectsData) ? projectsData : []);
-    } catch (err) {
-      console.error('Failed to load user content:', err);
-    }
-  }, [user?._id]);
+  useFocusEffect(useCallback(() => { loadProfile(); }, [loadProfile]));
 
-  useFocusEffect(
-    useCallback(() => {
-      loadProfile();
-    }, [loadProfile])
-  );
-
-  useEffect(() => {
-    if (user?._id) {
-      loadUserContent();
-    }
-  }, [user?._id, loadUserContent]);
-
-  const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    loadProfile();
-  }, [loadProfile]);
+  const onRefresh = useCallback(() => { setRefreshing(true); loadProfile(); }, [loadProfile]);
 
   const handleSaveProfile = async () => {
-    setLoading(true);
+    setSaving(true);
+    setEditMessage(null);
     try {
-      const data = await updateUserProfile(editableData);
+      const data = await updateUserProfile(editData);
       setUser(data);
-      setIsEditing(false);
-      Alert.alert('Success', 'Profile updated successfully!');
-    } catch (err) {
-      Alert.alert('Error', err instanceof Error ? err.message : 'Failed to update profile');
+      setEditMessage({ type: 'success', text: 'Profile updated!' });
+      setTimeout(() => setActiveSheet(null), 1500);
+    } catch (err: any) {
+      setEditMessage({ type: 'error', text: err?.message || 'Failed to update.' });
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
   const handleChangePassword = async () => {
-    if (!passwords.current || !passwords.new || !passwords.confirm) {
-      Alert.alert('Error', 'Please fill in all password fields');
+    setPwMessage(null);
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setPwMessage({ type: 'error', text: 'All fields required.' });
       return;
     }
-    if (passwords.new !== passwords.confirm) {
-      Alert.alert('Error', 'New passwords do not match');
+    if (newPassword.length < 8) {
+      setPwMessage({ type: 'error', text: 'Minimum 8 characters.' });
       return;
     }
-
-    try {
-      await changePassword(passwords.current, passwords.new);
-      Alert.alert('Success', 'Password changed successfully!');
-      setPasswords({ current: '', new: '', confirm: '' });
-      setShowChangePassword(false);
-    } catch (err) {
-      Alert.alert('Error', err instanceof Error ? err.message : 'Failed to change password');
+    if (newPassword !== confirmPassword) {
+      setPwMessage({ type: 'error', text: 'Passwords do not match.' });
+      return;
     }
-  };
-
-  const handleToggle2FA = async () => {
+    setPwSaving(true);
     try {
-      if (is2FAEnabled) {
-        await disable2FA('');
-        setIs2FAEnabled(false);
-      } else {
-        await enable2FA();
-        setIs2FAEnabled(true);
-      }
-      Alert.alert('Success', `2FA ${is2FAEnabled ? 'disabled' : 'enabled'}!`);
-    } catch (err) {
-      Alert.alert('Error', err instanceof Error ? err.message : 'Failed to toggle 2FA');
+      await changePassword(currentPassword, newPassword);
+      setPwMessage({ type: 'success', text: 'Password changed!' });
+      setTimeout(() => { setActiveSheet(null); setCurrentPassword(''); setNewPassword(''); setConfirmPassword(''); }, 1500);
+    } catch (err: any) {
+      setPwMessage({ type: 'error', text: err?.message || 'Failed to change password.' });
+    } finally {
+      setPwSaving(false);
     }
   };
 
   const handleLogout = () => {
-    Alert.alert('Log Out', 'Are you sure you want to log out?', [
+    Alert.alert('Log Out', 'Are you sure?', [
       { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Log Out',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await logout();
-          } catch (error) {
-            Alert.alert('Error', 'Failed to log out');
-          }
-        },
-      },
+      { text: 'Log Out', style: 'destructive', onPress: () => logout() },
     ]);
   };
 
-  const stats = {
-    reviews: reviews.length,
-    conversations: 5, // Placeholder - would need API
-    projects: projects.length,
-  };
-
-  if (loading && !user) {
+  if (loading) {
     return (
-      <View style={styles.container}>
-        <Header title="Profile" />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#4F46E5" />
-        </View>
+      <View className="flex-1 bg-neutral-50 dark:bg-neutral-900 items-center justify-center">
+        <ActivityIndicator size="large" color="#4F46E5" />
       </View>
     );
   }
 
-  if (error) {
-    return (
-      <View style={styles.container}>
-        <Header title="Profile" />
-        <ErrorState message={error} onRetry={loadProfile} />
-      </View>
-    );
-  }
+  const closeSheet = () => setActiveSheet(null);
+
+  const menuItems = [
+    { icon: 'user-edit', label: 'Edit Profile', sheet: 'edit-profile', desc: 'Name, email, phone, photo' },
+    { icon: 'bell', label: 'Notifications', sheet: 'notifications', desc: 'Push, email, job updates' },
+    { icon: 'shield-alt', label: 'Privacy & Security', sheet: 'privacy', desc: 'Password, 2FA, data' },
+    { icon: 'cog', label: 'App Settings', sheet: 'settings', desc: 'Theme, language, defaults' },
+    { icon: 'question-circle', label: 'Help Center', sheet: 'help', desc: 'FAQs, support, contact' },
+  ];
+
+  const faqs = [
+    { q: 'How does escrow work?', a: 'Your money is held securely in escrow. The contractor only receives payment after you approve the completed work.' },
+    { q: 'How do I request a quote?', a: 'Browse contractors, find one you like, and tap "Request Quote." Fill out the job details and submit.' },
+    { q: 'What if I\'m not satisfied?', a: 'Your payment is protected by escrow. If work doesn\'t meet expectations, you can dispute the release of funds.' },
+    { q: 'How are contractors verified?', a: 'Contractors go through license checks, insurance verification, background checks, and review of references.' },
+    { q: 'Can I cancel a job?', a: 'You can cancel before payment at no cost. After payment, cancellation depends on the project stage.' },
+  ];
 
   return (
-    <View style={styles.container}>
-      <Header title="Profile" />
-      
-      <ScrollView
-        style={styles.scrollView}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Profile Header - Reference Design */}
-        <View style={styles.profileHeader}>
-          <View style={styles.profileMain}>
-            <View style={styles.avatarContainer}>
-              {user?.profilePicture ? (
-                <Image source={{ uri: user.profilePicture }} style={styles.avatar} />
-              ) : (
-                <View style={styles.avatarPlaceholder}>
-                  <Text style={styles.avatarInitial}>
-                    {(user?.firstName?.[0] || user?.email?.[0] || 'U').toUpperCase()}
-                  </Text>
-                </View>
-              )}
-              <TouchableOpacity 
-                style={styles.editAvatarButton}
+    <View className="flex-1 bg-white dark:bg-neutral-950" style={{ paddingTop: Math.max(insets.top, 16) }}>
+      <ScrollView showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
+        {/* Profile Header */}
+        <View className="bg-white dark:bg-neutral-950 px-4 pb-5">
+          <View className="flex-row items-center" style={{ gap: 16 }}>
+            <View className="relative">
+              {(() => {
+                const avatarUrl = getProfileImageUrl(user?.firstName || 'User', user?.profilePicture || '');
+                return isSvgUrl(avatarUrl) ? (
+                  <View className="w-[72px] h-[72px] rounded-full overflow-hidden">
+                    <SvgImage uri={avatarUrl} width="100%" height="100%" />
+                  </View>
+                ) : (
+                  <Image
+                    source={{ uri: avatarUrl }}
+                    className="w-[72px] h-[72px] rounded-full"
+                  />
+                );
+              })()}
+              <Pressable
                 onPress={() => setActiveSheet('edit-profile')}
+                className="absolute -bottom-1 -right-1 w-7 h-7 bg-indigo-600 rounded-full items-center justify-center border-2 border-white"
               >
-                <FontAwesome5 name="edit" size={12} color="#FFFFFF" />
-              </TouchableOpacity>
+                <FontAwesome5 name="pen" size={10} color="#fff" />
+              </Pressable>
             </View>
-            <View style={styles.profileInfo}>
-              <Text style={styles.profileName}>
-                {user?.firstName} {user?.lastName}
-              </Text>
-              <Text style={styles.profileEmail}>{user?.email}</Text>
-              <View style={styles.profileBadges}>
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>Homeowner</Text>
+            <View className="flex-1">
+              <Text className="text-xl font-bold text-neutral-900 dark:text-neutral-50">{user?.firstName || 'User'} {user?.lastName || ''}</Text>
+              <Text className="text-sm text-neutral-500 dark:text-neutral-400">{user?.email || ''}</Text>
+              <View className="flex-row mt-1" style={{ gap: 4 }}>
+                <View className="bg-indigo-50 px-2 py-0.5 rounded-full">
+                  <Text className="text-[10px] font-bold text-indigo-600 capitalize">{user?.role || 'User'}</Text>
                 </View>
-                <View style={[styles.badge, styles.badgeSecondary]}>
-                  <Text style={[styles.badgeText, styles.badgeTextSecondary]}>
-                    Since {user?.createdAt ? new Date(user.createdAt).getFullYear() : '2024'}
-                  </Text>
+                <View className="bg-neutral-100 dark:bg-neutral-900 px-2 py-0.5 rounded-full">
+                  <Text className="text-[10px] font-bold text-neutral-700 dark:text-neutral-300">Since {user?.createdAt ? new Date(user.createdAt).getFullYear() : '2024'}</Text>
                 </View>
               </View>
-              <Button
-                title="Switch to Contractor Dashboard"
-                onPress={() => navigation.navigate('ContractorDashboard')}
-                style={styles.switchButton}
-                textStyle={styles.switchButtonText}
-              />
+              {(user?.role === 'contractor' || user?.role === 'admin') && (
+                <Pressable
+                  onPress={() => navigation.navigate('ContractorDashboard')}
+                  className="mt-2 flex-row items-center justify-center py-2 bg-neutral-900 dark:bg-neutral-50 rounded-lg"
+                  style={{ gap: 6 }}
+                >
+                  <FontAwesome5 name="briefcase" size={10} color="#fff" />
+                  <Text className="text-xs font-semibold text-white dark:text-neutral-900">Switch to Contractor Dashboard</Text>
+                </Pressable>
+              )}
             </View>
           </View>
         </View>
 
-        {/* Stats Section - Reference Design */}
-        <View style={styles.statsSection}>
-          <View style={styles.statsRow}>
-            <TouchableOpacity style={styles.statItem}>
-              <Text style={styles.statValue}>{stats.reviews}</Text>
-              <Text style={styles.statLabel}>Reviews</Text>
-            </TouchableOpacity>
-            <View style={styles.statDivider} />
-            <TouchableOpacity style={styles.statItem}>
-              <Text style={styles.statValue}>{stats.conversations}</Text>
-              <Text style={styles.statLabel}>Conversations</Text>
-            </TouchableOpacity>
-            <View style={styles.statDivider} />
-            <TouchableOpacity style={styles.statItem}>
-              <Text style={styles.statValue}>{stats.projects}</Text>
-              <Text style={styles.statLabel}>Projects</Text>
-            </TouchableOpacity>
+        {/* Stats */}
+        <View className="bg-white dark:bg-neutral-950 mt-2 px-4 py-4">
+          <View className="flex-row">
+            <View className="flex-1 items-center border-r border-neutral-200 dark:border-neutral-700">
+              <Text className="text-xl font-bold text-neutral-900 dark:text-neutral-50">0</Text>
+              <Text className="text-xs text-neutral-500 dark:text-neutral-400">Reviews</Text>
+            </View>
+            <View className="flex-1 items-center border-r border-neutral-200 dark:border-neutral-700">
+              <Text className="text-xl font-bold text-neutral-900 dark:text-neutral-50">0</Text>
+              <Text className="text-xs text-neutral-500 dark:text-neutral-400">Conversations</Text>
+            </View>
+            <View className="flex-1 items-center">
+              <Text className="text-xl font-bold text-neutral-900 dark:text-neutral-50">0</Text>
+              <Text className="text-xs text-neutral-500 dark:text-neutral-400">Projects</Text>
+            </View>
           </View>
         </View>
 
-        {/* Menu Items - Reference Design */}
-        <View style={styles.menuSection}>
-          <MenuItem
-            icon="user-edit"
-            label="Edit Profile"
-            description="Name, email, phone, photo"
-            onPress={() => setActiveSheet('edit-profile')}
-          />
-          <MenuItem
-            icon="bell"
-            label="Notifications"
-            description="Push, email, job updates"
-            onPress={() => setActiveSheet('notifications')}
-          />
-          <MenuItem
-            icon="shield-alt"
-            label="Privacy & Security"
-            description="Password, 2FA, data"
-            onPress={() => setActiveSheet('privacy')}
-          />
-          <MenuItem
-            icon="cog"
-            label="App Settings"
-            description="Theme, language, defaults"
-            onPress={() => setActiveSheet('settings')}
-          />
-          <MenuItem
-            icon="question-circle"
-            label="Help Center"
-            description="FAQs, support, contact"
-            onPress={() => setActiveSheet('help')}
-            isLast
-          />
+        {/* Menu */}
+        <View className="bg-white dark:bg-neutral-950 mt-2">
+          {menuItems.map((item, i) => (
+            <Pressable
+              key={item.label}
+              onPress={() => setActiveSheet(item.sheet)}
+              className={`flex-row items-center px-4 py-3.5 ${i < menuItems.length - 1 ? 'border-b border-neutral-100 dark:border-neutral-800' : ''}`}
+              style={{ gap: 12 }}
+            >
+              <FontAwesome5 name={item.icon} size={18} color="#404040" />
+              <View className="flex-1">
+                <Text className="text-sm font-medium text-neutral-900 dark:text-neutral-50">{item.label}</Text>
+                <Text className="text-[11px] text-neutral-400">{item.desc}</Text>
+              </View>
+              <FontAwesome5 name="chevron-right" size={12} color="#a3a3a3" />
+            </Pressable>
+          ))}
         </View>
 
         {/* Log Out */}
-        <View style={styles.menuSection}>
-          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-            <FontAwesome5 name="sign-out-alt" size={20} color="#f43f5e" />
-            <Text style={styles.logoutText}>Log Out</Text>
-          </TouchableOpacity>
+        <View className="bg-white dark:bg-neutral-950 mt-2 mb-20">
+          <Pressable onPress={handleLogout} className="flex-row items-center px-4 py-3.5" style={{ gap: 12 }}>
+            <FontAwesome5 name="sign-out-alt" size={18} color="#4F46E5" />
+            <Text className="text-sm font-medium text-indigo-500">Log Out</Text>
+          </Pressable>
         </View>
-
-        <View style={styles.bottomSpacer} />
       </ScrollView>
 
       {/* Edit Profile Sheet */}
-      <Modal
-        visible={activeSheet === 'edit-profile'}
-        onClose={() => setActiveSheet(null)}
-        title="Edit Profile"
-      >
-        <View style={styles.sheetContent}>
-          <View style={styles.sheetAvatarContainer}>
-            {user?.profilePicture ? (
-              <Image source={{ uri: user.profilePicture }} style={styles.sheetAvatar} />
-            ) : (
-              <View style={styles.sheetAvatarPlaceholder}>
-                <Text style={styles.sheetAvatarInitial}>
-                  {(user?.firstName?.[0] || 'U').toUpperCase()}
-                </Text>
+      {activeSheet === 'edit-profile' && (
+        <SettingsSheet title="Edit Profile" onClose={closeSheet}>
+          <View className="items-center mb-4">
+            <View className="relative">
+              <Image
+                source={{ uri: user?.profilePicture || '' }}
+                className="w-20 h-20 rounded-full bg-neutral-200 dark:bg-neutral-800"
+              />
+              <View className="absolute -bottom-1 -right-1 w-7 h-7 bg-indigo-600 rounded-full items-center justify-center border-2 border-white">
+                <FontAwesome5 name="pen" size={10} color="#fff" />
               </View>
-            )}
-            <TouchableOpacity style={styles.sheetEditAvatarButton}>
-              <FontAwesome5 name="edit" size={14} color="#FFFFFF" />
-            </TouchableOpacity>
+            </View>
           </View>
-          <Input
-            label="First name"
-            value={editableData.firstName}
-            onChangeText={(text) => setEditableData({ ...editableData, firstName: text })}
-            style={styles.sheetInput}
-          />
-          <Input
-            label="Last name"
-            value={editableData.lastName}
-            onChangeText={(text) => setEditableData({ ...editableData, lastName: text })}
-            style={styles.sheetInput}
-          />
-          <Input
-            label="Email"
-            value={editableData.email}
-            onChangeText={(text) => setEditableData({ ...editableData, email: text })}
-            autoCapitalize="none"
-            style={styles.sheetInput}
-          />
-          <Input
-            label="Phone"
-            value={editableData.address || ''}
-            onChangeText={(text) => setEditableData({ ...editableData, address: text })}
-            keyboardType="phone-pad"
-            style={styles.sheetInput}
-          />
-          <Input
-            label="Zip code"
-            value={editableData.zipCode}
-            onChangeText={(text) => setEditableData({ ...editableData, zipCode: text })}
-            keyboardType="numeric"
-            style={styles.sheetInput}
-          />
-          <Button
-            title="Save Changes"
-            onPress={handleSaveProfile}
-            style={styles.saveButton}
-          />
-        </View>
-      </Modal>
+          {editMessage && (
+            <View className={`mb-4 px-3 py-2 rounded-lg ${editMessage.type === 'success' ? 'bg-emerald-50' : 'bg-indigo-50'}`}>
+              <Text className={`text-sm ${editMessage.type === 'success' ? 'text-emerald-700' : 'text-indigo-700'}`}>{editMessage.text}</Text>
+            </View>
+          )}
+          <Text className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 mb-1">First name</Text>
+          <TextInput value={editData.firstName} onChangeText={t => setEditData(p => ({ ...p, firstName: t }))} className="w-full border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm mb-3 text-neutral-900 dark:text-neutral-50" />
+          <Text className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 mb-1">Last name</Text>
+          <TextInput value={editData.lastName} onChangeText={t => setEditData(p => ({ ...p, lastName: t }))} className="w-full border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm mb-3 text-neutral-900 dark:text-neutral-50" />
+          <Text className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 mb-1">Email</Text>
+          <TextInput value={editData.email} onChangeText={t => setEditData(p => ({ ...p, email: t }))} keyboardType="email-address" autoCapitalize="none" className="w-full border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm mb-3 text-neutral-900 dark:text-neutral-50" />
+          <Text className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 mb-1">Zip code</Text>
+          <TextInput value={editData.zipCode} onChangeText={t => setEditData(p => ({ ...p, zipCode: t }))} keyboardType="numeric" maxLength={10} className="w-full border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm mb-3 text-neutral-900 dark:text-neutral-50" />
+          <Pressable onPress={handleSaveProfile} disabled={saving} className="w-full py-3 bg-indigo-600 rounded-xl items-center mt-2 flex-row justify-center" style={{ gap: 8 }}>
+            {saving && <ActivityIndicator size="small" color="#fff" />}
+            <Text className="text-sm font-semibold text-white dark:text-neutral-900">{saving ? 'Saving...' : 'Save Changes'}</Text>
+          </Pressable>
+        </SettingsSheet>
+      )}
 
       {/* Notifications Sheet */}
-      <Modal
-        visible={activeSheet === 'notifications'}
-        onClose={() => setActiveSheet(null)}
-        title="Notifications"
-      >
-        <View style={styles.sheetContent}>
-          <Text style={styles.sectionLabel}>Push Notifications</Text>
-          <ToggleRow
-            label="Job Updates"
-            description="When a contractor responds to your quote request"
-            value={notifications.jobUpdates}
-            onValueChange={(val) => setNotifications({ ...notifications, jobUpdates: val })}
-          />
-          <ToggleRow
-            label="New Messages"
-            description="When you receive a new message"
-            value={notifications.newMessages}
-            onValueChange={(val) => setNotifications({ ...notifications, newMessages: val })}
-          />
-          <ToggleRow
-            label="Payment Status"
-            description="When payment is confirmed or released"
-            value={notifications.paymentStatus}
-            onValueChange={(val) => setNotifications({ ...notifications, paymentStatus: val })}
-          />
-          <ToggleRow
-            label="New Reviews"
-            description="When someone reviews your project"
-            value={notifications.newReviews}
-            onValueChange={(val) => setNotifications({ ...notifications, newReviews: val })}
-          />
-          <ToggleRow
-            label="Promotions"
-            description="Deals and offers from Ratedeed"
-            value={notifications.promotions}
-            onValueChange={(val) => setNotifications({ ...notifications, promotions: val })}
-          />
-          
-          <Text style={[styles.sectionLabel, styles.sectionLabelMargin]}>Email</Text>
-          <ToggleRow
-            label="Job Summary"
-            description="Weekly digest of your active projects"
-            value={notifications.emailSummary}
-            onValueChange={(val) => setNotifications({ ...notifications, emailSummary: val })}
-          />
-          <ToggleRow
-            label="Marketing Emails"
-            description="Tips, guides, and product updates"
-            value={notifications.marketingEmails}
-            onValueChange={(val) => setNotifications({ ...notifications, marketingEmails: val })}
-          />
-        </View>
-      </Modal>
+      {activeSheet === 'notifications' && (
+        <SettingsSheet title="Notifications" onClose={closeSheet}>
+          <Text className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-2">Push Notifications</Text>
+          <Toggle label="Job Updates" description="When a contractor responds to your quote request" defaultOn />
+          <Toggle label="New Messages" description="When you receive a new message" defaultOn />
+          <Toggle label="Payment Status" description="When payment is confirmed or released" defaultOn />
+          <Toggle label="New Reviews" description="When someone reviews your project" />
+          <Toggle label="Promotions" description="Deals and offers from Ratedeed" />
+          <Text className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mt-4 mb-2">Email</Text>
+          <Toggle label="Job Summary" description="Weekly digest of your active projects" defaultOn />
+          <Toggle label="Marketing Emails" description="Tips, guides, and product updates" />
+        </SettingsSheet>
+      )}
 
       {/* Privacy & Security Sheet */}
-      <Modal
-        visible={activeSheet === 'privacy'}
-        onClose={() => setActiveSheet(null)}
-        title="Privacy &amp; Security"
-      >
-        <View style={styles.sheetContent}>
-          <TouchableOpacity 
-            style={styles.menuRow}
-            onPress={() => setShowChangePassword(true)}
-          >
+      {activeSheet === 'privacy' && (
+        <SettingsSheet title="Privacy & Security" onClose={closeSheet}>
+          <Pressable onPress={() => { closeSheet(); setTimeout(() => setActiveSheet('change-password'), 300); }} className="flex-row items-center justify-between py-2">
             <View>
-              <Text style={styles.menuRowLabel}>Change Password</Text>
-              <Text style={styles.menuRowDescription}>Last changed 30 days ago</Text>
+              <Text className="text-sm font-medium text-neutral-900 dark:text-neutral-50">Change Password</Text>
+              <Text className="text-xs text-neutral-500 dark:text-neutral-400">Update your account password</Text>
             </View>
-            <FontAwesome5 name="chevron-right" size={16} color="#9ca3af" />
-          </TouchableOpacity>
-          
-          <ToggleRow
-            label="Two-Factor Authentication"
-            description="Add an extra layer of security to your account"
-            value={is2FAEnabled}
-            onValueChange={handleToggle2FA}
-          />
-          <ToggleRow
-            label="Biometric Login"
-            description="Use Face ID or fingerprint to log in"
-            value={false}
-            onValueChange={() => {}}
-          />
-          
-          <Text style={[styles.sectionLabel, styles.sectionLabelMargin]}>Data & Privacy</Text>
-          <ToggleRow
-            label="Share Usage Data"
-            description="Help us improve Ratedeed with anonymous usage data"
-            value={true}
-            onValueChange={() => {}}
-          />
-          <ToggleRow
-            label="Location Services"
-            description="Allow access to your location for nearby results"
-            value={true}
-            onValueChange={() => {}}
-          />
-        </View>
-      </Modal>
+            <FontAwesome5 name="chevron-right" size={12} color="#a3a3a3" />
+          </Pressable>
+          <Toggle label="Two-Factor Authentication" description="Add an extra layer of security" />
+          <Toggle label="Biometric Login" description="Use Face ID or fingerprint to log in" defaultOn />
+          <View className="pt-2 border-t border-neutral-100 dark:border-neutral-800 mt-2">
+            <Text className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-2">Data & Privacy</Text>
+            <Toggle label="Share Usage Data" description="Help us improve with anonymous usage data" defaultOn />
+            <Toggle label="Location Services" description="Allow access to your location for nearby results" defaultOn />
+          </View>
+          <View className="pt-4 border-t border-neutral-100 dark:border-neutral-800 mt-2">
+            <Pressable><Text className="text-sm font-medium text-indigo-500">Delete Account</Text></Pressable>
+            <Text className="text-[11px] text-neutral-400 mt-0.5">Permanently delete your account and all data</Text>
+          </View>
+        </SettingsSheet>
+      )}
+
+      {/* Change Password Sheet */}
+      {activeSheet === 'change-password' && (
+        <SettingsSheet title="Change Password" onClose={closeSheet}>
+          {pwMessage && (
+            <View className={`mb-4 px-3 py-2 rounded-lg ${pwMessage.type === 'success' ? 'bg-emerald-50' : 'bg-indigo-50'}`}>
+              <Text className={`text-sm ${pwMessage.type === 'success' ? 'text-emerald-700' : 'text-indigo-700'}`}>{pwMessage.text}</Text>
+            </View>
+          )}
+          <Text className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 mb-1">Current Password</Text>
+          <TextInput value={currentPassword} onChangeText={setCurrentPassword} secureTextEntry className="w-full border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm mb-3 text-neutral-900 dark:text-neutral-50" placeholderTextColor="#a3a3a3" />
+          <Text className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 mb-1">New Password</Text>
+          <TextInput value={newPassword} onChangeText={setNewPassword} secureTextEntry className="w-full border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm mb-1 text-neutral-900 dark:text-neutral-50" placeholderTextColor="#a3a3a3" />
+          <Text className="text-[11px] text-neutral-400 mb-3">Minimum 8 characters</Text>
+          <Text className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 mb-1">Confirm New Password</Text>
+          <TextInput value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry className="w-full border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm mb-3 text-neutral-900 dark:text-neutral-50" placeholderTextColor="#a3a3a3" />
+          <Pressable onPress={handleChangePassword} disabled={pwSaving} className="w-full py-3 bg-indigo-600 rounded-xl items-center flex-row justify-center" style={{ gap: 8 }}>
+            {pwSaving && <ActivityIndicator size="small" color="#fff" />}
+            <Text className="text-sm font-semibold text-white dark:text-neutral-900">{pwSaving ? 'Updating...' : 'Change Password'}</Text>
+          </Pressable>
+        </SettingsSheet>
+      )}
 
       {/* App Settings Sheet */}
-      <Modal
-        visible={activeSheet === 'settings'}
-        onClose={() => setActiveSheet(null)}
-        title="App Settings"
-      >
-        <View style={styles.sheetContent}>
-          <TouchableOpacity style={styles.menuRow}>
-            <View>
-              <Text style={styles.menuRowLabel}>Theme</Text>
-              <Text style={styles.menuRowDescription}>System default</Text>
-            </View>
-            <FontAwesome5 name="chevron-right" size={16} color="#9ca3af" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.menuRow}>
-            <View>
-              <Text style={styles.menuRowLabel}>Language</Text>
-              <Text style={styles.menuRowDescription}>English</Text>
-            </View>
-            <FontAwesome5 name="chevron-right" size={16} color="#9ca3af" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.menuRow}>
-            <View>
-              <Text style={styles.menuRowLabel}>Default Search Location</Text>
-              <Text style={styles.menuRowDescription}>{user?.zipCode || 'Not set'}</Text>
-            </View>
-            <FontAwesome5 name="chevron-right" size={16} color="#9ca3af" />
-          </TouchableOpacity>
-        </View>
-      </Modal>
+      {activeSheet === 'settings' && (
+        <SettingsSheet title="App Settings" onClose={closeSheet}>
+          <Text className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 mb-1">Language</Text>
+          <View className="border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 flex-row items-center justify-between mb-3">
+            <Text className="text-sm text-neutral-900 dark:text-neutral-50">English (US)</Text>
+            <FontAwesome5 name="chevron-down" size={12} color="#a3a3a3" />
+          </View>
+          <Text className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 mb-1">Default Service Area</Text>
+          <TextInput defaultValue={user?.zipCode || '10001'} className="w-full border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm mb-3 text-neutral-900 dark:text-neutral-50" />
+          <Toggle 
+            label="Dark Mode" 
+            description="Switch between light and dark themes" 
+            defaultOn={colorScheme === 'dark'}
+            onValueChange={(val) => setColorScheme(val ? 'dark' : 'light')} 
+          />
+          <Toggle label="Auto-play Videos" description="Play videos automatically when scrolling" defaultOn />
+          <Toggle label="Haptic Feedback" description="Vibrate on button taps and interactions" defaultOn />
+          <View className="pt-2 border-t border-neutral-100 dark:border-neutral-800 mt-2">
+            <Text className="text-xs text-neutral-400">Version 1.0.0 · Build 2026.04</Text>
+          </View>
+        </SettingsSheet>
+      )}
 
       {/* Help Center Sheet */}
-      <Modal
-        visible={activeSheet === 'help'}
-        onClose={() => setActiveSheet(null)}
-        title="Help Center"
-      >
-        <View style={styles.sheetContent}>
-          <TouchableOpacity style={styles.menuRow}>
-            <FontAwesome5 name="book" size={20} color="#6b7280" />
-            <Text style={[styles.menuRowLabel, styles.menuRowLabelMargin]}>FAQs</Text>
-            <FontAwesome5 name="chevron-right" size={16} color="#9ca3af" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.menuRow}>
-            <FontAwesome5 name="headset" size={20} color="#6b7280" />
-            <Text style={[styles.menuRowLabel, styles.menuRowLabelMargin]}>Contact Support</Text>
-            <FontAwesome5 name="chevron-right" size={16} color="#9ca3af" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.menuRow}>
-            <FontAwesome5 name="info-circle" size={20} color="#6b7280" />
-            <Text style={[styles.menuRowLabel, styles.menuRowLabelMargin]}>About Ratedeed</Text>
-            <FontAwesome5 name="chevron-right" size={16} color="#9ca3af" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.menuRow}>
-            <FontAwesome5 name="file-alt" size={20} color="#6b7280" />
-            <Text style={[styles.menuRowLabel, styles.menuRowLabelMargin]}>Terms of Service</Text>
-            <FontAwesome5 name="chevron-right" size={16} color="#9ca3af" />
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.menuRow, styles.menuRowBorderNone]}>
-            <FontAwesome5 name="shield-alt" size={20} color="#6b7280" />
-            <Text style={[styles.menuRowLabel, styles.menuRowLabelMargin]}>Privacy Policy</Text>
-            <FontAwesome5 name="chevron-right" size={16} color="#9ca3af" />
-          </TouchableOpacity>
-        </View>
-      </Modal>
-
-      {/* Change Password Modal */}
-      <Modal
-        visible={showChangePassword}
-        onClose={() => setShowChangePassword(false)}
-        title="Change Password"
-      >
-        <View style={styles.sheetContent}>
-          <Input
-            label="Current Password"
-            value={passwords.current}
-            onChangeText={(text) => setPasswords({ ...passwords, current: text })}
-            secureTextEntry
-            style={styles.sheetInput}
-          />
-          <Input
-            label="New Password"
-            value={passwords.new}
-            onChangeText={(text) => setPasswords({ ...passwords, new: text })}
-            secureTextEntry
-            style={styles.sheetInput}
-          />
-          <Input
-            label="Confirm New Password"
-            value={passwords.confirm}
-            onChangeText={(text) => setPasswords({ ...passwords, confirm: text })}
-            secureTextEntry
-            style={styles.sheetInput}
-          />
-          <View style={styles.modalButtons}>
-            <Button
-              title="Cancel"
-              variant="outline"
-              onPress={() => setShowChangePassword(false)}
-              style={styles.modalButton}
-            />
-            <Button
-              title="Change Password"
-              onPress={handleChangePassword}
-              style={styles.modalButton}
-            />
+      {activeSheet === 'help' && (
+        <SettingsSheet title="Help Center" onClose={closeSheet}>
+          {faqs.map((faq, i) => (
+            <View key={i} className="border-b border-neutral-100 dark:border-neutral-800">
+              <Pressable onPress={() => setOpenFaq(openFaq === i ? null : i)} className="flex-row items-center justify-between py-3">
+                <Text className="text-sm font-medium text-neutral-900 dark:text-neutral-50 flex-1 mr-4">{faq.q}</Text>
+                <FontAwesome5 name={openFaq === i ? 'chevron-up' : 'chevron-down'} size={12} color="#a3a3a3" />
+              </Pressable>
+              {openFaq === i && <Text className="text-sm text-neutral-600 dark:text-neutral-400 leading-5 pb-3">{faq.a}</Text>}
+            </View>
+          ))}
+          <View className="pt-4 border-t border-neutral-100 dark:border-neutral-800 mt-2 items-center">
+            <Text className="text-sm text-neutral-500 dark:text-neutral-400 mb-3">Still need help?</Text>
+            <Pressable className="w-full py-3 border border-indigo-600 rounded-xl items-center">
+              <Text className="text-sm font-semibold text-indigo-600">Contact Support</Text>
+            </Pressable>
           </View>
-        </View>
-      </Modal>
+        </SettingsSheet>
+      )}
     </View>
   );
 };
-
-// Menu Item Component
-function MenuItem({ 
-  icon, 
-  label, 
-  description, 
-  onPress, 
-  isLast = false 
-}: { 
-  icon: string; 
-  label: string; 
-  description: string; 
-  onPress: () => void; 
-  isLast?: boolean;
-}) {
-  return (
-    <TouchableOpacity 
-      style={[styles.menuItem, !isLast && styles.menuItemBorder]} 
-      onPress={onPress}
-    >
-      <FontAwesome5 name={icon as any} size={20} color="#374151" />
-      <View style={styles.menuItemContent}>
-        <Text style={styles.menuItemLabel}>{label}</Text>
-        <Text style={styles.menuItemDescription}>{description}</Text>
-      </View>
-      <FontAwesome5 name="chevron-right" size={16} color="#9ca3af" />
-    </TouchableOpacity>
-  );
-}
-
-// Toggle Row Component
-function ToggleRow({ 
-  label, 
-  description, 
-  value, 
-  onValueChange 
-}: { 
-  label: string; 
-  description: string; 
-  value: boolean; 
-  onValueChange: (val: boolean) => void;
-}) {
-  return (
-    <View style={styles.toggleRow}>
-      <View style={styles.toggleRowContent}>
-        <Text style={styles.toggleRowLabel}>{label}</Text>
-        <Text style={styles.toggleRowDescription}>{description}</Text>
-      </View>
-      <TouchableOpacity 
-        style={[styles.toggle, value && styles.toggleActive]}
-        onPress={() => onValueChange(!value)}
-      >
-        <View style={[styles.toggleKnob, value && styles.toggleKnobActive]} />
-      </TouchableOpacity>
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f9fafb',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  // Profile Header
-  profileHeader: {
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 20,
-  },
-  profileMain: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 16,
-  },
-  avatarContainer: {
-    position: 'relative',
-  },
-  avatar: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-  },
-  avatarPlaceholder: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: '#4F46E5',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarInitial: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  editAvatarButton: {
-    position: 'absolute',
-    bottom: -4,
-    right: -4,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#4F46E5',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-  },
-  profileInfo: {
-    flex: 1,
-  },
-  profileName: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#111827',
-  },
-  profileEmail: {
-    fontSize: 14,
-    color: '#6b7280',
-    marginTop: 2,
-  },
-  profileBadges: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 8,
-  },
-  badge: {
-    backgroundColor: '#eef2ff',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-  },
-  badgeSecondary: {
-    backgroundColor: '#f3f4f6',
-  },
-  badgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#4F46E5',
-  },
-  badgeTextSecondary: {
-    color: '#374151',
-  },
-  switchButton: {
-    backgroundColor: '#111827',
-    marginTop: 12,
-    paddingVertical: 10,
-  },
-  switchButtonText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  // Stats Section
-  statsSection: {
-    backgroundColor: '#FFFFFF',
-    marginTop: 8,
-    paddingVertical: 16,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  statItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  statValue: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#111827',
-  },
-  statLabel: {
-    fontSize: 11,
-    color: '#6b7280',
-    marginTop: 4,
-  },
-  statDivider: {
-    width: 1,
-    height: 32,
-    backgroundColor: '#e5e7eb',
-  },
-  // Menu Section
-  menuSection: {
-    backgroundColor: '#FFFFFF',
-    marginTop: 8,
-  },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    gap: 12,
-  },
-  menuItemBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
-  },
-  menuItemContent: {
-    flex: 1,
-  },
-  menuItemLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#111827',
-  },
-  menuItemDescription: {
-    fontSize: 11,
-    color: '#9ca3af',
-    marginTop: 2,
-  },
-  // Logout
-  logoutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    gap: 12,
-  },
-  logoutText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#f43f5e',
-  },
-  bottomSpacer: {
-    height: 32,
-  },
-  // Sheet Content
-  sheetContent: {
-    paddingBottom: 20,
-  },
-  sheetAvatarContainer: {
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  sheetAvatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-  },
-  sheetAvatarPlaceholder: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#4F46E5',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  sheetAvatarInitial: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  sheetEditAvatarButton: {
-    position: 'absolute',
-    bottom: 0,
-    right: '50%',
-    marginRight: -16,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#4F46E5',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-  },
-  sheetInput: {
-    marginBottom: 12,
-  },
-  saveButton: {
-    marginTop: 8,
-  },
-  // Section Label
-  sectionLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#9ca3af',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 12,
-  },
-  sectionLabelMargin: {
-    marginTop: 20,
-  },
-  // Toggle Row
-  toggleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
-  },
-  toggleRowContent: {
-    flex: 1,
-    marginRight: 16,
-  },
-  toggleRowLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#111827',
-  },
-  toggleRowDescription: {
-    fontSize: 12,
-    color: '#6b7280',
-    marginTop: 2,
-  },
-  toggle: {
-    width: 48,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#d1d5db',
-    justifyContent: 'center',
-    paddingHorizontal: 2,
-  },
-  toggleActive: {
-    backgroundColor: '#4F46E5',
-  },
-  toggleKnob: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  toggleKnobActive: {
-    alignSelf: 'flex-end',
-  },
-  // Menu Row
-  menuRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
-    gap: 12,
-  },
-  menuRowBorderNone: {
-    borderBottomWidth: 0,
-  },
-  menuRowLabel: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#111827',
-  },
-  menuRowLabelMargin: {
-    marginLeft: 0,
-  },
-  menuRowDescription: {
-    fontSize: 12,
-    color: '#6b7280',
-    marginTop: 2,
-  },
-  // Modal Buttons
-  modalButtons: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 20,
-  },
-  modalButton: {
-    flex: 1,
-  },
-});
 
 export default ProfileScreen;

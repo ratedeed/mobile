@@ -6,6 +6,26 @@ const User = require('../models/User');
 const Contractor = require('../models/Contractor');
 const generateToken = require('../utils/authUtils'); // Use the centralized token generation utility
 
+const {
+  registerUser,
+  verifyEmail,
+  loginUser,
+  updateEmailVerificationStatus
+} = require('../controllers/userController');
+
+// @desc    Register a new user (Homeowner)
+// @route   POST /api/auth/register
+// @access  Public
+router.post(
+  '/register',
+  [
+    check('email', 'Please include a valid email').isEmail(),
+    check('password', 'Password must be at least 6 characters').isLength({ min: 6 }),
+    check('firstName', 'First name is required').not().isEmpty(),
+  ],
+  registerUser
+);
+
 // @desc    Forgot password route
 // @route   POST /api/auth/forgot-password
 // @access  Public
@@ -53,13 +73,13 @@ router.post(
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { businessName, contactPerson, email, phone, password, zipCode, category } = req.body;
+    const { businessName, contactPerson, email, phone, password, zipCode, category, firebaseUid } = req.body;
 
     const contractorExists = await Contractor.findOne({ email });
 
     if (contractorExists) {
-      res.status(409); // Use 409 Conflict for existing resource
-      throw new Error('Contractor with this email already exists');
+      res.status(409).json({ message: 'Contractor with this email already exists' });
+      return;
     }
 
     // Create a new User entry for the contractor
@@ -69,6 +89,8 @@ router.post(
       email,
       password, // Password will be hashed by pre-save hook in User model
       role: 'contractor', // Set role to 'contractor'
+      firebaseUid: firebaseUid || null,
+      isVerified: firebaseUid ? false : false, // Still false until verified, but Firebase users verified by Firebase
     });
 
     if (user) {
@@ -78,22 +100,26 @@ router.post(
         contactPerson,
         zipCode,
         category,
-        contact: { // Populate the contact sub-document
+        email, // Still keeping email for search/reference if needed, but primary is user.email
+        phone,
+        password: 'LINKED_TO_USER', // Placeholder since password is in User model
+        contact: {
           email,
           phone,
-          // website and address can be added later via profile update
         },
-        // Other fields can be set to defaults or left empty
       });
 
       if (newContractor) {
-        res.status(201).json({
+        return res.status(201).json({
           _id: user._id,
           firstName: user.firstName,
           lastName: user.lastName,
           email: user.email,
           role: user.role,
           token: generateToken(user._id),
+          message: firebaseUid 
+            ? 'Contractor registered successfully. Please verify your email via Firebase.' 
+            : 'Contractor registered successfully.',
           contractorProfile: {
             _id: newContractor._id,
             businessName: newContractor.businessName,
@@ -101,7 +127,8 @@ router.post(
             zipCode: newContractor.zipCode,
           }
         });
-      } else {
+      }
+ else {
         res.status(400);
         throw new Error('Invalid contractor data provided.'); // More specific error message
       }

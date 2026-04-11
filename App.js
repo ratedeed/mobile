@@ -9,6 +9,7 @@ import { NotificationsProvider } from './src/context/NotificationsContext';
 import ErrorBoundary from './src/components/ErrorBoundary';
 import * as Sentry from '@sentry/react-native';
 import { usePushNotifications } from './src/hooks/usePushNotifications';
+import { EscrowTrustBanner } from './src/components/EscrowTrustBanner';
 
 Sentry.init({
   dsn: 'https://placeholder@sentry.io/1234567', // Replace with your actual Sentry DSN
@@ -45,7 +46,14 @@ function AppContent() {
 
   return (
     <NavigationContainer linking={linking}>
-      {isAuthenticated ? <MainNavigator /> : <AuthNavigator />}
+      {isAuthenticated ? (
+        <>
+          <MainNavigator />
+          <EscrowTrustBanner />
+        </>
+      ) : (
+        <AuthNavigator />
+      )}
     </NavigationContainer>
   );
 }

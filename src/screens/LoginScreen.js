@@ -1,13 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, TouchableOpacity } from 'react-native';
+import {
+  View,
+  ScrollView,
+  Pressable,
+  Text,
+  TextInput,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { backendLoginFirebase, syncEmailVerificationStatus } from '../api/auth';
+import { FontAwesome5 } from '@expo/vector-icons';
+import { backendLoginFirebase, syncEmailVerificationStatus } from '../api';
 import { auth } from '../firebaseConfig';
 import { sendEmailVerification, signInWithEmailAndPassword } from 'firebase/auth';
-import Button from '../components/common/Button';
-import Input from '../components/common/Input';
-import Header from '../components/common/Header';
-import Typography from '../components/common/Typography';
 import Toast from 'react-native-toast-message';
 import { useAuth } from '../context/AuthContext';
 
@@ -15,278 +21,249 @@ const LoginScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [showVerificationMessage, setShowVerificationMessage] = useState(false);
+  const [apiError, setApiError] = useState(null);
   const navigation = useNavigation();
   const { updateBackendToken } = useAuth();
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(user => {
-      if (user && !user.emailVerified) {
-        setShowVerificationMessage(true);
-      } else {
-        setShowVerificationMessage(false);
-      }
+      setShowVerificationMessage(user && !user.emailVerified);
     });
     return unsubscribe;
   }, []);
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Toast.show({
-        type: 'error',
-        text1: 'Error',
-        text2: 'Please enter both email and password.',
-      });
+      Toast.show({ type: 'error', text1: 'Error', text2: 'Please enter both email and password.' });
       return;
     }
 
+    setApiError(null);
     setLoading(true);
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
-      console.log('LoginScreen: Firebase signInWithEmailAndPassword successful. User UID:', user.uid, 'Email:', user.email);
 
       await user.reload();
       const reloadedUser = auth.currentUser;
-      console.log('LoginScreen: Firebase user reloaded. Current user UID:', reloadedUser?.uid, 'Email:', reloadedUser?.email);
 
       if (!reloadedUser) {
-        Toast.show({
-          type: 'error',
-          text1: 'Login Failed',
-          text2: 'Firebase user not found after reload. Please try again.',
-        });
-        console.error('LoginScreen: Firebase user is null after reload.');
+        setApiError('User not found after reload. Please try again.');
         return;
       }
 
       if (!reloadedUser.emailVerified) {
-        Toast.show({
-          type: 'info',
-          text1: 'Verification Required',
-          text2: 'Please verify your email address to continue.',
-        });
+        Toast.show({ type: 'info', text1: 'Verification Required', text2: 'Please verify your email address to continue.' });
         setShowVerificationMessage(true);
-        console.log('LoginScreen: Email not verified. Preventing navigation to Main.');
-        return; 
+        return;
       }
 
       const idToken = await reloadedUser.getIdToken();
-      console.log('LoginScreen: Firebase ID Token generated (first 20 chars):', idToken ? idToken.substring(0, 20) + '...' : 'No');
 
-      let backendResponse;
       try {
-        backendResponse = await backendLoginFirebase(idToken, email);
-        console.log('LoginScreen: Backend login response:', JSON.stringify(backendResponse, null, 2));
-
-        if (backendResponse && backendResponse.token) {
+        const backendResponse = await backendLoginFirebase(idToken, email);
+        if (backendResponse?.token) {
           await updateBackendToken(backendResponse.token, backendResponse.emailVerified);
-          Toast.show({
-            type: 'success',
-            text1: 'Success',
-            text2: 'Logged in successfully!',
-          });
+          Toast.show({ type: 'success', text1: 'Success', text2: 'Logged in successfully!' });
         } else {
-          Toast.show({
-            type: 'error',
-            text1: 'Login Failed',
-            text2: 'Backend authentication failed or no token received. Please try again.',
-          });
-          console.error('LoginScreen: Backend login did not return a token.');
+          setApiError('Backend authentication failed. Please try again.');
         }
       } catch (backendError) {
-        let errorMessage = 'Failed to connect to backend or backend authentication failed.';
-        if (backendError.message) {
-          errorMessage = backendError.message;
-        }
-        Toast.show({
-          type: 'error',
-          text1: 'Login Failed',
-          text2: errorMessage,
-        });
-        console.error('LoginScreen: Error during backend login:', backendError);
+        setApiError(backendError.message || 'Backend authentication failed.');
       }
-
-    } catch (error) { 
-      let errorMessage = 'An unexpected error occurred. Please try again.';
+    } catch (error) {
+      let errorMessage = 'An unexpected error occurred.';
       if (error.code) {
-        switch (error.code) {
-          case 'auth/invalid-email':
-            errorMessage = 'Invalid email address.';
-            break;
-          case 'auth/user-disabled':
-            errorMessage = 'Your account has been disabled.';
-            break;
-          case 'auth/user-not-found':
-          case 'auth/wrong-password':
-            errorMessage = 'Invalid email or password.';
-            break;
-          case 'auth/too-many-requests':
-            errorMessage = 'Too many login attempts. Please try again later.';
-            break;
-          default:
-            errorMessage = error.message;
-        }
-      } else if (error.message) {
-        errorMessage = error.message;
+        const errorMap = {
+          'auth/invalid-email': 'Invalid email address.',
+          'auth/user-disabled': 'Your account has been disabled.',
+          'auth/user-not-found': 'Invalid email or password.',
+          'auth/wrong-password': 'Invalid email or password.',
+          'auth/too-many-requests': 'Too many login attempts. Please try again later.',
+        };
+        errorMessage = errorMap[error.code] || error.message;
       }
-      Toast.show({
-        type: 'error',
-        text1: 'Login Failed',
-        text2: errorMessage,
-      });
-      console.error('LoginScreen: Firebase or general login error:', error);
+      setApiError(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
   const handleResendVerification = async () => {
-    if (auth && auth.currentUser) {
+    if (auth?.currentUser) {
       try {
         await sendEmailVerification(auth.currentUser);
-        Toast.show({
-          type: 'success',
-          text1: 'Success',
-          text2: 'Verification email sent! Please check your inbox.',
-        });
+        Toast.show({ type: 'success', text1: 'Success', text2: 'Verification email sent!' });
       } catch (error) {
-        Toast.show({
-          type: 'error',
-          text1: 'Error',
-          text2: error.message || 'Failed to send verification email.',
-        });
-        console.error('Resend verification error:', error);
+        Toast.show({ type: 'error', text1: 'Error', text2: error.message });
       }
-    } else {
-      Toast.show({
-        type: 'error',
-        text1: 'Error',
-        text2: 'User not logged in or auth not initialized.',
-      });
     }
   };
 
   const handleVerifiedCheck = async () => {
-    if (auth.currentUser) {
-      try {
-        await auth.currentUser.reload();
-        if (auth.currentUser.emailVerified) {
-          const idToken = await auth.currentUser.getIdToken();
-          await syncEmailVerificationStatus(idToken, auth.currentUser.email, true);
-          Toast.show({
-            type: 'success',
-            text1: 'Email Verified',
-            text2: 'Your email has been successfully verified! You can now log in.',
-          });
-          setShowVerificationMessage(false);
-          const backendResponse = await backendLoginFirebase(idToken, auth.currentUser.email);
-          if (backendResponse && backendResponse.token) {
-            await updateBackendToken(backendResponse.token, backendResponse.emailVerified); 
-          } else {
-            Toast.show({
-              type: 'error',
-              text1: 'Login Failed',
-              text2: 'Backend authentication failed after email verification. Please try again.',
-            });
-          }
-        } else {
-          Toast.show({
-            type: 'info',
-            text1: 'Not Verified',
-            text2: 'Your email is still not verified. Please check your inbox or resend the email.',
-          });
+    if (!auth.currentUser) return;
+    try {
+      await auth.currentUser.reload();
+      if (auth.currentUser.emailVerified) {
+        const idToken = await auth.currentUser.getIdToken();
+        await syncEmailVerificationStatus(idToken, auth.currentUser.email, true);
+        setShowVerificationMessage(false);
+        const backendResponse = await backendLoginFirebase(idToken, auth.currentUser.email);
+        if (backendResponse?.token) {
+          await updateBackendToken(backendResponse.token, backendResponse.emailVerified);
         }
-      } catch (error) {
-        Toast.show({
-          type: 'error',
-          text1: 'Verification Check Failed',
-          text2: error.message || 'Failed to check verification status.',
-        });
-        console.error('Verification check error:', error);
+      } else {
+        Toast.show({ type: 'info', text1: 'Not Verified', text2: 'Email still not verified. Check your inbox.' });
       }
-    } else {
-      Toast.show({
-        type: 'error',
-        text1: 'Error',
-        text2: 'No user is currently logged in.',
-      });
+    } catch (error) {
+      Toast.show({ type: 'error', text1: 'Error', text2: error.message });
     }
   };
 
   return (
-    <View style={styles.fullScreenContainer}>
-      <Header title="Welcome Back" />
-      <ScrollView contentContainerClassName="flex-grow justify-center p-4">
-        <View style={styles.cardContainer}>
-          <Typography variant="h3" style={styles.title}>Sign In</Typography>
-          <Typography variant="subtitle1" style={styles.subtitle}>
-            Access your RateDeed account to manage your projects.
-          </Typography>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      className="flex-1 bg-white"
+    >
+      <ScrollView
+        contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24 }}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Logo */}
+        <View className="items-center mb-10">
+          <FontAwesome5 name="hammer" size={48} color="#4F46E5" />
+          <Text className="text-2xl font-bold text-indigo-600 mt-3">ratedeed</Text>
+        </View>
 
-          <Input
-            label="Email"
-            placeholder="Enter your email address"
+        {/* Form */}
+        <View className="w-full max-w-sm mx-auto" style={{ gap: 16 }}>
+          {/* Email */}
+          <TextInput
+            placeholder="Email"
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
-            style={styles.inputField}
-          />
-          <Input
-            label="Password"
-            placeholder="Enter your password"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            style={styles.inputField}
+            autoComplete="email"
+            editable={!loading}
+            className="w-full border border-neutral-300 rounded-xl px-4 py-3 text-sm bg-white"
+            placeholderTextColor="#a3a3a3"
           />
 
-          <Button
-            title="Sign In"
-            onPress={handleLogin}
-            loading={loading}
-            style={styles.loginButton}
-          />
-
-          <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')} style={styles.linkButton}>
-            <Typography variant="body" style={styles.mutedText}>
-              Forgot your password? <Typography variant="button" style={styles.primaryLinkText}>Reset Password</Typography>
-            </Typography>
-          </TouchableOpacity>
-
-          <TouchableOpacity onPress={() => navigation.navigate('Register')} style={styles.linkButton}>
-            <Typography variant="body" style={styles.mutedText}>
-              Don't have an account? <Typography variant="button" style={styles.primaryLinkText}>Sign Up</Typography>
-            </Typography>
-          </TouchableOpacity>
-
-          <TouchableOpacity onPress={() => navigation.navigate('ContractorSignup')} style={styles.linkButton}>
-            <Typography variant="body" style={styles.mutedText}>
-              Are you a contractor? <Typography variant="button" style={styles.primaryLinkText}>Sign Up as a Contractor</Typography>
-            </Typography>
-          </TouchableOpacity>
-          {showVerificationMessage && (
-            <View style={styles.verificationCard}>
-              <Typography variant="body" style={styles.verificationText}>
-                Your email is not verified. Please check your inbox for a verification link.
-              </Typography>
-              <Button
-                title="Resend Verification Email"
-                onPress={handleResendVerification}
-                style={styles.resendButton}
+          {/* Password */}
+          <View className="relative">
+            <TextInput
+              placeholder="Password"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+              autoComplete="password"
+              editable={!loading}
+              className="w-full border border-neutral-300 rounded-xl px-4 py-3 text-sm bg-white pr-20"
+              placeholderTextColor="#a3a3a3"
+            />
+            <Pressable
+              onPress={() => setShowPassword(!showPassword)}
+              className="absolute right-4 top-3 flex-row items-center"
+              style={{ gap: 4 }}
+            >
+              <FontAwesome5
+                name={showPassword ? 'eye-slash' : 'eye'}
+                size={12}
+                color="#171717"
               />
-              <TouchableOpacity onPress={handleVerifiedCheck} style={styles.linkButton}>
-                <Typography variant="button" style={styles.primaryLinkText}>
-                  I have verified my email
-                </Typography>
-              </TouchableOpacity>
+              <Text className="text-xs font-semibold text-neutral-900">
+                {showPassword ? 'Hide' : 'Show'}
+              </Text>
+            </Pressable>
+          </View>
+
+          {/* API Error */}
+          {apiError && (
+            <View className="bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-2.5">
+              <Text className="text-xs text-indigo-700">{apiError}</Text>
             </View>
           )}
+
+          {/* Verification Message */}
+          {showVerificationMessage && (
+            <View className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3" style={{ gap: 8 }}>
+              <Text className="text-xs text-amber-800">
+                Your email is not verified. Please check your inbox for a verification link.
+              </Text>
+              <Pressable onPress={handleResendVerification}>
+                <Text className="text-xs font-semibold text-amber-900 underline">
+                  Resend Verification Email
+                </Text>
+              </Pressable>
+              <Pressable onPress={handleVerifiedCheck}>
+                <Text className="text-xs font-semibold text-amber-900 underline">
+                  I have verified my email
+                </Text>
+              </Pressable>
+            </View>
+          )}
+
+          {/* Forgot Password */}
+          <Pressable onPress={() => navigation.navigate('ForgotPassword')}>
+            <Text className="text-xs font-semibold text-neutral-500">Forgot password?</Text>
+          </Pressable>
+
+          {/* Login Button */}
+          <Pressable
+            onPress={handleLogin}
+            disabled={loading}
+            className="w-full py-3 rounded-xl items-center"
+            style={{
+              backgroundColor: loading ? '#818cf8' : '#4F46E5',
+              shadowColor: '#4F46E5',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.2,
+              shadowRadius: 8,
+              elevation: 4,
+            }}
+          >
+            {loading ? (
+              <View className="flex-row items-center" style={{ gap: 8 }}>
+                <ActivityIndicator size="small" color="#fff" />
+                <Text className="text-sm font-semibold text-white">Logging in...</Text>
+              </View>
+            ) : (
+              <Text className="text-sm font-semibold text-white">Log In</Text>
+            )}
+          </Pressable>
+
+          {/* Sign Up Link */}
+          <View className="items-center pt-4">
+            <Text className="text-sm text-neutral-500">
+              Don't have an account?{' '}
+              <Text
+                className="font-semibold text-neutral-900 underline"
+                onPress={() => navigation.navigate('Register')}
+              >
+                Sign Up
+              </Text>
+            </Text>
+          </View>
+
+          {/* Contractor Link */}
+          <View className="items-center">
+            <Text className="text-sm text-neutral-500">
+              Are you a contractor?{' '}
+              <Text
+                className="font-semibold text-neutral-900 underline"
+                onPress={() => navigation.navigate('ContractorSignup')}
+              >
+                Sign Up as a Contractor
+              </Text>
+            </Text>
+          </View>
         </View>
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 

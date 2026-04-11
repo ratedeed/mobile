@@ -24,7 +24,7 @@ import {
   QuoteLineItem,
 } from '../types/index';
 
-const API_BASE = API_BASE_URL;
+const API_BASE = `${API_BASE_URL}/api`;
 
 // ==========================================
 // Base API Client Functions
@@ -101,12 +101,85 @@ export const del = async (url: string, headers: Record<string, string> = {}): Pr
   return handleResponse(response);
 };
 
+// ---- Normalization Helpers (Ported from web version) ----
+export const normalizeApiContractor = (c: any): Contractor => {
+  if (!c) return c;
+  const contractor = { ...c };
+  
+  // Ensure ID is normalized
+  contractor._id = contractor._id || contractor.id;
+
+  // Prioritize explicit city/state from signup/contact info over generic location string
+  let derivedCity = '';
+  let derivedState = '';
+
+  if (c.contactInfo?.city && c.contactInfo?.state) {
+    derivedCity = c.contactInfo.city;
+    derivedState = c.contactInfo.state;
+  } else if ((c.contactInfo?.city || c.city) && (c.contactInfo?.state || c.state || c.contactInfo?.parsedState)) {
+    derivedCity = c.contactInfo?.city || c.city || '';
+    derivedState = c.contactInfo?.state || c.contactInfo?.parsedState?.toUpperCase() || c.state || '';
+  } else if (c.city && c.state) {
+    derivedCity = c.city;
+    derivedState = c.state;
+  } else {
+    // Fallback: try to parse from raw address string if explicit fields are missing
+    const address = c.contact?.address || c.address || c.businessAddress;
+    if (address && typeof address === 'string') {
+      const match = address.match(/([^,]+),\s*([A-Z]{2}|[a-zA-Z\s]+?)(?:\s+\d{5})?$/);
+      if (match) {
+        derivedCity = match[1].trim();
+        derivedState = match[2].trim();
+      } else if (address.includes(',')) {
+        const parts = address.split(',');
+        if (parts.length >= 2) {
+          derivedCity = parts[parts.length - 2].trim();
+          derivedState = parts[parts.length - 1].trim().split(' ')[0];
+        }
+      }
+    }
+  }
+
+  // Final fallback: use location string or businessAddress directly
+  if (!derivedCity && !derivedState) {
+    const loc = c.location;
+    if (typeof loc === 'string' && loc.trim() && !loc.includes('{')) {
+      const locParts = loc.split(',');
+      if (locParts.length >= 2) {
+        derivedCity = locParts[0].trim();
+        derivedState = locParts[1].trim();
+      }
+    }
+    if (!derivedCity && c.businessAddress && typeof c.businessAddress === 'string') {
+      const match = c.businessAddress.match(/([^,]+),\s*([A-Z]{2})(?:\s+\d{5})?$/);
+      if (match) {
+        derivedCity = match[1].trim();
+        derivedState = match[2].trim();
+      }
+    }
+  }
+
+  // Update contactInfo with normalized data
+  if (!contractor.contactInfo) contractor.contactInfo = {};
+  if (derivedCity) contractor.contactInfo.city = derivedCity;
+  if (derivedState) contractor.contactInfo.state = derivedState;
+
+  return contractor;
+};
+
+export const adaptApiContractor = normalizeApiContractor; // Alias used in web version
+
+const normalizeContractors = (list: any[]): Contractor[] => {
+  if (!Array.isArray(list)) return [];
+  return list.map(normalizeApiContractor);
+};
+
 // ==========================================
 // Auth API
 // ==========================================
 
 export const login = async (email: string, password: string): Promise<any> => {
-  const data = await post(`${API_BASE}/api/users/login`, { email, password });
+  const data = await post(`${API_BASE}/users/login`, { email, password });
   if (data && data.token) {
     await AsyncStorage.setItem('userInfo', JSON.stringify({ token: data.token, ...data.user }));
   }
@@ -118,24 +191,24 @@ export const logout = async (): Promise<void> => {
 };
 
 export const register = async (data: any): Promise<any> => {
-  return post(`${API_BASE}/api/users/signup`, data);
+  return post(`${API_BASE}/users/signup`, data);
 };
 
 export const verifyEmailBackend = async (email: string): Promise<any> => {
-  return post(`${API_BASE}/api/users/verify-email`, { email });
+  return post(`${API_BASE}/users/verify-email`, { email });
 };
 
 export const forgotPassword = async (email: string): Promise<any> => {
-  return post(`${API_BASE}/api/auth/forgot-password`, { email });
+  return post(`${API_BASE}/auth/forgot-password`, { email });
 };
 
 export const contractorSignup = async (data: any): Promise<any> => {
-  return post(`${API_BASE}/api/auth/contractor-signup`, data);
+  return post(`${API_BASE}/contractors`, data);
 };
 
 export const backendLoginFirebase = async (idToken: string, email: string): Promise<any> => {
   const headers = { 'Authorization': `Bearer ${idToken}` };
-  const data = await post(`${API_BASE}/api/users/login`, { email, firebaseUid: firebaseAuth.currentUser?.uid }, headers);
+  const data = await post(`${API_BASE}/users/login`, { email, firebaseUid: firebaseAuth.currentUser?.uid }, headers);
   if (data && data.token) {
     await AsyncStorage.setItem('userInfo', JSON.stringify({ token: data.token, ...data.user }));
   }
@@ -144,7 +217,7 @@ export const backendLoginFirebase = async (idToken: string, email: string): Prom
 
 export const syncEmailVerificationStatus = async (idToken: string, email: string, isVerified: boolean): Promise<any> => {
   const headers = { 'Authorization': `Bearer ${idToken}` };
-  return post(`${API_BASE}/api/users/verify-email`, { email, isVerified, firebaseUid: firebaseAuth.currentUser?.uid }, headers);
+  return post(`${API_BASE}/users/verify-email`, { email, isVerified, firebaseUid: firebaseAuth.currentUser?.uid }, headers);
 };
 
 // ==========================================
@@ -153,33 +226,41 @@ export const syncEmailVerificationStatus = async (idToken: string, email: string
 
 export const browseContractors = async (queryParams: ContractorQueryParams = {}): Promise<ContractorsResponse> => {
   const queryString = new URLSearchParams(queryParams as any).toString();
-  return get(`${API_BASE}/api/contractors?${queryString}`);
+  const data = await get(`${API_BASE}/contractors?${queryString}`);
+  if (data?.contractors) data.contractors = normalizeContractors(data.contractors);
+  else if (Array.isArray(data)) return { contractors: normalizeContractors(data), total: data.length, page: 1, pages: 1, limit: data.length };
+  return data;
 };
 
 export const getTopRatedContractors = async (zipCode: string, limit: number = 6): Promise<Contractor[]> => {
-  return get(`${API_BASE}/api/contractors/top-rated?zipCode=${zipCode}&limit=${limit}`);
+  const data = await get(`${API_BASE}/contractors/top-rated?zipCode=${zipCode}&limit=${limit}`);
+  return normalizeContractors(data);
 };
 
 export const getNearbyTopRatedContractors = async (zipCode: string, excludeId?: string): Promise<Contractor[]> => {
-  let url = `${API_BASE}/api/contractors/nearby?zipCode=${zipCode}`;
+  let url = `${API_BASE}/contractors/nearby?zipCode=${zipCode}`;
   if (excludeId) url += `&excludeId=${excludeId}`;
-  return get(url);
+  const data = await get(url);
+  return normalizeContractors(data);
 };
 
 export const getContractorBySlug = async (slug: string): Promise<Contractor> => {
-  return get(`${API_BASE}/api/contractors/slug/${slug}`);
+  const data = await get(`${API_BASE}/contractors/slug/${slug}`);
+  return normalizeApiContractor(data);
 };
 
 export const getContractorDetails = async (contractorId: string): Promise<Contractor> => {
   const authHeaders = await getAuthHeaders();
-  return get(`${API_BASE}/api/contractors/${contractorId}`, authHeaders);
+  const data = await get(`${API_BASE}/contractors/${contractorId}`, authHeaders);
+  return normalizeApiContractor(data);
 };
 
 export const fetchContractorDetails = getContractorDetails;
 
 export const updateContractorProfile = async (data: Partial<Contractor>): Promise<Contractor> => {
   const authHeaders = await getAuthHeaders();
-  return put(`${API_BASE}/api/contractors/profile`, data, authHeaders);
+  const result = await put(`${API_BASE}/contractors/profile`, data, authHeaders);
+  return normalizeApiContractor(result);
 };
 
 // ==========================================
@@ -208,26 +289,58 @@ export const registerSocket = async (userId: string) => {
   socket?.emit('register', userId);
 };
 
+export const joinConversationSocket = (conversationId: string) => {
+  socket?.emit('joinConversation', conversationId);
+};
+
+export const leaveConversationSocket = (conversationId: string) => {
+  socket?.emit('leaveConversation', conversationId);
+};
+
+export const onNewMessage = (callback: (message: any) => void) => {
+  socket?.on('newMessage', callback);
+};
+
+export const onMessageRead = (callback: (data: any) => void) => {
+  socket?.on('messageRead', callback);
+};
+
+export const onTyping = (callback: (data: any) => void) => {
+  socket?.on('typing', callback);
+};
+
+export const onUserOnlineStatus = (callback: (data: any) => void) => {
+  socket?.on('userOnlineStatus', callback);
+};
+
+export const emitTyping = (conversationId: string, userId: string, isTyping: boolean) => {
+  socket?.emit('typing', { conversationId, userId, isTyping });
+};
+
+export const emitMessageRead = (messageId: string, readerId: string, conversationId: string) => {
+  socket?.emit('messageRead', { messageId, readerId, conversationId });
+};
+
 export const sendMessage = async (conversationId: string, recipientId: string, messageText: string): Promise<any> => {
   const authHeaders = await getAuthHeaders();
-  return post(`${API_BASE}/api/messages`, { conversationId, recipientId, messageText }, authHeaders);
+  return post(`${API_BASE}/messages`, { conversationId, recipientId, messageText }, authHeaders);
 };
 
 export const listConversations = async (): Promise<any[]> => {
   const authHeaders = await getAuthHeaders();
-  return get(`${API_BASE}/api/messages/conversations`, authHeaders);
+  return get(`${API_BASE}/messages/conversations`, authHeaders);
 };
 
 export const fetchConversations = listConversations;
 
 export const fetchMessages = async (conversationId: string): Promise<any[]> => {
   const authHeaders = await getAuthHeaders();
-  return get(`${API_BASE}/api/messages/conversation/${conversationId}`, authHeaders);
+  return get(`${API_BASE}/messages/conversation/${conversationId}`, authHeaders);
 };
 
 export const findOrCreateConversation = async (participantIds: string[]): Promise<any> => {
   const authHeaders = await getAuthHeaders();
-  return post(`${API_BASE}/api/messages/find-or-create-conversation`, { participantIds }, authHeaders);
+  return post(`${API_BASE}/messages/find-or-create-conversation`, { participantIds }, authHeaders);
 };
 
 export const createConversation = findOrCreateConversation;
@@ -238,44 +351,44 @@ export const createConversation = findOrCreateConversation;
 
 export const listPosts = async (queryParams: any = {}): Promise<{ posts: Post[] }> => {
   const queryString = new URLSearchParams(queryParams).toString();
-  return get(`${API_BASE}/api/posts?${queryString}`);
+  return get(`${API_BASE}/posts?${queryString}`);
 };
 
 export const getFeedPosts = listPosts;
 
 export const fetchContractorPosts = async (contractorId: string): Promise<{ posts: Post[] }> => {
-  const posts = await get(`${API_BASE}/api/posts/contractor/${contractorId}`);
+  const posts = await get(`${API_BASE}/posts/contractor/${contractorId}`);
   return { posts: Array.isArray(posts) ? posts : (posts.posts || []) };
 };
 
 export const createPost = async (postData: any): Promise<Post> => {
   const authHeaders = await getAuthHeaders();
-  return post(`${API_BASE}/api/posts`, postData, authHeaders);
+  return post(`${API_BASE}/posts`, postData, authHeaders);
 };
 
 export const likePost = async (postId: string): Promise<void> => {
   const authHeaders = await getAuthHeaders();
-  return put(`${API_BASE}/api/posts/${postId}/like`, {}, authHeaders);
+  return put(`${API_BASE}/posts/${postId}/like`, {}, authHeaders);
 };
 
 export const unlikePost = async (postId: string): Promise<void> => {
   const authHeaders = await getAuthHeaders();
-  return put(`${API_BASE}/api/posts/${postId}/unlike`, {}, authHeaders);
+  return put(`${API_BASE}/posts/${postId}/unlike`, {}, authHeaders);
 };
 
 export const commentOnPost = async (postId: string, commentData: any): Promise<PostComment> => {
   const authHeaders = await getAuthHeaders();
-  return post(`${API_BASE}/api/posts/${postId}/comments`, commentData, authHeaders);
+  return post(`${API_BASE}/posts/${postId}/comments`, commentData, authHeaders);
 };
 
 export const deletePost = async (postId: string): Promise<void> => {
   const authHeaders = await getAuthHeaders();
-  return del(`${API_BASE}/api/posts/${postId}`, authHeaders);
+  return del(`${API_BASE}/posts/${postId}`, authHeaders);
 };
 
 export const listContractorReviews = async (contractorId: string, params: any = {}): Promise<any> => {
   const queryString = new URLSearchParams(params).toString();
-  return get(`${API_BASE}/api/contractors/${contractorId}/reviews?${queryString}`);
+  return get(`${API_BASE}/contractors/${contractorId}/reviews?${queryString}`);
 };
 
 export const fetchContractorReviews = async (contractorId: string): Promise<Review[]> => {
@@ -285,7 +398,7 @@ export const fetchContractorReviews = async (contractorId: string): Promise<Revi
 
 export const submitReview = async (contractorId: string, reviewData: Partial<Review>): Promise<Review> => {
   const authHeaders = await getAuthHeaders();
-  return post(`${API_BASE}/api/contractors/${contractorId}/reviews`, reviewData, authHeaders);
+  return post(`${API_BASE}/contractors/${contractorId}/reviews`, reviewData, authHeaders);
 };
 
 // ==========================================
@@ -294,22 +407,22 @@ export const submitReview = async (contractorId: string, reviewData: Partial<Rev
 
 export const getNotifications = async (): Promise<Notification[]> => {
   const authHeaders = await getAuthHeaders();
-  return get(`${API_BASE}/api/notifications`, authHeaders);
+  return get(`${API_BASE}/notifications`, authHeaders);
 };
 
 export const markNotificationRead = async (notificationId: string): Promise<void> => {
   const authHeaders = await getAuthHeaders();
-  return put(`${API_BASE}/api/notifications/${notificationId}/read`, {}, authHeaders);
+  return put(`${API_BASE}/notifications/${notificationId}/read`, {}, authHeaders);
 };
 
 export const markAllNotificationsRead = async (): Promise<void> => {
   const authHeaders = await getAuthHeaders();
-  return put(`${API_BASE}/api/notifications/read-all`, {}, authHeaders);
+  return put(`${API_BASE}/notifications/read-all`, {}, authHeaders);
 };
 
 export const deleteNotification = async (notificationId: string): Promise<void> => {
   const authHeaders = await getAuthHeaders();
-  return del(`${API_BASE}/api/notifications/${notificationId}`, authHeaders);
+  return del(`${API_BASE}/notifications/${notificationId}`, authHeaders);
 };
 
 // ==========================================
@@ -318,24 +431,24 @@ export const deleteNotification = async (notificationId: string): Promise<void> 
 
 export const getUserProfile = async (): Promise<User> => {
   const authHeaders = await getAuthHeaders();
-  return get(`${API_BASE}/api/users/profile`, authHeaders);
+  return get(`${API_BASE}/users/profile`, authHeaders);
 };
 
 export const fetchUserProfile = getUserProfile;
 
 export const updateUserProfile = async (data: Partial<User>): Promise<User> => {
   const authHeaders = await getAuthHeaders();
-  return put(`${API_BASE}/api/users/profile`, data, authHeaders);
+  return put(`${API_BASE}/users/profile`, data, authHeaders);
 };
 
 export const updateProfilePicture = async (pictureUrl: string): Promise<User> => {
   const authHeaders = await getAuthHeaders();
-  return put(`${API_BASE}/api/users/profile-picture`, { pictureUrl }, authHeaders);
+  return put(`${API_BASE}/users/profile-picture`, { pictureUrl }, authHeaders);
 };
 
 export const updateBannerImage = async (imageUrl: string): Promise<User> => {
   const authHeaders = await getAuthHeaders();
-  return put(`${API_BASE}/api/users/banner-image`, { imageUrl }, authHeaders);
+  return put(`${API_BASE}/users/banner-image`, { imageUrl }, authHeaders);
 };
 
 // ==========================================
@@ -344,37 +457,48 @@ export const updateBannerImage = async (imageUrl: string): Promise<User> => {
 
 export const getStripeConnectUrl = async (): Promise<{ url: string }> => {
   const authHeaders = await getAuthHeaders();
-  return get(`${API_BASE}/api/stripe/connect-url`, authHeaders);
+  return get(`${API_BASE}/stripe/connect-url`, authHeaders);
 };
 
 export const getStripeAccountStatus = async (): Promise<StripeConnectStatus> => {
   const authHeaders = await getAuthHeaders();
-  return get(`${API_BASE}/api/stripe/account-status`, authHeaders);
+  return get(`${API_BASE}/stripe/account-status`, authHeaders);
 };
 
 export const createQuote = async (quoteData: any): Promise<Quote> => {
   const authHeaders = await getAuthHeaders();
-  return post(`${API_BASE}/api/quotes`, quoteData, authHeaders);
+  return post(`${API_BASE}/quotes`, quoteData, authHeaders);
 };
 
 export const getContractorLeads = async (): Promise<Lead[]> => {
   const authHeaders = await getAuthHeaders();
-  return get(`${API_BASE}/api/leads/contractor`, authHeaders);
+  return get(`${API_BASE}/leads/contractor`, authHeaders);
 };
 
 export const getContractorQuotes = async (): Promise<Quote[]> => {
   const authHeaders = await getAuthHeaders();
-  return get(`${API_BASE}/api/quotes/contractor`, authHeaders);
+  return get(`${API_BASE}/quotes/contractor`, authHeaders);
+};
+
+export const getUserQuotes = async (): Promise<Quote[]> => {
+  const authHeaders = await getAuthHeaders();
+  return get(`${API_BASE}/quotes/client`, authHeaders);
 };
 
 export const getContractorJobs = async (): Promise<Job[]> => {
   const authHeaders = await getAuthHeaders();
-  return get(`${API_BASE}/api/jobs/contractor`, authHeaders);
+  return get(`${API_BASE}/jobs/contractor`, authHeaders);
 };
+
+export const getUserJobs = async (): Promise<Job[]> => {
+  const authHeaders = await getAuthHeaders();
+  return get(`${API_BASE}/jobs/client`, authHeaders);
+};
+
 
 export const getContractorEarnings = async (): Promise<Earnings> => {
   const authHeaders = await getAuthHeaders();
-  return get(`${API_BASE}/api/stripe/earnings`, authHeaders);
+  return get(`${API_BASE}/stripe/earnings`, authHeaders);
 };
 
 // ==========================================
@@ -384,21 +508,21 @@ export const getContractorEarnings = async (): Promise<Earnings> => {
 export const getAllUsers = async (params: UserQueryParams): Promise<UsersResponse> => {
   const queryString = new URLSearchParams(params as any).toString();
   const authHeaders = await getAuthHeaders();
-  return get(`${API_BASE}/api/admin/users?${queryString}`, authHeaders);
+  return get(`${API_BASE}/admin/users?${queryString}`, authHeaders);
 };
 
 export const getAllContractors = async (params: ContractorQueryParams): Promise<ContractorsResponse> => {
   const queryString = new URLSearchParams(params as any).toString();
   const authHeaders = await getAuthHeaders();
-  return get(`${API_BASE}/api/admin/contractors?${queryString}`, authHeaders);
+  return get(`${API_BASE}/admin/contractors?${queryString}`, authHeaders);
 };
 
 export const getPlatformStats = async (): Promise<PlatformStats> => {
   const authHeaders = await getAuthHeaders();
-  return get(`${API_BASE}/api/admin/stats`, authHeaders);
+  return get(`${API_BASE}/admin/stats`, authHeaders);
 };
 
 export const createLead = async (leadData: any): Promise<any> => {
   const authHeaders = await getAuthHeaders();
-  return post(`${API_BASE}/api/leads`, leadData, authHeaders);
+  return post(`${API_BASE}/leads`, leadData, authHeaders);
 };

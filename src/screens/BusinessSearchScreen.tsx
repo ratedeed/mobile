@@ -2,693 +2,409 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   FlatList,
-  TouchableOpacity,
+  ScrollView,
+  Pressable,
   Image,
   ActivityIndicator,
   TextInput,
   RefreshControl,
-  ListRenderItemInfo,
-  StyleSheet,
   Text,
+  SafeAreaView,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { FontAwesome5 } from '@expo/vector-icons';
-import { browseContractors } from '../api/contractor';
+import { SvgImage } from '../components/common/SvgImage';
+import { CategoryIcon } from '../components/common/CategoryIcon';
+import { browseContractors } from '../api';
 import { Contractor } from '../types';
-import { Spacing, Radii, Colors, Shadows } from '../constants/designTokens';
-import Header from '../components/common/Header';
-import Card from '../components/common/Card';
-import Typography from '../components/common/Typography';
-import { SkeletonLoader } from '../components/common/SkeletonLoader';
-import { EmptyState } from '../components/common/EmptyState';
-import { Badge } from '../components/common/Badge';
+import { getCoverImageUrl, isSvgUrl } from '../utils/avatarUtils';
+import { getFavorites, addFavorite, removeFavorite } from '../utils/favoritesStore';
+
+// Categories matching web version (same as HomeScreen)
+const CATEGORIES = [
+  { id: 'all', label: 'All', icon: 'grid' },
+  { id: 'builders', label: 'Builders', icon: 'home' },
+  { id: 'plumbers', label: 'Plumbers', icon: 'droplets' },
+  { id: 'electricians', label: 'Electricians', icon: 'zap' },
+  { id: 'painters', label: 'Painters', icon: 'paintbrush' },
+  { id: 'landscape', label: 'Landscape', icon: 'trees' },
+  { id: 'hvac', label: 'HVAC', icon: 'wind' },
+  { id: 'roofers', label: 'Roofers', icon: 'warehouse' },
+  { id: 'cleaners', label: 'Cleaners', icon: 'sparkles' },
+  { id: 'handyman', label: 'Handyman', icon: 'wrench' },
+  { id: 'kitchen', label: 'Kitchens', icon: 'cooking-pot' },
+  { id: 'bathroom', label: 'Bathrooms', icon: 'bath' },
+];
 
 type RootStackParamList = {
   BusinessSearch: { query?: string; searchType?: string; name?: string };
-  BusinessDetail: { contractorId?: string; slug?: string };
+  BusinessDetail: { id?: string; contractorId?: string; slug?: string };
 };
 
 type BusinessSearchScreenRouteProp = RouteProp<RootStackParamList, 'BusinessSearch'>;
 type BusinessSearchScreenNavigationProp = StackNavigationProp<RootStackParamList, 'BusinessSearch'>;
 
-const CATEGORIES: string[] = [
-  'All',
-  'Home Builders',
-  'Plumbers',
-  'Electricians',
-  'Painters',
-  'Landscapers',
-  'Handymen',
-  'Roofers',
-  'HVAC',
-  'Carpenters',
-  'Cleaners',
-];
-
-export interface SortOption {
-  key: string;
-  label: string;
+// ---- Helpers ----
+function deriveLocation(c: Contractor): string {
+  const city = c.contactInfo?.city || (c as any).city || '';
+  const state = c.contactInfo?.state || (c as any).state || '';
+  if (city && state) return `${city}, ${state}`;
+  if (city || state) return city || state;
+  // Fallback: try location string or businessAddress
+  const loc = (c as any).location;
+  if (typeof loc === 'string' && loc.trim() && !loc.includes('{')) return loc.trim();
+  const addr = (c as any).businessAddress || c.contact?.address;
+  if (typeof addr === 'string' && addr.trim()) return addr.trim();
+  return '';
 }
 
-const SORT_OPTIONS: SortOption[] = [
-  { key: 'rating', label: 'Highest Rated' },
-  { key: 'reviews', label: 'Most Reviews' },
-  { key: 'distance', label: 'Nearest' },
-];
+function derivePrice(c: Contractor): string | null {
+  if (c.pricing) return c.pricing.split('–')[0]?.trim() || null;
+  if (c.servicesOffered?.length) {
+    const svc = c.servicesOffered[0];
+    if (typeof svc === 'object' && svc !== null) {
+      const range = (svc as any).priceEstimate || (svc as any).priceRange;
+      if (range) return range.split('–')[0]?.trim();
+    }
+  }
+  return null;
+}
 
+// ---- Listing Card (matches web) ----
+const ListingCard = React.memo(function ListingCard({
+  listing,
+  searchZip,
+  onPress,
+}: {
+  listing: Contractor;
+  searchZip: string;
+  onPress: () => void;
+}) {
+  const location = deriveLocation(listing);
+  const price = derivePrice(listing);
+  const rawImage = (listing as any).bannerUrl || listing.bannerImage || (listing as any).imageUrl || listing.profilePicture || '';
+  const coverImage = getCoverImageUrl(listing.companyName || listing.businessName || 'Contractor', rawImage, listing.category);
+  const distance = (listing as any).distance;
+
+  return (
+    <Pressable className="mb-4" onPress={onPress}>
+      <View className="relative rounded-xl overflow-hidden bg-neutral-100 dark:bg-neutral-900 aspect-square">
+        {isSvgUrl(coverImage) ? (
+          <View className="absolute inset-0 w-full h-full">
+            <SvgImage uri={coverImage} width="100%" height="100%" />
+          </View>
+        ) : coverImage ? (
+          <Image
+            source={{ uri: coverImage }}
+            className="absolute inset-0 w-full h-full"
+            resizeMode="cover"
+          />
+        ) : null}
+
+        {listing.isVerified && (
+          <View className="absolute top-2 left-2 bg-white dark:bg-neutral-950 rounded-full px-2 py-0.5 shadow-sm flex-row items-center" style={{ gap: 4 }}>
+            <FontAwesome5 name="shield-alt" size={10} color="#4F46E5" />
+            <Text className="text-[10px] font-bold text-neutral-900 dark:text-neutral-50">License Verified</Text>
+          </View>
+        )}
+        <View className="absolute top-2 right-2">
+          <FontAwesome5 name="heart" size={24} color="rgba(0,0,0,0.5)" />
+        </View>
+      </View>
+      <View className="mt-2">
+        <View className="flex-row items-start justify-between" style={{ gap: 4 }}>
+          <Text className="text-[14px] font-bold text-neutral-900 dark:text-neutral-50 leading-tight flex-1" numberOfLines={1}>
+            {listing.companyName || listing.businessName || 'Company'}
+          </Text>
+          <View className="flex-row items-center shrink-0" style={{ gap: 2 }}>
+            <FontAwesome5 name="star" solid size={12} color="#eab308" />
+            <Text className="text-xs font-bold text-slate-600">{(listing.averageRating || 0).toFixed(2)}</Text>
+          </View>
+        </View>
+        {location ? (
+          <Text className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5" numberOfLines={1}>
+            {location}
+          </Text>
+        ) : null}
+        {distance ? <Text className="text-[11px] text-neutral-400 dark:text-neutral-500 mt-0.5">{distance}</Text> : null}
+        {searchZip && listing.zipCodesCovered?.includes(searchZip) && (
+          <View className="flex-row items-center mt-0.5" style={{ gap: 2 }}>
+            <FontAwesome5 name="map-marker-alt" size={10} color="#059669" />
+            <Text className="text-[10px] font-semibold text-emerald-700">Serves your area</Text>
+          </View>
+        )}
+        {price && (
+          <Text className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-50 mt-0.5">
+            From {price} <Text className="font-normal text-neutral-500 dark:text-neutral-400">project</Text>
+          </Text>
+        )}
+      </View>
+    </Pressable>
+  );
+});
+
+// ---- SEARCH SCREEN ----
 const BusinessSearchScreen: React.FC = () => {
   const navigation = useNavigation<BusinessSearchScreenNavigationProp>();
   const route = useRoute<BusinessSearchScreenRouteProp>();
-  const { query, searchType, name } = route.params || {};
+  const { query, searchType, name: routeName } = route.params || {};
 
-  const [searchZip, setSearchZip] = useState<string>(query || '');
-  const [searchName, setSearchName] = useState<string>(name || '');
-  const [selectedCategory, setSelectedCategory] = useState<string>(
-    searchType === 'category' ? (query || '') : ''
+  const [searchZip, setSearchZip] = useState(query || '');
+  const [searchName, setSearchName] = useState(routeName || '');
+  const [activeCategory, setActiveCategory] = useState(
+    searchType === 'category' ? (query || 'all') : 'all'
   );
-  const [sortBy, setSortBy] = useState<string>('rating');
   const [contractors, setContractors] = useState<Contractor[]>([]);
-  const [page, setPage] = useState<number>(1);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [loadingMore, setLoadingMore] = useState<boolean>(false);
-  const [hasMore, setHasMore] = useState<boolean>(true);
-  const [totalResults, setTotalResults] = useState<number>(0);
-  const [refreshing, setRefreshing] = useState<boolean>(false);
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [totalResults, setTotalResults] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+  const isFirstRender = useRef(true);
 
-  const isFirstRender = useRef<boolean>(true);
+  const fetchContractors = useCallback(async (pageNum = 1, append = false) => {
+    try {
+      if (pageNum === 1) setLoading(true);
+      else setLoadingMore(true);
 
-  const fetchContractors = useCallback(
-    async (pageNum: number = 1, append: boolean = false) => {
-      try {
-        if (pageNum === 1) {
-          setLoading(true);
-        } else {
-          setLoadingMore(true);
-        }
+      const filters: any = { page: pageNum, limit: 20, sortBy: 'rating' };
 
-        const filters: any = {
-          page: pageNum,
-          limit: 20,
-          sortBy: sortBy,
-        };
-
-        // Use zip code if provided, otherwise use name search
-        if (searchZip && /^\d{5}$/.test(searchZip)) {
-          filters.zip = searchZip;
-        } else if (searchName) {
-          filters.search = searchName;
-        } else if (searchZip) {
-          filters.search = searchZip;
-        }
-
-        if (selectedCategory && selectedCategory !== 'All') {
-          filters.category = selectedCategory;
-        }
-
-        const data = await browseContractors(filters);
-
-        if (append) {
-          setContractors(prev => [...prev, ...(data.contractors || [])]);
-        } else {
-          setContractors(data.contractors || []);
-        }
-
-        setTotalResults(data.total || 0);
-        setHasMore(data.page < data.pages);
-        setPage(pageNum);
-      } catch (error) {
-        console.error('Error fetching contractors:', error);
-        if (!append) {
-          setContractors([]);
-          setTotalResults(0);
-        }
-      } finally {
-        setLoading(false);
-        setLoadingMore(false);
-        setRefreshing(false);
+      if (searchZip) {
+        filters.zipCode = searchZip;
       }
-    },
-    [searchZip, searchName, selectedCategory, sortBy]
-  );
+      
+      if (searchName) {
+        filters.name = searchName;
+      }
+
+      if (activeCategory !== 'all') {
+        const cat = CATEGORIES.find(c => c.id === activeCategory);
+        if (cat) filters.type = cat.label;
+      }
+
+      const data: any = await browseContractors(filters);
+      const list = data?.contractors || data?.data || (Array.isArray(data) ? data : []);
+
+      if (append) {
+        setContractors(prev => [...prev, ...list]);
+      } else {
+        setContractors(list);
+      }
+      setTotalResults(data?.total || list.length);
+      setHasMore(data?.page < (data?.pages || 1));
+      setPage(pageNum);
+    } catch (error) {
+      console.error('Error fetching contractors:', error);
+      if (!append) { setContractors([]); setTotalResults(0); }
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+      setRefreshing(false);
+    }
+  }, [searchZip, searchName, activeCategory]);
 
   useEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false;
+      fetchContractors(1);
       return;
     }
-    fetchContractors(1, false);
-  }, [selectedCategory, sortBy, fetchContractors]);
+    fetchContractors(1);
+  }, [activeCategory, fetchContractors]);
 
   useEffect(() => {
-    const debounceTimer = setTimeout(() => {
-      if (!isFirstRender.current) {
-        fetchContractors(1, false);
-      }
+    const timer = setTimeout(() => {
+      if (!isFirstRender.current) fetchContractors(1);
     }, 500);
-    return () => clearTimeout(debounceTimer);
+    return () => clearTimeout(timer);
   }, [searchZip, searchName, fetchContractors]);
 
-  const handleSearch = () => {
-    fetchContractors(1, false);
-  };
-
   const handleLoadMore = () => {
-    if (!loadingMore && hasMore) {
-      fetchContractors(page + 1, true);
-    }
+    if (!loadingMore && hasMore) fetchContractors(page + 1, true);
   };
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    fetchContractors(1, false);
+  const onRefresh = () => { setRefreshing(true); fetchContractors(1); };
+
+  const handleCategorySelect = (catId: string) => {
+    setActiveCategory(catId);
   };
 
-  const handleCategorySelect = (category: string) => {
-    setSelectedCategory(category === 'All' ? '' : category);
-    setSearchZip('');
-    setSearchName('');
-  };
-
-  const renderStarRating = (rating?: number) => {
-    if (!rating) return null;
-    const fullStars = Math.floor(rating);
-    const hasHalf = rating % 1 >= 0.5;
-
-    return (
-      <View style={styles.starsContainer}>
-        {[1, 2, 3, 4, 5].map((i) => (
-          <FontAwesome5
-            key={i}
-            name={i <= fullStars ? 'star' : i === fullStars + 1 && hasHalf ? 'star-half-alt' : 'star'}
-            solid={i <= fullStars}
-            size={12}
-            color="#f59e0b"
-            style={styles.starIcon}
-          />
-        ))}
-      </View>
-    );
-  };
-
-  const renderContractorCard = ({ item }: ListRenderItemInfo<Contractor>) => (
-    <TouchableOpacity
-      style={styles.listingCard}
-      onPress={() => {
-        if (item._id) {
-          navigation.navigate('BusinessDetail', { contractorId: item._id });
-        } else if (item.slug) {
-          navigation.navigate('BusinessDetail', { slug: item.slug });
-        }
-      }}
-      activeOpacity={0.8}
-    >
-      <View style={styles.imageContainer}>
-        <Image
-          source={{ uri: item.profilePicture || 'https://via.placeholder.com/200' }}
-          style={styles.contractorImage}
-          resizeMode="cover"
-        />
-        {item.isVerified && (
-          <View style={styles.verifiedBadge}>
-            <FontAwesome5 name="shield-alt" size={10} color="#4F46E5" />
-            <Text style={styles.verifiedText}>Verified</Text>
-          </View>
-        )}
-        <TouchableOpacity style={styles.favoriteButton}>
-          <FontAwesome5 name="heart" size={16} color="rgba(0,0,0,0.5)" />
-        </TouchableOpacity>
-      </View>
-      <View style={styles.cardContent}>
-        <View style={styles.cardHeader}>
-          <Text style={styles.companyName} numberOfLines={1}>
-            {item.companyName}
-          </Text>
-          <View style={styles.ratingContainer}>
-            <FontAwesome5 name="star" size={10} color="#111827" />
-            <Text style={styles.ratingText}>
-              {item.averageRating?.toFixed(2) || '0.00'}
-            </Text>
-          </View>
-        </View>
-        <Text style={styles.categoryText}>
-          {item.category || 'General Contractor'}
-        </Text>
-        <View style={styles.ratingRow}>
-          {renderStarRating(item.averageRating)}
-          <Text style={styles.reviewCount}>
-            ({item.numReviews || 0})
-          </Text>
-        </View>
-        {item.pricing && (
-          <Text style={styles.pricingText}>{item.pricing}</Text>
-        )}
-        {item.contactInfo?.city && (
-          <View style={styles.locationRow}>
-            <FontAwesome5 name="map-marker-alt" size={10} color="#6b7280" />
-            <Text style={styles.locationText}>
-              {item.contactInfo.city}, {item.contactInfo.state}
-            </Text>
-          </View>
-        )}
-      </View>
-    </TouchableOpacity>
-  );
-
-  const renderFooter = () => {
-    if (!loadingMore) return null;
-    return (
-      <View style={styles.footerLoader}>
-        <ActivityIndicator size="small" color="#4F46E5" />
-      </View>
-    );
-  };
-
-  const renderHeader = () => (
-    <View style={styles.listHeader}>
-      <Text style={styles.resultsCount}>
-        {totalResults} contractor{totalResults !== 1 ? 's' : ''} found
-      </Text>
-      <View style={styles.sortContainer}>
-        <Text style={styles.sortLabel}>Sort:</Text>
-        {SORT_OPTIONS.map((option) => (
-          <TouchableOpacity
-            key={option.key}
-            style={[
-              styles.sortOption,
-              sortBy === option.key && styles.sortOptionActive
-            ]}
-            onPress={() => setSortBy(option.key)}
-          >
-            <Text
-              style={[
-                styles.sortOptionText,
-                sortBy === option.key && styles.sortOptionTextActive
-              ]}
-            >
-              {option.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-    </View>
-  );
-
-  if (loading && contractors.length === 0) {
-    return (
-      <View style={styles.container}>
-        <Header title="Search Contractors" showBackButton />
-        <View style={styles.loadingContainer}>
-          <View style={styles.gridContainer}>
-            {[1, 2, 3, 4].map((i) => (
-              <View key={i} style={styles.skeletonCard}>
-                <View style={styles.skeletonImage} />
-                <View style={styles.skeletonText}>
-                  <View style={styles.skeletonLine} />
-                  <View style={styles.skeletonLineShort} />
-                </View>
-              </View>
-            ))}
-          </View>
-        </View>
-      </View>
-    );
-  }
-
-  const categoryListData = [{ key: 'categories' }, ...CATEGORIES.map((c) => ({ key: c }))];
-
-  return (
-    <View style={styles.container}>
-      <Header title="Search Contractors" showBackButton />
-
-      {/* Split Search Bar - Design from reference */}
-      <View style={styles.searchSection}>
-        <TouchableOpacity 
-          style={styles.searchButton}
-          onPress={handleSearch}
-        >
-          <View style={styles.searchField}>
-            <Text style={styles.searchFieldLabel}>Zip code</Text>
-            <TextInput
-              style={styles.searchFieldInput}
-              placeholder="Enter zip"
-              placeholderTextColor="#9ca3af"
-              value={searchZip}
-              onChangeText={setSearchZip}
-              keyboardType="numeric"
-              maxLength={5}
-            />
-          </View>
-          <View style={styles.searchFieldDivider} />
-          <View style={styles.searchFieldRight}>
-            <Text style={styles.searchFieldLabel}>Name</Text>
-            <TextInput
-              style={styles.searchFieldInput}
-              placeholder="Contractor name..."
-              placeholderTextColor="#9ca3af"
-              value={searchName}
-              onChangeText={setSearchName}
-            />
-          </View>
-          <View style={styles.searchIconContainer}>
-            <FontAwesome5 name="search" size={14} color="#FFFFFF" />
-          </View>
-        </TouchableOpacity>
-      </View>
-
-      {/* Category Bar */}
-      <FlatList
-        data={categoryListData}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.categoryScroll}
-        keyExtractor={(item) => item.key}
-        renderItem={({ item }) => {
-          if (item.key === 'categories') {
-            return null;
-          }
-          const isSelected = (selectedCategory === '' && item.key === 'All') || selectedCategory === item.key;
-          return (
-            <TouchableOpacity
-              style={[
-                styles.categoryChip,
-                isSelected && styles.categoryChipActive
-              ]}
-              onPress={() => handleCategorySelect(item.key)}
-            >
-              <Text
-                style={[
-                  styles.categoryChipText,
-                  isSelected && styles.categoryChipTextActive
-                ]}
-              >
-                {item.key}
-              </Text>
-            </TouchableOpacity>
-          );
+  const renderCard = ({ item }: { item: Contractor }) => (
+    <View className="w-[48%]">
+      <ListingCard
+        listing={item}
+        searchZip={searchZip}
+        onPress={() => {
+          if (item.slug) navigation.navigate('BusinessDetail', { slug: item.slug });
+          else if (item._id) navigation.navigate('BusinessDetail', { id: item._id });
         }}
       />
-
-      <View style={styles.divider} />
-
-      {/* Results List */}
-      <FlatList
-        data={contractors}
-        renderItem={renderContractorCard}
-        keyExtractor={(item) => item._id || item.slug || Math.random().toString()}
-        numColumns={2}
-        columnWrapperStyle={styles.row}
-        contentContainerStyle={styles.listContainer}
-        ListHeaderComponent={contractors.length > 0 ? renderHeader : null}
-        ListEmptyComponent={
-          <EmptyState
-            title="No contractors found"
-            message="Try adjusting your search or filters"
-            icon="search"
-          />
-        }
-        ListFooterComponent={renderFooter}
-        onEndReached={handleLoadMore}
-        onEndReachedThreshold={0.3}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-      />
     </View>
   );
-};
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  loadingContainer: {
-    flex: 1,
-    padding: 16,
-  },
-  searchSection: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 8,
-    backgroundColor: '#f9fafb',
-  },
-  searchButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 999,
-    overflow: 'hidden',
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  searchField: {
-    flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-  },
-  searchFieldDivider: {
-    width: 1,
-    height: '100%',
-    backgroundColor: '#e5e7eb',
-  },
-  searchFieldRight: {
-    flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-  },
-  searchFieldLabel: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#6b7280',
-    marginBottom: 2,
-  },
-  searchFieldInput: {
-    fontSize: 14,
-    color: '#111827',
-    padding: 0,
-  },
-  searchIconContainer: {
-    backgroundColor: '#4F46E5',
-    borderRadius: 999,
-    padding: 10,
-    marginRight: 6,
-  },
-  categoryScroll: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 8,
-  },
-  categoryChip: {
-    backgroundColor: '#f3f4f6',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 999,
-    marginRight: 8,
-  },
-  categoryChipActive: {
-    backgroundColor: '#4F46E5',
-  },
-  categoryChipText: {
-    color: '#6b7280',
-    fontWeight: '500',
-    fontSize: 14,
-  },
-  categoryChipTextActive: {
-    color: '#FFFFFF',
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#e5e7eb',
-  },
-  listContainer: {
-    padding: 16,
-    flexGrow: 1,
-  },
-  listHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 8,
-    marginBottom: 12,
-  },
-  resultsCount: {
-    color: '#6b7280',
-    fontSize: 14,
-  },
-  sortContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  sortLabel: {
-    color: '#6b7280',
-    fontSize: 12,
-    marginRight: 4,
-  },
-  sortOption: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-  },
-  sortOptionActive: {
-    backgroundColor: 'rgba(79, 70, 229, 0.1)',
-  },
-  sortOptionText: {
-    color: '#6b7280',
-    fontSize: 12,
-  },
-  sortOptionTextActive: {
-    color: '#4F46E5',
-    fontWeight: '600',
-  },
-  row: {
-    justifyContent: 'space-between',
-  },
-  // Listing Card styles from reference
-  listingCard: {
-    width: '48%',
-    marginBottom: 16,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  imageContainer: {
-    position: 'relative',
-    aspectRatio: 1,
-    backgroundColor: '#f3f4f6',
-  },
-  contractorImage: {
-    width: '100%',
-    height: '100%',
-  },
-  verifiedBadge: {
-    position: 'absolute',
-    top: 8,
-    left: 8,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 999,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 1,
-    elevation: 1,
-  },
-  verifiedText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#111827',
-    marginLeft: 4,
-  },
-  favoriteButton: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-  },
-  cardContent: {
-    padding: 10,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  companyName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#111827',
-    flex: 1,
-  },
-  ratingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-  },
-  ratingText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#111827',
-  },
-  categoryText: {
-    fontSize: 12,
-    color: '#6b7280',
-    marginTop: 2,
-  },
-  ratingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  starsContainer: {
-    flexDirection: 'row',
-  },
-  starIcon: {
-    marginRight: 2,
-  },
-  reviewCount: {
-    fontSize: 10,
-    color: '#6b7280',
-    marginLeft: 4,
-  },
-  pricingText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#4F46E5',
-    marginTop: 4,
-  },
-  locationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
-    gap: 4,
-  },
-  locationText: {
-    fontSize: 11,
-    color: '#6b7280',
-  },
-  // Skeleton styles
-  gridContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  skeletonCard: {
-    width: '48%',
-    marginBottom: 16,
-  },
-  skeletonImage: {
-    aspectRatio: 1,
-    backgroundColor: '#f3f4f6',
-    borderRadius: 12,
-  },
-  skeletonText: {
-    padding: 10,
-    gap: 6,
-  },
-  skeletonLine: {
-    height: 12,
-    backgroundColor: '#f3f4f6',
-    borderRadius: 4,
-    width: '75%',
-  },
-  skeletonLineShort: {
-    height: 12,
-    backgroundColor: '#f3f4f6',
-    borderRadius: 4,
-    width: '50%',
-  },
-  footerLoader: {
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-});
+  const hasSearch = searchZip.trim().length > 0 || searchName.trim().length > 0 || activeCategory !== 'all';
+
+  return (
+    <SafeAreaView className="flex-1 bg-white dark:bg-neutral-950">
+      {/* Search Header */}
+      <View className="bg-white dark:bg-neutral-950 border-b border-neutral-200 dark:border-neutral-700 px-4 py-3">
+        <View className="flex-row items-center" style={{ gap: 8 }}>
+          {/* Back Button */}
+          <Pressable onPress={() => navigation.goBack()} className="w-8 h-8 items-center justify-center">
+            <FontAwesome5 name="chevron-left" size={18} color="#171717" />
+          </Pressable>
+
+          {/* Zip Code Input */}
+          <View className="flex-1 relative">
+            <FontAwesome5 name="map-marker-alt" size={14} color="#a3a3a3" style={{ position: 'absolute', left: 12, top: 13, zIndex: 1 }} />
+            <TextInput
+              value={searchZip}
+              onChangeText={text => { setSearchZip(text); setActiveCategory('all'); }}
+              onSubmitEditing={() => fetchContractors(1)}
+              placeholder="Zip code"
+              placeholderTextColor="#a3a3a3"
+              keyboardType="numeric"
+              maxLength={10}
+              className="bg-neutral-100 dark:bg-neutral-900 dark:text-neutral-50 rounded-full pl-10 pr-9 py-2.5 text-sm"
+            />
+
+            {searchZip ? (
+              <Pressable onPress={() => setSearchZip('')} className="absolute right-3 top-3">
+                <FontAwesome5 name="times" size={14} color="#a3a3a3" />
+              </Pressable>
+            ) : null}
+          </View>
+
+          {/* Divider */}
+          <View className="w-px h-6 bg-neutral-200 dark:bg-neutral-800" />
+
+          {/* Name Input */}
+          <View className="flex-1 relative">
+            <FontAwesome5 name="building" size={14} color="#a3a3a3" style={{ position: 'absolute', left: 12, top: 13, zIndex: 1 }} />
+            <TextInput
+              value={searchName}
+              onChangeText={text => { setSearchName(text); setActiveCategory('all'); }}
+              onSubmitEditing={() => fetchContractors(1)}
+              placeholder="Contractor name..."
+              placeholderTextColor="#a3a3a3"
+              className="bg-neutral-100 dark:bg-neutral-900 dark:text-neutral-50 rounded-full pl-10 pr-9 py-2.5 text-sm"
+            />
+
+            {searchName ? (
+              <Pressable onPress={() => setSearchName('')} className="absolute right-3 top-3">
+                <FontAwesome5 name="times" size={14} color="#a3a3a3" />
+              </Pressable>
+            ) : null}
+          </View>
+
+          {/* Search Button */}
+          <Pressable
+            onPress={() => fetchContractors(1)}
+            className="bg-indigo-600 rounded-full p-2.5 shrink-0"
+          >
+            <FontAwesome5 name="search" size={14} color="#fff" />
+          </Pressable>
+        </View>
+      </View>
+
+      {/* Category Pills */}
+      <View>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          className="px-4 py-3"
+          contentContainerStyle={{ gap: 16, alignItems: 'center', paddingRight: 40 }}
+        >
+          {CATEGORIES.map(cat => {
+            const isActive = activeCategory === cat.id;
+
+            return (
+              <Pressable
+                key={cat.id}
+                onPress={() => handleCategorySelect(cat.id)}
+                className="flex-col items-center shrink-0 pt-1.5 pb-1.5 min-w-[60px]"
+                style={{ gap: 6 }}
+              >
+                <CategoryIcon name={cat.icon} active={isActive} size={48} />
+                <Text className={`text-[10px] font-semibold whitespace-nowrap ${
+                  isActive ? 'text-neutral-900 dark:text-neutral-50' : 'text-neutral-500 dark:text-neutral-400'
+                }`}>
+                  {cat.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      </View>
+
+      <View className="h-px bg-neutral-200 dark:bg-neutral-800" />
+
+      {/* Results Info */}
+      <View className="px-4 py-2">
+        <Text className="text-sm text-neutral-500 dark:text-neutral-400">
+          {hasSearch
+            ? loading && contractors.length === 0
+              ? 'Searching...'
+              : `${contractors.length} result${contractors.length !== 1 ? 's' : ''} found`
+            : 'Search by zip code or contractor name'}
+        </Text>
+      </View>
+
+      {/* Loading State */}
+      {loading && contractors.length === 0 ? (
+        <View className="flex-1 items-center justify-center py-20">
+          <ActivityIndicator size="large" color="#a3a3a3" />
+          <Text className="text-sm text-neutral-500 dark:text-neutral-400 mt-3">Searching contractors...</Text>
+        </View>
+      ) : contractors.length > 0 ? (
+        <FlatList
+          data={contractors}
+          renderItem={renderCard}
+          keyExtractor={item => item._id || item.slug || Math.random().toString()}
+          numColumns={2}
+          columnWrapperStyle={{ justifyContent: 'space-between' }}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 100 }}
+          ListFooterComponent={
+            hasMore ? (
+              <View className="py-8 items-center">
+                <Pressable
+                  onPress={handleLoadMore}
+                  disabled={loadingMore}
+                  className="flex-row items-center px-6 py-3 border border-neutral-200 dark:border-neutral-700 rounded-xl"
+                  style={{ gap: 8 }}
+                >
+                  {loadingMore ? (
+                    <ActivityIndicator size="small" color="#171717" />
+                  ) : (
+                    <FontAwesome5 name="chevron-down" size={14} color="#171717" />
+                  )}
+                  <Text className="text-sm font-semibold text-neutral-900 dark:text-neutral-50">
+                    {loadingMore ? 'Loading...' : 'Load More'}
+                  </Text>
+                </Pressable>
+              </View>
+            ) : null
+          }
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.3}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        />
+      ) : hasSearch ? (
+        <View className="flex-1 items-center justify-center py-20">
+          <FontAwesome5 name="search" size={48} color="#d4d4d4" />
+          <Text className="font-semibold text-neutral-900 dark:text-neutral-50 mt-3">No results found</Text>
+          <Text className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">Try a different zip code, name, or category</Text>
+        </View>
+      ) : (
+        <View className="flex-1 items-center justify-center py-20">
+          <FontAwesome5 name="map-marker-alt" size={48} color="#d4d4d4" />
+          <Text className="text-neutral-500 dark:text-neutral-400 text-sm mt-3">Enter a zip code or contractor name to search</Text>
+        </View>
+      )}
+    </SafeAreaView>
+  );
+};
 
 export default BusinessSearchScreen;

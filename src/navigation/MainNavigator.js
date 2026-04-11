@@ -2,8 +2,17 @@ import React from 'react';
 import { createStackNavigator, CardStyleInterpolators } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { FontAwesome5 } from '@expo/vector-icons';
-import { Image, View, TouchableOpacity } from 'react-native';
+import { Image, View, TouchableOpacity, Text as RNText } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useColorScheme } from 'nativewind';
+import { 
+  MagnifyingGlass, 
+  Heart, 
+  Briefcase, 
+  ChatCircle, 
+  User as UserIcon,
+  Bell
+} from 'phosphor-react-native';
 
 import HomeScreen from '../screens/HomeScreen';
 import BusinessSearchScreen from '../screens/BusinessSearchScreen';
@@ -12,12 +21,48 @@ import MessagesScreen from '../screens/MessagesScreen';
 import ContractorDashboardScreen from '../screens/ContractorDashboardScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
+import ActiveJobsScreen from '../screens/ActiveJobsScreen';
+import PaymentFlowScreen from '../screens/PaymentFlowScreen';
+import SavedScreen from '../screens/SavedScreen';
 
 import Typography from '../components/common/Typography';
 import { useAuth } from '../context/AuthContext';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
+
+// ---- Custom Center Tab Button ----
+const JobsTabBarButton = ({ onPress }: { onPress: () => void }) => (
+  <TouchableOpacity
+    onPress={onPress}
+    activeOpacity={0.8}
+    style={{
+      top: -24,
+      justifyContent: 'center',
+      alignItems: 'center',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.2,
+      shadowRadius: 10,
+      elevation: 8
+    }}
+  >
+    <View
+      style={{
+        width: 68,
+        height: 68,
+        borderRadius: 34,
+        backgroundColor: '#171717',
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: 2
+      }}
+    >
+      <Briefcase size={28} color="#FFF" weight="fill" />
+      <RNText style={{ color: '#FFF', fontSize: 10, fontWeight: '700' }}>Jobs</RNText>
+    </View>
+  </TouchableOpacity>
+);
 
 const screenOptions = {
   headerStyle: {
@@ -42,68 +87,65 @@ const screenOptions = {
 function MainTabNavigator() {
   const insets = useSafeAreaInsets();
   const { userRole } = useAuth();
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
 
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         tabBarIcon: ({ focused, color, size }) => {
-          let iconName;
-          if (route.name === 'Home') {
-            iconName = 'home';
-          } else if (route.name === 'Search') {
-            iconName = 'search';
+          const weight = focused ? 'fill' : 'regular';
+          if (route.name === 'Explore') {
+            return <MagnifyingGlass size={24} color={color} weight={focused ? 'bold' : 'regular'} />;
+          } else if (route.name === 'Saved') {
+            return <Heart size={24} color={color} weight={weight} />;
           } else if (route.name === 'Messages') {
-            iconName = 'comments';
+            return <ChatCircle size={24} color={color} weight={weight} />;
           } else if (route.name === 'Profile') {
-            iconName = 'user-circle';
-          } else if (route.name === 'Dashboard') {
-            iconName = 'chart-bar';
+            return <UserIcon size={24} color={color} weight={weight} />;
           }
-          return <FontAwesome5 name={iconName} size={size} color={color} solid={focused} />;
+          return null;
         },
-        tabBarActiveTintColor: '#2563EB', // shadcn primary
-        tabBarInactiveTintColor: '#71717A', // shadcn muted foreground
+        tabBarActiveTintColor: isDark ? '#FFFFFF' : '#171717',
+        tabBarInactiveTintColor: isDark ? '#A3A3A3' : '#737373',
         tabBarStyle: {
-          backgroundColor: '#FFFFFF',
+          backgroundColor: isDark ? '#0A0A0A' : '#FFFFFF',
           borderTopWidth: 1,
-          borderTopColor: '#E4E4E7',
-          height: 60 + insets.bottom,
-          paddingBottom: insets.bottom + 8,
-          paddingTop: 8,
+          borderTopColor: isDark ? '#262626' : '#F0F0F0',
+          height: 64 + insets.bottom,
+          paddingBottom: insets.bottom + 4,
+          paddingTop: 10,
           elevation: 0,
           shadowOpacity: 0,
         },
         tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '500',
-          marginTop: 4,
-        },
-        headerStyle: {
-          backgroundColor: '#FFFFFF',
-          borderBottomWidth: 1,
-          borderBottomColor: '#E4E4E7',
-          shadowOpacity: 0,
-          elevation: 0,
-        },
-        headerTitleStyle: {
+          fontSize: 11,
           fontWeight: '600',
-          fontSize: 18,
-          color: '#09090B',
+          marginTop: 2,
         },
+        headerShown: false,
       })}
     >
       <Tab.Screen
-        name="Home"
+        name="Explore"
         component={HomeScreen}
         options={({ navigation }) => ({
-          title: 'Home',
+          title: 'Explore',
+          headerShown: true,
+          headerStyle: {
+            backgroundColor: isDark ? '#0A0A0A' : '#FFFFFF',
+            borderBottomWidth: 1,
+            borderBottomColor: isDark ? '#262626' : '#E4E4E7',
+            shadowOpacity: 0,
+            elevation: 0,
+          },
           headerLeft: () => (
             <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 16 }}>
               <Image
                 source={require('../../assets/faviiocon.png')}
                 style={{ width: 28, height: 28, marginRight: 8, borderRadius: 6 }}
               />
-              <Typography variant="h4" style={{ color: '#09090B' }}>Ratedeed</Typography>
+              <Typography variant="h4" style={{ color: isDark ? '#FAFAFA' : '#09090B' }}>Ratedeed</Typography>
             </View>
           ),
           headerTitle: '',
@@ -112,32 +154,33 @@ function MainTabNavigator() {
               style={{ marginRight: 16, padding: 8 }}
               onPress={() => navigation.navigate('Notifications')}
             >
-              <FontAwesome5 name="bell" size={20} color="#09090B" />
+              <Bell size={22} color={isDark ? '#FAFAFA' : '#09090B'} />
             </TouchableOpacity>
           ),
         })}
       />
       <Tab.Screen
-        name="Search"
-        component={BusinessSearchScreen}
-        options={{ title: 'Search', headerShown: false }}
+        name="Saved"
+        component={SavedScreen}
+        options={{ title: 'Saved' }}
+      />
+      <Tab.Screen
+        name="Jobs"
+        component={ActiveJobsScreen}
+        options={{
+          title: '', // Hide label for the center button as it's built-in
+          tabBarButton: (props) => <JobsTabBarButton {...props} />
+        }}
       />
       <Tab.Screen
         name="Messages"
         component={MessagesScreen}
-        options={{ title: 'Messages', headerShown: false }}
+        options={{ title: 'Messages' }}
       />
-      {userRole === 'contractor' && (
-        <Tab.Screen
-          name="Dashboard"
-          component={ContractorDashboardScreen}
-          options={{ title: 'Dashboard', headerShown: false }}
-        />
-      )}
       <Tab.Screen
         name="Profile"
         component={ProfileScreen}
-        options={{ title: 'Profile', headerShown: false }}
+        options={{ title: 'Profile' }}
       />
     </Tab.Navigator>
   );
@@ -151,6 +194,8 @@ export default function MainNavigator() {
       <Stack.Screen name="ContractorDashboard" component={ContractorDashboardScreen} options={{ title: '' }} />
       <Stack.Screen name="Notifications" component={NotificationsScreen} />
       <Stack.Screen name="ChatScreen" component={MessagesScreen} options={{ title: 'Chat' }} />
+      <Stack.Screen name="ActiveJobs" component={ActiveJobsScreen} options={{ title: '', headerShown: false }} />
+      <Stack.Screen name="PaymentFlow" component={PaymentFlowScreen} options={{ title: '', headerShown: false }} />
     </Stack.Navigator>
   );
 }

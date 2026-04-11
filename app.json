@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "icon": "./icon.png",
     "newArchEnabled": true,
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "splash": {
       "image": "./hammer-solid.png",
       "resizeMode": "contain",
@@ -38,7 +38,15 @@
     "plugins": [
       "expo-secure-store",
       "@react-native-firebase/app",
-      "@sentry/react-native/expo",
+      [
+        "@sentry/react-native/expo",
+        {
+          "organization": "ratedeed",
+          "project": "ratedeed-mobile",
+          "setCommits": false,
+          "uploadSourceMaps": false
+        }
+      ],
       [
         "expo-camera",
         {
@@ -58,7 +66,6 @@
           "color": "#ffffff"
         }
       ],
-      "@sentry/react-native",
       [
         "expo-build-properties",
         {

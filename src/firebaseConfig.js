@@ -25,7 +25,6 @@ const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 // Initialize Firebase Authentication:
 // Configures Firebase Auth to use React Native's AsyncStorage for persistence.
 // This ensures user sessions are maintained across app restarts.
-console.log('firebaseConfig: Checking AsyncStorage availability for persistence:', typeof AsyncStorage);
 const auth = initializeAuth(app, {
   persistence: getReactNativePersistence(AsyncStorage),
 });

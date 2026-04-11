@@ -32,6 +32,21 @@ exports.registerUser = async (req, res) => {
       isVerified: false // Default to false
     });
 
+    // If registered via Firebase, we skip backend email verification 
+    // because Firebase handles its own email verification.
+    if (firebaseUid) {
+      return res.status(201).json({
+        message: 'User registered successfully. Please check your email for a verification link from Firebase.',
+        user: {
+          id: user._id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          isVerified: user.isVerified
+        }
+      });
+    }
+
     // Generate verification token and set expiry
     const verificationToken = user.getVerificationToken(); // Method defined in User model
     await user.save(); // Save user with token and expiry
