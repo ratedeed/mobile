@@ -237,29 +237,19 @@ const LoginScreen = () => {
           </Pressable>
 
           {/* Sign Up Link */}
-          <View className="items-center pt-4">
-            <Text className="text-sm text-neutral-500">
-              Don't have an account?{' '}
-              <Text
-                className="font-semibold text-neutral-900 underline"
-                onPress={() => navigation.navigate('Register')}
-              >
-                Sign Up
-              </Text>
-            </Text>
+          <View className="items-center pt-4 flex-row justify-center" style={{ gap: 4 }}>
+            <Text className="text-sm text-neutral-500">Don't have an account?</Text>
+            <Pressable onPress={() => navigation.navigate('Register')}>
+              <Text className="text-sm font-semibold text-neutral-900 underline">Sign Up</Text>
+            </Pressable>
           </View>
 
           {/* Contractor Link */}
-          <View className="items-center">
-            <Text className="text-sm text-neutral-500">
-              Are you a contractor?{' '}
-              <Text
-                className="font-semibold text-neutral-900 underline"
-                onPress={() => navigation.navigate('ContractorSignup')}
-              >
-                Sign Up as a Contractor
-              </Text>
-            </Text>
+          <View className="items-center pt-2 flex-row justify-center" style={{ gap: 4 }}>
+            <Text className="text-sm text-neutral-500">Are you a contractor?</Text>
+            <Pressable onPress={() => navigation.navigate('ContractorSignup')}>
+              <Text className="text-sm font-semibold text-neutral-900 underline">Sign Up as a Contractor</Text>
+            </Pressable>
           </View>
         </View>
       </ScrollView>

@@ -72,6 +72,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = useCallback(async () => {
     await AsyncStorage.removeItem('userInfo');
+    await AsyncStorage.removeItem('ratedeed-current-user');
     setBackendToken(null);
     setUserId(null);
     setFirebaseUser(null);
@@ -85,6 +86,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const userInfo = currentUserInfo ? JSON.parse(currentUserInfo) : {};
       const updated = { ...userInfo, ...userData };
       await AsyncStorage.setItem('userInfo', JSON.stringify(updated));
+      await AsyncStorage.setItem('ratedeed-current-user', JSON.stringify(updated));
       
       if (userData.role) {
         setUserRole(userData.role as UserRole);
@@ -112,6 +114,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     await AsyncStorage.setItem('userInfo', JSON.stringify(userInfo));
+    await AsyncStorage.setItem('ratedeed-current-user', JSON.stringify(userInfo));
     setBackendToken(token);
     setIsEmailVerified(emailVerifiedStatus);
     if (userInfo._id || userInfo.id || decodedId) {

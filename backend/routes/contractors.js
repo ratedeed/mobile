@@ -11,12 +11,12 @@ const { protect } = require('../middleware/authMiddleware');
 // @route   GET /api/contractors
 // @access  Public
 router.get('/', asyncHandler(async (req, res) => {
-  const { zipCode, type, name, isFeatured } = req.query;
+  const { zipCode, zip, type, name, isFeatured } = req.query;
+  const searchZip = zipCode || zip;
   let query = {};
   let sort = {};
   let limit = 0;
 
-  if (zipCode) query.zipCode = zipCode;
   if (type) query.category = type;
   if (name) {
     query.businessName = { $regex: name.toLowerCase(), $options: 'i' };
@@ -29,10 +29,48 @@ router.get('/', asyncHandler(async (req, res) => {
   }
 
   try {
-    let contractorsQuery = Contractor.find(query);
-    if (Object.keys(sort).length > 0) contractorsQuery = contractorsQuery.sort(sort);
-    if (limit > 0) contractorsQuery = contractorsQuery.limit(limit);
-    const contractors = await contractorsQuery;
+    let contractors;
+
+    if (searchZip) {
+      // Priority 1: exact zip match OR contractors who serve that zip
+      const exactQuery = { ...query, $or: [
+        { zipCode: searchZip },
+        { zipCodesCovered: searchZip },
+      ]};
+      contractors = await Contractor.find(exactQuery).sort(sort).limit(limit || 0);
+
+      // Priority 2: if not enough, expand to zip prefix (first 3 digits = same local area)
+      if (contractors.length < 16) {
+        const prefix = searchZip.slice(0, 3);
+        const seenIds = new Set(contractors.map(c => c._id.toString()));
+        const prefixQuery = { ...query, zipCode: { $regex: `^${prefix}` } };
+        const prefixResults = await Contractor.find(prefixQuery).sort(sort).limit(limit || 0);
+        for (const c of prefixResults) {
+          if (!seenIds.has(c._id.toString())) {
+            contractors.push(c);
+            seenIds.add(c._id.toString());
+          }
+        }
+      }
+
+      // Priority 3: if still not enough, expand to zip prefix (first 2 digits = wider region)
+      if (contractors.length < 16) {
+        const widePrefix = searchZip.slice(0, 2);
+        const seenIds = new Set(contractors.map(c => c._id.toString()));
+        const wideQuery = { ...query, zipCode: { $regex: `^${widePrefix}` } };
+        const wideResults = await Contractor.find(wideQuery).sort(sort).limit(limit || 0);
+        for (const c of wideResults) {
+          if (!seenIds.has(c._id.toString())) {
+            contractors.push(c);
+            seenIds.add(c._id.toString());
+          }
+        }
+      }
+    } else {
+      // No zip: return all matching contractors
+      contractors = await Contractor.find(query).sort(sort).limit(limit || 0);
+    }
+
     res.json(contractors.length > 0 ? contractors : []);
   } catch (error) {
     console.error('Contractor search error:', error);
@@ -153,6 +191,42 @@ router.post('/:id/reviews', protect, asyncHandler(async (req, res) => {
   contractor.reviews = contractor.reviewsList.length;
   contractor.rating = contractor.reviewsList.reduce((sum, r) => sum + r.rating, 0) / contractor.reviews;
   await contractor.save();
+
+  // Create notification for contractor
+  const Notification = require('../models/Notification');
+  const { sendPushNotification } = require('../utils/pushNotifications');
+  const User = require('../models/User');
+  
+  const notification = await Notification.create({
+    recipient: contractor.user,
+    recipientModel: 'User',
+    sender: req.user._id,
+    senderModel: 'User',
+    message: `You received a new ${rating}-star review: "${title}"`,
+    type: 'new_review',
+    link: `/contractors/profile`
+  });
+
+  // Emit socket
+  const io = req.app.get('socketio');
+  if (io) {
+    io.to(contractor.user.toString()).emit('newNotification', notification);
+  }
+
+  // SEND REAL PUSH NOTIFICATION
+  try {
+    const contractorUser = await User.findById(contractor.user);
+    if (contractorUser && contractorUser.pushToken) {
+      await sendPushNotification(contractorUser.pushToken, {
+        title: 'New Review Received!',
+        body: `A user left you a ${rating}-star review: "${title}"`,
+        data: {
+          type: 'new_review',
+          contractorId: contractor._id.toString()
+        }
+      });
+    }
+  } catch (pushErr) {}
 
   res.status(201).json({ message: 'Review submitted' });
 }));

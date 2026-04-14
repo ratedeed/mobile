@@ -14,7 +14,10 @@ import {
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { getUserProfile, updateUserProfile } from '../api';
+import * as ImagePicker from "expo-image-picker";
+import { uploadToCloudinary, CLOUDINARY_FOLDERS } from "../utils/cloudinary";
+
+import { getUserProfile, updateUserProfile, updateProfilePicture } from '../api';
 import { put, getAuthHeaders } from '../api';
 import { API_BASE_URL } from '../config';
 
@@ -128,6 +131,36 @@ const ProfileScreen: React.FC = () => {
   useFocusEffect(useCallback(() => { loadProfile(); }, [loadProfile]));
 
   const onRefresh = useCallback(() => { setRefreshing(true); loadProfile(); }, [loadProfile]);
+  const handleUpdateProfilePic = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setSaving(true);
+        setEditMessage(null);
+        const localUri = result.assets[0].uri;
+        try {
+          const secureUrl = await uploadToCloudinary(localUri, CLOUDINARY_FOLDERS.USER_PROFILE);
+          const updatedUser = await updateProfilePicture(secureUrl);
+          setUser(updatedUser);
+          setEditMessage({ type: "success", text: "Profile picture updated!" });
+        } catch (uploadErr) {
+          console.error("Image upload failed", uploadErr);
+          setEditMessage({ type: "error", text: "Failed to upload image. Please try again." });
+        }
+      }
+    } catch (err) {
+      console.error("Failed to pick image:", err);
+      setEditMessage({ type: "error", text: "Failed to pick image." });
+    } finally {
+      setSaving(false);
+    }
+  };
+
 
   const handleSaveProfile = async () => {
     setSaving(true);
@@ -210,6 +243,7 @@ const ProfileScreen: React.FC = () => {
         <View className="bg-white dark:bg-neutral-950 px-4 pb-5">
           <View className="flex-row items-center" style={{ gap: 16 }}>
             <View className="relative">
+              <Pressable onPress={handleUpdateProfilePic}>
               {(() => {
                 const avatarUrl = getProfileImageUrl(user?.firstName || 'User', user?.profilePicture || '');
                 return isSvgUrl(avatarUrl) ? (
@@ -229,7 +263,10 @@ const ProfileScreen: React.FC = () => {
               >
                 <FontAwesome5 name="pen" size={10} color="#fff" />
               </Pressable>
+              </Pressable>
             </View>
+
+
             <View className="flex-1">
               <Text className="text-xl font-bold text-neutral-900 dark:text-neutral-50">{user?.firstName || 'User'} {user?.lastName || ''}</Text>
               <Text className="text-sm text-neutral-500 dark:text-neutral-400">{user?.email || ''}</Text>
@@ -306,15 +343,18 @@ const ProfileScreen: React.FC = () => {
         <SettingsSheet title="Edit Profile" onClose={closeSheet}>
           <View className="items-center mb-4">
             <View className="relative">
-              <Image
-                source={{ uri: user?.profilePicture || '' }}
-                className="w-20 h-20 rounded-full bg-neutral-200 dark:bg-neutral-800"
-              />
-              <View className="absolute -bottom-1 -right-1 w-7 h-7 bg-indigo-600 rounded-full items-center justify-center border-2 border-white">
-                <FontAwesome5 name="pen" size={10} color="#fff" />
-              </View>
+              <Pressable onPress={handleUpdateProfilePic}>
+                <Image
+                  source={{ uri: user?.profilePicture || "" }}
+                  className="w-20 h-20 rounded-full bg-neutral-200 dark:bg-neutral-800"
+                />
+                <View className="absolute -bottom-1 -right-1 w-7 h-7 bg-indigo-600 rounded-full items-center justify-center border-2 border-white">
+                  <FontAwesome5 name="pen" size={10} color="#fff" />
+                </View>
+              </Pressable>
             </View>
           </View>
+
           {editMessage && (
             <View className={`mb-4 px-3 py-2 rounded-lg ${editMessage.type === 'success' ? 'bg-emerald-50' : 'bg-indigo-50'}`}>
               <Text className={`text-sm ${editMessage.type === 'success' ? 'text-emerald-700' : 'text-indigo-700'}`}>{editMessage.text}</Text>

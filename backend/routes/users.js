@@ -5,7 +5,8 @@ const {
   registerUser,
   verifyEmail,
   loginUser,
-  updateEmailVerificationStatus
+  updateEmailVerificationStatus,
+  savePushToken
 } = require('../controllers/userController');
 const { protect } = require('../middleware/authMiddleware');
 const User = require('../models/User');
@@ -148,5 +149,10 @@ router.put('/2fa', protect, async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
+
+// @route   PUT /api/users/push-token
+// @desc    Update user's push notification token
+// @access  Private
+router.put('/push-token', protect, savePushToken);
 
 module.exports = router;

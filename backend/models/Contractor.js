@@ -132,6 +132,14 @@ const contractorSchema = new mongoose.Schema({
   },
   areasServed: [String],
   zipCodesCovered: [String],
+  businessHours: {
+    type: Map,
+    of: {
+      open: String,
+      close: String,
+      isOpen: Boolean
+    }
+  },
   servicesOffered: [String],
   services: [String],
   portfolio: [{

@@ -2,10 +2,23 @@ const mongoose = require('mongoose');
 
 const notificationSchema = mongoose.Schema(
   {
-    user: {
+    recipient: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
-      ref: 'User',
+      refPath: 'recipientModel',
+    },
+    recipientModel: {
+      type: String,
+      required: true,
+      enum: ['User', 'Contractor'],
+    },
+    sender: {
+      type: mongoose.Schema.Types.ObjectId,
+      refPath: 'senderModel',
+    },
+    senderModel: {
+      type: String,
+      enum: ['User', 'Contractor'],
     },
     message: {
       type: String,
@@ -19,7 +32,7 @@ const notificationSchema = mongoose.Schema(
     type: {
       type: String,
       required: true,
-      enum: ['new_message', 'new_review', 'admin_alert', 'system_update'],
+      enum: ['new_message', 'new_review', 'admin_alert', 'system_update', 'new_lead', 'quote_request'],
     },
     link: {
       type: String,

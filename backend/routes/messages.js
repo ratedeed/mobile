@@ -11,10 +11,14 @@ const { protect } = require('../middleware/authMiddleware'); // Import protect m
 // @route   POST /api/messages
 // @access  Private
 router.post('/', protect, async (req, res) => {
-    console.log('Backend: Received message request body:', req.body); // Add this log
-    const { recipientId, messageText } = req.body;
-    if (!recipientId || !messageText) {
-        return res.status(400).json({ message: 'Please provide recipientId and messageText' });
+    console.log('Backend: Received message request body:', req.body);
+    const { recipientId, messageText, attachmentUrl } = req.body;
+    
+    if (!recipientId) {
+        return res.status(400).json({ message: 'Please provide recipientId' });
+    }
+    if (!messageText && !attachmentUrl) {
+        return res.status(400).json({ message: 'Please provide messageText or attachmentUrl' });
     }
 
     try {
@@ -23,12 +27,16 @@ router.post('/', protect, async (req, res) => {
         let senderUserForSocket = req.user; // Default to req.user for socket room ID
 
         // Determine actualSenderId and senderOnModel
+        // Always use req.user._id (User's _id) for senderId so the frontend's currentUserId matches.
+        // senderOnModel still distinguishes whether the sender is a User or Contractor.
         if (req.user.role === 'contractor') {
             const senderContractor = await Contractor.findOne({ user: req.user._id });
             if (!senderContractor) {
                 return res.status(404).json({ message: 'Sender Contractor profile not found' });
             }
-            actualSenderId = senderContractor._id;
+            // Use User's _id (req.user._id) for senderId so frontend comparison works.
+            // senderOnModel = 'Contractor' still tells the frontend this is a contractor message.
+            actualSenderId = req.user._id;
             senderOnModel = 'Contractor';
             // For socket room, we still use the User's _id
             senderUserForSocket = req.user;
@@ -84,14 +92,18 @@ router.post('/', protect, async (req, res) => {
         }
 
         // Find or create conversation
+        // Build participant objects matching the Conversation schema { _id, participantModel }
+        const participantObjects = participantUserIds.map((uid, idx) => ({
+            _id: uid,
+            participantModel: participantModels[idx] || 'User'
+        }));
         let conversation = await Conversation.findOneAndUpdate(
             {
-                participants: { $all: participantUserIds }
+                participants: { $all: participantObjects }
             },
             {
                 $setOnInsert: {
-                    participants: participantUserIds,
-                    participantModels: participantModels // Store the models for each participant
+                    participants: participantObjects,
                 },
                 $set: { lastMessageAt: new Date() } // Update last message timestamp
             },
@@ -99,17 +111,18 @@ router.post('/', protect, async (req, res) => {
         );
 
         const message = new Message({
-            conversationId: conversation._id, // Assign the canonical conversation ID
+            conversation: conversation._id, // Fixed: use 'conversation' instead of 'conversationId'
             senderId: actualSenderId,
             recipientId: actualRecipientId,
             senderOnModel,
             recipientOnModel,
-            messageText,
+            messageText: messageText || '',
+            attachmentUrl: attachmentUrl || null,
         });
 
         const createdMessage = await message.save();
 
-        // Populate recipientId and conversationId before sending back to frontend
+        // Populate recipientId and conversation before sending back to frontend
         const populatedMessage = await Message.findById(createdMessage._id)
             .populate({
                 path: 'recipientId',
@@ -117,7 +130,7 @@ router.post('/', protect, async (req, res) => {
                 refPath: 'recipientOnModel'
             })
             .populate({
-                path: 'conversationId',
+                path: 'conversation',
                 select: '_id participants' // Populate conversation details
             })
             .exec();
@@ -125,15 +138,16 @@ router.post('/', protect, async (req, res) => {
         // Manually add sender details for the frontend response
         let senderDetailsForFrontend;
         if (senderOnModel === 'Contractor') {
-            const senderContractorProfile = await Contractor.findById(actualSenderId).select('_id firstName lastName businessName profilePicture'); // Changed companyName to businessName
+            // actualSenderId is now the User's _id (not Contractor._id), so look up by user field
+            const senderContractorProfile = await Contractor.findOne({ user: actualSenderId }).select('_id firstName lastName businessName profilePicture user');
             // Also get the linked User's firstName/lastName if needed for display
             const linkedUser = await User.findById(req.user._id).select('firstName lastName');
             senderDetailsForFrontend = {
-                _id: senderContractorProfile._id,
-                firstName: senderContractorProfile.firstName || (linkedUser ? linkedUser.firstName : ''),
-                lastName: senderContractorProfile.lastName || (linkedUser ? linkedUser.lastName : ''),
-                businessName: senderContractorProfile.businessName, // Changed companyName to businessName
-                profilePicture: senderContractorProfile.profilePicture,
+                _id: senderContractorProfile ? senderContractorProfile._id : actualSenderId,
+                firstName: senderContractorProfile?.firstName || (linkedUser ? linkedUser.firstName : ''),
+                lastName: senderContractorProfile?.lastName || (linkedUser ? linkedUser.lastName : ''),
+                businessName: senderContractorProfile?.businessName || '',
+                profilePicture: senderContractorProfile?.profilePicture || '',
                 role: 'Contractor' // Standardized to 'Contractor' (capitalized)
             };
         } else {
@@ -149,7 +163,7 @@ router.post('/', protect, async (req, res) => {
         const finalMessageForFrontend = {
             ...populatedMessage.toObject(),
             senderId: senderDetailsForFrontend,
-            conversationId: populatedMessage.conversationId._id // Ensure conversationId is just the ID
+            conversationId: populatedMessage.conversation?._id || populatedMessage.conversation // Ensure conversationId is set
         };
 
         console.log('Backend: Final message sent to frontend:', JSON.stringify(finalMessageForFrontend, null, 2));
@@ -180,6 +194,44 @@ router.post('/', protect, async (req, res) => {
         io.to(recipientSocketRoomId).emit('newMessage', finalMessageForFrontend);
         console.log(`Backend: Emitted newMessage to recipient room: ${recipientSocketRoomId}`);
 
+        // Create and emit notification for the recipient
+        try {
+          const Notification = require('../models/Notification');
+          const { sendPushNotification } = require('../utils/pushNotifications');
+          const notification = await Notification.create({
+            recipient: recipientUserForSocket._id,
+            recipientModel: recipientOnModel,
+            sender: actualSenderId,
+            senderModel: senderOnModel,
+            message: `New message from ${senderDetailsForFrontend.firstName} ${senderDetailsForFrontend.lastName}`,
+            type: 'new_message',
+            link: `/messages/${conversation._id}`
+          });
+          
+          if (io) {
+            console.log(`Backend: Emitting newNotification to user room: ${recipientSocketRoomId}`);
+            io.to(recipientSocketRoomId).emit('newNotification', notification);
+          } else {
+            console.warn('Backend: Socket.io instance not found in req.app, cannot emit notification');
+          }
+
+          // SEND REAL PUSH NOTIFICATION (for locked screens)
+          if (recipientUserForSocket.pushToken) {
+            console.log(`Backend: Attempting to send push notification to user: ${recipientUserForSocket._id}`);
+            await sendPushNotification(recipientUserForSocket.pushToken, {
+              title: `New message from ${senderDetailsForFrontend.firstName}`,
+              body: messageText.length > 100 ? `${messageText.substring(0, 97)}...` : messageText,
+              data: {
+                type: 'new_message',
+                conversationId: conversation._id.toString(),
+                senderId: actualSenderId.toString()
+              }
+            });
+          }
+        } catch (notifErr) {
+          console.error('Backend: Error creating message notification:', notifErr);
+        }
+
     } catch (error) {
         console.error('Backend: Error sending message:', error.stack);
         res.status(500).json({ message: 'Server Error', details: error.message });
@@ -192,24 +244,22 @@ router.post('/', protect, async (req, res) => {
 router.get('/conversations', protect, async (req, res) => {
     try {
         const currentUserId = req.user._id;
-        const currentUserRole = req.user.role;
-        console.log(`Backend: GET /conversations - currentUserId: ${currentUserId}, role: ${currentUserRole}`);
+        console.log(`Backend: GET /conversations - currentUserId: ${currentUserId}`);
  
         // Find all conversations where the current user is a participant
-        const conversations = await Conversation.find({ participants: currentUserId })
+        const conversations = await Conversation.find({ 'participants._id': currentUserId })
             .sort({ lastMessageAt: -1 }); // Sort by most recent message in the conversation
 
         const finalConversations = [];
 
         for (const conv of conversations) {
-            // Determine the other participant's User ID in the conversation
-            const otherParticipantUserId = conv.participants.find(pId => pId.toString() !== currentUserId.toString());
+            // conv.participants is [{ _id, participantModel }] per the Conversation schema
+            const otherParticipant = conv.participants.find(p => p._id.toString() !== currentUserId.toString());
+            const otherParticipantUserId = otherParticipant ? otherParticipant._id.toString() : null;
+            const otherParticipantModelType = otherParticipant ? otherParticipant.participantModel : 'User';
 
             let otherParticipantDetails = null;
             if (otherParticipantUserId) {
-                // Find the index of the other participant's User ID in the sorted participants array
-                const otherParticipantIndex = conv.participants.findIndex(pId => pId.toString() === otherParticipantUserId.toString());
-                const otherParticipantModelType = conv.participantModels[otherParticipantIndex];
 
                 if (otherParticipantModelType === 'User') {
                     const user = await User.findById(otherParticipantUserId).select('_id firstName lastName profilePicture role');
@@ -246,7 +296,7 @@ router.get('/conversations', protect, async (req, res) => {
             }
 
             // Get the last message for this conversation
-            const lastMessage = await Message.findOne({ conversationId: conv._id })
+            const lastMessage = await Message.findOne({ conversation: conv._id })
                 .sort({ createdAt: -1 })
                 .populate({
                     path: 'senderId',
@@ -262,7 +312,7 @@ router.get('/conversations', protect, async (req, res) => {
 
             // Calculate unread count for the current user in this conversation
             const unreadCount = await Message.countDocuments({
-                conversationId: conv._id,
+                conversation: conv._id,
                 recipientId: currentUserId, // Current user is the recipient
                 read: false
             });
@@ -282,7 +332,7 @@ router.get('/conversations', protect, async (req, res) => {
                 ],
                 lastMessage: lastMessage ? {
                     _id: lastMessage._id,
-                    conversationId: lastMessage.conversationId,
+                    conversationId: lastMessage.conversation,
                     senderId: lastMessage.senderId,
                     recipientId: lastMessage.recipientId,
                     messageText: lastMessage.messageText,
@@ -330,7 +380,7 @@ router.get('/conversation/:conversationId', protect, async (req, res) => {
             return res.status(403).json({ message: 'Not authorized to view this conversation' });
         }
 
-        const messages = await Message.find({ conversationId: conversationId }).sort('createdAt');
+        const messages = await Message.find({ conversation: conversationId }).sort('createdAt');
 
         const populatedMessages = await Promise.all(messages.map(async (msg) => {
             const msgObj = msg.toObject();
@@ -341,17 +391,17 @@ router.get('/conversation/:conversationId', protect, async (req, res) => {
                 if (msgObj.senderOnModel === 'User') {
                     senderDetails = await User.findById(msgObj.senderId).select('_id firstName lastName profilePicture role');
                 } else if (msgObj.senderOnModel === 'Contractor') {
-                    senderDetails = await Contractor.findById(msgObj.senderId).select('_id firstName lastName businessName profilePicture role');
-                    console.log('DEBUG: GET /conversation/:conversationId - Fetched sender contractor details:', JSON.stringify(senderDetails, null, 2));
-                    // If it's a contractor, also try to get firstName/lastName from the linked User model
-                    // Prioritize contractor's own name, then linked user's
-                    if (senderDetails && senderDetails.user) {
-                        const linkedUser = await User.findById(senderDetails.user).select('firstName lastName');
+                    // senderId is now the User's _id (not Contractor._id), so look up by user field
+                    senderDetails = await Contractor.findOne({ user: msgObj.senderId }).select('_id firstName lastName businessName profilePicture role user');
+                    if (senderDetails) {
+                        // Get firstName/lastName from linked User if not set on contractor
+                        const linkedUser = await User.findById(msgObj.senderId).select('firstName lastName');
                         senderDetails.firstName = senderDetails.firstName || (linkedUser ? linkedUser.firstName : '');
                         senderDetails.lastName = senderDetails.lastName || (linkedUser ? linkedUser.lastName : '');
+                        senderDetails.businessName = senderDetails.businessName || '';
+                        // Use the Contractor's _id for the frontend's senderId
+                        senderDetails._id = senderDetails._id;
                     }
-                    // Ensure businessName is explicitly set for the frontend
-                    senderDetails.businessName = senderDetails.businessName || '';
                 }
                 msgObj.senderId = senderDetails || {};
             } else {
@@ -417,7 +467,7 @@ router.put('/read-conversation/:conversationId', protect, async (req, res) => {
         }
 
         // Ensure the current user is a participant in this conversation
-        const isParticipant = conversation.participants.some(pId => pId.toString() === currentUserId.toString());
+        const isParticipant = conversation.participants.some(p => p._id.toString() === currentUserId.toString());
         if (!isParticipant) {
             return res.status(403).json({ message: 'Not authorized to mark messages in this conversation as read' });
         }
@@ -425,7 +475,7 @@ router.put('/read-conversation/:conversationId', protect, async (req, res) => {
         // Mark all messages in this conversation as read for the current user (as recipient)
         await Message.updateMany(
             {
-                conversationId: conversationId,
+                conversation: conversationId,
                 recipientId: currentUserId, // Only mark messages where current user is the recipient
                 read: false
             },
@@ -491,31 +541,28 @@ router.post('/find-or-create-conversation', protect, async (req, res) => {
         }
 
 
-        // The conversation participants array should always store User _ids
-        const conversationUserIds = [participant1Details.linkedUser._id, participant2Details.linkedUser._id].map(id => id.toString()).sort();
-        
-        // The participantModels array should correspond to the sorted conversationUserIds
-        // We need to ensure the order of participantModels matches the sorted conversationUserIds
-        const sortedParticipantModels = [];
-        if (conversationUserIds[0] === participant1Details.linkedUser._id.toString()) {
-            sortedParticipantModels.push(participant1Details.model);
-            sortedParticipantModels.push(participant2Details.model);
-        } else {
-            sortedParticipantModels.push(participant2Details.model);
-            sortedParticipantModels.push(participant1Details.model);
-        }
+        // Build participant objects matching the Conversation schema { _id, participantModel }
+        // Always use the linked User's _id as the participant _id (for consistent lookups)
+        const p1Id = participant1Details.linkedUser._id.toString();
+        const p2Id = participant2Details.linkedUser._id.toString();
+        const [firstId, secondId] = p1Id < p2Id ? [p1Id, p2Id] : [p2Id, p1Id];
+        const firstModel = p1Id < p2Id ? participant1Details.model : participant2Details.model;
+        const secondModel = p1Id < p2Id ? participant2Details.model : participant1Details.model;
 
-        console.log(`Backend: find-or-create-conversation: Conversation User IDs (sorted):`, conversationUserIds);
-        console.log(`Backend: find-or-create-conversation: Sorted Participant Models:`, sortedParticipantModels);
+        const participantObjects = [
+            { _id: firstId, participantModel: firstModel },
+            { _id: secondId, participantModel: secondModel }
+        ];
+
+        console.log(`Backend: find-or-create-conversation: Participants:`, participantObjects);
 
         let conversation = await Conversation.findOneAndUpdate(
             {
-                participants: { $all: conversationUserIds }
+                participants: { $all: participantObjects }
             },
             {
                 $setOnInsert: {
-                    participants: conversationUserIds,
-                    participantModels: sortedParticipantModels
+                    participants: participantObjects,
                 },
                 $set: { lastMessageAt: new Date() } // Update last message timestamp
             },

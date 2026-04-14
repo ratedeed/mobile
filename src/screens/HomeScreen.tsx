@@ -186,6 +186,7 @@ const HomeScreen = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [searchZip, setSearchZip] = useState('');
   const [searchName, setSearchName] = useState('');
+  const [nearbyLabel, setNearbyLabel] = useState('');
   const mountedRef = useRef(true);
 
   // Sync searchZip when IP zip is detected
@@ -220,31 +221,65 @@ const HomeScreen = () => {
     return [];
   };
 
-  // Discovery mode — same as web: primary ZIP-filtered query, fallback broad query
+  // 3-tier zip expansion — same as web version (HomePage.tsx lines 112-172)
+  // Tier 1: exact zip match
+  // Tier 2: 3-digit prefix (same local area) — checks serviceZipCodes
+  // Tier 3: 2-digit prefix (wider region/state) — checks serviceZipCodes
+  const MIN_RESULTS = 16;
+
   const loadContractors = useCallback(async (zip?: string | null) => {
     setLoading(true);
     try {
-      // Primary: zip-filtered results (same as web searchContractors with zip param)
-      const zipParams: any = { limit: 500 };
-      if (zip) zipParams.zip = zip;
-      const zipResult: any = await browseContractors(zipParams);
-      let list = extractList(zipResult);
-
-      // Fallback: if zip gave few results, pad with broad search (same as web)
-      if (zip && list.length < 16) {
-        const broadResult: any = await browseContractors({ limit: 500 });
-        const broadList = extractList(broadResult);
-        const seen = new Set(list.map((c: Contractor) => c._id));
-        for (const c of broadList) {
-          if (!seen.has(c._id)) {
-            list.push(c);
-            seen.add(c._id);
-          }
-        }
+      // Tier 1: exact zip
+      let tier1: Contractor[] = [];
+      if (zip) {
+        if (mountedRef.current) setNearbyLabel('');
+        const exactResult: any = await browseContractors({ zip, limit: 500 });
+        tier1 = extractList(exactResult);
+      } else {
+        if (mountedRef.current) setNearbyLabel('');
+        const result: any = await browseContractors({ limit: 500 });
+        tier1 = extractList(result);
       }
 
+      // If enough or no zip, done
+      if (!zip || tier1.length >= MIN_RESULTS) {
+        if (mountedRef.current) setAllContractors(tier1);
+        return;
+      }
+
+      // Tier 2: fetch all and add contractors whose serviceZipCodes start with 3-digit prefix
+      const zip3 = zip.slice(0, 3);
+      if (mountedRef.current) setNearbyLabel('Showing nearby cities');
+      const allResult: any = await browseContractors({ limit: 500 });
+      const allList = extractList(allResult);
+      const seen2 = new Set(tier1.map(c => c._id));
+      const tier2Extras = allList.filter((c: Contractor) => {
+        if (seen2.has(c._id)) return false;
+        const serviceZips = c.zipCodesCovered || [];
+        return serviceZips.some(z => z.startsWith(zip3));
+      });
+      const tier1Plus2 = [...tier1, ...tier2Extras];
+
+      // If enough after tier 2, done
+      if (tier1Plus2.length >= MIN_RESULTS) {
+        if (mountedRef.current) setAllContractors(tier1Plus2);
+        return;
+      }
+
+      // Tier 3: add contractors whose serviceZipCodes start with 2-digit prefix (wider region)
+      if (mountedRef.current) setNearbyLabel('Showing nearby cities & region');
+      const zip2 = zip.slice(0, 2);
+      const seen3 = new Set(tier1Plus2.map(c => c._id));
+      const tier3Extras = allList.filter((c: Contractor) => {
+        if (seen3.has(c._id)) return false;
+        const serviceZips = c.zipCodesCovered || [];
+        return serviceZips.some(z => z.startsWith(zip2));
+      });
+      const final = [...tier1Plus2, ...tier3Extras];
+
       if (mountedRef.current) {
-        setAllContractors(list);
+        setAllContractors(final);
       }
     } catch (err) {
       console.error('Error fetching contractors:', err);
@@ -387,6 +422,13 @@ const HomeScreen = () => {
               <FontAwesome5 name="search" size={14} color="#ffffff" />
             </Pressable>
           </View>
+          {/* Nearby cities label */}
+          {nearbyLabel ? (
+            <View className="flex-row items-center mt-1.5 px-1" style={{ gap: 4 }}>
+              <FontAwesome5 name="map-marker-alt" size={10} color="#6366f1" />
+              <Text className="text-xs text-indigo-600 dark:text-indigo-400">{nearbyLabel}</Text>
+            </View>
+          ) : null}
         </View>
 
         {/* Category Bar */}

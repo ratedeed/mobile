@@ -39,6 +39,7 @@ router.post('/', protect, asyncHandler(async (req, res) => {
 
     // Create notification for client
     const notification = require('../models/Notification');
+    const { sendPushNotification } = require('../utils/pushNotifications');
     await notification.create({
       user: clientId,
       message: `You received a new quote from ${contractor.businessName}`,
@@ -52,6 +53,19 @@ router.post('/', protect, asyncHandler(async (req, res) => {
     const clientUser = await require('../models/User').findById(clientId);
     if (clientUser && activeUsers.has(clientUser._id.toString())) {
       io.to(clientUser._id.toString()).emit('newQuote', quote);
+    }
+
+    // SEND REAL PUSH NOTIFICATION
+    if (clientUser && clientUser.pushToken) {
+      console.log(`Backend: Sending push quote notification to user: ${clientUser._id}`);
+      await sendPushNotification(clientUser.pushToken, {
+        title: 'New Quote Received!',
+        body: `You received a new quote from ${contractor.businessName}`,
+        data: {
+          type: 'new_quote',
+          quoteId: quote._id.toString()
+        }
+      });
     }
 
     res.status(201).json(quote);
@@ -161,6 +175,8 @@ router.put('/:id/accept', protect, asyncHandler(async (req, res) => {
       subtotal: quote.subtotal,
       platformFee: quote.platformFee,
       total: quote.total,
+      isMilestone: quote.isMilestone,
+      milestones: quote.milestones ? quote.milestones.map(m => ({ ...m, status: "pending" })) : [],
       status: 'awaiting_payment',
     });
 
@@ -168,6 +184,7 @@ router.put('/:id/accept', protect, asyncHandler(async (req, res) => {
 
     // Notify contractor
     const notification = require('../models/Notification');
+    const { sendPushNotification } = require('../utils/pushNotifications');
     await notification.create({
       user: quote.contractorUser,
       message: `${quote.clientName} accepted your quote!`,
@@ -181,6 +198,21 @@ router.put('/:id/accept', protect, asyncHandler(async (req, res) => {
     if (activeUsers.has(quote.contractorUser.toString())) {
       io.to(quote.contractorUser.toString()).emit('quoteAccepted', { quote, job });
     }
+
+    // SEND REAL PUSH NOTIFICATION
+    try {
+      const contractorUser = await require('../models/User').findById(quote.contractorUser);
+      if (contractorUser && contractorUser.pushToken) {
+        await sendPushNotification(contractorUser.pushToken, {
+          title: 'Quote Accepted!',
+          body: `${quote.clientName} accepted your quote. Let's get to work!`,
+          data: {
+            type: 'quote_accepted',
+            jobId: job._id.toString()
+          }
+        });
+      }
+    } catch (pushErr) {}
 
     res.json({ quote, job });
   } catch (error) {

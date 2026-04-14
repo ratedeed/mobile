@@ -18,8 +18,10 @@ export const SvgImage = ({ uri, width = '100%', height = '100%', style }: { uri:
           }
         } else if (uri.startsWith('http')) {
           const response = await fetch(uri);
-          const text = await response.text();
+          let text = await response.text();
           if (text.includes('<svg') && isMounted) {
+            // Remove unsupported drop-shadow filters that cause React Native crashes/warnings
+            text = text.replace(/style="filter:\s*drop-shadow\([^"]*\);?"/g, '');
             setXml(text);
           } else if (isMounted) {
             console.warn('SvgImage: Fetched content is not a valid SVG:', text.slice(0, 100));

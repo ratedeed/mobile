@@ -25,10 +25,8 @@ import {
   getStripeConnectUrl,
   getStripeAccountStatus,
   fetchContractorReviews,
-  updateContractorProfile,
+  updateContractorProfile, getContractorProfile,
   getContractorDetails,
-  updateBannerImage,
-  updateProfilePicture,
   get,
   getAuthHeaders,
   post as apiPost,
@@ -37,6 +35,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { API_BASE_URL } from '../config';
 import { getCoverImageUrl, getProfileImageUrl, isSvgUrl } from '../utils/avatarUtils';
 import { SvgImage } from '../components/common/SvgImage';
+import { useAuth } from '../context/AuthContext';
 
 const TABS = [
   { key: 'posts', label: 'Posts' },
@@ -141,6 +140,8 @@ function Sheet({ visible, onClose, title, children }: { visible: boolean; onClos
 // Main Component
 // ================================================================
 const ContractorDashboardScreen: React.FC = () => {
+  const { userId: currentUserId } = useAuth();
+  const [realContractorId, setRealContractorId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('posts');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -182,10 +183,9 @@ const ContractorDashboardScreen: React.FC = () => {
   const [bannerUrl, setBannerUrl] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
   const [contractorName, setContractorName] = useState('');
-  const [contractorCategory, setContractorCategory] = useState('');
 
   const [imageLoading, setImageLoading] = useState(false);
-  const contractorId = 'current';
+  const contractorId = realContractorId || currentUserId;
 
   const pickFromLibrary = async (): Promise<string | null> => {
     try {
@@ -214,17 +214,30 @@ const ContractorDashboardScreen: React.FC = () => {
 
   const loadData = useCallback(async () => {
     try {
-      const [postsData, reviewsData, portfolioData, earningsData, leadsData, quotesData, jobsData, stripeData, profileData] = await Promise.all([
-        fetchContractorPosts(contractorId).catch(() => ({ posts: [] })),
-        fetchContractorReviews(contractorId).catch(() => []),
-        getPortfolio(contractorId).catch(() => []),
+      // 1. Fetch profile first using JWT to get the REAL contractor ID
+      const profile = await getContractorProfile().catch(() => null);
+      if (!profile) {
+        console.log('No contractor profile found for current user');
+        setLoading(false);
+        setRefreshing(false);
+        return;
+      }
+
+      const cid = profile._id;
+      if (cid) setRealContractorId(cid);
+
+      // 2. Now fetch everything else using that REAL ID
+      const [postsData, reviewsData, portfolioData, earningsData, leadsData, quotesData, jobsData, stripeData] = await Promise.all([
+        fetchContractorPosts(cid).catch(() => ({ posts: [] })),
+        fetchContractorReviews(cid).catch(() => []),
+        getPortfolio(cid).catch(() => []),
         getContractorEarnings().catch(() => null),
         getContractorLeads().catch(() => []),
         getContractorQuotes().catch(() => []),
         getContractorJobs().catch(() => []),
         getStripeAccountStatus().catch(() => ({ connected: false })),
-        getContractorDetails(contractorId).catch(() => null),
       ]);
+
       setPosts(Array.isArray(postsData?.posts) ? postsData.posts : []);
       setReviews(Array.isArray(reviewsData) ? reviewsData : []);
       setPortfolio(Array.isArray(portfolioData) ? portfolioData : []);
@@ -234,23 +247,35 @@ const ContractorDashboardScreen: React.FC = () => {
       setJobs(Array.isArray(jobsData) ? jobsData : []);
       setStripeStatus(stripeData);
 
-      if (profileData) {
-        const rawBanner = (profileData as any).bannerUrl || profileData.bannerImage || (profileData as any).imageUrl || '';
-        const name = profileData.companyName || profileData.businessName || '';
-        const cat = profileData.category || '';
-        setContractorName(name);
-        setContractorCategory(cat);
-        setBannerUrl(getCoverImageUrl(name, rawBanner, cat));
-        const rawAvatar = profileData.profilePicture || profileData.user?.profilePicture || '';
-        setAvatarUrl(getProfileImageUrl(name, rawAvatar, cat));
-      }
+      // Populate profile data
+      const name = profile.companyName || profile.businessName || '';
+      const cat = profile.category || '';
+      const rawBanner = profile.bannerImage || (profile as any).bannerUrl || (profile as any).imageUrl || '';
+      const rawAvatar = profile.profilePicture || profile.user?.profilePicture || '';
+      
+      setContractorName(name);
+      setBannerUrl(getCoverImageUrl(name, rawBanner, cat));
+      setAvatarUrl(getProfileImageUrl(name, rawAvatar, cat));
+      
+      // Update editable data
+      setEditableData({
+        description: profile.description || '',
+        pricing: profile.pricing || '',
+        certifications: profile.certifications || '',
+        servicesOffered: (profile.services || profile.servicesOffered || []).map((s: any) => typeof s === 'string' ? s : s.name || ''),
+        phone: profile.contact?.phone || '',
+        email: profile.contact?.email || '',
+        website: profile.contact?.website || '',
+        address: profile.contact?.address || '',
+      });
+
     } catch (err) {
       console.error('Failed to load data:', err);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [contractorId]);
+  }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -274,7 +299,7 @@ const ContractorDashboardScreen: React.FC = () => {
   const handleLikePost = async (postId: string, isLiked: boolean) => {
     try {
       if (isLiked) await unlikePost(postId); else await likePost(postId);
-      setPosts(prev => prev.map(p => p._id === postId ? { ...p, likes: isLiked ? p.likes.filter((id: string) => id !== 'current') : [...p.likes, 'current'] } : p));
+      setPosts(prev => prev.map(p => p._id === postId ? { ...p, likes: isLiked ? p.likes.filter((id: string) => id !== currentUserId) : [...p.likes, currentUserId] } : p));
     } catch { Alert.alert('Error', 'Failed to update like'); }
   };
 
@@ -456,8 +481,8 @@ const ContractorDashboardScreen: React.FC = () => {
                         <Text className="text-sm text-neutral-800" style={{ lineHeight: 20 }}>{post.caption}</Text>
                         <View className="flex-row items-center justify-between mt-3">
                           <View className="flex-row items-center" style={{ gap: 12 }}>
-                            <Pressable onPress={() => handleLikePost(post._id, post.likes.includes('current'))} className="flex-row items-center" style={{ gap: 4 }}>
-                              <FontAwesome5 name="heart" solid={post.likes.includes('current')} size={14} color={post.likes.includes('current') ? '#ef4444' : '#737373'} />
+                            <Pressable onPress={() => handleLikePost(post._id, post.likes.includes(currentUserId))} className="flex-row items-center" style={{ gap: 4 }}>
+                              <FontAwesome5 name="heart" solid={post.likes.includes(currentUserId)} size={14} color={post.likes.includes(currentUserId) ? '#ef4444' : '#737373'} />
                               <Text className="text-xs text-neutral-500">{post.likes.length}</Text>
                             </Pressable>
                             <View className="flex-row items-center" style={{ gap: 4 }}>

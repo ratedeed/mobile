@@ -44,10 +44,13 @@ const userSchema = new mongoose.Schema({
     enum: ['user', 'contractor', 'admin'],
     default: 'user',
   },
-}, {
+  pushToken: {
+    type: String,
+    required: false,
+  },
+  }, {
   timestamps: true // Adds createdAt and updatedAt fields
-});
-
+  });
 // Encrypt password using bcrypt
 // Encrypt password using bcrypt before saving
 userSchema.pre('save', async function(next) {

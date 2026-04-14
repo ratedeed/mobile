@@ -271,3 +271,30 @@ exports.updateEmailVerificationStatus = async (req, res) => {
     res.status(500).json({ message: 'Server error updating verification status.', details: error.message });
   }
 };
+
+// @desc    Save/Update user's push token for notifications
+// @route   PUT /api/users/push-token
+// @access  Private
+exports.savePushToken = async (req, res) => {
+  const { pushToken } = req.body;
+
+  if (!pushToken) {
+    return res.status(400).json({ message: 'Push token is required.' });
+  }
+
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found.' });
+    }
+
+    user.pushToken = pushToken;
+    await user.save();
+
+    console.log(`savePushToken: Updated push token for user: ${user.email}`);
+    res.status(200).json({ message: 'Push token saved successfully.' });
+  } catch (error) {
+    console.error('savePushToken: Error saving push token:', error);
+    res.status(500).json({ message: 'Server error saving push token.', details: error.message });
+  }
+};

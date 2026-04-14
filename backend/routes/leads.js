@@ -41,13 +41,41 @@ router.post('/', asyncHandler(async (req, res) => {
     await lead.save();
 
     // Notify contractor
-    const notification = require('../models/Notification');
-    await notification.create({
-      user: contractor.user,
+    const Notification = require('../models/Notification');
+    const { sendPushNotification } = require('../utils/pushNotifications');
+    const notification = await Notification.create({
+      recipient: contractor.user,
+      recipientModel: 'User',
       message: `New lead: ${projectTitle}`,
       type: 'new_lead',
       link: `/leads/${lead._id}`,
     });
+
+    // Emit via socket
+    const io = req.app.get('socketio');
+    if (io) {
+      io.to(contractor.user.toString()).emit('newNotification', notification);
+      console.log(`Backend: Emitted lead notification to user: ${contractor.user}`);
+    }
+
+    // SEND REAL PUSH NOTIFICATION (for locked screens)
+    try {
+      // Need to populate or find the user to get pushToken
+      const user = await User.findById(contractor.user);
+      if (user && user.pushToken) {
+        console.log(`Backend: Attempting to send push lead notification to user: ${user._id}`);
+        await sendPushNotification(user.pushToken, {
+          title: 'New Project Lead!',
+          body: `You have a new inquiry: ${projectTitle}`,
+          data: {
+            type: 'new_lead',
+            leadId: lead._id.toString()
+          }
+        });
+      }
+    } catch (pushErr) {
+      console.error('Backend: Error sending push lead notification:', pushErr);
+    }
 
     res.status(201).json(lead);
   } catch (error) {

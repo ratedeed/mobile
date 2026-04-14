@@ -1,3 +1,4 @@
+import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AuthNavigator from './src/navigation/AuthNavigator';
@@ -6,10 +7,13 @@ import LoadingScreen from './src/screens/LoadingScreen';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { ContractorProvider } from './src/context/ContractorContext';
 import { NotificationsProvider } from './src/context/NotificationsContext';
+import { registerSocket } from './src/utils/apiClient';
 import ErrorBoundary from './src/components/ErrorBoundary';
 import * as Sentry from '@sentry/react-native';
 import { usePushNotifications } from './src/hooks/usePushNotifications';
 import { EscrowTrustBanner } from './src/components/EscrowTrustBanner';
+import { StatusBar } from 'expo-status-bar';
+import { useColorScheme } from 'nativewind';
 
 Sentry.init({
   dsn: 'https://placeholder@sentry.io/1234567', // Replace with your actual Sentry DSN
@@ -37,15 +41,28 @@ const linking = {
 };
 
 function AppContent() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, userId } = useAuth();
+  const { colorScheme } = useColorScheme();
   usePushNotifications(); // Initialize push notification listeners
 
+  useEffect(() => {
+    if (isAuthenticated && userId) {
+      registerSocket(userId);
+    }
+  }, [isAuthenticated, userId]);
+
   if (isLoading) {
-    return <LoadingScreen />;
+    return (
+      <>
+        <StatusBar style="auto" />
+        <LoadingScreen />
+      </>
+    );
   }
 
   return (
     <NavigationContainer linking={linking}>
+      <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
       {isAuthenticated ? (
         <>
           <MainNavigator />

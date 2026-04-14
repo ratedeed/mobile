@@ -42,13 +42,24 @@ const jobSchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
+  isMilestone: {
+    type: Boolean,
+    default: false,
+  },
+  milestones: [{
+    name: String,
+    amount: Number,
+    status: { type: String, enum: ["pending", "funded", "released"], default: "pending" },
+    stripePaymentIntentId: String,
+    stripeTransferId: String,
+  }],
   fundedAmount: {
     type: Number,
     default: 0,
   },
   status: {
     type: String,
-    enum: ['funded_in_progress', 'completed_paid', 'awaiting_payment', 'cancelled', 'disputed'],
+    enum: ["partially_funded", 'funded_in_progress', 'completed_paid', 'awaiting_payment', 'cancelled', 'disputed'],
     default: 'awaiting_payment',
   },
   stripePaymentIntentId: {
@@ -56,7 +67,7 @@ const jobSchema = new mongoose.Schema({
   },
   paymentStatus: {
     type: String,
-    enum: ['pending', 'paid', 'failed', 'refunded'],
+    enum: ["partially_funded", 'pending', 'paid', 'failed', 'refunded'],
     default: 'pending',
   },
   completionDate: {

@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../config';
 import io, { Socket } from 'socket.io-client';
 import { auth as firebaseAuth } from '../firebaseConfig';
+import { jwtDecode } from 'jwt-decode';
 import {
   Contractor,
   Post,
@@ -167,7 +168,13 @@ export const normalizeApiContractor = (c: any): Contractor => {
   return contractor;
 };
 
-export const adaptApiContractor = normalizeApiContractor; // Alias used in web version
+export const adaptApiContractor = normalizeApiContractor;
+
+export const extractId = (obj: any): string => {
+  if (!obj) return "";
+  if (typeof obj === "string") return obj;
+  return (obj._id || obj.id || "").toString();
+}; // Alias used in web version
 
 const normalizeContractors = (list: any[]): Contractor[] => {
   if (!Array.isArray(list)) return [];
@@ -191,19 +198,19 @@ export const logout = async (): Promise<void> => {
 };
 
 export const register = async (data: any): Promise<any> => {
-  return post(`${API_BASE}/users/signup`, data);
+  return post(`${API_BASE}/users/signup/`, data);
 };
 
 export const verifyEmailBackend = async (email: string): Promise<any> => {
-  return post(`${API_BASE}/users/verify-email`, { email });
+  return post(`${API_BASE}/users/verify-email/`, { email });
 };
 
 export const forgotPassword = async (email: string): Promise<any> => {
-  return post(`${API_BASE}/auth/forgot-password`, { email });
+  return post(`${API_BASE}/auth/forgot-password/`, { email });
 };
 
 export const contractorSignup = async (data: any): Promise<any> => {
-  return post(`${API_BASE}/contractors`, data);
+  return post(`${API_BASE}/contractors/`, data);
 };
 
 export const backendLoginFirebase = async (idToken: string, email: string): Promise<any> => {
@@ -249,6 +256,12 @@ export const getContractorBySlug = async (slug: string): Promise<Contractor> => 
   return normalizeApiContractor(data);
 };
 
+export const getContractorProfile = async (): Promise<Contractor> => {
+  const authHeaders = await getAuthHeaders();
+  const data = await get(`${API_BASE}/contractors/profile`, authHeaders);
+  return normalizeApiContractor(data);
+};
+
 export const getContractorDetails = async (contractorId: string): Promise<Contractor> => {
   const authHeaders = await getAuthHeaders();
   const data = await get(`${API_BASE}/contractors/${contractorId}`, authHeaders);
@@ -268,62 +281,181 @@ export const updateContractorProfile = async (data: Partial<Contractor>): Promis
 // ==========================================
 
 let socket: Socket | null = null;
+let isInitializingSocket = false;
 
 export const initializeSocket = async () => {
-  if (socket?.connected) return;
+  if (socket?.connected || isInitializingSocket) return;
+  isInitializingSocket = true;
 
-  const userInfo = await AsyncStorage.getItem('userInfo');
-  const token = userInfo ? JSON.parse(userInfo).token : null;
+  try {
+    const userInfo = await AsyncStorage.getItem('userInfo');
+    const token = userInfo ? JSON.parse(userInfo).token : null;
 
-  socket = io(API_BASE, {
-    transports: ['websocket'],
-    withCredentials: true,
-    auth: token ? { token } : undefined,
-  });
+    // Use API_BASE_URL instead of API_BASE because Socket.io usually mounts at the root /socket.io
+    // Also add 'polling' transport as fallback for environments where WebSocket upgrade might fail
+    console.log('Socket: Attempting to connect to:', API_BASE_URL);
+    socket = io(API_BASE_URL, {
+      transports: ['websocket', 'polling'],
+      withCredentials: true,
+      auth: token ? { token } : undefined,
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 1000,
+    });
 
-  socket.on('connect', () => console.log('Socket connected:', socket?.id));
+    socket.on('connect', () => {
+      console.log('Socket connected:', socket?.id);
+      isInitializingSocket = false;
+    });
+
+    socket.on('connect_error', (error) => {
+      console.error('Socket connection error:', error);
+      isInitializingSocket = false;
+    });
+
+    socket.on('disconnect', (reason) => {
+      console.log('Socket disconnected:', reason);
+      if (reason === 'io server disconnect') {
+        // the disconnection was initiated by the server, you need to reconnect manually
+        socket?.connect();
+      }
+    });
+  } catch (error) {
+    console.error('Error initializing socket:', error);
+    isInitializingSocket = false;
+  }
 };
 
 export const registerSocket = async (userId: string) => {
   await initializeSocket();
-  socket?.emit('register', userId);
-};
+  
+  const emitRegister = () => {
+    if (userId) {
+      console.log(`Registering socket for user ${userId}`);
+      socket?.emit("register", userId);
+    }
+  };
 
-export const joinConversationSocket = (conversationId: string) => {
-  socket?.emit('joinConversation', conversationId);
+  if (socket?.connected) {
+    emitRegister();
+  } else {
+    socket?.once('connect', emitRegister);
+  }
+
+  // Handle re-registration on reconnection
+  socket?.on('connect', () => {
+    console.log('Socket reconnected, re-registering user');
+    emitRegister();
+  });
+
+  return socket;
+};
+export const joinConversationSocket = async (conversationId: string) => {
+  await initializeSocket();
+  if (socket?.connected) {
+    socket.emit("joinConversation", conversationId);
+  } else {
+    socket?.once('connect', () => socket?.emit("joinConversation", conversationId));
+  }
 };
 
 export const leaveConversationSocket = (conversationId: string) => {
-  socket?.emit('leaveConversation', conversationId);
+  socket?.emit("leaveConversation", conversationId);
+};
+export const onNewMessage = (callback: (message: any) => void) => {
+  if (!socket) return;
+  // If no callback is provided, remove all listeners for this event
+  if (!callback) {
+    socket.removeAllListeners("newMessage");
+    return;
+  }
+  socket.off("newMessage"); // Remove all previous listeners for this event
+  socket.on("newMessage", callback);
 };
 
-export const onNewMessage = (callback: (message: any) => void) => {
-  socket?.on('newMessage', callback);
+export const offNewMessage = (callback?: (message: any) => void) => {
+  if (callback) {
+    socket?.off("newMessage", callback);
+  } else {
+    socket?.off("newMessage");
+  }
 };
+
 
 export const onMessageRead = (callback: (data: any) => void) => {
-  socket?.on('messageRead', callback);
+  if (!socket) return;
+  socket.off("messageRead");
+  socket.on("messageRead", callback);
 };
+
+export const offMessageRead = (callback?: (data: any) => void) => {
+  if (callback) {
+    socket?.off("messageRead", callback);
+  } else {
+    socket?.off("messageRead");
+  }
+};
+
 
 export const onTyping = (callback: (data: any) => void) => {
-  socket?.on('typing', callback);
+  if (!socket) return;
+  socket.off("typing");
+  socket.on("typing", callback);
 };
+
+export const offTyping = (callback?: (data: any) => void) => {
+  if (callback) {
+    socket?.off("typing", callback);
+  } else {
+    socket?.off("typing");
+  }
+};
+
 
 export const onUserOnlineStatus = (callback: (data: any) => void) => {
-  socket?.on('userOnlineStatus', callback);
+  if (!socket) return;
+  socket.off("userOnlineStatus");
+  socket.on("userOnlineStatus", callback);
 };
 
+export const offUserOnlineStatus = (callback?: (data: any) => void) => {
+  if (callback) {
+    socket?.off("userOnlineStatus", callback);
+  } else {
+    socket?.off("userOnlineStatus");
+  }
+};
+
+export const onNewNotification = (callback: (notification: any) => void) => {
+  if (!socket) return;
+  socket.off("newNotification");
+  socket.on("newNotification", callback);
+};
+
+export const offNewNotification = (callback?: (notification: any) => void) => {
+  if (callback) {
+    socket?.off("newNotification", callback);
+  } else {
+    socket?.off("newNotification");
+  }
+};
+
+
 export const emitTyping = (conversationId: string, userId: string, isTyping: boolean) => {
-  socket?.emit('typing', { conversationId, userId, isTyping });
+  if (socket?.connected) {
+    socket.emit('typing', { conversationId, userId, isTyping });
+  }
 };
 
 export const emitMessageRead = (messageId: string, readerId: string, conversationId: string) => {
-  socket?.emit('messageRead', { messageId, readerId, conversationId });
+  if (socket?.connected) {
+    socket.emit('messageRead', { messageId, readerId, conversationId });
+  }
 };
 
-export const sendMessage = async (conversationId: string, recipientId: string, messageText: string): Promise<any> => {
+export const sendMessage = async (conversationId: string, recipientId: string, messageText: string, attachmentUrl?: string): Promise<any> => {
   const authHeaders = await getAuthHeaders();
-  return post(`${API_BASE}/messages`, { conversationId, recipientId, messageText }, authHeaders);
+  return post(`${API_BASE}/messages/`, { conversationId, recipientId, messageText, attachmentUrl }, authHeaders);
 };
 
 export const listConversations = async (): Promise<any[]> => {
@@ -344,6 +476,11 @@ export const findOrCreateConversation = async (participantIds: string[]): Promis
 };
 
 export const createConversation = findOrCreateConversation;
+
+export const createQuoteFromChat = async (data: any): Promise<any> => {
+  const authHeaders = await getAuthHeaders();
+  return post(`${API_BASE}/quotes/from-chat`, data, authHeaders);
+};
 
 // ==========================================
 // Posts & Reviews API
@@ -431,7 +568,21 @@ export const deleteNotification = async (notificationId: string): Promise<void> 
 
 export const getUserProfile = async (): Promise<User> => {
   const authHeaders = await getAuthHeaders();
-  return get(`${API_BASE}/users/profile`, authHeaders);
+  const user = await get(`${API_BASE}/users/profile`, authHeaders);
+  // Backend doesn't return createdAt — use JWT iat as fallback
+  if (!user.createdAt) {
+    try {
+      const userInfo = await AsyncStorage.getItem('userInfo');
+      const parsed = userInfo ? JSON.parse(userInfo) : {};
+      if (parsed.token) {
+        const decoded: any = jwtDecode(parsed.token);
+        if (decoded.iat) {
+          user.createdAt = new Date(decoded.iat * 1000).toISOString();
+        }
+      }
+    } catch {}
+  }
+  return user;
 };
 
 export const fetchUserProfile = getUserProfile;
@@ -439,6 +590,11 @@ export const fetchUserProfile = getUserProfile;
 export const updateUserProfile = async (data: Partial<User>): Promise<User> => {
   const authHeaders = await getAuthHeaders();
   return put(`${API_BASE}/users/profile`, data, authHeaders);
+};
+
+export const savePushToken = async (pushToken: string): Promise<any> => {
+  const authHeaders = await getAuthHeaders();
+  return put(`${API_BASE}/users/push-token`, { pushToken }, authHeaders);
 };
 
 export const updateProfilePicture = async (pictureUrl: string): Promise<User> => {
@@ -490,6 +646,36 @@ export const getContractorJobs = async (): Promise<Job[]> => {
   return get(`${API_BASE}/jobs/contractor`, authHeaders);
 };
 
+export const releaseFunds = async (jobId: string): Promise<any> => {
+  const authHeaders = await getAuthHeaders();
+  return post(`${API_BASE}/jobs/${jobId}/release`, {}, authHeaders);
+};
+
+export const markJobComplete = async (jobId: string): Promise<any> => {
+  const authHeaders = await getAuthHeaders();
+  return post(`${API_BASE}/jobs/${jobId}/complete`, {}, authHeaders);
+};
+
+export const raiseDispute = async (jobId: string, reason: string, milestoneId?: string): Promise<any> => {
+  const authHeaders = await getAuthHeaders();
+  return post(`${API_BASE}/jobs/${jobId}/dispute`, { reason, milestoneId }, authHeaders);
+};
+
+export const createChangeOrder = async (jobId: string, data: { title: string; description: string; amount: number }): Promise<any> => {
+  const authHeaders = await getAuthHeaders();
+  return post(`${API_BASE}/jobs/${jobId}/change-order`, data, authHeaders);
+};
+
+export const acceptChangeOrder = async (jobId: string, changeOrderId: string): Promise<any> => {
+  const authHeaders = await getAuthHeaders();
+  return post(`${API_BASE}/jobs/${jobId}/change-order/${changeOrderId}/accept`, {}, authHeaders);
+};
+
+export const declineChangeOrder = async (jobId: string, changeOrderId: string): Promise<any> => {
+  const authHeaders = await getAuthHeaders();
+  return post(`${API_BASE}/jobs/${jobId}/change-order/${changeOrderId}/decline`, {}, authHeaders);
+};
+
 export const getUserJobs = async (): Promise<Job[]> => {
   const authHeaders = await getAuthHeaders();
   return get(`${API_BASE}/jobs/client`, authHeaders);
@@ -520,6 +706,11 @@ export const getAllContractors = async (params: ContractorQueryParams): Promise<
 export const getPlatformStats = async (): Promise<PlatformStats> => {
   const authHeaders = await getAuthHeaders();
   return get(`${API_BASE}/admin/stats`, authHeaders);
+};
+
+export const getCloudinarySignature = async (folder: string): Promise<any> => {
+  const authHeaders = await getAuthHeaders();
+  return post(`${API_BASE}/admin/cloudinary-sign`, { folder }, authHeaders);
 };
 
 export const createLead = async (leadData: any): Promise<any> => {

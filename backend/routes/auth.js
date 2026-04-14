@@ -73,7 +73,7 @@ router.post(
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { businessName, contactPerson, email, phone, password, zipCode, category, firebaseUid } = req.body;
+    const { businessName, contactPerson, email, phone, password, zipCode, category, firebaseUid, businessAddress, zipCodesCovered, businessHours } = req.body;
 
     const contractorExists = await Contractor.findOne({ email });
 
@@ -106,7 +106,10 @@ router.post(
         contact: {
           email,
           phone,
+          address: businessAddress,
         },
+        zipCodesCovered: zipCodesCovered || [zipCode],
+        businessHours: businessHours || {},
       });
 
       if (newContractor) {

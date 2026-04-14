@@ -58,6 +58,15 @@ const quoteSchema = new mongoose.Schema({
   estimatedCompletion: {
     type: Date,
   },
+  isMilestone: {
+    type: Boolean,
+    default: false,
+  },
+  milestones: [{
+    name: String,
+    percentage: Number,
+    amount: Number,
+  }],
   notes: {
     type: String,
   },
@@ -78,6 +87,19 @@ quoteSchema.pre('save', function(next) {
   }, 0);
   this.platformFee = Math.round(this.subtotal * 0.05 * 100) / 100; // 5% platform fee
   this.total = this.subtotal + this.platformFee;
+
+  // Auto-generate milestones for large projects
+  if (this.total >= 5000) {
+    this.isMilestone = true;
+    this.milestones = [
+      { name: "Deposit (30%)", percentage: 30, amount: Math.round(this.total * 0.3 * 100) / 100 },
+      { name: "Midpoint (30%)", percentage: 30, amount: Math.round(this.total * 0.3 * 100) / 100 },
+      { name: "Completion (40%)", percentage: 40, amount: Math.round(this.total * 0.4 * 100) / 100 }
+    ];
+  } else {
+    this.isMilestone = false;
+    this.milestones = [];
+  }
   next();
 });
 

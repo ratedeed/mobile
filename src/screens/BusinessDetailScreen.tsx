@@ -8,8 +8,6 @@ import {
   Alert,
   RefreshControl,
   Share,
-  Linking,
-  Platform,
   Text,
   TextInput,
   Dimensions,
@@ -20,7 +18,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { SvgImage } from '../components/common/SvgImage';
-import { fetchContractorDetails, submitReview, fetchContractorPosts, createLead, fetchContractorReviews } from '../api';
+import { fetchContractorDetails, fetchContractorPosts, createLead, fetchContractorReviews, extractId } from '../api';
 import { Contractor, Post, Review } from '../types';
 import { API_BASE_URL } from '../config';
 import { getCoverImageUrl, isSvgUrl } from '../utils/avatarUtils';
@@ -105,12 +103,6 @@ const BusinessDetailScreen: React.FC = () => {
     } catch {}
   };
 
-  const handleCall = () => {
-    const phone = contractor?.contactInfo?.phoneNumber;
-    if (phone) Linking.openURL(`tel:${phone}`);
-    else Alert.alert('Notice', 'Phone number not available');
-  };
-
   const handleRequestQuote = async () => {
     if (!quoteProjectTitle.trim() || !quoteDescription.trim()) {
       Alert.alert('Error', 'Please fill in all fields');
@@ -131,7 +123,7 @@ const BusinessDetailScreen: React.FC = () => {
     if (!reportReason.trim()) return;
     setReportSubmitting(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/reports`, {
+      await fetch(`${API_BASE_URL}/api/reports`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ contractorId: id, reason: reportReason }),
@@ -155,6 +147,8 @@ const BusinessDetailScreen: React.FC = () => {
       setIsSaved(true);
     }
   };
+
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
 
   if (loading) {
     return (
@@ -207,8 +201,6 @@ const BusinessDetailScreen: React.FC = () => {
     bannerImage,
     ...(portfolio || []).flatMap((p: any) => p.images || []).slice(0, 7)
   ].filter(Boolean);
-
-  const [activeImageIndex, setActiveImageIndex] = useState(0);
 
   return (
     <View className="flex-1 bg-white dark:bg-neutral-950">
@@ -264,7 +256,13 @@ const BusinessDetailScreen: React.FC = () => {
             </Pressable>
             <View className="flex-row" style={{ gap: 8 }}>
               <Pressable
-                onPress={() => navigation.navigate('ChatScreen', { recipientId: (c as any).user?._id || id })}
+                onPress={() => {
+                  const recipientUserId = extractId(c.user);
+                  navigation.navigate('ChatScreen', {
+                    recipientId: recipientUserId,
+                    recipientName: c.companyName || c.businessName || 'Contractor',
+                  } as any);
+                }}
                 className="w-8 h-8 items-center justify-center bg-white dark:bg-neutral-950 rounded-full"
                 style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 4, elevation: 4 }}
               >
@@ -541,10 +539,15 @@ const BusinessDetailScreen: React.FC = () => {
           </View>
           <View className="flex-row" style={{ gap: 8 }}>
             <Pressable
-              onPress={() => navigation.navigate('ChatScreen', { recipientId: (c as any).user?._id || id })}
+              onPress={() => {
+                const recipientUserId = extractId(c.user);
+                navigation.navigate('ChatScreen', {
+                  recipientId: recipientUserId,
+                  recipientName: c.companyName || c.businessName || 'Contractor',
+                } as any);
+              }}
               className="bg-neutral-100 dark:bg-neutral-900 px-5 py-3 rounded-xl"
-            >
-              <FontAwesome5 name="paper-plane" size={14} color="#171717" />
+            >              <FontAwesome5 name="paper-plane" size={14} color="#171717" />
             </Pressable>
             <Pressable
               onPress={() => setIsQuoteModalVisible(true)}

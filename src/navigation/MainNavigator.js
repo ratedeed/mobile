@@ -27,12 +27,13 @@ import SavedScreen from '../screens/SavedScreen';
 
 import Typography from '../components/common/Typography';
 import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../context/NotificationsContext';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
 // ---- Custom Center Tab Button ----
-const JobsTabBarButton = ({ onPress }: { onPress: () => void }) => (
+const JobsTabBarButton = ({ onPress }) => (
   <TouchableOpacity
     onPress={onPress}
     activeOpacity={0.8}
@@ -87,6 +88,7 @@ const screenOptions = {
 function MainTabNavigator() {
   const insets = useSafeAreaInsets();
   const { userRole } = useAuth();
+  const { unreadCount, unreadMessagesCount } = useNotifications();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
 
@@ -154,7 +156,31 @@ function MainTabNavigator() {
               style={{ marginRight: 16, padding: 8 }}
               onPress={() => navigation.navigate('Notifications')}
             >
-              <Bell size={22} color={isDark ? '#FAFAFA' : '#09090B'} />
+              <View>
+                <Bell size={22} color={isDark ? '#FAFAFA' : '#09090B'} />
+                {unreadCount > 0 && (
+                  <View 
+                    style={{ 
+                      position: 'absolute', 
+                      right: -6, 
+                      top: -6, 
+                      backgroundColor: '#EF4444', 
+                      borderRadius: 9, 
+                      minWidth: 18, 
+                      height: 18, 
+                      justifyContent: 'center', 
+                      alignItems: 'center',
+                      borderWidth: 2,
+                      borderColor: isDark ? '#0A0A0A' : '#FFFFFF',
+                      paddingHorizontal: 2
+                    }}
+                  >
+                    <RNText style={{ color: 'white', fontSize: 9, fontWeight: '700' }}>
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </RNText>
+                  </View>
+                )}
+              </View>
             </TouchableOpacity>
           ),
         })}
@@ -175,7 +201,16 @@ function MainTabNavigator() {
       <Tab.Screen
         name="Messages"
         component={MessagesScreen}
-        options={{ title: 'Messages' }}
+        options={{ 
+          title: 'Messages',
+          tabBarBadge: unreadMessagesCount > 0 ? unreadMessagesCount : undefined,
+          tabBarBadgeStyle: {
+            backgroundColor: '#EF4444',
+            color: 'white',
+            fontSize: 10,
+            fontWeight: 'bold',
+          }
+        }}
       />
       <Tab.Screen
         name="Profile"
@@ -187,8 +222,28 @@ function MainTabNavigator() {
 }
 
 export default function MainNavigator() {
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
+
+  const dynamicScreenOptions = {
+    headerStyle: {
+      backgroundColor: isDark ? '#0A0A0A' : '#FFFFFF',
+      borderBottomWidth: 1,
+      borderBottomColor: isDark ? '#262626' : '#E4E4E7',
+      shadowOpacity: 0,
+      elevation: 0,
+    },
+    headerTitleStyle: {
+      fontWeight: '600',
+      fontSize: 18,
+      color: isDark ? '#FAFAFA' : '#09090B',
+    },
+    headerTintColor: isDark ? '#6366F1' : '#2563EB',
+    cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
+  };
+
   return (
-    <Stack.Navigator screenOptions={screenOptions}>
+    <Stack.Navigator screenOptions={dynamicScreenOptions}>
       <Stack.Screen name="Main" component={MainTabNavigator} options={{ headerShown: false }} />
       <Stack.Screen name="BusinessDetail" component={BusinessDetailScreen} options={{ title: '' }} />
       <Stack.Screen name="ContractorDashboard" component={ContractorDashboardScreen} options={{ title: '' }} />

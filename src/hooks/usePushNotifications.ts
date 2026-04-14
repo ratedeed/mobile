@@ -2,6 +2,8 @@ import { useEffect, useState, useRef } from 'react';
 import * as Notifications from 'expo-notifications';
 import messaging from '@react-native-firebase/messaging';
 import { Platform } from 'react-native';
+import { useAuth } from '../context/AuthContext';
+import { savePushToken } from '../utils/apiClient';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -14,6 +16,7 @@ Notifications.setNotificationHandler({
 });
 
 export const usePushNotifications = () => {
+  const { isAuthenticated } = useAuth();
   const [expoPushToken, setExpoPushToken] = useState<string | undefined>();
   const [notification, setNotification] = useState<Notifications.Notification | undefined>();
   const notificationListener = useRef<Notifications.EventSubscription | null>(null);
@@ -30,8 +33,17 @@ export const usePushNotifications = () => {
         if (enabled) {
           console.log('Push Authorization status:', authStatus);
           const fcmToken = await messaging().getToken();
-          console.log('FCM Token:', fcmToken);
+          console.log('FCM Token acquired:', fcmToken);
           setExpoPushToken(fcmToken);
+
+          if (isAuthenticated && fcmToken) {
+            try {
+              await savePushToken(fcmToken);
+              console.log('FCM Token saved to backend');
+            } catch (err) {
+              console.error('Error saving push token to backend:', err);
+            }
+          }
         }
       } catch (error) {
         console.warn('Failed to get push token', error);
@@ -60,8 +72,7 @@ export const usePushNotifications = () => {
 
     responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
       console.log('Notification tapped!', response);
-      // Logic for deep linking (e.g., navigating to ChatScreen) would go here
-      // This is generally caught by the NavigationContainer's linking config if formatted correctly
+      // Logic for deep linking would be handled by NavigationContainer linking config
     });
 
     return () => {
@@ -73,7 +84,7 @@ export const usePushNotifications = () => {
         responseListener.current.remove();
       }
     };
-  }, []);
+  }, [isAuthenticated]);
 
   return { expoPushToken, notification };
 };

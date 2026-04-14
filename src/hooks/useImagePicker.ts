@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { launchImageLibrary, launchCamera, ImagePickerResponse, Asset } from 'react-native-image-picker';
+import { launchImageLibrary, launchCamera, ImagePickerResponse } from 'react-native-image-picker';
 import { uploadToCloudinary } from '../api/admin';
 
 interface UseImagePickerOptions {
@@ -32,16 +32,12 @@ export const useImagePicker = (options: UseImagePickerOptions = {}) => {
         return null;
       }
 
-      const asset: Asset = result.assets[0];
+      const asset = result.assets[0];
       if (!asset.uri) {
         throw new Error('No image URI returned');
       }
 
-      const response = await fetch(asset.uri);
-      const blob = await response.blob();
-      const file = new File([blob], asset.fileName || 'image.jpg', { type: asset.type });
-
-      const imageUrl = await uploadToCloudinary(file, folder);
+      const imageUrl = await uploadToCloudinary(asset.uri, folder);
       return imageUrl;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to pick image');
@@ -69,16 +65,12 @@ export const useImagePicker = (options: UseImagePickerOptions = {}) => {
         return null;
       }
 
-      const asset: Asset = result.assets[0];
+      const asset = result.assets[0];
       if (!asset.uri) {
         throw new Error('No image URI returned');
       }
 
-      const response = await fetch(asset.uri);
-      const blob = await response.blob();
-      const file = new File([blob], asset.fileName || 'image.jpg', { type: asset.type });
-
-      const imageUrl = await uploadToCloudinary(file, folder);
+      const imageUrl = await uploadToCloudinary(asset.uri, folder);
       return imageUrl;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to take photo');
@@ -109,10 +101,7 @@ export const useImagePicker = (options: UseImagePickerOptions = {}) => {
       const urls: string[] = [];
       for (const asset of result.assets) {
         if (asset.uri) {
-          const response = await fetch(asset.uri);
-          const blob = await response.blob();
-          const file = new File([blob], asset.fileName || 'image.jpg', { type: asset.type });
-          const imageUrl = await uploadToCloudinary(file, folder);
+          const imageUrl = await uploadToCloudinary(asset.uri, folder);
           urls.push(imageUrl);
         }
       }

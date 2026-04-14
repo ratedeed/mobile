@@ -187,6 +187,114 @@ export interface QuoteLineItem {
   unitPrice?: number;
 }
 
+export type ProjectPhase = "quoted" | "accepted" | "scheduled" | "in_progress" | "completed" | "reviewed";
+export type QuoteStatus = "pending" | "accepted" | "declined" | "expired" | "withdrawn" | "revised";
+export type ChangeOrderStatus = "pending" | "accepted" | "declined";
+export type DocType = "contract" | "permit" | "invoice" | "warranty" | "other";
+export type VoiceState = "idle" | "recording" | "paused" | "sent";
+
+export interface ProjectQuote {
+  id: string;
+  projectName: string;
+  category: string;
+  description: string;
+  checkIn: string;
+  estimatedDuration: string;
+  laborCost: number;
+  materialsCost: number;
+  subtotal: number;
+  platformFee: number;
+  taxes: number;
+  total: number;
+  deposit: number;
+  status: QuoteStatus;
+  createdAt: number | string;
+  expiresAt: number | string;
+  revisions?: number;
+  contractorName?: string;
+  contractorAvatar?: string;
+  contractorRating?: number;
+  contractorReviewCount?: number;
+  contractorLocation?: string;
+  contractorVerified?: boolean;
+  contractorMessage?: string;
+}
+
+export interface PhotoAttachment {
+  id: string;
+  url: string;
+  caption?: string;
+  label?: string;
+  phase?: "before" | "during" | "after";
+}
+
+export interface DocumentAttachment {
+  id: string;
+  name: string;
+  type: DocType;
+  size: string;
+  url: string;
+  signed?: boolean;
+}
+
+export interface VoiceAttachment {
+  id: string;
+  duration: number;
+  url: string;
+}
+
+export interface ChangeOrder {
+  id: string;
+  title: string;
+  description: string;
+  additionalCost: number;
+  status: ChangeOrderStatus;
+  originalQuoteId: string;
+}
+
+export interface MaterialItem {
+  name: string;
+  quantity: number;
+  unit: string;
+  estimatedCost: number;
+  link?: string;
+}
+
+export interface MaterialList {
+  id: string;
+  title: string;
+  items: MaterialItem[];
+  totalCost: number;
+  homeownerPurchases: boolean;
+}
+
+export interface EscrowInfo {
+  status: "pending" | "deposited" | "in_escrow" | "released" | "refunded";
+  amount: number;
+  depositedAt?: string;
+  releasedAt?: string;
+  releasedTo?: string;
+  waitingForApproval?: boolean;
+}
+
+export interface PaymentUpdateInfo {
+  label: string;
+  amount: number;
+  status: "deposited" | "in_escrow" | "released" | "refunded";
+}
+
+export interface ReviewData {
+  rating: number;
+  text: string;
+}
+
+export interface VideoCallInfo {
+  link: string;
+  duration?: number;
+  status: "scheduled" | "completed" | "missed";
+  scheduledAt: string;
+}
+
 export interface Quote {
   _id: string;
   contractor: string | Contractor;
@@ -199,6 +307,8 @@ export interface Quote {
   estimatedCompletionDate?: string;
   contractorNotes?: string;
   status: 'pending_user_approval' | 'accepted' | 'rejected' | 'expired';
+  isMilestone?: boolean;
+  milestones?: Array<{ name: string; percentage: number; amount: number }>;
   expiresAt?: string;
   createdAt: string;
   updatedAt?: string;
@@ -210,7 +320,18 @@ export interface Job {
   contractor: string | Contractor;
   user: string | User;
   amountFunded: number;
-  status: 'awaiting_payment' | 'funded_in_progress' | 'completed_pending_release' | 'completed_paid' | 'cancelled' | 'disputed';
+  status: 'awaiting_payment' | 'partially_funded' | 'funded_in_progress' | 'completed_pending_release' | 'completed_paid' | 'cancelled' | 'disputed';
+  isMilestone?: boolean;
+  milestones?: Array<{
+    _id: string;
+    name: string;
+    amount: number;
+    status: 'pending' | 'funded' | 'released';
+    stripePaymentIntentId?: string;
+    stripeTransferId?: string;
+  }>;
+  disputeReason?: string;
+  disputedMilestoneId?: string;
   stripeTransferId?: string;
   completionNotes?: string;
   completionDate?: string;

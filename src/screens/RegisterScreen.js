@@ -25,7 +25,6 @@ const RegisterScreen = () => {
   const [zipCode, setZipCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [role, setRole] = useState('homeowner');
   const [apiError, setApiError] = useState(null);
   const navigation = useNavigation();
 
@@ -98,212 +97,139 @@ const RegisterScreen = () => {
         {/* Role Toggle */}
         <View className="flex-row bg-neutral-100 rounded-xl p-1 w-full max-w-sm mx-auto mb-6">
           <Pressable
-            onPress={() => { setRole('homeowner'); setApiError(null); }}
-            className={`flex-1 py-2.5 rounded-lg items-center ${
-              role === 'homeowner' ? 'bg-white shadow-sm' : ''
-            }`}
-            style={{ elevation: role === 'homeowner' ? 2 : 0 }}
+            className="flex-1 py-2.5 rounded-lg items-center bg-white shadow-sm"
+            style={{ elevation: 2 }}
           >
-            <Text className={`text-sm font-semibold ${role === 'homeowner' ? 'text-neutral-900' : 'text-neutral-500'}`}>
+            <Text className="text-sm font-semibold text-neutral-900">
               I'm a Homeowner
             </Text>
           </Pressable>
           <Pressable
-            onPress={() => { setRole('contractor'); setApiError(null); }}
-            className={`flex-1 py-2.5 rounded-lg items-center ${
-              role === 'contractor' ? 'bg-white shadow-sm' : ''
-            }`}
-            style={{ elevation: role === 'contractor' ? 2 : 0 }}
+            onPress={() => navigation.navigate('ContractorSignup')}
+            className="flex-1 py-2.5 rounded-lg items-center"
+            style={{ elevation: 0 }}
           >
-            <Text className={`text-sm font-semibold ${role === 'contractor' ? 'text-neutral-900' : 'text-neutral-500'}`}>
+            <Text className="text-sm font-semibold text-neutral-500">
               I'm a Contractor
             </Text>
           </Pressable>
         </View>
 
-        {role === 'contractor' ? (
-          /* Contractor Notice */
-          <View className="w-full max-w-sm mx-auto" style={{ gap: 16 }}>
-            <View className="bg-neutral-50 border border-neutral-200 rounded-2xl p-6 items-center" style={{ gap: 16 }}>
-              <View className="w-12 h-12 bg-neutral-900 rounded-full items-center justify-center">
-                <FontAwesome5 name="hammer" size={18} color="#fff" />
-              </View>
-              <Text className="text-lg font-bold text-neutral-900">Join as a Contractor</Text>
-              <Text className="text-sm text-neutral-600 text-center leading-5">
-                Contractor registration includes company name, service category, service area, business address, and hours.
-              </Text>
-              <View className="flex-row items-start bg-white rounded-xl p-3 border border-neutral-100 w-full" style={{ gap: 8 }}>
-                <FontAwesome5 name="info-circle" size={14} color="#a3a3a3" style={{ marginTop: 2 }} />
-                <Text className="text-xs text-neutral-500 flex-1">
-                  Already have a contractor account?{' '}
-                  <Text
-                    className="font-semibold text-neutral-900 underline"
-                    onPress={() => navigation.navigate('Login')}
-                  >
-                    Log in
-                  </Text>
-                </Text>
-              </View>
-            </View>
-
-            <Pressable
-              onPress={() => navigation.navigate('ContractorSignup')}
-              className="w-full py-3 rounded-xl items-center"
-              style={{
-                backgroundColor: '#4F46E5',
-                shadowColor: '#4F46E5',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.2,
-                shadowRadius: 8,
-                elevation: 4,
-              }}
-            >
-              <Text className="text-sm font-semibold text-white">
-                Continue to Contractor Sign Up
-              </Text>
-            </Pressable>
-
-            <Pressable
-              onPress={() => setRole('homeowner')}
-              className="w-full py-3 rounded-xl items-center border border-neutral-300"
-            >
-              <Text className="text-sm font-medium text-neutral-900">I'm a Homeowner Instead</Text>
-            </Pressable>
-
-            <View className="items-center pt-2">
-              <Text className="text-sm text-neutral-500">
-                Already have an account?{' '}
-                <Text
-                  className="font-semibold text-neutral-900 underline"
-                  onPress={() => navigation.navigate('Login')}
-                >
-                  Log In
-                </Text>
-              </Text>
-            </View>
+        {/* Homeowner Sign Up Form */}
+        <View className="w-full max-w-sm mx-auto" style={{ gap: 12 }}>
+          {/* Name Fields Row */}
+          <View className="flex-row" style={{ gap: 12 }}>
+            <TextInput
+              placeholder="First name"
+              value={firstName}
+              onChangeText={setFirstName}
+              autoCapitalize="words"
+              autoComplete="given-name"
+              editable={!loading}
+              className="flex-1 border border-neutral-300 rounded-xl px-4 py-3 text-sm bg-white"
+              placeholderTextColor="#a3a3a3"
+            />
+            <TextInput
+              placeholder="Last name"
+              value={lastName}
+              onChangeText={setLastName}
+              autoCapitalize="words"
+              autoComplete="family-name"
+              editable={!loading}
+              className="flex-1 border border-neutral-300 rounded-xl px-4 py-3 text-sm bg-white"
+              placeholderTextColor="#a3a3a3"
+            />
           </View>
-        ) : (
-          /* Homeowner Sign Up Form */
-          <View className="w-full max-w-sm mx-auto" style={{ gap: 12 }}>
-            {/* Name Fields Row */}
-            <View className="flex-row" style={{ gap: 12 }}>
-              <TextInput
-                placeholder="First name"
-                value={firstName}
-                onChangeText={setFirstName}
-                autoCapitalize="words"
-                autoComplete="given-name"
-                editable={!loading}
-                className="flex-1 border border-neutral-300 rounded-xl px-4 py-3 text-sm bg-white"
-                placeholderTextColor="#a3a3a3"
-              />
-              <TextInput
-                placeholder="Last name"
-                value={lastName}
-                onChangeText={setLastName}
-                autoCapitalize="words"
-                autoComplete="family-name"
-                editable={!loading}
-                className="flex-1 border border-neutral-300 rounded-xl px-4 py-3 text-sm bg-white"
-                placeholderTextColor="#a3a3a3"
-              />
-            </View>
 
-            {/* Email */}
+          {/* Email */}
+          <TextInput
+            placeholder="Email"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+            autoComplete="email"
+            editable={!loading}
+            className="w-full border border-neutral-300 rounded-xl px-4 py-3 text-sm bg-white"
+            placeholderTextColor="#a3a3a3"
+          />
+
+          {/* Password */}
+          <View className="relative">
             <TextInput
-              placeholder="Email"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-              autoComplete="email"
+              placeholder="Password (6+ chars, 1 uppercase, 1 number)"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+              autoComplete="new-password"
               editable={!loading}
-              className="w-full border border-neutral-300 rounded-xl px-4 py-3 text-sm bg-white"
+              className="w-full border border-neutral-300 rounded-xl px-4 py-3 text-sm bg-white pr-20"
               placeholderTextColor="#a3a3a3"
             />
+            <Pressable
+              onPress={() => setShowPassword(!showPassword)}
+              className="absolute right-4 top-3 flex-row items-center"
+              style={{ gap: 4 }}
+            >
+              <FontAwesome5 name={showPassword ? 'eye-slash' : 'eye'} size={12} color="#171717" />
+              <Text className="text-xs font-semibold text-neutral-900">
+                {showPassword ? 'Hide' : 'Show'}
+              </Text>
+            </Pressable>
+          </View>
 
-            {/* Password */}
-            <View className="relative">
-              <TextInput
-                placeholder="Password (6+ chars, 1 uppercase, 1 number)"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-                autoComplete="new-password"
-                editable={!loading}
-                className="w-full border border-neutral-300 rounded-xl px-4 py-3 text-sm bg-white pr-20"
-                placeholderTextColor="#a3a3a3"
-              />
-              <Pressable
-                onPress={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-3 flex-row items-center"
-                style={{ gap: 4 }}
-              >
-                <FontAwesome5 name={showPassword ? 'eye-slash' : 'eye'} size={12} color="#171717" />
-                <Text className="text-xs font-semibold text-neutral-900">
-                  {showPassword ? 'Hide' : 'Show'}
-                </Text>
-              </Pressable>
+          {/* ZIP Code */}
+          <TextInput
+            placeholder="ZIP code (optional)"
+            value={zipCode}
+            onChangeText={setZipCode}
+            keyboardType="numeric"
+            autoComplete="postal-code"
+            maxLength={10}
+            editable={!loading}
+            className="w-full border border-neutral-300 rounded-xl px-4 py-3 text-sm bg-white"
+            placeholderTextColor="#a3a3a3"
+          />
+
+          {/* API Error */}
+          {apiError && (
+            <View className="bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-2.5">
+              <Text className="text-xs text-indigo-700">{apiError}</Text>
             </View>
+          )}
 
-            {/* ZIP Code */}
-            <TextInput
-              placeholder="ZIP code (optional)"
-              value={zipCode}
-              onChangeText={setZipCode}
-              keyboardType="numeric"
-              autoComplete="postal-code"
-              maxLength={10}
-              editable={!loading}
-              className="w-full border border-neutral-300 rounded-xl px-4 py-3 text-sm bg-white"
-              placeholderTextColor="#a3a3a3"
-            />
-
-            {/* API Error */}
-            {apiError && (
-              <View className="bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-2.5">
-                <Text className="text-xs text-indigo-700">{apiError}</Text>
+          {/* Submit */}
+          <Pressable
+            onPress={handleRegister}
+            disabled={loading}
+            className="w-full py-3 rounded-xl items-center"
+            style={{
+              backgroundColor: loading ? '#818cf8' : '#4F46E5',
+              shadowColor: '#4F46E5',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.2,
+              shadowRadius: 8,
+              elevation: 4,
+            }}
+          >
+            {loading ? (
+              <View className="flex-row items-center" style={{ gap: 8 }}>
+                <ActivityIndicator size="small" color="#fff" />
+                <Text className="text-sm font-semibold text-white">Creating account...</Text>
               </View>
+            ) : (
+              <Text className="text-sm font-semibold text-white">Sign Up</Text>
             )}
+          </Pressable>
 
-            {/* Submit */}
-            <Pressable
-              onPress={handleRegister}
-              disabled={loading}
-              className="w-full py-3 rounded-xl items-center"
-              style={{
-                backgroundColor: loading ? '#818cf8' : '#4F46E5',
-                shadowColor: '#4F46E5',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.2,
-                shadowRadius: 8,
-                elevation: 4,
-              }}
-            >
-              {loading ? (
-                <View className="flex-row items-center" style={{ gap: 8 }}>
-                  <ActivityIndicator size="small" color="#fff" />
-                  <Text className="text-sm font-semibold text-white">Creating account...</Text>
-                </View>
-              ) : (
-                <Text className="text-sm font-semibold text-white">Sign Up</Text>
-              )}
+          <View className="items-center pt-4 flex-row justify-center" style={{ gap: 4 }}>
+            <Text className="text-sm text-neutral-500">Already have an account?</Text>
+            <Pressable onPress={() => navigation.navigate('Login')}>
+              <Text className="text-sm font-semibold text-neutral-900 underline">Log In</Text>
             </Pressable>
-
-            <View className="items-center pt-4">
-              <Text className="text-sm text-neutral-500">
-                Already have an account?{' '}
-                <Text
-                  className="font-semibold text-neutral-900 underline"
-                  onPress={() => navigation.navigate('Login')}
-                >
-                  Log In
-                </Text>
-              </Text>
-            </View>
           </View>
-        )}
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );

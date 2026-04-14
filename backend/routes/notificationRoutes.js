@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { protect, authorize } = require('../middleware/authMiddleware');
+const { protect } = require('../middleware/authMiddleware');
 const Notification = require('../models/Notification');
 
 // @desc    Retrieve all notifications for a specific user
@@ -8,7 +8,7 @@ const Notification = require('../models/Notification');
 // @access  Private
 router.get('/', protect, async (req, res) => {
   try {
-    const notifications = await Notification.find({ user: req.user._id }).sort({ createdAt: -1 });
+    const notifications = await Notification.find({ recipient: req.user._id }).sort({ createdAt: -1 });
     res.json(notifications);
   } catch (error) {
     console.error(error);
@@ -42,7 +42,7 @@ router.put('/:id/read', protect, async (req, res) => {
 router.put('/read-all', protect, async (req, res) => {
   try {
     await Notification.updateMany(
-      { user: req.user._id, read: false },
+      { recipient: req.user._id, read: false },
       { read: true }
     );
     res.json({ message: 'All notifications marked as read' });

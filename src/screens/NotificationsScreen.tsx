@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useCallback } from 'react';
 import {
   View,
   FlatList,
@@ -9,137 +9,137 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
-import { getNotifications, markNotificationRead, markAllNotificationsRead, deleteNotification } from '../api';
+import { useNotifications } from '../context/NotificationsContext';
+import { useNavigation } from '@react-navigation/native';
 
 const NotificationsScreen: React.FC = () => {
-  const [notifications, setNotifications] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const navigation = useNavigation<any>();
+  const { 
+    notifications, 
+    unreadCount, 
+    isLoading, 
+    refreshNotifications, 
+    markAsRead, 
+    markAllAsRead, 
+    deleteNotification 
+  } = useNotifications();
+  const [refreshing, setRefreshing] = React.useState(false);
 
-  const loadNotifications = useCallback(async () => {
-    try {
-      const data = await getNotifications();
-      setNotifications(data || []);
-    } catch (err) {
-      console.error('Failed to load notifications:', err);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refreshNotifications();
+    setRefreshing(false);
+  }, [refreshNotifications]);
+
+  const handleNotificationPress = async (item: any) => {
+    if (!item.read) {
+      await markAsRead(item._id);
     }
-  }, []);
 
-  useEffect(() => { loadNotifications(); }, [loadNotifications]);
+    if (!item.link) return;
 
-  const onRefresh = useCallback(() => { setRefreshing(true); loadNotifications(); }, [loadNotifications]);
-
-  const handleMarkAsRead = async (id: string) => {
-    try {
-      await markNotificationRead(id);
-      setNotifications(prev => prev.map(n => (n._id === id ? { ...n, read: true } : n)));
-    } catch { Alert.alert('Error', 'Failed to mark as read'); }
-  };
-
-  const handleMarkAllAsRead = async () => {
-    try {
-      await markAllNotificationsRead();
-      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-    } catch { Alert.alert('Error', 'Failed to mark all as read'); }
-  };
-
-  const handleDelete = async (id: string) => {
-    try {
-      await deleteNotification(id);
-      setNotifications(prev => prev.filter(n => n._id !== id));
-    } catch { Alert.alert('Error', 'Failed to delete'); }
+    // Handle deep linking based on backend link format
+    // Links are usually like "/messages/CONV_ID" or "/leads/LEAD_ID"
+    if (item.link.startsWith('/messages/')) {
+      const conversationId = item.link.split('/')[2];
+      navigation.navigate('ChatScreen', { conversationId });
+    } else if (item.link.startsWith('/leads/')) {
+      // In this app, leads might be on the Contractor Dashboard or a specific Leads screen
+      // For now, navigate to Main -> Explore or Dashboard as a fallback
+      navigation.navigate('Main', { screen: 'Dashboard' });
+    }
   };
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return '';
-    const diff = Date.now() - new Date(dateStr).getTime();
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
     const mins = Math.floor(diff / 60000);
+    
     if (mins < 1) return 'Just now';
     if (mins < 60) return `${mins}m ago`;
     const hours = Math.floor(mins / 60);
     if (hours < 24) return `${hours}h ago`;
-    const days = Math.floor(hours / 24);
-    if (days < 7) return `${days}d ago`;
-    return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    
+    // Format as "MMM D" for older notifications
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
-  const getNotificationIcon = (message: string) => {
+  const getNotificationIcon = (type: string, message: string) => {
     const m = message.toLowerCase();
-    if (m.includes('review') || m.includes('rating')) return { name: 'star', color: '#f59e0b', bg: '#fef3c7' };
-    if (m.includes('message') || m.includes('chat')) return { name: 'comment', color: '#3b82f6', bg: '#dbeafe' };
+    if (type === 'new_review' || m.includes('review')) return { name: 'star', color: '#f59e0b', bg: '#fef3c7' };
+    if (type === 'new_message' || m.includes('message')) return { name: 'comment', color: '#3b82f6', bg: '#dbeafe' };
     if (m.includes('quote') || m.includes('payment')) return { name: 'dollar-sign', color: '#10b981', bg: '#d1fae5' };
-    if (m.includes('job') || m.includes('project')) return { name: 'briefcase', color: '#8b5cf6', bg: '#ede9fe' };
+    if (type === 'new_lead' || m.includes('lead') || m.includes('project')) return { name: 'briefcase', color: '#8b5cf6', bg: '#ede9fe' };
     return { name: 'bell', color: '#4F46E5', bg: '#eef2ff' };
   };
 
-  const unreadCount = notifications.filter(n => !n.read).length;
-
-  if (loading) {
-    return (
-      <View className="flex-1 bg-white dark:bg-neutral-950 items-center justify-center">
-        <ActivityIndicator size="large" color="#a3a3a3" />
-        <Text className="text-sm text-neutral-400 mt-3">Loading notifications...</Text>
-      </View>
-    );
-  }
-
   const renderNotification = ({ item }: { item: any }) => {
-    const icon = getNotificationIcon(item.message);
+    const icon = getNotificationIcon(item.type, item.message);
     return (
       <Pressable
-        onPress={() => { if (!item.read) handleMarkAsRead(item._id); }}
+        onPress={() => handleNotificationPress(item)}
         onLongPress={() => {
-          Alert.alert('Actions', '', [
-            { text: 'Mark as Read', onPress: () => handleMarkAsRead(item._id) },
-            { text: 'Delete', style: 'destructive', onPress: () => handleDelete(item._id) },
+          Alert.alert('Notification Actions', '', [
+            { text: 'Delete', style: 'destructive', onPress: () => deleteNotification(item._id) },
             { text: 'Cancel', style: 'cancel' },
           ]);
         }}
-        className={`flex-row items-center px-4 py-3.5 ${!item.read ? 'bg-sky-50 dark:bg-sky-950/40' : 'bg-white dark:bg-neutral-950'} border-b border-neutral-100 dark:border-neutral-800`}
-        style={{ gap: 12 }}
+        className={`flex-row items-start px-4 py-4 ${!item.read ? 'bg-indigo-50/40 dark:bg-indigo-900/10' : 'bg-white dark:bg-neutral-950'} border-b border-neutral-100 dark:border-neutral-800`}
+        style={{ gap: 14 }}
       >
-        <View className="w-11 h-11 rounded-full items-center justify-center shrink-0" style={{ backgroundColor: icon.bg }}>
-          <FontAwesome5 name={icon.name as any} size={16} color={icon.color} />
+        <View className="w-10 h-10 rounded-full items-center justify-center shrink-0 mt-0.5" style={{ backgroundColor: icon.bg }}>
+          <FontAwesome5 name={icon.name as any} size={15} color={icon.color} />
         </View>
         <View className="flex-1">
-          <Text className={`text-sm ${!item.read ? 'font-semibold text-neutral-900 dark:text-neutral-50' : 'text-neutral-600 dark:text-neutral-400'}`} numberOfLines={2}>
+          <Text className={`text-[14px] leading-5 ${!item.read ? 'font-bold text-neutral-900 dark:text-neutral-50' : 'text-neutral-700 dark:text-neutral-300'}`}>
             {item.message}
           </Text>
-          <Text className="text-xs text-neutral-400 mt-1">{formatDate(item.createdAt)}</Text>
+          <Text className="text-[12px] text-neutral-400 mt-1.5 font-medium">{formatDate(item.createdAt)}</Text>
         </View>
-        {!item.read && <View className="w-2.5 h-2.5 rounded-full bg-indigo-500 shrink-0" />}
+        {!item.read && <View className="w-2 h-2 rounded-full bg-indigo-500 shrink-0 mt-2" />}
       </Pressable>
     );
   };
 
+  if (isLoading && !refreshing && notifications.length === 0) {
+    return (
+      <View className="flex-1 bg-white dark:bg-neutral-950 items-center justify-center">
+        <ActivityIndicator size="small" color="#6366f1" />
+        <Text className="text-sm text-neutral-400 mt-3 font-medium">Updating notifications...</Text>
+      </View>
+    );
+  }
+
   return (
     <View className="flex-1 bg-white dark:bg-neutral-950">
       {/* Header */}
-      <View className="px-4 pt-4 pb-2 flex-row items-center justify-between">
+      <View className="px-5 pt-5 pb-3 flex-row items-center justify-between border-b border-neutral-50 dark:border-neutral-900">
         <View>
           <Text className="text-2xl font-bold text-neutral-900 dark:text-neutral-50">Notifications</Text>
-          <Text className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">
+          <Text className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5 font-medium">
             {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up!'}
           </Text>
         </View>
         {unreadCount > 0 && (
-          <Pressable onPress={handleMarkAllAsRead}>
-            <Text className="text-sm font-semibold text-indigo-600 dark:text-indigo-400">Mark all read</Text>
+          <Pressable 
+            onPress={markAllAsRead}
+            className="bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1.5 rounded-full"
+          >
+            <Text className="text-xs font-bold text-indigo-600 dark:text-indigo-400">Mark all read</Text>
           </Pressable>
         )}
       </View>
 
       {notifications.length === 0 ? (
-        <View className="flex-1 items-center justify-center px-8">
-          <View className="w-16 h-16 bg-neutral-100 dark:bg-neutral-800 rounded-full items-center justify-center mb-4">
-            <FontAwesome5 name="bell" size={28} color="#d4d4d4" />
+        <View className="flex-1 items-center justify-center px-10">
+          <View className="w-20 h-20 bg-neutral-50 dark:bg-neutral-900 rounded-full items-center justify-center mb-6">
+            <FontAwesome5 name="bell" size={32} color="#e5e5e5" />
           </View>
-          <Text className="text-lg font-bold text-neutral-900 dark:text-neutral-50">No notifications</Text>
-          <Text className="text-sm text-neutral-500 dark:text-neutral-400 mt-1 text-center">
-            You're all caught up! We'll notify you when something new happens.
+          <Text className="text-xl font-bold text-neutral-900 dark:text-neutral-50">Stay updated</Text>
+          <Text className="text-sm text-neutral-500 dark:text-neutral-400 mt-2 text-center leading-5">
+            When you receive messages, leads, or updates, they'll appear here for quick access.
           </Text>
         </View>
       ) : (
@@ -147,7 +147,15 @@ const NotificationsScreen: React.FC = () => {
           data={notifications}
           renderItem={renderNotification}
           keyExtractor={item => item._id}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          contentContainerStyle={{ paddingBottom: 20 }}
+          refreshControl={
+            <RefreshControl 
+              refreshing={refreshing} 
+              onRefresh={onRefresh}
+              tintColor="#6366f1"
+              colors={['#6366f1']}
+            />
+          }
         />
       )}
     </View>
