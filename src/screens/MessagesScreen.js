@@ -313,8 +313,8 @@ const MessagesScreen = () => {
               </View>
             </View>
             <ScrollView className="flex-1">
-              {filteredConversations.map(conv => (
-                <ConversationItem key={conv.conversationId} conv={conv} currentUserId={currentUserId} onlineUsers={onlineUsers} onPress={() => setSelectedConversation(conv)} />
+              {filteredConversations.map((conv, idx) => (
+                <ConversationItem key={conv.conversationId || conv._id || `c-${idx}`} conv={conv} currentUserId={currentUserId} onlineUsers={onlineUsers} onPress={() => setSelectedConversation(conv)} />
               ))}
             </ScrollView>
           </View>
@@ -340,12 +340,12 @@ const MessagesScreen = () => {
               className="flex-1 px-4 py-4"
               onContentSizeChange={() => messagesScrollViewRef.current?.scrollToEnd({ animated: true })}
             >
-              {messages.map(msg => {
+              {messages.map((msg, idx) => {
                 const senderId = extractId(msg.senderId);
                 const otherId = extractId(chatOtherParticipant);
                 const isMe = (senderId && currentUserId && senderId.toString() === currentUserId.toString()) || (otherId && senderId !== otherId);
                 return (
-                  <View key={msg._id} className={`flex-row mb-3 ${isMe ? 'justify-end' : 'justify-start'}`} style={{ gap: 8 }}>
+                  <View key={msg._id || msg.id || `m-${idx}`} className={`flex-row mb-3 ${isMe ? 'justify-end' : 'justify-start'}`} style={{ gap: 8 }}>
                     <View className="max-w-[80%]">
                       <View className={`px-3.5 py-2.5 rounded-2xl ${isMe ? 'bg-indigo-600' : 'bg-neutral-100'}`}>
                         {msg.type === "quote" && msg.quote && (

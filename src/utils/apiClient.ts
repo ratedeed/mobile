@@ -3,6 +3,7 @@ import { API_BASE_URL } from '../config';
 import io, { Socket } from 'socket.io-client';
 import { auth as firebaseAuth } from '../firebaseConfig';
 import { jwtDecode } from 'jwt-decode';
+import { AppState } from 'react-native';
 import {
   Contractor,
   Post,
@@ -282,6 +283,23 @@ export const updateContractorProfile = async (data: Partial<Contractor>): Promis
 
 let socket: Socket | null = null;
 let isInitializingSocket = false;
+let currentSocketUserId: string | null = null;
+
+// Disconnect socket when app goes to background so the backend knows
+// to send FCM Push Notifications instead of just socket events
+AppState.addEventListener('change', (nextAppState) => {
+  if (nextAppState === 'background' || nextAppState === 'inactive') {
+    if (socket?.connected) {
+      console.log('App in background: disconnecting socket for FCM pushes');
+      socket.disconnect();
+    }
+  } else if (nextAppState === 'active') {
+    if (socket?.disconnected && currentSocketUserId) {
+      console.log('App in foreground: reconnecting socket');
+      socket.connect();
+    }
+  }
+});
 
 export const initializeSocket = async () => {
   if (socket?.connected || isInitializingSocket) return;
@@ -328,6 +346,7 @@ export const initializeSocket = async () => {
 
 export const registerSocket = async (userId: string) => {
   await initializeSocket();
+  currentSocketUserId = userId;
   
   const emitRegister = () => {
     if (userId) {
@@ -369,7 +388,8 @@ export const onNewMessage = (callback: (message: any) => void) => {
     socket.removeAllListeners("newMessage");
     return;
   }
-  socket.off("newMessage"); // Remove all previous listeners for this event
+  // Remove the specific callback if it was already added to prevent duplicates, but DON'T remove all listeners
+  socket.off("newMessage", callback);
   socket.on("newMessage", callback);
 };
 
@@ -377,14 +397,14 @@ export const offNewMessage = (callback?: (message: any) => void) => {
   if (callback) {
     socket?.off("newMessage", callback);
   } else {
-    socket?.off("newMessage");
+    socket?.removeAllListeners("newMessage");
   }
 };
 
 
 export const onMessageRead = (callback: (data: any) => void) => {
   if (!socket) return;
-  socket.off("messageRead");
+  socket.off("messageRead", callback);
   socket.on("messageRead", callback);
 };
 
@@ -392,14 +412,14 @@ export const offMessageRead = (callback?: (data: any) => void) => {
   if (callback) {
     socket?.off("messageRead", callback);
   } else {
-    socket?.off("messageRead");
+    socket?.removeAllListeners("messageRead");
   }
 };
 
 
 export const onTyping = (callback: (data: any) => void) => {
   if (!socket) return;
-  socket.off("typing");
+  socket.off("typing", callback);
   socket.on("typing", callback);
 };
 
@@ -407,14 +427,14 @@ export const offTyping = (callback?: (data: any) => void) => {
   if (callback) {
     socket?.off("typing", callback);
   } else {
-    socket?.off("typing");
+    socket?.removeAllListeners("typing");
   }
 };
 
 
 export const onUserOnlineStatus = (callback: (data: any) => void) => {
   if (!socket) return;
-  socket.off("userOnlineStatus");
+  socket.off("userOnlineStatus", callback);
   socket.on("userOnlineStatus", callback);
 };
 
@@ -422,13 +442,13 @@ export const offUserOnlineStatus = (callback?: (data: any) => void) => {
   if (callback) {
     socket?.off("userOnlineStatus", callback);
   } else {
-    socket?.off("userOnlineStatus");
+    socket?.removeAllListeners("userOnlineStatus");
   }
 };
 
 export const onNewNotification = (callback: (notification: any) => void) => {
   if (!socket) return;
-  socket.off("newNotification");
+  socket.off("newNotification", callback);
   socket.on("newNotification", callback);
 };
 
@@ -436,7 +456,7 @@ export const offNewNotification = (callback?: (notification: any) => void) => {
   if (callback) {
     socket?.off("newNotification", callback);
   } else {
-    socket?.off("newNotification");
+    socket?.removeAllListeners("newNotification");
   }
 };
 
@@ -530,7 +550,11 @@ export const listContractorReviews = async (contractorId: string, params: any = 
 
 export const fetchContractorReviews = async (contractorId: string): Promise<Review[]> => {
   const data = await listContractorReviews(contractorId);
-  return data.reviews || data || [];
+  if (!data) return [];
+  if (Array.isArray(data)) return data;
+  if (data.reviews && Array.isArray(data.reviews)) return data.reviews;
+  if (data.data && Array.isArray(data.data)) return data.data;
+  return [];
 };
 
 export const submitReview = async (contractorId: string, reviewData: Partial<Review>): Promise<Review> => {

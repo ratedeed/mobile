@@ -56,8 +56,8 @@ export function AppHeader({
   };
 
   const handleToggleNotifications = () => {
-    // Dispatch event for notification panel toggle - components can listen to this
-    // In React Native, we'd typically use a global event emitter or context
+    // @ts-ignore
+    navigation.navigate('Notifications');
   };
 
   const displayCount = unreadCount > 9 ? '9+' : unreadCount.toString();

@@ -1,12 +1,14 @@
 import './global.css';
 import 'react-native-gesture-handler';
 import { registerRootComponent } from 'expo';
-import messaging from '@react-native-firebase/messaging';
-import App from './App';
+import { getMessaging, setBackgroundMessageHandler } from '@react-native-firebase/messaging';
 
-// Register background handler for push notifications
-messaging().setBackgroundMessageHandler(async remoteMessage => {
-  console.log('Message handled in the background!', remoteMessage);
+// SYNC: Set background handler BEFORE importing App to ensure early registration
+setBackgroundMessageHandler(getMessaging(), async remoteMessage => {
+  console.log('Message handled in the background!', JSON.stringify(remoteMessage, null, 2));
+  return Promise.resolve();
 });
+
+import App from './App';
 
 registerRootComponent(App);

@@ -1,9 +1,17 @@
 import { useEffect, useState, useRef } from 'react';
 import * as Notifications from 'expo-notifications';
-import messaging from '@react-native-firebase/messaging';
+import { 
+  getMessaging, 
+  getToken, 
+  onMessage, 
+  requestPermission, 
+  AuthorizationStatus 
+} from '@react-native-firebase/messaging';
 import { Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../context/NotificationsContext';
 import { savePushToken } from '../utils/apiClient';
 
 Notifications.setNotificationHandler({
@@ -18,6 +26,7 @@ Notifications.setNotificationHandler({
 
 export const usePushNotifications = () => {
   const { isAuthenticated } = useAuth();
+  const { refreshNotifications } = useNotifications();
   const navigation = useNavigation();
   const [expoPushToken, setExpoPushToken] = useState<string | undefined>();
   const [notification, setNotification] = useState<Notifications.Notification | undefined>();
@@ -25,16 +34,18 @@ export const usePushNotifications = () => {
   const responseListener = useRef<Notifications.EventSubscription | null>(null);
 
   useEffect(() => {
+    const messaging = getMessaging();
+
     const requestUserPermission = async () => {
       try {
-        const authStatus = await messaging().requestPermission();
+        const authStatus = await requestPermission(messaging);
         const enabled =
-          authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
-          authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+          authStatus === AuthorizationStatus.AUTHORIZED ||
+          authStatus === AuthorizationStatus.PROVISIONAL;
 
         if (enabled) {
           console.log('Push Authorization status:', authStatus);
-          const fcmToken = await messaging().getToken();
+          const fcmToken = await getToken(messaging);
           console.log('FCM Token acquired:', fcmToken);
           setExpoPushToken(fcmToken);
 
@@ -54,9 +65,16 @@ export const usePushNotifications = () => {
 
     requestUserPermission();
 
+    // Save token if already acquired but auth just happened
+    if (isAuthenticated && expoPushToken) {
+      savePushToken(expoPushToken).catch(err => console.error('Error saving push token on auth:', err));
+    }
+
     // Foreground message handler
-    const unsubscribe = messaging().onMessage(async remoteMessage => {
+    const unsubscribe = onMessage(messaging, async remoteMessage => {
       console.log('A new FCM message arrived!', JSON.stringify(remoteMessage));
+      
+      // 1. Show system alert
       await Notifications.scheduleNotificationAsync({
         content: {
           title: remoteMessage.notification?.title || 'New Notification',
@@ -65,11 +83,21 @@ export const usePushNotifications = () => {
         },
         trigger: null,
       });
+
+      // 2. SYNC: Refresh Bell history
+      refreshNotifications().catch(e => console.error('Failed to refresh after FCM:', e));
     });
 
     // Notification tap handler
     notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
+      console.log('Foreground notification received!', JSON.stringify(notification, null, 2));
       setNotification(notification);
+      
+      // Auto-refresh notifications and unread counts
+      AsyncStorage.getItem('unreadNotifications').then(val => {
+        const count = val ? parseInt(val, 10) : 0;
+        AsyncStorage.setItem('unreadNotifications', (count + 1).toString());
+      });
     });
 
     responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
@@ -97,7 +125,7 @@ export const usePushNotifications = () => {
         responseListener.current.remove();
       }
     };
-  }, [isAuthenticated]);
+  }, [isAuthenticated, expoPushToken]);
 
   return { expoPushToken, notification };
 };

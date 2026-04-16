@@ -194,13 +194,13 @@ router.post('/', protect, async (req, res) => {
         io.to(recipientSocketRoomId).emit('newMessage', finalMessageForFrontend);
         console.log(`Backend: Emitted newMessage to recipient room: ${recipientSocketRoomId}`);
 
-        // Create and emit notification for the recipient
-        try {
+          // Create and emit notification for the recipient
           const Notification = require('../models/Notification');
           const { sendPushNotification } = require('../utils/pushNotifications');
+          
           const notification = await Notification.create({
             recipient: recipientUserForSocket._id,
-            recipientModel: recipientOnModel,
+            recipientModel: 'User', // Notifications are always linked to the User document
             sender: actualSenderId,
             senderModel: senderOnModel,
             message: `New message from ${senderDetailsForFrontend.firstName} ${senderDetailsForFrontend.lastName}`,
@@ -211,15 +211,20 @@ router.post('/', protect, async (req, res) => {
           if (io) {
             console.log(`Backend: Emitting newNotification to user room: ${recipientSocketRoomId}`);
             io.to(recipientSocketRoomId).emit('newNotification', notification);
-          } else {
-            console.warn('Backend: Socket.io instance not found in req.app, cannot emit notification');
           }
 
           // SEND REAL PUSH NOTIFICATION (for locked screens)
+          // SYNC: We send push notification if the user has a token. 
           if (recipientUserForSocket.pushToken) {
             console.log(`Backend: Attempting to send push notification to user: ${recipientUserForSocket._id}`);
+            
+            // Fix: Resolve correct sender name exactly as web version does
+            const senderName = senderOnModel === 'Contractor' 
+                ? (senderDetailsForFrontend.businessName || senderDetailsForFrontend.companyName || `${senderDetailsForFrontend.firstName} ${senderDetailsForFrontend.lastName}`)
+                : `${senderDetailsForFrontend.firstName} ${senderDetailsForFrontend.lastName}`;
+
             await sendPushNotification(recipientUserForSocket.pushToken, {
-              title: `New message from ${senderDetailsForFrontend.firstName}`,
+              title: `New message from ${senderName}`,
               body: messageText.length > 100 ? `${messageText.substring(0, 97)}...` : messageText,
               data: {
                 type: 'new_message',
@@ -228,9 +233,6 @@ router.post('/', protect, async (req, res) => {
               }
             });
           }
-        } catch (notifErr) {
-          console.error('Backend: Error creating message notification:', notifErr);
-        }
 
     } catch (error) {
         console.error('Backend: Error sending message:', error.stack);

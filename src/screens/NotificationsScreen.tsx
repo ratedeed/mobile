@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useNotifications } from '../context/NotificationsContext';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 
 const NotificationsScreen: React.FC = () => {
   const navigation = useNavigation<any>();
@@ -24,6 +24,13 @@ const NotificationsScreen: React.FC = () => {
     deleteNotification 
   } = useNotifications();
   const [refreshing, setRefreshing] = React.useState(false);
+
+  // Auto-refresh when the tab comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      refreshNotifications();
+    }, [refreshNotifications])
+  );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);

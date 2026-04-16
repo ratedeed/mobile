@@ -29,8 +29,46 @@ export const NotificationsProvider: React.FC<{ children: ReactNode }> = ({ child
     setIsLoading(true);
     try {
       const data = await apiClient.getNotifications();
-      setNotifications(data);
-      const unread = data.filter((n: Notification) => !n.read).length;
+      let notifs = Array.isArray(data) ? data : [];
+
+      try {
+        const convos = await apiClient.fetchConversations();
+        const unreadConvos = convos.filter((c: any) => c.unreadCount > 0);
+        
+        // Update unread messages count while we have the data
+        const count = unreadConvos.reduce((sum: number, c: any) => sum + (c.unreadCount || 0), 0);
+        setUnreadMessagesCount(count);
+
+        // Synthesize notifications for unread conversations
+        const syntheticNotifs = unreadConvos.map((c: any) => {
+          const otherParticipant = c.participants.find((p: any) => p._id !== userId);
+          const name = otherParticipant ? (otherParticipant.businessName || otherParticipant.companyName || `${otherParticipant.firstName || ''} ${otherParticipant.lastName || ''}`.trim() || 'Someone') : 'Someone';
+          
+          return {
+            _id: `msg-notif-${c.conversationId}`,
+            type: 'new_message',
+            message: `New message from ${name}`,
+            read: false,
+            createdAt: c.lastMessage?.createdAt || new Date().toISOString(),
+            link: `/messages/${c.conversationId}`,
+            sender: otherParticipant,
+          } as any;
+        });
+
+        console.log(`NotificationsContext: synthesized ${syntheticNotifs.length} notifications from unread convos`, JSON.stringify(syntheticNotifs));
+
+        // Filter out any real notifications that might duplicate these (just in case backend does send them)
+        notifs = notifs.filter(n => !(n.type === 'new_message' && n.link && syntheticNotifs.some(sn => sn.link === n.link)));
+        
+        // Combine and sort by date
+        notifs = [...syntheticNotifs, ...notifs].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        console.log(`NotificationsContext: final notifications array length: ${notifs.length}`);
+      } catch (convErr) {
+        console.error('Error fetching conversations for notifications:', convErr);
+      }
+
+      setNotifications(notifs);
+      const unread = notifs.filter((n: Notification) => !n.read).length;
       await AsyncStorage.setItem('unreadNotifications', unread.toString());
     } catch (error) {
       console.error('Error fetching notifications:', error);
@@ -53,7 +91,6 @@ export const NotificationsProvider: React.FC<{ children: ReactNode }> = ({ child
   useEffect(() => {
     if (isAuthenticated) {
       refreshNotifications();
-      refreshUnreadMessagesCount();
 
       // Stable listener functions
       const handleNewNotification = (notification: Notification) => {
@@ -61,41 +98,45 @@ export const NotificationsProvider: React.FC<{ children: ReactNode }> = ({ child
         setNotifications(prev => {
           // Prevent duplicates
           if (prev.find(n => n._id === notification._id)) return prev;
-          const newNotifications = [notification, ...prev];
-          // Update AsyncStorage unread count for AppHeader badge
+          const newNotifications = [notification, ...prev].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
           const newCount = newNotifications.filter((n: Notification) => !n.read).length;
           AsyncStorage.setItem('unreadNotifications', newCount.toString());
           return newNotifications;
         });
-
-        // If it's a message notification, refresh the unread messages count as well
-        if (notification.type === 'new_message') {
-          refreshUnreadMessagesCount();
-        }
       };
 
       const handleNewMessage = (message: any) => {
-        console.log('NotificationsContext: Socket received newMessage for badge update');
-        refreshUnreadMessagesCount();
+        console.log('NotificationsContext: Socket received newMessage, refreshing notifications to synthesize bell items');
+        refreshNotifications();
       };
 
-      // Listen for real-time notifications via socket
-      apiClient.onNewNotification(handleNewNotification);
+      const setupSocketListeners = async () => {
+        if (userId) {
+          await apiClient.registerSocket(userId);
+        }
+        apiClient.onNewNotification(handleNewNotification);
+        apiClient.onNewMessage(handleNewMessage);
+      };
 
-      // Listen for real-time messages to update tab badge
-      apiClient.onNewMessage(handleNewMessage);
+      setupSocketListeners();
     }
 
     return () => {
-      console.log('NotificationsContext: Cleaning up socket listeners');
       apiClient.offNewNotification();
       apiClient.offNewMessage();
     };
-  }, [isAuthenticated]);
+  }, [isAuthenticated, userId]);
 
   const markAsRead = async (id: string) => {
     try {
-      await apiClient.markNotificationRead(id);
+      if (!id.startsWith('msg-notif-')) {
+        await apiClient.markNotificationRead(id);
+      } else {
+        // It's a synthetic message notification, mark the conversation as read
+        const conversationId = id.replace('msg-notif-', '');
+        await apiClient.markConversationAsRead(conversationId);
+      }
+      
       setNotifications(prev => {
         const updated = prev.map(n => n._id === id ? { ...n, read: true } : n);
         const unread = updated.filter((n: Notification) => !n.read).length;
@@ -110,11 +151,14 @@ export const NotificationsProvider: React.FC<{ children: ReactNode }> = ({ child
   const markAllAsRead = async () => {
     try {
       await apiClient.markAllNotificationsRead();
+      // We should also theoretically mark all conversations as read, but that's complex
+      // For now, we'll optimistically update the UI
       setNotifications(prev => {
         const updated = prev.map(n => ({ ...n, read: true }));
         AsyncStorage.setItem('unreadNotifications', '0');
         return updated;
       });
+      setUnreadMessagesCount(0);
     } catch (error) {
       console.error('Error marking all notifications read:', error);
     }
@@ -122,7 +166,9 @@ export const NotificationsProvider: React.FC<{ children: ReactNode }> = ({ child
 
   const deleteNotification = async (id: string) => {
     try {
-      await apiClient.deleteNotification(id);
+      if (!id.startsWith('msg-notif-')) {
+        await apiClient.deleteNotification(id);
+      }
       setNotifications(prev => {
         const updated = prev.filter(n => n._id !== id);
         const unread = updated.filter((n: Notification) => !n.read).length;
