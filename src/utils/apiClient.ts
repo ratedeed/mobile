@@ -592,9 +592,10 @@ export const updateUserProfile = async (data: Partial<User>): Promise<User> => {
   return put(`${API_BASE}/users/profile`, data, authHeaders);
 };
 
-export const savePushToken = async (pushToken: string): Promise<any> => {
+export const savePushToken = async (token: string): Promise<any> => {
   const authHeaders = await getAuthHeaders();
-  return put(`${API_BASE}/users/push-token`, { pushToken }, authHeaders);
+  // Production Render backend expects POST /api/users/push-token with { token: "..." }
+  return post(`${API_BASE}/users/push-token`, { token }, authHeaders);
 };
 
 export const updateProfilePicture = async (pictureUrl: string): Promise<User> => {

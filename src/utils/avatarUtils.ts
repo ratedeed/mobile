@@ -161,32 +161,105 @@ export function generateAvatarDataUrl(name: string, size: number = 200, category
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${s}" height="${s}" viewBox="0 0 ${s} ${s}">
   <defs>
     <radialGradient id="${uid}-rg1" cx="30%" cy="25%" r="80%" fx="25%" fy="20%">
-      <stop offset="0%" stopColor="${colors.light}" stopOpacity="0.4" />
-      <stop offset="45%" stopColor="${colors.primary}" />
-      <stop offset="100%" stopColor="${colors.dark}" />
+      <stop offset="0%" stop-color="${colors.light}" stop-opacity="0.4" />
+      <stop offset="45%" stop-color="${colors.primary}" />
+      <stop offset="100%" stop-color="${colors.dark}" />
     </radialGradient>
     <clipPath id="${uid}-clip"><circle cx="${s / 2}" cy="${s / 2}" r="${s / 2}" /></clipPath>
   </defs>
-  <g clipPath="url(#${uid}-clip)">
+  <g clip-path="url(#${uid}-clip)">
     <rect width="${s}" height="${s}" fill="${colors.accent}" />
     <rect width="${s}" height="${s}" fill="url(#${uid}-rg1)" />
-    <text x="50%" y="50%" dy=".35em" textAnchor="middle" fontFamily="sans-serif" fontSize="${fontSize}" fontWeight="600" fill="white">${initials}</text>
+    <text x="50%" y="50%" dy=".35em" text-anchor="middle" font-family="sans-serif" font-size="${fontSize}" font-weight="600" fill="white">${initials}</text>
   </g>
 </svg>`;
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
-/** Check if a URL is a real uploaded image (same logic as web isRealImageUrl) */
+/**
+ * Generate a beautiful SVG data URI for a contractor banner/cover image.
+ */
+export function generateBannerDataUrl(
+  name: string,
+  category?: string,
+  width: number = 800,
+  height: number = 400,
+): string {
+  const colors = getCategoryColors(category, name);
+  const hash = simpleHash(name || 'default');
+  const uid = `bn-${hash}`;
+  const w = width;
+  const h = height;
+
+  const titleFontSize = Math.min(w * 0.065, 44);
+  const categoryFontSize = Math.min(w * 0.03, 22);
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
+  <defs>
+    <linearGradient id="${uid}-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="${colors.primary}" />
+      <stop offset="100%" stop-color="${colors.dark}" />
+    </linearGradient>
+  </defs>
+  <rect width="${w}" height="${h}" fill="url(#${uid}-bg)" />
+  <g>
+    <text
+      x="50%"
+      y="${h * 0.45}"
+      text-anchor="middle"
+      dominant-baseline="central"
+      font-family="sans-serif"
+      font-size="${titleFontSize}"
+      font-weight="800"
+      fill="white"
+    >${escapeXml(name || 'Ratedeed')}</text>
+    
+    ${category ? `
+    <text
+      x="50%"
+      y="${h * 0.45 + titleFontSize * 1.2}"
+      text-anchor="middle"
+      dominant-baseline="central"
+      font-family="sans-serif"
+      font-size="${categoryFontSize}"
+      font-weight="500"
+      fill="white"
+      fill-opacity="0.85"
+    >${escapeXml(category)}</text>
+    ` : ''}
+  </g>
+</svg>`;
+
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
+
+/** 
+ * Check if a URL is a real uploaded image.
+ * Returns FALSE for generated placeholders or empty strings.
+ */
 export function isRealImageUrl(url: string): boolean {
   if (!url || typeof url !== 'string') return false;
   const trimmed = url.trim();
-  if (trimmed.startsWith('data:image/svg+xml')) return false;
-  if (trimmed.startsWith('/images/')) return false;
-  if (trimmed.startsWith('http') && !trimmed.includes('/generate-banner')) return true;
-  if (trimmed.startsWith('/uploads/')) return true;
-  if (trimmed.startsWith('/profile/')) return true;
+  
+  // Explicitly ignore generated endpoints
+  if (trimmed.includes('generate-banner') || trimmed.includes('generate-avatar')) return false;
+  
+  // Data URIs are not "real uploaded images" (they are local or generated)
+  if (trimmed.startsWith('data:')) return false;
+  
+  // Local assets are not "real uploaded images"
+  if (trimmed.startsWith('/images/') || trimmed.startsWith('/img/')) return false;
+  
+  // Check for Cloudinary or standard HTTP images
   if (trimmed.includes('cloudinary') || trimmed.includes('res.cloudinary')) return true;
+  if (trimmed.startsWith('http')) {
+    // Only return true if it's NOT a generate endpoint (checked above)
+    return true;
+  }
+  
+  // Fallback check for common image extensions
   if (/\.(png|jpg|jpeg|webp|gif|avif)(\?.*)?$/i.test(trimmed)) return true;
+  
   return false;
 }
 
@@ -202,12 +275,10 @@ export function getProfileImageUrl(name: string, profilePicture: string, categor
 
 export function getCoverImageUrl(name: string, coverImage: string, category?: string): string {
   if (isRealImageUrl(coverImage)) return coverImage;
-  const safeName = encodeURIComponent(name || 'Contractor');
-  const safeCategory = encodeURIComponent(category || 'plumbers');
-  return `${API_BASE_URL}/api/contractors/generate-banner?text=${safeName}&category=${safeCategory}`;
+  return generateBannerDataUrl(name, category);
 }
 
 export function isSvgUrl(url: string): boolean {
   if (typeof url !== 'string') return false;
-  return url.startsWith('data:image/svg+xml') || url.includes('<svg') || url.includes('/generate-banner');
+  return url.startsWith('data:image/svg+xml') || url.includes('<svg') || url.includes('generate-banner') || url.includes('generate-avatar');
 }

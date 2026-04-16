@@ -40,10 +40,28 @@ const linking = {
   },
 };
 
+function AppNavigator() {
+  const { isAuthenticated } = useAuth();
+  const { colorScheme } = useColorScheme();
+  usePushNotifications(); // Initialize push notification listeners inside NavigationContainer
+
+  return (
+    <>
+      <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+      {isAuthenticated ? (
+        <>
+          <MainNavigator />
+          <EscrowTrustBanner />
+        </>
+      ) : (
+        <AuthNavigator />
+      )}
+    </>
+  );
+}
+
 function AppContent() {
   const { isAuthenticated, isLoading, userId } = useAuth();
-  const { colorScheme } = useColorScheme();
-  usePushNotifications(); // Initialize push notification listeners
 
   useEffect(() => {
     if (isAuthenticated && userId) {
@@ -62,15 +80,7 @@ function AppContent() {
 
   return (
     <NavigationContainer linking={linking}>
-      <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
-      {isAuthenticated ? (
-        <>
-          <MainNavigator />
-          <EscrowTrustBanner />
-        </>
-      ) : (
-        <AuthNavigator />
-      )}
+      <AppNavigator />
     </NavigationContainer>
   );
 }

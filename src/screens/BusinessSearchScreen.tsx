@@ -72,7 +72,7 @@ function derivePrice(c: Contractor): string | null {
 }
 
 // ---- Listing Card (matches web) ----
-const ListingCard = React.memo(function ListingCard({
+const ListingCard = ({
   listing,
   searchZip,
   onPress,
@@ -80,7 +80,7 @@ const ListingCard = React.memo(function ListingCard({
   listing: Contractor;
   searchZip: string;
   onPress: () => void;
-}) {
+}) => {
   const location = deriveLocation(listing);
   const price = derivePrice(listing);
   const rawImage = (listing as any).bannerUrl || listing.bannerImage || (listing as any).imageUrl || listing.profilePicture || '';
@@ -142,7 +142,7 @@ const ListingCard = React.memo(function ListingCard({
       </View>
     </Pressable>
   );
-});
+};
 
 // ---- SEARCH SCREEN ----
 const BusinessSearchScreen: React.FC = () => {

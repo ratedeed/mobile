@@ -78,7 +78,7 @@ router.get('/', asyncHandler(async (req, res) => {
   }
 }));
 
-// @desc    Get contractor profile
+// @desc    Get authenticated contractor profile
 // @route   GET /api/contractors/profile
 // @access  Private
 router.get('/profile', protect, asyncHandler(async (req, res) => {
@@ -94,21 +94,90 @@ router.get('/profile', protect, asyncHandler(async (req, res) => {
   }
 }));
 
-// @desc    Get contractor by ID
-// @route   GET /api/contractors/:id
+// @desc    Generate SVG banner
+// @route   GET /api/contractors/generate-banner
 // @access  Public
-router.get('/:id', asyncHandler(async (req, res) => {
-  if (req.params.id === 'profile') {
-    return res.status(404).json({ message: 'Contractor not found' });
-  }
+router.get('/generate-banner', asyncHandler(async (req, res) => {
+  const { text, category } = req.query;
+  const safeText = text || 'Company Name';
+  const safeCategory = category || 'Services';
+
+  const escapedText = safeText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  const escapedCategory = safeCategory.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+  // Simple deterministic color generation
+  const hash = Array.from(escapedText).reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const hue1 = hash % 360;
+  const hue2 = (hash + 40) % 360;
+
+  const svg = `<svg width="800" height="400" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Banner for ${escapedText}">
+    <defs>
+      <linearGradient id="grad_${hash}" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" style="stop-color:hsl(${hue1}, 70%, 50%);stop-opacity:1" />
+        <stop offset="100%" style="stop-color:hsl(${hue2}, 70%, 40%);stop-opacity:1" />
+      </linearGradient>
+    </defs>
+    <rect width="100%" height="100%" fill="url(#grad_${hash})" />
+    <text x="50%" y="45%" dominant-baseline="middle" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="44" font-weight="bold" fill="#ffffff">${escapedText}</text>
+    <text x="50%" y="58%" dominant-baseline="middle" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="22" font-weight="normal" fill="#e2e8f0">${escapedCategory}</text>
+  </svg>`;
+
+  res.setHeader('Content-Type', 'image/svg+xml');
+  res.setHeader('Cache-Control', 'public, max-age=86400');
+  res.send(svg);
+}));
+
+// @desc    Get leads for contractor
+// @route   GET /api/contractors/leads
+// @access  Private
+router.get('/leads', protect, asyncHandler(async (req, res) => {
   try {
-    const contractor = await Contractor.findById(req.params.id).populate('reviewsList.user', 'firstName lastName profilePicture');
-    if (contractor) {
-      const { password, posts, reviewsList, ...details } = contractor._doc;
-      res.json({ ...details, posts, reviewsList });
-    } else {
-      res.status(404).json({ message: 'Contractor not found' });
+    const contractor = await Contractor.findOne({ user: req.user._id });
+    if (!contractor) {
+      return res.status(404).json({ message: 'Contractor profile not found' });
     }
+    const leads = await Lead.find({ contractor: contractor._id }).sort({ createdAt: -1 });
+    res.json(leads);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+}));
+
+// @desc    Get earnings for contractor
+// @route   GET /api/contractors/earnings
+// @access  Private
+router.get('/earnings', protect, asyncHandler(async (req, res) => {
+  try {
+    const contractor = await Contractor.findOne({ user: req.user._id });
+    if (!contractor) {
+      return res.status(404).json({ message: 'Contractor profile not found' });
+    }
+
+    const jobs = await Job.find({ contractor: contractor._id });
+    const quotes = await Quote.find({ contractor: contractor._id });
+
+    const totalEarnings = jobs.filter(j => j.status === 'completed_paid').reduce((sum, j) => sum + j.total, 0);
+    const pendingEscrow = jobs.filter(j => j.status === 'funded_in_progress').reduce((sum, j) => sum + j.total, 0);
+
+    const monthlyEarnings = [];
+    const now = new Date();
+    for (let i = 5; i >= 0; i--) {
+      const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthName = monthDate.toLocaleString('default', { month: 'short', year: 'numeric' });
+      monthlyEarnings.push({ month: monthName, amount: 0 });
+    }
+
+    res.json({
+      totalEarnings,
+      pendingEscrow,
+      monthlyEarnings,
+      totalJobs: jobs.length,
+      completedJobs: jobs.filter(j => j.status === 'completed_paid').length,
+      pendingJobs: jobs.filter(j => j.status === 'funded_in_progress').length,
+      totalQuotes: quotes.length,
+      acceptedQuotes: quotes.filter(q => q.status === 'accepted').length,
+      pendingQuotes: quotes.filter(q => q.status === 'pending_user_approval').length,
+    });
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
   }
@@ -127,6 +196,37 @@ router.get('/slug/:slug', asyncHandler(async (req, res) => {
       res.status(404).json({ message: 'Contractor not found' });
     }
   } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+}));
+
+// @desc    Get contractor by ID
+// @route   GET /api/contractors/:id
+// @access  Public
+router.get('/:id', asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  
+  // Guard against non-ID strings that might have leaked past earlier routes
+  if (['profile', 'generate-banner', 'leads', 'earnings', 'slug'].includes(id)) {
+    return res.status(404).json({ message: 'Route not found' });
+  }
+
+  // Validate MongoDB ID format
+  const mongoose = require('mongoose');
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({ message: 'Invalid ID format' });
+  }
+
+  try {
+    const contractor = await Contractor.findById(id).populate('reviewsList.user', 'firstName lastName profilePicture');
+    if (contractor) {
+      const { password, posts, reviewsList, ...details } = contractor._doc;
+      res.json({ ...details, posts, reviewsList });
+    } else {
+      res.status(404).json({ message: 'Contractor not found' });
+    }
+  } catch (error) {
+    console.error(`Error fetching contractor by ID ${id}:`, error);
     res.status(500).json({ message: 'Server error' });
   }
 }));
@@ -250,69 +350,6 @@ router.put('/profile', protect, asyncHandler(async (req, res) => {
   } else {
     res.status(404);
     throw new Error('Contractor profile not found');
-  }
-}));
-
-// @desc    Follow contractor
-// @route   POST /api/contractors/:id/follow
-// @access  Private
-router.post('/:id/follow', protect, asyncHandler(async (req, res) => {
-  res.json({ message: 'Follow functionality coming soon' });
-}));
-
-// @desc    Get leads for contractor
-// @route   GET /api/contractors/leads
-// @access  Private
-router.get('/leads', protect, asyncHandler(async (req, res) => {
-  try {
-    const contractor = await Contractor.findOne({ user: req.user._id });
-    if (!contractor) {
-      return res.status(404).json({ message: 'Contractor profile not found' });
-    }
-    const leads = await Lead.find({ contractor: contractor._id }).sort({ createdAt: -1 });
-    res.json(leads);
-  } catch (error) {
-    res.status(500).json({ message: 'Server error' });
-  }
-}));
-
-// @desc    Get earnings for contractor
-// @route   GET /api/contractors/earnings
-// @access  Private
-router.get('/earnings', protect, asyncHandler(async (req, res) => {
-  try {
-    const contractor = await Contractor.findOne({ user: req.user._id });
-    if (!contractor) {
-      return res.status(404).json({ message: 'Contractor profile not found' });
-    }
-
-    const jobs = await Job.find({ contractor: contractor._id });
-    const quotes = await Quote.find({ contractor: contractor._id });
-
-    const totalEarnings = jobs.filter(j => j.status === 'completed_paid').reduce((sum, j) => sum + j.total, 0);
-    const pendingEscrow = jobs.filter(j => j.status === 'funded_in_progress').reduce((sum, j) => sum + j.total, 0);
-
-    const monthlyEarnings = [];
-    const now = new Date();
-    for (let i = 5; i >= 0; i--) {
-      const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const monthName = monthDate.toLocaleString('default', { month: 'short', year: 'numeric' });
-      monthlyEarnings.push({ month: monthName, amount: 0 });
-    }
-
-    res.json({
-      totalEarnings,
-      pendingEscrow,
-      monthlyEarnings,
-      totalJobs: jobs.length,
-      completedJobs: jobs.filter(j => j.status === 'completed_paid').length,
-      pendingJobs: jobs.filter(j => j.status === 'funded_in_progress').length,
-      totalQuotes: quotes.length,
-      acceptedQuotes: quotes.filter(q => q.status === 'accepted').length,
-      pendingQuotes: quotes.filter(q => q.status === 'pending_user_approval').length,
-    });
-  } catch (error) {
-    res.status(500).json({ message: 'Server error' });
   }
 }));
 

@@ -1,4 +1,4 @@
-// src/constants/designTokens.js
+// Design system constants for spacing, colors, typography, etc.
 
 export const Spacing = {
   none: 0,

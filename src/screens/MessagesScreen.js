@@ -119,12 +119,22 @@ const MessagesScreen = () => {
   const route = useRoute();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const { recipientId, recipientName } = route.params || {};
+  const { recipientId, recipientName, conversationId: routeConversationId } = route.params || {};
   const { userId: currentUserId, userRole: role } = useAuth();
   if (__DEV__) console.log('MessagesScreen: Current Role:', role);
 
   const [conversations, setConversations] = useState({});
   const [selectedConversation, setSelectedConversation] = useState(null);
+
+  // Auto-select conversation if conversationId is provided in route params
+  useEffect(() => {
+    if (routeConversationId && conversations[routeConversationId]) {
+      setSelectedConversation(conversations[routeConversationId]);
+    } else if (routeConversationId && !conversations[routeConversationId]) {
+      // If we have a route ID but it's not in our list yet, create a placeholder
+      setSelectedConversation({ conversationId: routeConversationId, _id: routeConversationId, participants: [], messages: [] });
+    }
+  }, [routeConversationId, conversations]);
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);

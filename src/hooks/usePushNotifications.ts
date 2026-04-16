@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import * as Notifications from 'expo-notifications';
 import messaging from '@react-native-firebase/messaging';
 import { Platform } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { savePushToken } from '../utils/apiClient';
 
@@ -17,6 +18,7 @@ Notifications.setNotificationHandler({
 
 export const usePushNotifications = () => {
   const { isAuthenticated } = useAuth();
+  const navigation = useNavigation();
   const [expoPushToken, setExpoPushToken] = useState<string | undefined>();
   const [notification, setNotification] = useState<Notifications.Notification | undefined>();
   const notificationListener = useRef<Notifications.EventSubscription | null>(null);
@@ -71,8 +73,19 @@ export const usePushNotifications = () => {
     });
 
     responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
-      console.log('Notification tapped!', response);
-      // Logic for deep linking would be handled by NavigationContainer linking config
+      console.log('Notification tapped!', JSON.stringify(response, null, 2));
+      const data = response.notification.request.content.data;
+      
+      if (data?.type === 'new_message' && data?.conversationId) {
+        // @ts-ignore
+        navigation.navigate('ChatScreen', { conversationId: data.conversationId });
+      } else if (data?.type === 'new_review') {
+        // @ts-ignore
+        navigation.navigate('Main', { screen: 'Profile' });
+      } else if (data?.type === 'new_lead') {
+        // @ts-ignore
+        navigation.navigate('ContractorDashboard');
+      }
     });
 
     return () => {

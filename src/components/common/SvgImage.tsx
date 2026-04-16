@@ -13,22 +13,30 @@ export const SvgImage = ({ uri, width = '100%', height = '100%', style }: { uri:
         if (uri.startsWith('data:image/svg+xml')) {
           const parts = uri.split(',');
           if (parts.length > 1) {
-            const decoded = decodeURIComponent(parts.slice(1).join(','));
+            let decoded = decodeURIComponent(parts.slice(1).join(','));
+            // Remove unsupported drop-shadow filters that cause React Native crashes/warnings
+            decoded = decoded.replace(/style="filter:\s*drop-shadow\([^"]*\);?"/g, '');
+            decoded = decoded.replace(/filter="drop-shadow\([^"]*\)"/g, '');
             if (isMounted) setXml(decoded);
           }
         } else if (uri.startsWith('http')) {
+          if (__DEV__) console.log('SvgImage: Fetching remote SVG:', uri);
           const response = await fetch(uri);
           let text = await response.text();
           if (text.includes('<svg') && isMounted) {
-            // Remove unsupported drop-shadow filters that cause React Native crashes/warnings
+            // Remove unsupported drop-shadow filters
             text = text.replace(/style="filter:\s*drop-shadow\([^"]*\);?"/g, '');
+            text = text.replace(/filter="drop-shadow\([^"]*\)"/g, '');
             setXml(text);
           } else if (isMounted) {
             console.warn('SvgImage: Fetched content is not a valid SVG:', text.slice(0, 100));
-            setXml('error'); // Use a marker to show fallback
+            setXml('error');
           }
         } else if (uri.includes('<svg')) {
-          if (isMounted) setXml(uri);
+          let cleaned = uri;
+          cleaned = cleaned.replace(/style="filter:\s*drop-shadow\([^"]*\);?"/g, '');
+          cleaned = cleaned.replace(/filter="drop-shadow\([^"]*\)"/g, '');
+          if (isMounted) setXml(cleaned);
         } else if (isMounted) {
           setXml('error');
         }

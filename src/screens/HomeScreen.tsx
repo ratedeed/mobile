@@ -63,7 +63,7 @@ function derivePrice(c: Contractor): string | null {
 }
 
 // ---- Listing Card ----
-const ListingCard = React.memo(function ListingCard({
+const ListingCard = ({
   listing,
   isFavorite,
   onToggleFavorite,
@@ -75,7 +75,7 @@ const ListingCard = React.memo(function ListingCard({
   onToggleFavorite: () => void;
   detectedZip: string | null;
   onPress: () => void;
-}) {
+}) => {
   const location = deriveLocation(listing);
   const price = derivePrice(listing);
   const rawImage = (listing as any).bannerUrl || listing.bannerImage || (listing as any).imageUrl || listing.profilePicture || '';
@@ -157,7 +157,7 @@ const ListingCard = React.memo(function ListingCard({
       </View>
     </Pressable>
   );
-});
+};
 
 // ---- Category matching logic (same as web) ----
 function matchesCategory(contractor: Contractor, catId: string, catLabel: string): boolean {
