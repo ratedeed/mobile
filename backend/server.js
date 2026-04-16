@@ -13,10 +13,11 @@ const reportRoutes = require('./routes/reportRoutes');
 const postRoutes = require('./routes/posts');
 
 const app = express();
+app.set('strict routing', false);
 const http = require('http');
 const server = http.createServer(app);
 const { Server } = require('socket.io');
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 
 // Connect to database
 connectDB();
@@ -24,7 +25,7 @@ connectDB();
 // JSON + CORS middleware
 app.use(express.json());
 app.use(cors({
-  origin: ['https://ratedeed.com', 'https://api.ratedeed.com', 'http://localhost:8081', 'http://localhost:3000', 'http://127.0.0.1:3000'],
+  origin: ['https://ratedeed.com', 'https://www.ratedeed.com', 'https://api.ratedeed.com', 'http://localhost:8081', 'http://localhost:3000', 'http://127.0.0.1:3000'],
   credentials: true
 }));
 
@@ -73,7 +74,7 @@ server.listen(PORT, '0.0.0.0', () => {
 // Initialize Socket.IO
 const io = new Server(server, {
   cors: {
-    origin: ['https://ratedeed.com', 'https://api.ratedeed.com', 'http://localhost:8081', 'http://localhost:3000', 'http://127.0.0.1:3000'],
+    origin: ['https://ratedeed.com', 'https://www.ratedeed.com', 'https://api.ratedeed.com', 'http://localhost:8081', 'http://localhost:3000', 'http://127.0.0.1:3000'],
     methods: ['GET', 'POST'],
     credentials: true
   }

@@ -70,7 +70,6 @@
         "expo-build-properties",
         {
           "ios": {
-            "useFrameworks": "static",
             "compilerFlags": "-DFMT_CONSTEXPR=constexpr"
           }
         }

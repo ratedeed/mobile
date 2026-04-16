@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthInfo, UserRole } from '../types';
+import { syncFavoritesWithServer } from '../utils/favoritesStore';
 
 import { jwtDecode } from 'jwt-decode';
 
@@ -53,6 +54,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUserId(parsed._id || parsed.id || decodedId || null);
         setIsEmailVerified(parsed.emailVerified || false);
         setUserRole(parsed.role || null);
+        // Sync favorites on load if token exists
+        if (token) {
+          syncFavoritesWithServer();
+        }
         if (parsed.firstName) {
           setFirebaseUser({ email: parsed.email });
         }
@@ -123,6 +128,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (userInfo.role) {
       setUserRole(userInfo.role as UserRole);
     }
+    // Sync favorites on login
+    syncFavoritesWithServer();
   }, []);
 
   const isAuthenticated = !!backendToken;

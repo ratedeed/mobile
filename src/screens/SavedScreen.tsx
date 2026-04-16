@@ -49,10 +49,17 @@ const SavedScreen = () => {
 
   const loadData = useCallback(async () => {
     try {
-      const [ids, result]: [string[], any] = await Promise.all([
-        getFavorites(),
-        browseContractors({ limit: 100 })
-      ]);
+      const ids = await getFavorites();
+      setSavedIds(ids);
+      
+      if (ids.length === 0) {
+        setAllContractors([]);
+        setLoading(false);
+        setRefreshing(false);
+        return;
+      }
+
+      const result: any = await browseContractors({ ids: ids.join(','), limit: 100 });
       
       const list = Array.isArray(result)
         ? result
@@ -62,7 +69,6 @@ const SavedScreen = () => {
             ? result.data
             : [];
 
-      setSavedIds(ids);
       setAllContractors(list);
     } catch (error) {
       console.error('Error loading saved contractors:', error);

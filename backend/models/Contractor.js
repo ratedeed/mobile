@@ -103,6 +103,7 @@ const contractorSchema = new mongoose.Schema({
     type: String,
     default: 'https://via.placeholder.com/600x200',
   },
+  pushToken: { type: String, default: null },
   isVerified: {
     type: Boolean,
     default: false,

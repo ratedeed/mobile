@@ -19,10 +19,8 @@ const userSchema = new mongoose.Schema({
     select: false // Don't return password in queries by default
   },
   // Add these fields for email verification
-  isVerified: {
-    type: Boolean,
-    default: false
-  },
+  pushToken: { type: String, default: null },
+  isVerified: { type: Boolean, default: false },
   verificationToken: String,
   verificationTokenExpires: Date,
   // If you're using Firebase as primary auth, you might store Firebase UID

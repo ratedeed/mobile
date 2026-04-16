@@ -420,6 +420,7 @@ export interface UserQueryParams {
 }
 
 export interface ContractorQueryParams {
+  ids?: string;
   page?: number;
   limit?: number;
   search?: string;

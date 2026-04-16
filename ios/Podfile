@@ -12,15 +12,16 @@ def ccache_enabled?(podfile_properties)
   podfile_properties['apple.ccacheEnabled'] == 'true'
 end
 
-ENV['RCT_NEW_ARCH_ENABLED'] = '1' if podfile_properties['newArchEnabled'] == 'true'
 ENV['RCT_NEW_ARCH_ENABLED'] ||= '0' if podfile_properties['newArchEnabled'] == 'false'
-ENV['SENTRY_DISABLE_AUTO_UPLOAD'] = 'true'
 ENV['EX_DEV_CLIENT_NETWORK_INSPECTOR'] ||= podfile_properties['EX_DEV_CLIENT_NETWORK_INSPECTOR']
 ENV['RCT_USE_RN_DEP'] ||= '1' if podfile_properties['ios.buildReactNativeFromSource'] != 'true' && podfile_properties['newArchEnabled'] != 'false'
 ENV['RCT_USE_PREBUILT_RNCORE'] ||= '1' if podfile_properties['ios.buildReactNativeFromSource'] != 'true' && podfile_properties['newArchEnabled'] != 'false'
 platform :ios, podfile_properties['ios.deploymentTarget'] || '15.1'
 
 prepare_react_native_project!
+
+# Enable modular headers globally to satisfy Swift dependencies
+use_modular_headers!
 
 target 'RateDeed' do
   use_expo_modules!
@@ -64,38 +65,26 @@ target 'RateDeed' do
 
     installer.pods_project.targets.each do |target|
       target.build_configurations.each do |config|
-        config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.1'
-        config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++20'
-
-        # Disable Folly coroutines to fix build error
-        config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= ['$(inherited)']
-        config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] << 'FOLLY_HAS_COROUTINES=0'
-        config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] << 'FOLLY_CFG_NO_COROUTINES=1'
-
-        # Fix RN Firebase non-modular header includes with RN 0.81 New Arch
-        if target.name.start_with?('RNFB') || target.name.start_with?('RNFirebase')
-          config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
-
-          # Ensure React-Core headers are found for RCT_EXPORT_METHOD etc.
-          config.build_settings['HEADER_SEARCH_PATHS'] ||= ['$(inherited)']
-          config.build_settings['HEADER_SEARCH_PATHS'] << '"${PODS_ROOT}/Headers/Public/React-Core"'
-          config.build_settings['HEADER_SEARCH_PATHS'] << '"${PODS_ROOT}/Headers/Public/React-common"'
-          config.build_settings['HEADER_SEARCH_PATHS'] << '"${PODS_CONFIGURATION_BUILD_DIR}/React-Core.prebuilt/React_Core.prebuilt.framework/Headers"'
-          config.build_settings['HEADER_SEARCH_PATHS'] << '"${PODS_CONFIGURATION_BUILD_DIR}/React-Fabric.prebuilt/React_Fabric.prebuilt.framework/Headers"'
-
-          # Disable modular headers for RNFB to avoid module import conflicts
-          config.build_settings['CLANG_ENABLE_MODULES'] = 'NO'
+        # Allow non-modular includes in framework modules
+        config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
+        
+        # Suppress the error and treat it as a warning
+        if config.build_settings['OTHER_CFLAGS']
+          config.build_settings['OTHER_CFLAGS'] << ' -Wno-non-modular-include-in-framework-module'
+        else
+          config.build_settings['OTHER_CFLAGS'] = '$(inherited) -Wno-non-modular-include-in-framework-module'
         end
-      end
-    end
 
-    fmt_base = File.join(installer.sandbox.pod_dir('fmt'), 'include', 'fmt', 'base.h')
-    if File.exist?(fmt_base)
-      content = File.read(fmt_base)
-      patched = content.gsub(/^#\s*define FMT_USE_CONSTEVAL 1$/, '# define FMT_USE_CONSTEVAL 0')
-      if patched != content
-        File.chmod(0644, fmt_base)
-        File.write(fmt_base, patched)
+        # When using frameworks, some headers might not be found correctly
+        if podfile_properties['ios.useFrameworks'] == 'static' || podfile_properties['ios.useFrameworks'] == 'dynamic'
+           header_search_paths = config.build_settings['HEADER_SEARCH_PATHS'] || ['$(inherited)']
+           
+           if target.name.include?('RNFB')
+             header_search_paths << '"$(PODS_ROOT)/Headers/Public/React-Core"'
+           end
+           
+           config.build_settings['HEADER_SEARCH_PATHS'] = header_search_paths.join(' ')
+        end
       end
     end
   end

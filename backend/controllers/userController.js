@@ -283,6 +283,12 @@ exports.savePushToken = async (req, res) => {
   }
 
   try {
+    // 1. Remove this token from any other User or Contractor to prevent duplicate notifications
+    await User.updateMany({ pushToken }, { $set: { pushToken: null } });
+    const Contractor = require('../models/Contractor');
+    await Contractor.updateMany({ pushToken }, { $set: { pushToken: null } });
+
+    // 2. Update the current User
     const user = await User.findById(req.user._id);
     if (!user) {
       return res.status(404).json({ message: 'User not found.' });
@@ -290,6 +296,13 @@ exports.savePushToken = async (req, res) => {
 
     user.pushToken = pushToken;
     await user.save();
+
+    // 3. Update associated Contractor profile if exists
+    const contractor = await Contractor.findOne({ user: req.user._id });
+    if (contractor) {
+      contractor.pushToken = pushToken;
+      await contractor.save();
+    }
 
     console.log(`savePushToken: Updated push token for user: ${user.email}`);
     res.status(200).json({ message: 'Push token saved successfully.' });
