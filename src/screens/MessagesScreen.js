@@ -211,7 +211,8 @@ const MessagesScreen = () => {
 
   const loadConversations = async () => {
     if (!currentUserId) return;
-    setLoading(true);
+    // Only show spinner on first load, not on refreshes (keep stale data visible)
+    if (Object.keys(conversations).length === 0) setLoading(true);
     try {
       const apiFetched = await fetchConversations();
       if (Array.isArray(apiFetched)) {

@@ -14,6 +14,23 @@ import { usePushNotifications } from './src/hooks/usePushNotifications';
 import { EscrowTrustBanner } from './src/components/EscrowTrustBanner';
 import { StatusBar } from 'expo-status-bar';
 import { useColorScheme } from 'nativewind';
+import { getMessaging, setBackgroundMessageHandler } from '@react-native-firebase/messaging';
+import * as Notifications from 'expo-notifications';
+
+// Register background message handler — MUST be at top level, outside any component
+setBackgroundMessageHandler(getMessaging(), async remoteMessage => {
+  console.log('Background message received:', remoteMessage.messageId);
+  // Show the notification via expo-notifications so it appears as a system banner
+  await Notifications.scheduleNotificationAsync({
+    content: {
+      title: remoteMessage.notification?.title || 'New Notification',
+      body: remoteMessage.notification?.body || 'You have a new message.',
+      data: remoteMessage.data,
+      sound: 'default',
+    },
+    trigger: null,
+  });
+});
 
 Sentry.init({
   dsn: 'https://placeholder@sentry.io/1234567', // Replace with your actual Sentry DSN

@@ -16,7 +16,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<any>;
   logout: () => void;
   updateUser: (userData: Partial<AuthInfo>) => void;
-  updateBackendToken: (token: string, emailVerifiedStatus: boolean) => Promise<void>;
+  updateBackendToken: (token: string, emailVerifiedStatus: boolean, userData?: any) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -104,11 +104,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  const updateBackendToken = useCallback(async (token: string, emailVerifiedStatus: boolean) => {
+  const updateBackendToken = useCallback(async (token: string, emailVerifiedStatus: boolean, userData?: any) => {
     const currentUserInfo = await AsyncStorage.getItem('userInfo');
     const userInfo = currentUserInfo ? JSON.parse(currentUserInfo) : {};
     userInfo.token = token;
     userInfo.emailVerified = emailVerifiedStatus;
+    
+    // Merge new userData if provided
+    if (userData) {
+      Object.assign(userInfo, userData);
+    }
     
     let decodedId = null;
     if (token) {

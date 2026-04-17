@@ -42,10 +42,10 @@ const userSchema = new mongoose.Schema({
     enum: ['user', 'contractor', 'admin'],
     default: 'user',
   },
-  pushToken: {
-    type: String,
-    required: false,
-  },
+  savedContractors: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Contractor',
+  }],
   }, {
   timestamps: true // Adds createdAt and updatedAt fields
   });

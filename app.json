@@ -73,7 +73,8 @@
             "compilerFlags": "-DFMT_CONSTEXPR=constexpr"
           }
         }
-      ]
+      ],
+      "expo-font"
     ]
   }
 }

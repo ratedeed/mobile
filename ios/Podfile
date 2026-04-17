@@ -20,10 +20,8 @@ platform :ios, podfile_properties['ios.deploymentTarget'] || '15.1'
 
 prepare_react_native_project!
 
-# Enable modular headers globally to satisfy Swift dependencies
-use_modular_headers!
-
 target 'RateDeed' do
+  use_modular_headers!
   use_expo_modules!
 
   if ENV['EXPO_USE_COMMUNITY_AUTOLINKING'] == '1'
@@ -62,30 +60,5 @@ target 'RateDeed' do
       :mac_catalyst_enabled => false,
       :ccache_enabled => ccache_enabled?(podfile_properties),
     )
-
-    installer.pods_project.targets.each do |target|
-      target.build_configurations.each do |config|
-        # Allow non-modular includes in framework modules
-        config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
-        
-        # Suppress the error and treat it as a warning
-        if config.build_settings['OTHER_CFLAGS']
-          config.build_settings['OTHER_CFLAGS'] << ' -Wno-non-modular-include-in-framework-module'
-        else
-          config.build_settings['OTHER_CFLAGS'] = '$(inherited) -Wno-non-modular-include-in-framework-module'
-        end
-
-        # When using frameworks, some headers might not be found correctly
-        if podfile_properties['ios.useFrameworks'] == 'static' || podfile_properties['ios.useFrameworks'] == 'dynamic'
-           header_search_paths = config.build_settings['HEADER_SEARCH_PATHS'] || ['$(inherited)']
-           
-           if target.name.include?('RNFB')
-             header_search_paths << '"$(PODS_ROOT)/Headers/Public/React-Core"'
-           end
-           
-           config.build_settings['HEADER_SEARCH_PATHS'] = header_search_paths.join(' ')
-        end
-      end
-    end
   end
 end

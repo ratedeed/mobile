@@ -60,7 +60,7 @@ router.delete('/:id', protect, async (req, res) => {
     const notification = await Notification.findById(req.params.id);
 
     if (notification) {
-      await notification.remove();
+      await notification.deleteOne();
       res.json({ message: 'Notification removed' });
     } else {
       res.status(404).json({ message: 'Notification not found' });

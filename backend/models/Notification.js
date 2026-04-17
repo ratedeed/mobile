@@ -32,7 +32,7 @@ const notificationSchema = mongoose.Schema(
     type: {
       type: String,
       required: true,
-      enum: ['new_message', 'new_review', 'admin_alert', 'system_update', 'new_lead', 'quote_request'],
+      enum: ['new_message', 'new_review', 'admin_alert', 'system_update', 'new_lead', 'quote_request', 'like', 'comment', 'tag', 'admin_message', 'REVIEW_ADDED'],
     },
     link: {
       type: String,

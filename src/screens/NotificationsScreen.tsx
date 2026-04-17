@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   FlatList,
@@ -23,12 +23,18 @@ const NotificationsScreen: React.FC = () => {
     markAllAsRead, 
     deleteNotification 
   } = useNotifications();
-  const [refreshing, setRefreshing] = React.useState(false);
+  
+  const [refreshing, setRefreshing] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   // Auto-refresh when the tab comes into focus
   useFocusEffect(
     useCallback(() => {
-      refreshNotifications();
+      let isMounted = true;
+      refreshNotifications().finally(() => {
+        if (isMounted) setIsInitialLoad(false);
+      });
+      return () => { isMounted = false; };
     }, [refreshNotifications])
   );
 
@@ -45,15 +51,15 @@ const NotificationsScreen: React.FC = () => {
 
     if (!item.link) return;
 
-    // Handle deep linking based on backend link format
-    // Links are usually like "/messages/CONV_ID" or "/leads/LEAD_ID"
     if (item.link.startsWith('/messages/')) {
       const conversationId = item.link.split('/')[2];
       navigation.navigate('ChatScreen', { conversationId });
     } else if (item.link.startsWith('/leads/')) {
-      // In this app, leads might be on the Contractor Dashboard or a specific Leads screen
-      // For now, navigate to Main -> Explore or Dashboard as a fallback
       navigation.navigate('Main', { screen: 'Dashboard' });
+    } else if (item.link.startsWith('/quotes/')) {
+      navigation.navigate('Main', { screen: 'Jobs' });
+    } else if (item.link.startsWith('/jobs/')) {
+      navigation.navigate('Main', { screen: 'Jobs' });
     }
   };
 
@@ -68,13 +74,11 @@ const NotificationsScreen: React.FC = () => {
     if (mins < 60) return `${mins}m ago`;
     const hours = Math.floor(mins / 60);
     if (hours < 24) return `${hours}h ago`;
-    
-    // Format as "MMM D" for older notifications
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
   const getNotificationIcon = (type: string, message: string) => {
-    const m = message.toLowerCase();
+    const m = (message || '').toLowerCase();
     if (type === 'new_review' || m.includes('review')) return { name: 'star', color: '#f59e0b', bg: '#fef3c7' };
     if (type === 'new_message' || m.includes('message')) return { name: 'comment', color: '#3b82f6', bg: '#dbeafe' };
     if (m.includes('quote') || m.includes('payment')) return { name: 'dollar-sign', color: '#10b981', bg: '#d1fae5' };
@@ -110,7 +114,8 @@ const NotificationsScreen: React.FC = () => {
     );
   };
 
-  if (isLoading && !refreshing && notifications.length === 0) {
+  // Only show the full-screen spinner if we are loading AND have zero notifications to show (initial load)
+  if (isLoading && isInitialLoad && notifications.length === 0) {
     return (
       <View className="flex-1 bg-white dark:bg-neutral-950 items-center justify-center">
         <ActivityIndicator size="small" color="#6366f1" />
@@ -153,7 +158,7 @@ const NotificationsScreen: React.FC = () => {
         <FlatList
           data={notifications}
           renderItem={renderNotification}
-          keyExtractor={item => item._id}
+          keyExtractor={(item, index) => item._id || `notif-${index}`}
           contentContainerStyle={{ paddingBottom: 20 }}
           refreshControl={
             <RefreshControl 

@@ -284,11 +284,11 @@ export const updateContractorProfile = async (data: Partial<Contractor>): Promis
 let socket: Socket | null = null;
 let isInitializingSocket = false;
 let currentSocketUserId: string | null = null;
+let pendingListeners: Array<{ event: string; callback: Function }> = [];
 
-// Disconnect socket when app goes to background so the backend knows
-// to send FCM Push Notifications instead of just socket events
+// Handle AppState changes
 AppState.addEventListener('change', (nextAppState) => {
-  if (nextAppState === 'background' || nextAppState === 'inactive') {
+  if (nextAppState === 'background') {
     if (socket?.connected) {
       console.log('App in background: disconnecting socket for FCM pushes');
       socket.disconnect();
@@ -309,21 +309,27 @@ export const initializeSocket = async () => {
     const userInfo = await AsyncStorage.getItem('userInfo');
     const token = userInfo ? JSON.parse(userInfo).token : null;
 
-    // Use API_BASE_URL instead of API_BASE because Socket.io usually mounts at the root /socket.io
-    // Also add 'polling' transport as fallback for environments where WebSocket upgrade might fail
-    console.log('Socket: Attempting to connect to:', API_BASE_URL);
+    // SYNC with web version: use standard transports and auth object
+    // Also remove withCredentials which can cause handshake errors in some environments
+    console.log('Socket: Connecting to:', API_BASE_URL);
     socket = io(API_BASE_URL, {
       transports: ['websocket', 'polling'],
-      withCredentials: true,
       auth: token ? { token } : undefined,
       reconnection: true,
-      reconnectionAttempts: Infinity,
+      reconnectionAttempts: 5,
       reconnectionDelay: 1000,
+      timeout: 20000,
     });
 
     socket.on('connect', () => {
       console.log('Socket connected:', socket?.id);
       isInitializingSocket = false;
+      // Flush any listeners that were registered before socket was ready
+      pendingListeners.forEach(({ event, callback }) => {
+        socket?.off(event, callback as any);
+        socket?.on(event, callback as any);
+      });
+      pendingListeners = [];
     });
 
     socket.on('connect_error', (error) => {
@@ -345,13 +351,20 @@ export const initializeSocket = async () => {
 };
 
 export const registerSocket = async (userId: string) => {
+  if (!userId) return;
   await initializeSocket();
+
+  // Prevent redundant registrations
+  if (currentSocketUserId === userId && socket?.connected) {
+    return;
+  }
+
   currentSocketUserId = userId;
-  
+
   const emitRegister = () => {
-    if (userId) {
+    if (userId && socket?.connected) {
       console.log(`Registering socket for user ${userId}`);
-      socket?.emit("register", userId);
+      socket.emit("register", userId);
     }
   };
 
@@ -360,15 +373,8 @@ export const registerSocket = async (userId: string) => {
   } else {
     socket?.once('connect', emitRegister);
   }
-
-  // Handle re-registration on reconnection
-  socket?.on('connect', () => {
-    console.log('Socket reconnected, re-registering user');
-    emitRegister();
-  });
-
-  return socket;
 };
+
 export const joinConversationSocket = async (conversationId: string) => {
   await initializeSocket();
   if (socket?.connected) {
@@ -382,22 +388,25 @@ export const leaveConversationSocket = (conversationId: string) => {
   socket?.emit("leaveConversation", conversationId);
 };
 export const onNewMessage = (callback: (message: any) => void) => {
-  if (!socket) return;
-  // If no callback is provided, remove all listeners for this event
   if (!callback) {
-    socket.removeAllListeners("newMessage");
+    socket?.removeAllListeners("newMessage");
     return;
   }
-  // Remove the specific callback if it was already added to prevent duplicates, but DON'T remove all listeners
-  socket.off("newMessage", callback);
-  socket.on("newMessage", callback);
+  if (socket?.connected) {
+    socket.off("newMessage", callback);
+    socket.on("newMessage", callback);
+  } else {
+    pendingListeners.push({ event: "newMessage", callback });
+  }
 };
 
 export const offNewMessage = (callback?: (message: any) => void) => {
   if (callback) {
     socket?.off("newMessage", callback);
+    pendingListeners = pendingListeners.filter(p => p.callback !== callback);
   } else {
     socket?.removeAllListeners("newMessage");
+    pendingListeners = pendingListeners.filter(p => p.event !== "newMessage");
   }
 };
 
@@ -447,16 +456,25 @@ export const offUserOnlineStatus = (callback?: (data: any) => void) => {
 };
 
 export const onNewNotification = (callback: (notification: any) => void) => {
-  if (!socket) return;
-  socket.off("newNotification", callback);
-  socket.on("newNotification", callback);
+  if (!callback) {
+    socket?.removeAllListeners("newNotification");
+    return;
+  }
+  if (socket?.connected) {
+    socket.off("newNotification", callback);
+    socket.on("newNotification", callback);
+  } else {
+    pendingListeners.push({ event: "newNotification", callback });
+  }
 };
 
 export const offNewNotification = (callback?: (notification: any) => void) => {
   if (callback) {
     socket?.off("newNotification", callback);
+    pendingListeners = pendingListeners.filter(p => p.callback !== callback);
   } else {
     socket?.removeAllListeners("newNotification");
+    pendingListeners = pendingListeners.filter(p => p.event !== "newNotification");
   }
 };
 
@@ -484,6 +502,11 @@ export const listConversations = async (): Promise<any[]> => {
 };
 
 export const fetchConversations = listConversations;
+
+export const markConversationAsRead = async (conversationId: string): Promise<void> => {
+  const authHeaders = await getAuthHeaders();
+  return put(`${API_BASE}/messages/read-conversation/${conversationId}`, {}, authHeaders);
+};
 
 export const fetchMessages = async (conversationId: string): Promise<any[]> => {
   const authHeaders = await getAuthHeaders();

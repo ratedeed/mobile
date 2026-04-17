@@ -65,7 +65,7 @@ const LoginScreen = () => {
       try {
         const backendResponse = await backendLoginFirebase(idToken, email);
         if (backendResponse?.token) {
-          await updateBackendToken(backendResponse.token, backendResponse.emailVerified);
+          await updateBackendToken(backendResponse.token, backendResponse.emailVerified, backendResponse.user);
           Toast.show({ type: 'success', text1: 'Success', text2: 'Logged in successfully!' });
         } else {
           setApiError('Backend authentication failed. Please try again.');

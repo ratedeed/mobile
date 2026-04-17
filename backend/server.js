@@ -3,6 +3,25 @@ const path = require('path');
 const cors = require('cors');
 require('dotenv').config();
 
+// Initialize Firebase Admin SDK for push notifications
+const admin = require('firebase-admin');
+if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+  try {
+    const serviceAccount = JSON.parse(
+      Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT_KEY.replace(/\s/g, ''), 'base64').toString('ascii')
+    );
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+      projectId: process.env.FIREBASE_PROJECT_ID,
+    }, 'ratedeedAdminApp');
+    console.log('Firebase Admin SDK initialized successfully.');
+  } catch (error) {
+    console.error('Error initializing Firebase Admin SDK:', error);
+  }
+} else {
+  console.warn('FIREBASE_SERVICE_ACCOUNT_KEY not set. Push notifications disabled.');
+}
+
 const connectDB = require('./config/db');
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
@@ -11,6 +30,9 @@ const messageRoutes = require('./routes/messages');
 const notificationRoutes = require('./routes/notificationRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const postRoutes = require('./routes/posts');
+const quoteRoutes = require('./routes/quotes');
+const jobRoutes = require('./routes/jobs');
+const leadRoutes = require('./routes/leads');
 
 const app = express();
 app.set('strict routing', false);
@@ -25,12 +47,11 @@ connectDB();
 // JSON + CORS middleware
 app.use(express.json());
 app.use(cors({
-  origin: ['https://ratedeed.com', 'https://www.ratedeed.com', 'https://api.ratedeed.com', 'http://localhost:8081', 'http://localhost:3000', 'http://127.0.0.1:3000'],
+  origin: function (origin, callback) { callback(null, true); },
   credentials: true
 }));
 
 // Mount all API routes
-// Note: Quote, Job, Lead routes are handled by production API at https://api.ratedeed.com
 app.use('/api/users', userRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/contractors', contractorRoutes);
@@ -38,6 +59,9 @@ app.use('/api/messages', messageRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/posts', postRoutes);
+app.use('/api/quotes', quoteRoutes);
+app.use('/api/jobs', jobRoutes);
+app.use('/api/leads', leadRoutes);
 
 // Health/Version endpoint
 app.get('/api/version', (req, res) => {
@@ -74,7 +98,7 @@ server.listen(PORT, '0.0.0.0', () => {
 // Initialize Socket.IO
 const io = new Server(server, {
   cors: {
-    origin: ['https://ratedeed.com', 'https://www.ratedeed.com', 'https://api.ratedeed.com', 'http://localhost:8081', 'http://localhost:3000', 'http://127.0.0.1:3000'],
+    origin: function (origin, callback) { callback(null, true); },
     methods: ['GET', 'POST'],
     credentials: true
   }

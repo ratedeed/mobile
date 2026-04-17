@@ -7,20 +7,19 @@ const admin = require('firebase-admin');
  * @param {string} pushToken - The user's stored FCM token
  * @param {object} payload - { title, body, data }
  */
-const sendPushNotification = async (pushToken, { title, body, data = {} }) => {
+const sendPushNotification = async (pushToken, { title, body, data = {}, badge }) => {
   if (!pushToken) {
     console.log('Push notification skipped: No token provided');
     return;
   }
 
   try {
-    // SYNC: Use the specifically named app instance as defined in production server.js
     let app;
     try {
       app = admin.app('ratedeedAdminApp');
     } catch (e) {
-      // Fallback to default app if the specific one isn't initialized locally
-      app = admin.app();
+      console.error('Firebase Admin not initialized. Cannot send push. Set FIREBASE_SERVICE_ACCOUNT_KEY env var.');
+      return;
     }
 
     // Ensure all data values are strings for FCM
@@ -49,8 +48,8 @@ const sendPushNotification = async (pushToken, { title, body, data = {} }) => {
         payload: {
           aps: {
             sound: 'default',
-            badge: 1,
-            contentAvailable: true, // Crucial for background tasks
+            badge: badge || 1,
+            contentAvailable: true,
           },
         },
       },

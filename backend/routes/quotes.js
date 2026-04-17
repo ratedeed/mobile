@@ -41,7 +41,8 @@ router.post('/', protect, asyncHandler(async (req, res) => {
     const notification = require('../models/Notification');
     const { sendPushNotification } = require('../utils/pushNotifications');
     await notification.create({
-      user: clientId,
+      recipient: clientId,
+      recipientModel: 'User',
       message: `You received a new quote from ${contractor.businessName}`,
       type: 'new_quote',
       link: `/quotes/${quote._id}`,
@@ -186,7 +187,8 @@ router.put('/:id/accept', protect, asyncHandler(async (req, res) => {
     const notification = require('../models/Notification');
     const { sendPushNotification } = require('../utils/pushNotifications');
     await notification.create({
-      user: quote.contractorUser,
+      recipient: quote.contractorUser,
+      recipientModel: 'User',
       message: `${quote.clientName} accepted your quote!`,
       type: 'quote_accepted',
       link: `/jobs/${job._id}`,
@@ -246,7 +248,8 @@ router.put('/:id/reject', protect, asyncHandler(async (req, res) => {
     // Notify contractor
     const notification = require('../models/Notification');
     await notification.create({
-      user: quote.contractorUser,
+      recipient: quote.contractorUser,
+      recipientModel: 'User',
       message: `${quote.clientName} rejected your quote`,
       type: 'quote_rejected',
       link: `/quotes/${quote._id}`,

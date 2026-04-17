@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { View, TouchableOpacity, Text, StyleSheet, Platform } from 'react-native';
+import React from 'react';
+import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useNotifications } from '../../context/NotificationsContext';
 
 interface AppHeaderProps {
   showBack?: boolean;
@@ -28,20 +28,7 @@ export function AppHeader({
 }: AppHeaderProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const [unreadCount, setUnreadCount] = useState(0);
-
-  useEffect(() => {
-    // Poll for notification updates
-    function updateCount() {
-      AsyncStorage.getItem('unreadNotifications').then((value) => {
-        const count = value ? parseInt(value, 10) : 0;
-        setUnreadCount(count);
-      }).catch(() => {});
-    }
-    updateCount();
-    const interval = setInterval(updateCount, 3000);
-    return () => clearInterval(interval);
-  }, []);
+  const { unreadCount } = useNotifications();
 
   const handleGoBack = () => {
     navigation.goBack();

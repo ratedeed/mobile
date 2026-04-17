@@ -115,7 +115,8 @@ router.put('/:id/status', protect, asyncHandler(async (req, res) => {
       : `Contractor updated job status to ${status.replace('_', ' ')}`;
 
     await notification.create({
-      user: notifyUserId,
+      recipient: notifyUserId,
+      recipientModel: 'User',
       message: statusMessage,
       type: 'job_update',
       link: `/jobs/${job._id}`,
@@ -157,7 +158,8 @@ router.put('/:id/fund', protect, asyncHandler(async (req, res) => {
     // Notify contractor
     const notification = require('../models/Notification');
     await notification.create({
-      user: job.contractorUser,
+      recipient: job.contractorUser,
+      recipientModel: 'User',
       message: `${job.clientName} has funded the project! Work can now begin.`,
       type: 'job_funded',
       link: `/jobs/${job._id}`,
