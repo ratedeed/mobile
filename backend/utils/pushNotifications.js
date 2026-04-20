@@ -2,7 +2,6 @@ const admin = require('firebase-admin');
 
 /**
  * Send a push notification to a specific user using the production Firebase instance.
- * Synchronized with Render "Work" implementation.
  * 
  * @param {string} pushToken - The user's stored FCM token
  * @param {object} payload - { title, body, data }
@@ -14,14 +13,6 @@ const sendPushNotification = async (pushToken, { title, body, data = {}, badge }
   }
 
   try {
-    let app;
-    try {
-      app = admin.app('ratedeedAdminApp');
-    } catch (e) {
-      console.error('Firebase Admin not initialized. Cannot send push. Set FIREBASE_SERVICE_ACCOUNT_KEY env var.');
-      return;
-    }
-
     // Ensure all data values are strings for FCM
     const stringData = {};
     Object.keys(data).forEach(key => {
@@ -55,7 +46,7 @@ const sendPushNotification = async (pushToken, { title, body, data = {}, badge }
       },
     };
 
-    const response = await app.messaging().send(message);
+    const response = await admin.messaging().send(message);
     console.log('Successfully sent push notification:', response);
     return response;
   } catch (error) {

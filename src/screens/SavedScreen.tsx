@@ -25,17 +25,16 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 const CATEGORIES = [
   { id: 'all', label: 'All', icon: 'grid' },
-  { id: 'builders', label: 'Builders', icon: 'home' },
+  { id: 'builders', label: 'Home Builders', icon: 'home' },
   { id: 'plumbers', label: 'Plumbers', icon: 'droplets' },
   { id: 'electricians', label: 'Electricians', icon: 'zap' },
   { id: 'painters', label: 'Painters', icon: 'paintbrush' },
-  { id: 'landscape', label: 'Landscape', icon: 'trees' },
+  { id: 'landscape', label: 'Landscapers', icon: 'trees' },
   { id: 'hvac', label: 'HVAC', icon: 'wind' },
   { id: 'roofers', label: 'Roofers', icon: 'warehouse' },
+  { id: 'carpenters', label: 'Carpenters', icon: 'hammer' },
   { id: 'cleaners', label: 'Cleaners', icon: 'sparkles' },
-  { id: 'handyman', label: 'Handyman', icon: 'wrench' },
-  { id: 'kitchen', label: 'Kitchens', icon: 'cooking-pot' },
-  { id: 'bathroom', label: 'Bathrooms', icon: 'bath' },
+  { id: 'handyman', label: 'Handymen', icon: 'wrench' },
 ];
 
 const SavedScreen = () => {
@@ -160,30 +159,20 @@ const SavedScreen = () => {
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ alignItems: 'center', gap: 16, paddingHorizontal: 16 }}
+              contentContainerStyle={{ alignItems: 'center', gap: 16, paddingHorizontal: 16, paddingVertical: 12 }}
               className="py-2"
             >
-              {availableCategories.map(cat => {
-                const isActive = activeCategory === cat.id;
-
-                return (
-                  <Pressable
-                    key={cat.id}
-                    className="flex-col items-center shrink-0 min-w-[60px]"
-                    style={{ gap: 6 }}
-                    onPress={() => setActiveCategory(cat.id)}
-                  >
-                    <CategoryIcon name={cat.icon} active={isActive} size={48} />
-                    <Text
-                      className={`text-[10px] font-semibold whitespace-nowrap ${
-                        isActive ? 'text-neutral-900 dark:text-neutral-50' : 'text-neutral-500'
-                      }`}
-                    >
-                      {cat.label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
+              {availableCategories.map((cat, i) => (
+                <CategoryIcon 
+                  key={cat.id}
+                  name={cat.icon} 
+                  active={activeCategory === cat.id} 
+                  size={48} 
+                  label={cat.label}
+                  index={i}
+                  onClick={() => setActiveCategory(cat.id)}
+                />
+              ))}
             </ScrollView>
           </View>
 
@@ -195,7 +184,7 @@ const SavedScreen = () => {
             <View className="flex-row flex-wrap justify-between pt-2">
               {filtered.map(contractor => {
                 const rawImage = (contractor as any).bannerUrl || contractor.bannerImage || (contractor as any).imageUrl || contractor.profilePicture || '';
-                const coverImage = getCoverImageUrl(contractor.companyName || contractor.businessName || 'Contractor', rawImage, contractor.category);
+                const coverImage = getCoverImageUrl(contractor.companyName || contractor.businessName || 'Contractor', rawImage, contractor.category, 400, 400);
                 const contractorId = contractor._id || (contractor as any).id;
 
                 return (

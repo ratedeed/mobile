@@ -158,7 +158,7 @@ export function generateAvatarDataUrl(name: string, size: number = 200, category
   const s = size;
   const fontSize = s * (initials.length > 2 ? 0.22 : 0.3);
 
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${s}" height="${s}" viewBox="0 0 ${s} ${s}">
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${s} ${s}" preserveAspectRatio="xMidYMid slice">
   <defs>
     <radialGradient id="${uid}-rg1" cx="30%" cy="25%" r="80%" fx="25%" fy="20%">
       <stop offset="0%" stop-color="${colors.light}" stop-opacity="0.4" />
@@ -191,10 +191,30 @@ export function generateBannerDataUrl(
   const w = width;
   const h = height;
 
-  const titleFontSize = Math.min(w * 0.065, 44);
-  const categoryFontSize = Math.min(w * 0.03, 22);
+  const titleFontSize = Math.min(w * 0.065, h * 0.15, 44);
+  const categoryFontSize = Math.min(w * 0.03, h * 0.07, 22);
 
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
+  const escapedName = escapeXml(name || 'Ratedeed');
+  const escapedCategory = category ? escapeXml(category) : '';
+
+  // Simple text wrapping for long names if square
+  const isSquare = Math.abs(w - h) < 50;
+  const nameParts = (isSquare && escapedName.length > 15) ? escapedName.split(' ') : [escapedName];
+  let nameSvg = '';
+  
+  if (nameParts.length > 1 && isSquare) {
+    const mid = Math.ceil(nameParts.length / 2);
+    const line1 = nameParts.slice(0, mid).join(' ');
+    const line2 = nameParts.slice(mid).join(' ');
+    nameSvg = `
+      <text x="50%" y="${h * 0.42}" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="${titleFontSize}" font-weight="800" fill="white">${line1}</text>
+      <text x="50%" y="${h * 0.42 + titleFontSize * 1.1}" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="${titleFontSize}" font-weight="800" fill="white">${line2}</text>
+    `;
+  } else {
+    nameSvg = `<text x="50%" y="${h * 0.45}" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="${titleFontSize}" font-weight="800" fill="white">${escapedName}</text>`;
+  }
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid slice">
   <defs>
     <linearGradient id="${uid}-bg" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="${colors.primary}" />
@@ -203,21 +223,12 @@ export function generateBannerDataUrl(
   </defs>
   <rect width="${w}" height="${h}" fill="url(#${uid}-bg)" />
   <g>
-    <text
-      x="50%"
-      y="${h * 0.45}"
-      text-anchor="middle"
-      dominant-baseline="central"
-      font-family="sans-serif"
-      font-size="${titleFontSize}"
-      font-weight="800"
-      fill="white"
-    >${escapeXml(name || 'Ratedeed')}</text>
+    ${nameSvg}
     
-    ${category ? `
+    ${escapedCategory ? `
     <text
       x="50%"
-      y="${h * 0.45 + titleFontSize * 1.2}"
+      y="${h * (isSquare && nameParts.length > 1 ? 0.42 + titleFontSize * 2.2 : 0.45 + titleFontSize * 1.2)}"
       text-anchor="middle"
       dominant-baseline="central"
       font-family="sans-serif"
@@ -225,7 +236,7 @@ export function generateBannerDataUrl(
       font-weight="500"
       fill="white"
       fill-opacity="0.85"
-    >${escapeXml(category)}</text>
+    >${escapedCategory}</text>
     ` : ''}
   </g>
 </svg>`;
@@ -268,14 +279,14 @@ export function isDefaultImage(url: string): boolean {
   return !isRealImageUrl(url);
 }
 
-export function getProfileImageUrl(name: string, profilePicture: string, category?: string): string {
+export function getProfileImageUrl(name: string, profilePicture: string, category?: string, size: number = 200): string {
   if (isRealImageUrl(profilePicture)) return profilePicture;
-  return generateAvatarDataUrl(name, 200, category);
+  return generateAvatarDataUrl(name, size, category);
 }
 
-export function getCoverImageUrl(name: string, coverImage: string, category?: string): string {
+export function getCoverImageUrl(name: string, coverImage: string, category?: string, width: number = 800, height: number = 400): string {
   if (isRealImageUrl(coverImage)) return coverImage;
-  return generateBannerDataUrl(name, category);
+  return generateBannerDataUrl(name, category, width, height);
 }
 
 export function isSvgUrl(url: string): boolean {

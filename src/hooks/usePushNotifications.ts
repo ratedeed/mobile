@@ -14,7 +14,6 @@ import { savePushToken } from '../utils/apiClient';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
     shouldShowBanner: true,
@@ -40,8 +39,19 @@ export const usePushNotifications = () => {
           authStatus === AuthorizationStatus.PROVISIONAL;
         if (enabled) {
           const fcmToken = await getToken(messaging);
-          console.log('FCM Token acquired:', fcmToken);
-          setExpoPushToken(fcmToken);
+          console.log('========================================');
+          setExpoPushToken(fcmToken); console.log('FCM Token:', fcmToken);
+          console.log('Copy this token to Firebase Console > Cloud Messaging > Send test message');
+          console.log('========================================');
+
+          // Log APNS token to verify APNS registration
+          try {
+            const { getAPNSToken } = require('@react-native-firebase/messaging');
+            const apnsToken = await getAPNSToken(messaging);
+            console.log('APNS Token:', apnsToken || 'NULL — push will NOT work');
+          } catch (e) {
+            console.warn('Could not check APNS token:', e);
+          }
         }
       } catch (error) {
         console.warn('Failed to get push token', error);

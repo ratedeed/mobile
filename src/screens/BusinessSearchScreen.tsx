@@ -24,17 +24,16 @@ import { getFavorites, addFavorite, removeFavorite } from '../utils/favoritesSto
 // Categories matching web version (same as HomeScreen)
 const CATEGORIES = [
   { id: 'all', label: 'All', icon: 'grid' },
-  { id: 'builders', label: 'Builders', icon: 'home' },
+  { id: 'builders', label: 'Home Builders', icon: 'home' },
   { id: 'plumbers', label: 'Plumbers', icon: 'droplets' },
   { id: 'electricians', label: 'Electricians', icon: 'zap' },
   { id: 'painters', label: 'Painters', icon: 'paintbrush' },
-  { id: 'landscape', label: 'Landscape', icon: 'trees' },
+  { id: 'landscape', label: 'Landscapers', icon: 'trees' },
   { id: 'hvac', label: 'HVAC', icon: 'wind' },
   { id: 'roofers', label: 'Roofers', icon: 'warehouse' },
+  { id: 'carpenters', label: 'Carpenters', icon: 'hammer' },
   { id: 'cleaners', label: 'Cleaners', icon: 'sparkles' },
-  { id: 'handyman', label: 'Handyman', icon: 'wrench' },
-  { id: 'kitchen', label: 'Kitchens', icon: 'cooking-pot' },
-  { id: 'bathroom', label: 'Bathrooms', icon: 'bath' },
+  { id: 'handyman', label: 'Handymen', icon: 'wrench' },
 ];
 
 type RootStackParamList = {
@@ -84,7 +83,7 @@ const ListingCard = ({
   const location = deriveLocation(listing);
   const price = derivePrice(listing);
   const rawImage = (listing as any).bannerUrl || listing.bannerImage || (listing as any).imageUrl || listing.profilePicture || '';
-  const coverImage = getCoverImageUrl(listing.companyName || listing.businessName || 'Contractor', rawImage, listing.category);
+  const coverImage = getCoverImageUrl(listing.companyName || listing.businessName || 'Contractor', rawImage, listing.category, 400, 400);
   const distance = (listing as any).distance;
 
   return (
@@ -162,6 +161,7 @@ const BusinessSearchScreen: React.FC = () => {
   const [hasMore, setHasMore] = useState(true);
   const [totalResults, setTotalResults] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
+  const [nearbyLabel, setNearbyLabel] = useState('');
   const isFirstRender = useRef(true);
 
   const fetchContractors = useCallback(async (pageNum = 1, append = false) => {
@@ -192,6 +192,15 @@ const BusinessSearchScreen: React.FC = () => {
       } else {
         setContractors(list);
       }
+      
+      // Handle nearby label
+      if (searchZip && data?.isExpanded) {
+        if (data.expansionTier === 2) setNearbyLabel('Showing nearby cities');
+        else if (data.expansionTier === 3) setNearbyLabel('Showing nearby cities & region');
+      } else {
+        setNearbyLabel('');
+      }
+
       setTotalResults(data?.total || list.length);
       setHasMore(data?.page < (data?.pages || 1));
       setPage(pageNum);
@@ -315,35 +324,35 @@ const BusinessSearchScreen: React.FC = () => {
           horizontal
           showsHorizontalScrollIndicator={false}
           className="px-4 py-3"
-          contentContainerStyle={{ gap: 16, alignItems: 'center', paddingRight: 40 }}
+          contentContainerStyle={{ gap: 16, alignItems: 'center', paddingRight: 40, paddingVertical: 12 }}
         >
-          {CATEGORIES.map(cat => {
-            const isActive = activeCategory === cat.id;
-
-            return (
-              <Pressable
-                key={cat.id}
-                onPress={() => handleCategorySelect(cat.id)}
-                className="flex-col items-center shrink-0 pt-1.5 pb-1.5 min-w-[60px]"
-                style={{ gap: 6 }}
-              >
-                <CategoryIcon name={cat.icon} active={isActive} size={48} />
-                <Text className={`text-[10px] font-semibold whitespace-nowrap ${
-                  isActive ? 'text-neutral-900 dark:text-neutral-50' : 'text-neutral-500 dark:text-neutral-400'
-                }`}>
-                  {cat.label}
-                </Text>
-              </Pressable>
-            );
-          })}
+          {CATEGORIES.map((cat, i) => (
+            <CategoryIcon 
+              key={cat.id}
+              name={cat.icon} 
+              active={activeCategory === cat.id} 
+              size={48} 
+              label={cat.label}
+              index={i}
+              onClick={() => handleCategorySelect(cat.id)}
+            />
+          ))}
         </ScrollView>
       </View>
 
       <View className="h-px bg-neutral-200 dark:bg-neutral-800" />
 
+      {/* Expansion Notice */}
+      {nearbyLabel ? (
+        <View className="px-4 py-2.5 bg-indigo-50/50 dark:bg-indigo-950/20 border-b border-indigo-100/50 dark:border-indigo-900/30 flex-row items-center" style={{ gap: 8 }}>
+          <FontAwesome5 name="map-marker-alt" size={12} color="#4f46e5" />
+          <Text className="text-xs font-semibold text-indigo-700 dark:text-indigo-400">{nearbyLabel}</Text>
+        </View>
+      ) : null}
+
       {/* Results Info */}
       <View className="px-4 py-2">
-        <Text className="text-sm text-neutral-500 dark:text-neutral-400">
+        <Text className="text-sm font-medium text-neutral-600 dark:text-neutral-400">
           {hasSearch
             ? loading && contractors.length === 0
               ? 'Searching...'

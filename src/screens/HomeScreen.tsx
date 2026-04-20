@@ -21,17 +21,16 @@ import { getFavorites, addFavorite, removeFavorite } from '../utils/favoritesSto
 // ---- Categories matching web version (constants.ts) ----
 const CATEGORIES = [
   { id: 'all', label: 'All', icon: 'grid' },
-  { id: 'builders', label: 'Builders', icon: 'home' },
+  { id: 'builders', label: 'Home Builders', icon: 'home' },
   { id: 'plumbers', label: 'Plumbers', icon: 'droplets' },
   { id: 'electricians', label: 'Electricians', icon: 'zap' },
   { id: 'painters', label: 'Painters', icon: 'paintbrush' },
-  { id: 'landscape', label: 'Landscape', icon: 'trees' },
+  { id: 'landscape', label: 'Landscapers', icon: 'trees' },
   { id: 'hvac', label: 'HVAC', icon: 'wind' },
   { id: 'roofers', label: 'Roofers', icon: 'warehouse' },
+  { id: 'carpenters', label: 'Carpenters', icon: 'hammer' },
   { id: 'cleaners', label: 'Cleaners', icon: 'sparkles' },
-  { id: 'handyman', label: 'Handyman', icon: 'wrench' },
-  { id: 'kitchen', label: 'Kitchens', icon: 'cooking-pot' },
-  { id: 'bathroom', label: 'Bathrooms', icon: 'bath' },
+  { id: 'handyman', label: 'Handymen', icon: 'wrench' },
 ];
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -79,7 +78,7 @@ const ListingCard = ({
   const location = deriveLocation(listing);
   const price = derivePrice(listing);
   const rawImage = (listing as any).bannerUrl || listing.bannerImage || (listing as any).imageUrl || listing.profilePicture || '';
-  const coverImage = getCoverImageUrl(listing.companyName || listing.businessName || 'Contractor', rawImage, listing.category);
+  const coverImage = getCoverImageUrl(listing.companyName || listing.businessName || 'Contractor', rawImage, listing.category, 400, 400);
   const serviceZips = listing.zipCodesCovered || [];
   const distance = (listing as any).distance;
 
@@ -230,61 +229,28 @@ const HomeScreen = () => {
   const loadContractors = useCallback(async (zip?: string | null) => {
     setLoading(true);
     try {
-      // Tier 1: exact zip
-      let tier1: Contractor[] = [];
-      if (zip) {
-        if (mountedRef.current) setNearbyLabel('');
-        const exactResult: any = await browseContractors({ zip, limit: 500 });
-        tier1 = extractList(exactResult);
-      } else {
-        if (mountedRef.current) setNearbyLabel('');
-        const result: any = await browseContractors({ limit: 500 });
-        tier1 = extractList(result);
-      }
-
-      // If enough or no zip, done
-      if (!zip || tier1.length >= MIN_RESULTS) {
-        if (mountedRef.current) setAllContractors(tier1);
-        return;
-      }
-
-      // Tier 2: fetch all and add contractors whose serviceZipCodes start with 3-digit prefix
-      const zip3 = zip.slice(0, 3);
-      if (mountedRef.current) setNearbyLabel('Showing nearby cities');
-      const allResult: any = await browseContractors({ limit: 500 });
-      const allList = extractList(allResult);
-      const seen2 = new Set(tier1.map(c => c._id));
-      const tier2Extras = allList.filter((c: Contractor) => {
-        if (seen2.has(c._id)) return false;
-        const serviceZips = c.zipCodesCovered || [];
-        return serviceZips.some(z => z.startsWith(zip3));
-      });
-      const tier1Plus2 = [...tier1, ...tier2Extras];
-
-      // If enough after tier 2, done
-      if (tier1Plus2.length >= MIN_RESULTS) {
-        if (mountedRef.current) setAllContractors(tier1Plus2);
-        return;
-      }
-
-      // Tier 3: add contractors whose serviceZipCodes start with 2-digit prefix (wider region)
-      if (mountedRef.current) setNearbyLabel('Showing nearby cities & region');
-      const zip2 = zip.slice(0, 2);
-      const seen3 = new Set(tier1Plus2.map(c => c._id));
-      const tier3Extras = allList.filter((c: Contractor) => {
-        if (seen3.has(c._id)) return false;
-        const serviceZips = c.zipCodesCovered || [];
-        return serviceZips.some(z => z.startsWith(zip2));
-      });
-      const final = [...tier1Plus2, ...tier3Extras];
-
+      const result: any = await browseContractors({ zip: zip || undefined, limit: 50 });
+      const list = extractList(result);
+      
       if (mountedRef.current) {
-        setAllContractors(final);
+        setAllContractors(list);
+        
+        // Handle nearby label based on backend expansion flags
+        if (zip && result.isExpanded) {
+          if (result.expansionTier === 2) {
+            setNearbyLabel('Showing nearby cities');
+          } else if (result.expansionTier === 3) {
+            setNearbyLabel('Showing nearby cities & region');
+          }
+        } else {
+          setNearbyLabel('');
+        }
       }
     } catch (err) {
       console.error('Error fetching contractors:', err);
       if (mountedRef.current) {
         setAllContractors([]);
+        setNearbyLabel('');
       }
     } finally {
       if (mountedRef.current) {
@@ -436,29 +402,19 @@ const HomeScreen = () => {
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ alignItems: 'center', gap: 16, paddingHorizontal: 16, paddingRight: 100 }}
+            contentContainerStyle={{ alignItems: 'center', gap: 16, paddingHorizontal: 16, paddingRight: 100, paddingVertical: 12 }}
           >
-            {CATEGORIES.map(cat => {
-              const isActive = activeCategory === cat.id;
-
-              return (
-                <Pressable
-                  key={cat.id}
-                  className="flex-col items-center shrink-0 pt-1.5 pb-1.5 min-w-[60px]"
-                  style={{ gap: 6 }}
-                  onPress={() => setActiveCategory(cat.id)}
-                >
-                  <CategoryIcon name={cat.icon} active={isActive} size={48} />
-                  <Text
-                    className={`text-[10px] font-semibold whitespace-nowrap ${
-                      isActive ? 'text-neutral-900 dark:text-neutral-50' : 'text-neutral-500 dark:text-neutral-400'
-                    }`}
-                  >
-                    {cat.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
+            {CATEGORIES.map((cat, i) => (
+              <CategoryIcon 
+                key={cat.id}
+                name={cat.icon} 
+                active={activeCategory === cat.id} 
+                size={48} 
+                label={cat.label}
+                index={i}
+                onClick={() => setActiveCategory(cat.id)}
+              />
+            ))}
           </ScrollView>
 
           {/* Filters Button */}

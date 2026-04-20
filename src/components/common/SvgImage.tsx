@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, ActivityIndicator } from 'react-native';
 import { SvgXml } from 'react-native-svg';
 
-export const SvgImage = ({ uri, width = '100%', height = '100%', style }: { uri: string, width?: any, height?: any, style?: any }) => {
+export const SvgImage = ({ uri, width = '100%', height = '100%', style, preserveAspectRatio = 'xMidYMid slice' }: { uri: string, width?: any, height?: any, style?: any, preserveAspectRatio?: string }) => {
   const [xml, setXml] = useState<string | null>(null);
 
   useEffect(() => {
@@ -62,5 +62,5 @@ export const SvgImage = ({ uri, width = '100%', height = '100%', style }: { uri:
     );
   }
 
-  return <SvgXml xml={xml} width={width} height={height} style={style} />;
+  return <SvgXml xml={xml} width={width} height={height} style={style} preserveAspectRatio={preserveAspectRatio} />;
 };

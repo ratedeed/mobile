@@ -140,7 +140,7 @@ function Sheet({ visible, onClose, title, children }: { visible: boolean; onClos
 // Main Component
 // ================================================================
 const ContractorDashboardScreen: React.FC = () => {
-  const { userId: currentUserId } = useAuth();
+  const { userId: currentUserId, updateUser } = useAuth();
   const [realContractorId, setRealContractorId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('posts');
   const [loading, setLoading] = useState(true);
@@ -159,6 +159,8 @@ const ContractorDashboardScreen: React.FC = () => {
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [showAddPortfolio, setShowAddPortfolio] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
+  const [activeEditSection, setActiveEditSection] = useState<string | null>(null);
+  const [newZip, setNewZip] = useState('');
 
   const [postCaption, setPostCaption] = useState('');
   const [postTags, setPostTags] = useState('');
@@ -170,14 +172,16 @@ const ContractorDashboardScreen: React.FC = () => {
   const [portfolioSubmitting, setPortfolioSubmitting] = useState(false);
 
   const [editableData, setEditableData] = useState({
-    description: '',
-    pricing: '',
-    certifications: '' as any,
-    servicesOffered: [] as string[],
-    phone: '',
-    email: '',
-    website: '',
-    address: '',
+    description: "",
+    pricing: "",
+    certifications: "" as any,
+    servicesOffered: [] as { name: string; description: string; priceRange: string }[],
+    phone: "",
+    email: "",
+    website: "",
+    address: "",
+    licenseNumber: "",
+    zipCodes: [] as string[],
   });
   const [profileSaving, setProfileSaving] = useState(false);
   const [bannerUrl, setBannerUrl] = useState('');
@@ -238,35 +242,64 @@ const ContractorDashboardScreen: React.FC = () => {
         getStripeAccountStatus().catch(() => ({ connected: false })),
       ]);
 
-      setPosts(Array.isArray(postsData?.posts) ? postsData.posts : []);
-      setReviews(Array.isArray(reviewsData) ? reviewsData : []);
-      setPortfolio(Array.isArray(portfolioData) ? portfolioData : []);
       setEarnings(earningsData);
       setLeads(Array.isArray(leadsData) ? leadsData : []);
       setQuotes(Array.isArray(quotesData) ? quotesData : []);
       setJobs(Array.isArray(jobsData) ? jobsData : []);
       setStripeStatus(stripeData);
 
-      // Populate profile data
-      const name = profile.companyName || profile.businessName || '';
+      // 3. Standardize and Map Data (Match web version robust mapping)
+      const name = profile.companyName || profile.businessName || profile.name || '';
       const cat = profile.category || '';
-      const rawBanner = profile.bannerImage || (profile as any).bannerUrl || (profile as any).imageUrl || '';
-      const rawAvatar = profile.profilePicture || profile.user?.profilePicture || '';
+      const rawBanner = profile.bannerImage || profile.coverImage || (profile as any).bannerUrl || (profile as any).imageUrl || '';
+      const rawAvatar = profile.profilePicture || profile.profileImage || profile.user?.profilePicture || '';
       
+      const phone = profile.phone || profile.contact?.phone || profile.contactInfo?.phoneNumber || profile.phoneNumber || "";
+      const email = profile.email || profile.contact?.email || profile.contactInfo?.email || "";
+      const website = profile.website || profile.contact?.website || profile.contactInfo?.website || "";
+      const address = profile.businessAddress || profile.location || profile.contact?.address || profile.contactInfo?.streetAddress || "";
+      
+      const rawServices = profile.services || profile.servicesOffered || [];
+      const normalizedServices = rawServices.map((s: any) => ({
+        name: typeof s === "string" ? s : s.name || "",
+        description: s.description || s.desc || "",
+        priceRange: s.priceRange || s.priceEstimate || ""
+      }));
+
+      const rawZips = profile.zipCodesCovered || profile.zipCodes || profile.serviceArea || [];
+      const zipsArray = Array.isArray(rawZips) ? rawZips : (typeof rawZips === 'string' ? rawZips.split(',').map(z => z.trim()).filter(Boolean) : []);
+
+      // Standardize Portfolio (Check profile.portfolio first, then separate fetch)
+      const rawPortfolio = (profile.portfolio && Array.isArray(profile.portfolio) && profile.portfolio.length > 0) 
+        ? profile.portfolio 
+        : (Array.isArray(portfolioData) ? portfolioData : []);
+      
+      const normalizedPortfolio = rawPortfolio.map((p: any) => ({
+        _id: p._id || p.id,
+        name: p.name || p.title || p.caption || "Untitled Project",
+        description: p.description || p.caption || "",
+        imageUrl: p.imageUrl || (Array.isArray(p.images) ? p.images[0] : "") || "",
+        images: Array.isArray(p.images) ? p.images : (p.imageUrl ? [p.imageUrl] : [])
+      }));
+
+      setPosts(Array.isArray(postsData?.posts) ? postsData.posts : []);
+      setReviews(Array.isArray(reviewsData) ? reviewsData : []);
+      setPortfolio(normalizedPortfolio);
       setContractorName(name);
       setBannerUrl(getCoverImageUrl(name, rawBanner, cat));
       setAvatarUrl(getProfileImageUrl(name, rawAvatar, cat));
-      
-      // Update editable data
+
       setEditableData({
-        description: profile.description || '',
-        pricing: profile.pricing || '',
-        certifications: profile.certifications || '',
-        servicesOffered: (profile.services || profile.servicesOffered || []).map((s: any) => typeof s === 'string' ? s : s.name || ''),
-        phone: profile.contact?.phone || '',
-        email: profile.contact?.email || '',
-        website: profile.contact?.website || '',
-        address: profile.contact?.address || '',
+        description: profile.description || "",
+        pricing: profile.pricing || "",
+        certifications: profile.certifications || "",
+        servicesOffered: normalizedServices,
+        phone,
+        email,
+        website,
+        address,
+        licenseNumber: profile.licenseNumber || "",
+        zipCodes: zipsArray,
       });
 
     } catch (err) {
@@ -307,43 +340,121 @@ const ContractorDashboardScreen: React.FC = () => {
     Alert.alert('Delete Post', 'Are you sure?', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Delete', style: 'destructive', onPress: async () => {
-        try { await deletePost(postId); setPosts(prev => prev.filter(p => p._id !== postId)); }
-        catch { Alert.alert('Error', 'Failed to delete post'); }
-      }},
-    ]);
+      try { await deletePost(postId); setPosts(prev => prev.filter(p => p._id !== postId)); }
+      catch { Alert.alert("Error", "Failed to delete post"); }
+    }}]);
+  };
+
+  const handleUpdateImage = async (type: "avatar" | "banner") => {
+    try {
+      const uri = await pickFromLibrary();
+      if (!uri) return;
+      setImageLoading(true);
+      const { uploadToCloudinary, CLOUDINARY_FOLDERS } = await import("../utils/cloudinary");
+      const folder = type === "avatar" ? CLOUDINARY_FOLDERS.CONTRACTOR_PROFILE : CLOUDINARY_FOLDERS.CONTRACTOR_BANNER;
+      const uploadedUrl = await uploadToCloudinary(uri, folder);
+      const updateData: any = {};
+      if (type === "avatar") updateData.profilePicture = uploadedUrl;
+      else updateData.bannerImage = uploadedUrl;
+      const result = await updateContractorProfile(updateData);
+      if (result && result.user) updateUser(result.user);
+      loadData();
+    } catch (err: any) {
+      Alert.alert("Error", err?.message || "Upload failed");
+    } finally {
+      setImageLoading(false);
+    }
   };
 
   const handleAddImage = async () => {
-    setImageLoading(true);
-    const url = await pickFromLibrary();
-    if (url) setPostImages(prev => [...prev, url]);
-    setImageLoading(false);
+    try {
+      const uri = await pickFromLibrary();
+      if (!uri) return;
+      setImageLoading(true);
+      const { uploadToCloudinary, CLOUDINARY_FOLDERS } = await import("../utils/cloudinary");
+      const uploadedUrl = await uploadToCloudinary(uri, CLOUDINARY_FOLDERS.POST_IMAGES);
+      setPostImages(prev => [...prev, uploadedUrl]);
+    } catch (err: any) {
+      Alert.alert("Error", err?.message || "Upload failed");
+    } finally {
+      setImageLoading(false);
+    }
   };
 
-  // ---- Portfolio handlers ----
   const handleAddPortfolio = async () => {
-    if (!portfolioItem.name.trim()) { Alert.alert('Error', 'Project name is required'); return; }
+    if (!portfolioItem.name.trim()) {
+      Alert.alert('Error', 'Project name is required');
+      return;
+    }
     setPortfolioSubmitting(true);
     try {
       await addPortfolioItem(portfolioItem);
       setPortfolioItem({ name: '', description: '', imageUrl: '' });
       setShowAddPortfolio(false);
       loadData();
-      Alert.alert('Success', 'Portfolio item added!');
-    } catch { Alert.alert('Error', 'Failed to add portfolio item'); }
-    finally { setPortfolioSubmitting(false); }
+      Alert.alert('Success', 'Portfolio project added');
+    } catch (err: any) {
+      Alert.alert('Error', err?.message || 'Failed to add portfolio item');
+    } finally {
+      setPortfolioSubmitting(false);
+    }
   };
 
-  // ---- Profile handler ----
+  const handleAddPortfolioImage = async () => {
+    try {
+      const uri = await pickFromLibrary();
+      if (!uri) return;
+      setImageLoading(true);
+      const { uploadToCloudinary, CLOUDINARY_FOLDERS } = await import("../utils/cloudinary");
+      const uploadedUrl = await uploadToCloudinary(uri, CLOUDINARY_FOLDERS.PORTFOLIO);
+      setPortfolioItem(prev => ({ ...prev, imageUrl: uploadedUrl }));
+    } catch (err: any) {
+      Alert.alert("Error", err?.message || "Upload failed");
+    } finally {
+      setImageLoading(false);
+    }
+  };
+
   const handleSaveProfile = async () => {
     setProfileSaving(true);
     try {
-      await updateContractorProfile(editableData);
+      const updateData: any = {
+        description: editableData.description,
+        pricing: editableData.pricing,
+        certifications: Array.isArray(editableData.certifications) ? editableData.certifications : editableData.certifications?.split(",").map((s: string) => s.trim()).filter(Boolean) || [],
+        zipCodesCovered: editableData.zipCodes,
+        licenseNumber: editableData.licenseNumber,
+        // Match web version: send services as objects with priceEstimate
+        servicesOffered: editableData.servicesOffered.map(s => ({
+          name: s.name,
+          description: s.description,
+          priceEstimate: s.priceRange
+        })),
+        services: editableData.servicesOffered.map(s => s.name),
+        // Match web version: map portfolio properly
+        portfolio: portfolio.map(p => ({
+          name: p.name,
+          description: p.description,
+          imageUrl: p.imageUrl,
+          images: p.images || [p.imageUrl].filter(Boolean)
+        })),
+        // Include contact info nested
+        contact: {
+          phone: editableData.phone,
+          website: editableData.website,
+          address: editableData.address,
+        }
+      };
+      const result = await updateContractorProfile(updateData);
+      if (result && result.user) updateUser(result.user);
       setShowEditProfile(false);
       loadData();
-      Alert.alert('Success', 'Profile updated!');
-    } catch { Alert.alert('Error', 'Failed to update profile'); }
-    finally { setProfileSaving(false); }
+      Alert.alert("Success", "Profile updated!");
+    } catch (err: any) {
+      Alert.alert("Error", err?.message || "Failed to update profile");
+    } finally {
+      setProfileSaving(false);
+    }
   };
 
   // ---- Computed values ----
@@ -371,52 +482,76 @@ const ContractorDashboardScreen: React.FC = () => {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
-        {/* ==================== HEADER: Banner + Avatar ==================== */}
         <View className="relative">
-          <View className="h-44 w-full bg-neutral-200 overflow-hidden">
+          <View className="h-48 w-full bg-neutral-200 overflow-hidden">
             {bannerUrl ? (
               isSvgUrl(bannerUrl) ? (
-                <SvgImage uri={bannerUrl} width="100%" height="100%" />
+                <SvgImage key={bannerUrl} uri={bannerUrl} width="100%" height="100%" />
               ) : (
-                <Image source={{ uri: bannerUrl }} className="absolute inset-0 w-full h-full" resizeMode="cover" />
+                <Image key={bannerUrl} source={{ uri: bannerUrl }} className="w-full h-full" resizeMode="cover" />
               )
             ) : (
-              <View className="absolute inset-0 bg-gradient-to-b from-neutral-300 to-neutral-200" />
+              <View className="absolute inset-0 bg-neutral-300" />
             )}
+            <View className="absolute inset-0 bg-black/10" />
+            <Pressable 
+              onPress={() => handleUpdateImage("banner")} 
+              className="absolute top-4 left-4 bg-white/90 px-3 py-1.5 rounded-lg flex-row items-center shadow-sm"
+              style={{ gap: 6, zIndex: 50 }}
+            >
+              <FontAwesome5 name="camera" size={12} color="#404040" />
+              <Text className="text-[10px] font-bold text-neutral-800">Edit Cover</Text>
+            </Pressable>
+
+            <Pressable
+              onPress={() => setShowEditProfile(true)}
+              className="absolute top-4 right-4 bg-white/90 px-3 py-1.5 rounded-lg flex-row items-center shadow-sm"
+              style={{ gap: 6, zIndex: 50 }}
+            >
+              <FontAwesome5 name="pen" size={10} color="#525252" />
+              <Text className="text-xs font-semibold text-neutral-800">Edit Profile</Text>
+            </Pressable>
           </View>
-          <View className="absolute -bottom-12 left-4">
-            <View className="w-24 h-24 rounded-full border-4 border-white overflow-hidden bg-neutral-200">
-              {avatarUrl ? (
-                isSvgUrl(avatarUrl) ? (
-                  <SvgImage uri={avatarUrl} width="100%" height="100%" />
+
+          {/* Profile Card Overlap */}
+          <View className="mx-4 -mt-10 bg-white rounded-2xl border border-neutral-100 shadow-sm p-4 relative z-10">
+            <View className="flex-row items-end" style={{ gap: 16 }}>
+              <View className="w-20 h-20 rounded-2xl border-4 border-white overflow-hidden bg-neutral-200 shadow-sm -mt-10 relative">
+                {avatarUrl ? (
+                  isSvgUrl(avatarUrl) ? (
+                    <SvgImage key={avatarUrl} uri={avatarUrl} width="100%" height="100%" />
+                  ) : (
+                    <Image key={avatarUrl} source={{ uri: avatarUrl }} className="w-full h-full" resizeMode="cover" />
+                  )
                 ) : (
-                  <Image source={{ uri: avatarUrl }} className="absolute inset-0 w-full h-full" resizeMode="cover" />
-                )
-              ) : (
-                <FontAwesome5 name="user" size={32} color="#a3a3a3" style={{ position: 'absolute', top: 20, left: 20 }} />
-              )}
+                  <FontAwesome5 name="user" size={24} color="#a3a3a3" style={{ position: "absolute", top: 24, left: 24 }} />
+                )}
+                <Pressable 
+                  onPress={() => handleUpdateImage("avatar")} 
+                  className="absolute inset-0 bg-black/10 items-center justify-center"
+                >
+                  <FontAwesome5 name="camera" size={12} color="#fff" />
+                </Pressable>
+              </View>
+              <View className="flex-1 pb-1">
+                <View className="flex-row items-center" style={{ gap: 6 }}>
+                  <Text className="text-xl font-bold text-neutral-900">{contractorName || "My Business"}</Text>
+                  <FontAwesome5 name="badge-check" size={16} color="#4F46E5" />
+                </View>
+                <View className="flex-row items-center mt-1" style={{ gap: 8 }}>
+                  <StarRating rating={avgRating} />
+                  <Text className="text-xs text-neutral-500 font-medium">{reviews.length} reviews</Text>
+                </View>
+              </View>
             </View>
           </View>
-          <Pressable
-            onPress={() => setShowEditProfile(true)}
-            className="absolute top-3 right-3 bg-white/90 px-3 py-1.5 rounded-lg flex-row items-center"
-            style={{ gap: 6, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2 }}
-          >
-            <FontAwesome5 name="pen" size={10} color="#525252" />
-            <Text className="text-xs font-semibold text-neutral-800">Edit Profile</Text>
-          </Pressable>
         </View>
 
-        {/* ==================== Profile Info ==================== */}
-        <View className="pt-14 px-4">
-          <View className="flex-row items-center" style={{ gap: 8 }}>
-            <Text className="text-xl font-bold text-neutral-900">{contractorName || 'My Business'}</Text>
-            <FontAwesome5 name="badge-check" size={16} color="#4F46E5" />
-          </View>
-          <View className="flex-row items-center mt-2" style={{ gap: 8 }}>
-            <StarRating rating={avgRating} />
-            <Text className="text-sm text-neutral-500">({reviews.length} reviews)</Text>
-          </View>
+        {/* ==================== Profile Info (Removed as it's now in the overlap card) ==================== */}
+        <View className="px-4 mt-4">
+          <Text className="text-sm text-neutral-600 leading-5" numberOfLines={3}>
+            {editableData.description || "No description added yet."}
+          </Text>
         </View>
 
         {/* ==================== Tab Navigation ==================== */}
@@ -429,7 +564,7 @@ const ContractorDashboardScreen: React.FC = () => {
                   onPress={() => setActiveTab(tab.key)}
                   className="relative px-4 py-3"
                 >
-                  <Text className={`text-sm font-semibold whitespace-nowrap ${activeTab === tab.key ? 'text-indigo-600' : 'text-neutral-500'}`}>
+                  <Text className={`text-sm font-semibold whitespace-nowrap ${activeTab === tab.key ? "text-indigo-600" : "text-neutral-500"}`}>
                     {tab.label}
                   </Text>
                   {activeTab === tab.key && (
@@ -521,6 +656,21 @@ const ContractorDashboardScreen: React.FC = () => {
               </View>
 
               <View className="bg-white rounded-xl border border-neutral-200 p-5">
+                <Text className="text-base font-semibold text-neutral-900 mb-3">Service Areas</Text>
+                {editableData.zipCodes.length > 0 ? (
+                  <View className="flex-row flex-wrap" style={{ gap: 8 }}>
+                    {editableData.zipCodes.map(zip => (
+                      <View key={zip} className="bg-neutral-100 px-3 py-1.5 rounded-full">
+                        <Text className="text-xs font-medium text-neutral-600">{zip}</Text>
+                      </View>
+                    ))}
+                  </View>
+                ) : (
+                  <Text className="text-sm text-neutral-500 italic">No service areas listed</Text>
+                )}
+              </View>
+
+              <View className="bg-white rounded-xl border border-neutral-200 p-5">
                 <Text className="text-base font-semibold text-neutral-900 mb-3">Business Hours</Text>
                 {DAYS.map(day => (
                   <View key={day} className="flex-row justify-between py-2 border-b border-neutral-100">
@@ -539,10 +689,16 @@ const ContractorDashboardScreen: React.FC = () => {
               {editableData.servicesOffered.length === 0 ? (
                 <EmptyState icon="briefcase" title="No services listed" message="Edit your profile to add services" />
               ) : (
-                <View className="flex-row flex-wrap" style={{ gap: 8 }}>
+                <View style={{ gap: 12 }}>
                   {editableData.servicesOffered.map((service, idx) => (
-                    <View key={idx} className="bg-indigo-50 px-3 py-1.5 rounded-full">
-                      <Text className="text-xs font-medium text-indigo-700">{service}</Text>
+                    <View key={idx} className="bg-white rounded-xl border border-neutral-200 p-4">
+                      <Text className="text-sm font-bold text-neutral-900">{service.name}</Text>
+                      {service.description ? (
+                        <Text className="text-xs text-neutral-500 mt-1">{service.description}</Text>
+                      ) : null}
+                      {service.priceRange ? (
+                        <Text className="text-xs font-semibold text-indigo-600 mt-2">{service.priceRange}</Text>
+                      ) : null}
                     </View>
                   ))}
                 </View>
@@ -947,7 +1103,22 @@ const ContractorDashboardScreen: React.FC = () => {
           className="w-full border border-neutral-200 rounded-xl px-4 py-2.5 text-sm mb-3"
           style={{ textAlignVertical: 'top', minHeight: 80 }}
         />
-        <Text className="text-xs font-semibold text-neutral-500 mb-1">Image URL</Text>
+        <Text className="text-xs font-semibold text-neutral-500 mb-1">Project Image</Text>
+        <Pressable
+          onPress={handleAddPortfolioImage}
+          disabled={imageLoading}
+          className="w-full border-2 border-dashed border-neutral-200 rounded-lg p-5 items-center mb-3 overflow-hidden"
+        >
+          {portfolioItem.imageUrl ? (
+            <Image source={{ uri: portfolioItem.imageUrl }} className="w-full h-32 rounded-lg" resizeMode="cover" />
+          ) : (
+            <View className="items-center" style={{ gap: 6 }}>
+              <FontAwesome5 name="camera" size={20} color="#a3a3a3" />
+              <Text className="text-sm text-neutral-500">{imageLoading ? 'Uploading...' : 'Upload project photo'}</Text>
+            </View>
+          )}
+        </Pressable>
+        <Text className="text-xs font-semibold text-neutral-500 mb-1">Image URL (Optional)</Text>
         <TextInput
           value={portfolioItem.imageUrl}
           onChangeText={t => setPortfolioItem(p => ({ ...p, imageUrl: t }))}
@@ -973,69 +1144,344 @@ const ContractorDashboardScreen: React.FC = () => {
 
       {/* ==================== EDIT PROFILE SHEET ==================== */}
       <Sheet visible={showEditProfile} onClose={() => setShowEditProfile(false)} title="Edit Profile">
-        <Text className="text-xs font-semibold text-neutral-500 mb-1">Description</Text>
-        <TextInput
-          value={editableData.description}
-          onChangeText={t => setEditableData(p => ({ ...p, description: t }))}
-          placeholder="Tell homeowners about your business..."
-          placeholderTextColor="#a3a3a3"
-          multiline
-          numberOfLines={4}
-          className="w-full border border-neutral-200 rounded-xl px-4 py-2.5 text-sm mb-3"
-          style={{ textAlignVertical: 'top', minHeight: 100 }}
-        />
-        <Text className="text-xs font-semibold text-neutral-500 mb-1">Pricing</Text>
-        <TextInput
-          value={editableData.pricing}
-          onChangeText={t => setEditableData(p => ({ ...p, pricing: t }))}
-          placeholder="e.g., $500 - $5,000"
-          placeholderTextColor="#a3a3a3"
-          className="w-full border border-neutral-200 rounded-xl px-4 py-2.5 text-sm mb-3"
-        />
-        <Text className="text-xs font-semibold text-neutral-500 mb-1">Certifications</Text>
-        <TextInput
-          value={editableData.certifications}
-          onChangeText={t => setEditableData(p => ({ ...p, certifications: t }))}
-          placeholder="Licensed, Bonded, Insured..."
-          placeholderTextColor="#a3a3a3"
-          className="w-full border border-neutral-200 rounded-xl px-4 py-2.5 text-sm mb-3"
-        />
-        <Text className="text-xs font-semibold text-neutral-500 mb-1">Phone</Text>
-        <TextInput
-          value={editableData.phone}
-          onChangeText={t => setEditableData(p => ({ ...p, phone: t }))}
-          placeholder="(555) 123-4567"
-          placeholderTextColor="#a3a3a3"
-          keyboardType="phone-pad"
-          className="w-full border border-neutral-200 rounded-xl px-4 py-2.5 text-sm mb-3"
-        />
-        <Text className="text-xs font-semibold text-neutral-500 mb-1">Email</Text>
-        <TextInput
-          value={editableData.email}
-          onChangeText={t => setEditableData(p => ({ ...p, email: t }))}
-          placeholder="your@email.com"
-          placeholderTextColor="#a3a3a3"
-          keyboardType="email-address"
-          autoCapitalize="none"
-          className="w-full border border-neutral-200 rounded-xl px-4 py-2.5 text-sm mb-3"
-        />
-        <Text className="text-xs font-semibold text-neutral-500 mb-1">Address</Text>
-        <TextInput
-          value={editableData.address}
-          onChangeText={t => setEditableData(p => ({ ...p, address: t }))}
-          placeholder="123 Main St, City, State"
-          placeholderTextColor="#a3a3a3"
-          className="w-full border border-neutral-200 rounded-xl px-4 py-2.5 text-sm mb-3"
-        />
-        <Pressable
-          onPress={handleSaveProfile}
-          disabled={profileSaving}
-          className="w-full py-3 bg-indigo-600 rounded-xl items-center flex-row justify-center"
-          style={{ gap: 8 }}
-        >
-          {profileSaving && <ActivityIndicator size="small" color="#fff" />}
-          <Text className="text-sm font-semibold text-white">{profileSaving ? 'Saving...' : 'Save Changes'}</Text>
-        </Pressable>
+        {/* Banner & Avatar Preview */}
+        <View className="mb-6">
+          <View className="h-32 w-full bg-neutral-200 rounded-xl overflow-hidden relative">
+            {bannerUrl ? (
+              <Image source={{ uri: bannerUrl }} className="w-full h-full" resizeMode="cover" />
+            ) : (
+              <View className="absolute inset-0 bg-neutral-300" />
+            )}
+            <View className="absolute inset-0 bg-black/20 items-center justify-center">
+              <Pressable 
+                onPress={() => handleUpdateImage("banner")}
+                className="bg-white/90 px-4 py-2 rounded-xl flex-row items-center"
+                style={{ gap: 8 }}
+              >
+                <FontAwesome5 name="camera" size={14} color="#404040" />
+                <Text className="text-xs font-bold text-neutral-800">Change Cover</Text>
+              </Pressable>
+            </View>
+          </View>
+          
+          <View className="flex-row items-end px-4 -mt-8" style={{ gap: 12 }}>
+            <View className="w-20 h-20 rounded-2xl border-4 border-white overflow-hidden bg-neutral-200 shadow-sm relative">
+              {avatarUrl ? (
+                <Image source={{ uri: avatarUrl }} className="w-full h-full" resizeMode="cover" />
+              ) : (
+                <FontAwesome5 name="user" size={24} color="#a3a3a3" style={{ position: "absolute", top: 24, left: 24 }} />
+              )}
+              <Pressable 
+                onPress={() => handleUpdateImage("avatar")}
+                className="absolute inset-0 bg-black/20 items-center justify-center"
+              >
+                <FontAwesome5 name="camera" size={12} color="#fff" />
+              </Pressable>
+            </View>
+            <View className="pb-2">
+              <Text className="text-base font-bold text-neutral-900">{contractorName || "Your Business"}</Text>
+              <Text className="text-xs text-neutral-500">Profile Preview</Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={{ gap: 12 }} className="pb-10">
+          {/* License Verification Accordion */}
+          <View className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+            <Pressable 
+              onPress={() => setActiveEditSection(activeEditSection === 'license' ? null : 'license')}
+              className="flex-row items-center justify-between p-4"
+            >
+              <View className="flex-row items-center" style={{ gap: 12 }}>
+                <View className="w-10 h-10 rounded-lg bg-indigo-50 items-center justify-center">
+                  <FontAwesome5 name="shield-check" size={16} color="#4F46E5" />
+                </View>
+                <View>
+                  <Text className="text-sm font-bold text-neutral-900">License Verification</Text>
+                  <Text className="text-[10px] text-neutral-500">Verified status builds trust</Text>
+                </View>
+              </View>
+              <FontAwesome5 name={activeEditSection === 'license' ? "chevron-up" : "chevron-down"} size={12} color="#a3a3a3" />
+            </Pressable>
+            
+            {activeEditSection === 'license' && (
+              <View className="p-4 border-t border-neutral-100 bg-neutral-50/50">
+                <Text className="text-xs font-semibold text-neutral-500 mb-1.5">License Number</Text>
+                <TextInput
+                  value={editableData.licenseNumber}
+                  onChangeText={t => setEditableData(p => ({ ...p, licenseNumber: t }))}
+                  placeholder="e.g. #12345678"
+                  placeholderTextColor="#a3a3a3"
+                  className="w-full bg-white border border-neutral-200 rounded-xl px-4 py-2.5 text-sm mb-4"
+                />
+                <View className="bg-indigo-50 p-3 rounded-lg border border-indigo-100">
+                  <Text className="text-[11px] text-indigo-700 leading-4">
+                    Get verified to display a badge on your profile. Verification usually takes 1-2 business days.
+                  </Text>
+                </View>
+              </View>
+            )}
+          </View>
+
+          {/* About Us Accordion */}
+          <View className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+            <Pressable 
+              onPress={() => setActiveEditSection(activeEditSection === 'about' ? null : 'about')}
+              className="flex-row items-center justify-between p-4"
+            >
+              <View className="flex-row items-center" style={{ gap: 12 }}>
+                <View className="w-10 h-10 rounded-lg bg-neutral-50 items-center justify-center">
+                  <FontAwesome5 name="info-circle" size={16} color="#525252" />
+                </View>
+                <View>
+                  <Text className="text-sm font-bold text-neutral-900">About Us</Text>
+                  <Text className="text-[10px] text-neutral-500">Business description and info</Text>
+                </View>
+              </View>
+              <FontAwesome5 name={activeEditSection === 'about' ? "chevron-up" : "chevron-down"} size={12} color="#a3a3a3" />
+            </Pressable>
+            
+            {activeEditSection === 'about' && (
+              <View className="p-4 border-t border-neutral-100 bg-neutral-50/50" style={{ gap: 12 }}>
+                <View>
+                  <Text className="text-xs font-semibold text-neutral-500 mb-1.5">Business Description</Text>
+                  <TextInput
+                    value={editableData.description}
+                    onChangeText={t => setEditableData(p => ({ ...p, description: t }))}
+                    placeholder="Tell homeowners about your business..."
+                    placeholderTextColor="#a3a3a3"
+                    multiline
+                    numberOfLines={4}
+                    className="w-full bg-white border border-neutral-200 rounded-xl px-4 py-2.5 text-sm"
+                    style={{ textAlignVertical: "top", minHeight: 100 }}
+                  />
+                </View>
+                <View>
+                  <Text className="text-xs font-semibold text-neutral-500 mb-1.5">Pricing Info</Text>
+                  <TextInput
+                    value={editableData.pricing}
+                    onChangeText={t => setEditableData(p => ({ ...p, pricing: t }))}
+                    placeholder="e.g. $500 - $5,000"
+                    placeholderTextColor="#a3a3a3"
+                    className="w-full bg-white border border-neutral-200 rounded-xl px-4 py-2.5 text-sm"
+                  />
+                </View>
+                <View>
+                  <Text className="text-xs font-semibold text-neutral-500 mb-1.5">Certifications</Text>
+                  <TextInput
+                    value={editableData.certifications}
+                    onChangeText={t => setEditableData(p => ({ ...p, certifications: t }))}
+                    placeholder="Licensed, Bonded, Insured..."
+                    placeholderTextColor="#a3a3a3"
+                    className="w-full bg-white border border-neutral-200 rounded-xl px-4 py-2.5 text-sm"
+                  />
+                </View>
+              </View>
+            )}
+          </View>
+
+          {/* Contact & Location Accordion */}
+          <View className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+            <Pressable 
+              onPress={() => setActiveEditSection(activeEditSection === 'contact' ? null : 'contact')}
+              className="flex-row items-center justify-between p-4"
+            >
+              <View className="flex-row items-center" style={{ gap: 12 }}>
+                <View className="w-10 h-10 rounded-lg bg-neutral-50 items-center justify-center">
+                  <FontAwesome5 name="map-marker-alt" size={16} color="#525252" />
+                </View>
+                <View>
+                  <Text className="text-sm font-bold text-neutral-900">Contact & Location</Text>
+                  <Text className="text-[10px] text-neutral-500">Where you work and how to reach you</Text>
+                </View>
+              </View>
+              <FontAwesome5 name={activeEditSection === 'contact' ? "chevron-up" : "chevron-down"} size={12} color="#a3a3a3" />
+            </Pressable>
+            
+            {activeEditSection === 'contact' && (
+              <View className="p-4 border-t border-neutral-100 bg-neutral-50/50" style={{ gap: 12 }}>
+                <View>
+                  <Text className="text-xs font-semibold text-neutral-500 mb-1.5">Phone</Text>
+                  <TextInput
+                    value={editableData.phone}
+                    onChangeText={t => setEditableData(p => ({ ...p, phone: t }))}
+                    placeholder="(555) 123-4567"
+                    placeholderTextColor="#a3a3a3"
+                    keyboardType="phone-pad"
+                    className="w-full bg-white border border-neutral-200 rounded-xl px-4 py-2.5 text-sm"
+                  />
+                </View>
+                <View>
+                  <Text className="text-xs font-semibold text-neutral-500 mb-1.5">Website (Optional)</Text>
+                  <TextInput
+                    value={editableData.website}
+                    onChangeText={t => setEditableData(p => ({ ...p, website: t }))}
+                    placeholder="https://yourwebsite.com"
+                    placeholderTextColor="#a3a3a3"
+                    autoCapitalize="none"
+                    className="w-full bg-white border border-neutral-200 rounded-xl px-4 py-2.5 text-sm"
+                  />
+                </View>
+                <View>
+                  <Text className="text-xs font-semibold text-neutral-500 mb-1.5">Service Areas (Zip Codes)</Text>
+                  <View className="flex-row flex-wrap mb-3" style={{ gap: 8 }}>
+                    {editableData.zipCodes.map((zip, idx) => (
+                      <View key={idx} className="bg-indigo-50 px-3 py-1.5 rounded-full flex-row items-center" style={{ gap: 6 }}>
+                        <Text className="text-xs font-medium text-indigo-700">{zip}</Text>
+                        <Pressable onPress={() => setEditableData(p => ({ ...p, zipCodes: p.zipCodes.filter((_, i) => i !== idx) }))}>
+                          <FontAwesome5 name="times" size={10} color="#6366f1" />
+                        </Pressable>
+                      </View>
+                    ))}
+                    {editableData.zipCodes.length === 0 && (
+                      <Text className="text-xs text-neutral-400 italic">No zip codes added</Text>
+                    )}
+                  </View>
+                  <View className="flex-row" style={{ gap: 8 }}>
+                    <TextInput
+                      value={newZip}
+                      onChangeText={setNewZip}
+                      placeholder="Add Zip Code"
+                      placeholderTextColor="#a3a3a3"
+                      keyboardType="number-pad"
+                      maxLength={5}
+                      className="flex-1 bg-white border border-neutral-200 rounded-xl px-4 py-2.5 text-sm"
+                      onSubmitEditing={() => {
+                        const val = newZip.trim();
+                        if (val && !editableData.zipCodes.includes(val)) {
+                          setEditableData(p => ({ ...p, zipCodes: [...p.zipCodes, val] }));
+                          setNewZip('');
+                        }
+                      }}
+                    />
+                    <Pressable 
+                      onPress={() => {
+                        const val = newZip.trim();
+                        if (val && !editableData.zipCodes.includes(val)) {
+                          setEditableData(p => ({ ...p, zipCodes: [...p.zipCodes, val] }));
+                          setNewZip('');
+                        }
+                      }}
+                      className="bg-indigo-600 w-11 h-11 rounded-xl items-center justify-center shadow-sm shadow-indigo-200"
+                    >
+                      <FontAwesome5 name="plus" size={14} color="#fff" />
+                    </Pressable>
+                  </View>
+                </View>
+                <View>
+                  <Text className="text-xs font-semibold text-neutral-500 mb-1.5">Address</Text>
+                  <TextInput
+                    value={editableData.address}
+                    onChangeText={t => setEditableData(p => ({ ...p, address: t }))}
+                    placeholder="123 Main St, City, State"
+                    placeholderTextColor="#a3a3a3"
+                    className="w-full bg-white border border-neutral-200 rounded-xl px-4 py-2.5 text-sm"
+                  />
+                </View>
+              </View>
+            )}
+          </View>
+
+          {/* Services Accordion */}
+          <View className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+            <Pressable 
+              onPress={() => setActiveEditSection(activeEditSection === 'services' ? null : 'services')}
+              className="flex-row items-center justify-between p-4"
+            >
+              <View className="flex-row items-center" style={{ gap: 12 }}>
+                <View className="w-10 h-10 rounded-lg bg-neutral-50 items-center justify-center">
+                  <FontAwesome5 name="briefcase" size={16} color="#525252" />
+                </View>
+                <View>
+                  <Text className="text-sm font-bold text-neutral-900">Services</Text>
+                  <Text className="text-[10px] text-neutral-500">{editableData.servicesOffered.length} services listed</Text>
+                </View>
+              </View>
+              <FontAwesome5 name={activeEditSection === 'services' ? "chevron-up" : "chevron-down"} size={12} color="#a3a3a3" />
+            </Pressable>
+            
+            {activeEditSection === 'services' && (
+              <View className="p-4 border-t border-neutral-100 bg-neutral-50/50" style={{ gap: 12 }}>
+                <View className="flex-row items-center justify-between mb-2">
+                  <Text className="text-xs font-semibold text-neutral-500">Services Offered</Text>
+                  <Pressable 
+                    onPress={() => setEditableData(p => ({ ...p, servicesOffered: [...p.servicesOffered, { name: '', description: '', priceRange: '' }] }))}
+                    className="flex-row items-center bg-indigo-50 px-3 py-1.5 rounded-lg"
+                    style={{ gap: 6 }}
+                  >
+                    <FontAwesome5 name="plus" size={10} color="#4F46E5" />
+                    <Text className="text-[11px] font-bold text-indigo-700">Add Service</Text>
+                  </Pressable>
+                </View>
+
+                {editableData.servicesOffered.length === 0 && (
+                  <View className="py-4 border border-dashed border-neutral-200 rounded-xl items-center">
+                    <Text className="text-xs text-neutral-400">No services added yet</Text>
+                  </View>
+                )}
+
+                {editableData.servicesOffered.map((service, idx) => (
+                  <View key={idx} className="bg-white rounded-xl border border-neutral-200 p-4 relative mb-2">
+                    <Pressable 
+                      onPress={() => setEditableData(p => ({ ...p, servicesOffered: p.servicesOffered.filter((_, i) => i !== idx) }))}
+                      className="absolute top-3 right-3 w-7 h-7 bg-neutral-50 rounded-full items-center justify-center"
+                    >
+                      <FontAwesome5 name="trash" size={10} color="#ef4444" />
+                    </Pressable>
+                    <TextInput
+                      value={service.name}
+                      onChangeText={t => {
+                        const next = [...editableData.servicesOffered];
+                        next[idx].name = t;
+                        setEditableData(p => ({ ...p, servicesOffered: next }));
+                      }}
+                      placeholder="Service Name (e.g. Interior Painting)"
+                      placeholderTextColor="#a3a3a3"
+                      className="text-sm font-bold text-neutral-900 mb-2 mr-8"
+                    />
+                    <TextInput
+                      value={service.description}
+                      onChangeText={t => {
+                        const next = [...editableData.servicesOffered];
+                        next[idx].description = t;
+                        setEditableData(p => ({ ...p, servicesOffered: next }));
+                      }}
+                      placeholder="Service Description"
+                      placeholderTextColor="#a3a3a3"
+                      multiline
+                      className="text-xs text-neutral-600 mb-2 p-2 bg-neutral-50 rounded-lg"
+                    />
+                    <TextInput
+                      value={service.priceRange}
+                      onChangeText={t => {
+                        const next = [...editableData.servicesOffered];
+                        next[idx].priceRange = t;
+                        setEditableData(p => ({ ...p, servicesOffered: next }));
+                      }}
+                      placeholder="Price Range (e.g. $500 - $1,500)"
+                      placeholderTextColor="#a3a3a3"
+                      className="text-xs font-semibold text-indigo-600"
+                    />
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+
+          <Pressable
+            onPress={handleSaveProfile}
+            disabled={profileSaving}
+            className="w-full py-4 bg-indigo-600 rounded-2xl items-center flex-row justify-center mt-4 shadow-md shadow-indigo-200"
+            style={{ gap: 10 }}
+          >
+            {profileSaving ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <FontAwesome5 name="save" size={16} color="#fff" />
+            )}
+            <Text className="text-base font-bold text-white">{profileSaving ? "Saving Changes..." : "Save Profile"}</Text>
+          </Pressable>
+        </View>
       </Sheet>
     </View>
   );

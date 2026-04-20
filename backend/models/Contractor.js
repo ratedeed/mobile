@@ -104,6 +104,10 @@ const contractorSchema = new mongoose.Schema({
     default: 'https://via.placeholder.com/600x200',
   },
   pushToken: { type: String, default: null },
+  licenseNumber: {
+    type: String,
+    trim: true,
+  },
   isVerified: {
     type: Boolean,
     default: false,
@@ -141,11 +145,18 @@ const contractorSchema = new mongoose.Schema({
       isOpen: Boolean
     }
   },
-  servicesOffered: [String],
+  servicesOffered: [{
+    name: String,
+    description: String,
+    priceEstimate: String,
+  }],
   services: [String],
   portfolio: [{
+    name: String,
+    description: String,
     imageUrl: String,
-    caption: String,
+    images: [String],
+    caption: String, // Keep for backward compatibility
   }],
   posts: [postSchema],
   contact: {

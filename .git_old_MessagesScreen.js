@@ -126,30 +126,15 @@ const MessagesScreen = () => {
   const [conversations, setConversations] = useState({});
   const [selectedConversation, setSelectedConversation] = useState(null);
 
-  // Auto-select conversation if conversationId or recipientId is provided in route params
+  // Auto-select conversation if conversationId is provided in route params
   useEffect(() => {
     if (routeConversationId && conversations[routeConversationId]) {
       setSelectedConversation(conversations[routeConversationId]);
     } else if (routeConversationId && !conversations[routeConversationId]) {
       // If we have a route ID but it's not in our list yet, create a placeholder
       setSelectedConversation({ conversationId: routeConversationId, _id: routeConversationId, participants: [], messages: [] });
-    } else if (recipientId && !routeConversationId) {
-      // If we only have a recipientId, check if a conversation already exists
-      const existingConv = Object.values(conversations).find(c => extractId(c.otherParticipant) === recipientId);
-      if (existingConv) {
-        setSelectedConversation(existingConv);
-      } else {
-        // Create a temp conversation to allow sending the first message
-        setSelectedConversation({
-          conversationId: `temp-${recipientId}`,
-          _id: `temp-${recipientId}`,
-          otherParticipant: { _id: recipientId, firstName: recipientName },
-          participants: [],
-          messages: []
-        });
-      }
     }
-  }, [routeConversationId, recipientId, recipientName, conversations]);
+  }, [routeConversationId, conversations]);
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
@@ -188,17 +173,12 @@ const MessagesScreen = () => {
     if (!currentUserId) return;
     const handleNewMessage = (message) => {
       setConversations(prev => {
-        const convo = prev[message.conversationId] || { conversationId: message.conversationId, _id: message.conversationId, participants: [], messages: [], lastMessage: null, unreadCount: 0, otherParticipant: null };
+        const convo = prev[message.conversationId] || { _id: message.conversationId, participants: [], messages: [], lastMessage: null, unreadCount: 0, otherParticipant: null };
         const existingMessages = convo.messages || [];
         if (existingMessages.some(m => m._id === message._id)) return prev;
         const updatedMessages = [...existingMessages, message].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
 
-        const senderId = extractId(message.senderId);
-        const otherId = extractId(convo.otherParticipant);
-        const isFromOther = (() => {
-          if (!senderId) return false;
-          return currentUserId && senderId.toString() !== currentUserId.toString();
-        })();
+        const isFromOther = extractId(message.senderId) !== extractId(currentUserId);
         const isSelected = selectedConversationRef.current && (selectedConversationRef.current.conversationId === message.conversationId || selectedConversationRef.current._id === message.conversationId);
         const newUnread = convo.unreadCount + (isFromOther && !isSelected ? 1 : 0);
         return { ...prev, [message.conversationId]: { ...convo, messages: updatedMessages, lastMessage: message, unreadCount: newUnread } };
@@ -231,8 +211,7 @@ const MessagesScreen = () => {
 
   const loadConversations = async () => {
     if (!currentUserId) return;
-    // Only show spinner on first load, not on refreshes (keep stale data visible)
-    if (Object.keys(conversations).length === 0) setLoading(true);
+    setLoading(true);
     try {
       const apiFetched = await fetchConversations();
       if (Array.isArray(apiFetched)) {
@@ -270,10 +249,10 @@ const MessagesScreen = () => {
   const handleSendMessage = async () => {
     if ((!newMessage.trim() && !pendingAttachment) || !selectedConversation || !currentUserId) return;
     try {
-      let finalConversationId = selectedConversation.conversationId || selectedConversation._id;
+      let finalConversationId = selectedConversation.conversationId;
       let targetRecipientId = extractId(selectedConversation.otherParticipant);
 
-      if (finalConversationId?.startsWith('temp-')) {
+      if (finalConversationId.startsWith('temp-')) {
         const response = await createConversation([currentUserId, targetRecipientId]);
         finalConversationId = response.conversationId;
       }
@@ -289,14 +268,8 @@ const MessagesScreen = () => {
       const sentMessage = await sendMessage(finalConversationId, targetRecipientId, newMessage, attachmentUrl);
       setNewMessage('');
       setPendingAttachment(null);
-      
-      // Update selected conversation id if it was temporary
-      if (selectedConversation.conversationId !== finalConversationId) {
-        setSelectedConversation(prev => ({ ...prev, conversationId: finalConversationId, _id: finalConversationId }));
-      }
-
       setConversations(prev => {
-        const convo = prev[sentMessage.conversationId] || { conversationId: sentMessage.conversationId, _id: sentMessage.conversationId, participants: [], messages: [], lastMessage: null, unreadCount: 0, otherParticipant: selectedConversation.otherParticipant };
+        const convo = prev[sentMessage.conversationId] || { _id: sentMessage.conversationId, participants: [], messages: [], lastMessage: null, unreadCount: 0, otherParticipant: selectedConversation.otherParticipant };
         return { ...prev, [sentMessage.conversationId]: { ...convo, lastMessage: sentMessage, messages: [...(convo.messages || []), sentMessage] } };
       });
 
@@ -368,33 +341,9 @@ const MessagesScreen = () => {
               onContentSizeChange={() => messagesScrollViewRef.current?.scrollToEnd({ animated: true })}
             >
               {messages.map((msg, idx) => {
-                const isMe = (() => {
-                  const sId = extractId(msg.senderId);
-                  const rId = extractId(msg.recipientId);
-                  const myId = currentUserId?.toString();
-                  const oId = extractId(chatOtherParticipant);
-
-                  // 1. Direct ID comparison (User ID vs User ID)
-                  if (sId && myId && sId === myId) return true;
-                  if (rId && oId && rId === oId) return true;
-                  if (sId && oId && sId === oId) return false;
-                  if (rId && myId && rId === myId) return false;
-
-                  // 2. Role-based fallback (for Contractor ID mismatch in unpatched Production API)
-                  const myRole = role?.toLowerCase();
-                  const oRole = chatOtherParticipant?.role?.toLowerCase();
-                  const sModel = msg.senderOnModel?.toLowerCase();
-
-                  if (sModel === 'contractor') {
-                    if (myRole === 'contractor' && oRole !== 'contractor') return true;
-                    if (oRole === 'contractor' && myRole !== 'contractor') return false;
-                  } else if (sModel === 'user') {
-                    if (myRole === 'user' && oRole !== 'user') return true;
-                    if (oRole === 'user' && myRole !== 'user') return false;
-                  }
-
-                  return false;
-                })();
+                const senderId = extractId(msg.senderId);
+                const otherId = extractId(chatOtherParticipant);
+                const isMe = (senderId && currentUserId && senderId.toString() === currentUserId.toString()) || (otherId && senderId !== otherId);
                 return (
                   <View key={msg._id || msg.id || `m-${idx}`} className={`flex-row mb-3 ${isMe ? 'justify-end' : 'justify-start'}`} style={{ gap: 8 }}>
                     <View className="max-w-[80%]">

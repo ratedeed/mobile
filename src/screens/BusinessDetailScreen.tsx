@@ -18,7 +18,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList, Review, Contractor, Post } from '../types';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { SvgImage } from '../components/common/SvgImage';
-import { fetchContractorDetails, fetchContractorPosts, createLead, fetchContractorReviews, extractId } from '../api';
+import { fetchContractorDetails, fetchContractorPosts, createLead, fetchContractorReviews, extractId, browseContractors } from '../api';
 import { API_BASE_URL } from '../config';
 import { getCoverImageUrl, getProfileImageUrl, isSvgUrl } from '../utils/avatarUtils';
 import { isFavorite, addFavorite, removeFavorite } from '../utils/favoritesStore';
@@ -71,6 +71,7 @@ const BusinessDetailScreen: React.FC = () => {
   const [quoteDescription, setQuoteDescription] = useState('');
   const [quoteContactPreference, setQuoteContactPreference] = useState('email');
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [similarContractors, setSimilarContractors] = useState<Contractor[]>([]);
 
   const loadContractorDetails = async () => {
     try {
@@ -78,9 +79,9 @@ const BusinessDetailScreen: React.FC = () => {
       const data = await fetchContractorDetails(id);
       if (__DEV__) console.log('BusinessDetail: Fetched contractor data');
       setContractor(data);
-      
-      const contractorId = data?._id || data?.id || id;
-      
+
+      const contractorId = data?._id || (data as any).id || id;
+
       const [postsData, reviewsData, favStatus] = await Promise.all([
         fetchContractorPosts(contractorId).catch(() => ({ posts: [] })),
         fetchContractorReviews(contractorId).catch(() => []),
@@ -121,6 +122,20 @@ const BusinessDetailScreen: React.FC = () => {
         console.log(`BusinessDetail: Final unique reviews count: ${uniqueReviews.length}`);
       }
       setContractorReviews(uniqueReviews);
+
+      // Fetch similar contractors by category (matching web version)
+      if (data?.category) {
+        try {
+          const similarData = await browseContractors({ type: data.category, limit: 8 });
+          const list = similarData?.contractors || (Array.isArray(similarData) ? similarData : []);
+          const filtered = list
+            .filter((sc: any) => (sc._id || sc.id) !== contractorId)
+            .slice(0, 6);
+          setSimilarContractors(filtered);
+        } catch (e) {
+          console.error('Failed to load similar contractors:', e);
+        }
+      }
     } catch (error) {
       console.error('Error loading contractor:', error);
       Alert.alert('Error', 'Failed to load contractor details');
@@ -327,7 +342,7 @@ const BusinessDetailScreen: React.FC = () => {
             <View className="flex-row" style={{ gap: 8 }}>
               <Pressable
                 onPress={() => {
-                  const recipientUserId = extractId(c.user);
+                  const recipientUserId = extractId(c.user) || c._id || id;
                   if (recipientUserId) {
                     navigation.navigate('ChatScreen', {
                       recipientId: recipientUserId,
@@ -335,7 +350,7 @@ const BusinessDetailScreen: React.FC = () => {
                     } as any);
                   }
                 }}
-                className="w-8 h-8 items-center justify-center bg-white dark:bg-neutral-950 rounded-full shadow-sm"
+                className="w-8 h-8 items-center justify-center bg-white/90 dark:bg-neutral-800/90 rounded-full shadow-sm"
               >
                 <FontAwesome5 name="comment" size={14} color="#171717" />
               </Pressable>
@@ -555,22 +570,91 @@ const BusinessDetailScreen: React.FC = () => {
             )}
           </View>
 
+          {/* SIMILAR CONTRACTORS */}
+          {similarContractors.length > 0 && (
+            <View className="mt-8 pt-6 border-t border-neutral-100 dark:border-neutral-800">
+              <Text className="text-lg font-bold text-neutral-900 dark:text-neutral-50 mb-3">Similar contractors</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
+                {similarContractors.map((sc, i) => {
+                  const scName = sc.companyName || sc.businessName || 'Contractor';
+                  const scRating = sc.averageRating || sc.rating || 0;
+                  const scReviews = sc.numReviews || sc.reviews || 0;
+                  const scLocation = [sc.contactInfo?.city, sc.contactInfo?.state].filter(Boolean).join(', ');
+                  const scCover = getCoverImageUrl(scName, (sc as any).bannerUrl || sc.bannerImage || (sc as any).imageUrl || sc.profilePicture || '', sc.category, 400, 400);
+                  const scId = sc._id || (sc as any).id;
+                  return (
+                    <Pressable
+                      key={scId || `sc-${i}`}
+                      onPress={() => {
+                        navigation.push('BusinessDetail' as any, { id: scId } as any);
+                      }}
+                      className="w-40 bg-white dark:bg-neutral-900 rounded-xl border border-neutral-100 dark:border-neutral-800 overflow-hidden"
+                    >
+                      <View style={{ aspectRatio: 1 }}>
+                        {isSvgUrl(scCover) ? (
+                          <View className="w-full h-full">
+                            <SvgImage uri={scCover} width="100%" height="100%" />
+                          </View>
+                        ) : (
+                          <Image source={{ uri: scCover }} className="w-full h-full" resizeMode="cover" />
+                        )}
+                        {sc.isVerified && (
+                          <View className="absolute top-1.5 left-1.5 bg-white dark:bg-neutral-800 rounded-full px-1.5 py-0.5 flex-row items-center shadow-sm" style={{ gap: 2 }}>
+                            <FontAwesome5 name="shield-alt" size={6} color="#4F46E5" />
+                            <Text className="text-[8px] font-bold text-neutral-900 dark:text-neutral-100">Verified</Text>
+                          </View>
+                        )}
+                      </View>
+                      <View className="p-2">
+                        <Text className="text-xs font-semibold text-neutral-900 dark:text-neutral-50 leading-tight" numberOfLines={1}>{scName}</Text>
+                        <View className="flex-row items-center mt-0.5" style={{ gap: 2 }}>
+                          <FontAwesome5 name="star" solid size={8} color="#eab308" />
+                          <Text className="text-[10px] font-semibold text-neutral-700 dark:text-neutral-300">{scRating.toFixed(1)}</Text>
+                          <Text className="text-[10px] text-neutral-400">({scReviews})</Text>
+                        </View>
+                        {!!scLocation && (
+                          <Text className="text-[10px] text-neutral-500 dark:text-neutral-400 mt-0.5" numberOfLines={1}>{scLocation}</Text>
+                        )}
+                      </View>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          )}
+
           <View style={{ height: 100 }} />
         </View>
       </ScrollView>
 
       {/* Sticky Bottom CTA */}
-      <View className="absolute bottom-0 left-0 right-0 bg-white dark:bg-neutral-950 border-t border-neutral-100 dark:border-neutral-800 px-4 py-4 pb-8 flex-row items-center justify-between shadow-lg">
+      <View className="absolute bottom-0 left-0 right-0 bg-white/95 dark:bg-neutral-950/95 border-t border-neutral-100 dark:border-neutral-800 px-4 py-4 pb-8 flex-row items-center justify-between shadow-lg">
         <View>
           <Text className="text-lg font-bold text-neutral-900 dark:text-neutral-50">From {priceMin || 'N/A'}</Text>
           <Text className="text-[10px] text-neutral-500 uppercase tracking-tighter">Starting Project Price</Text>
         </View>
-        <Pressable
-          onPress={() => setIsQuoteModalVisible(true)}
-          className="bg-indigo-600 px-8 py-3.5 rounded-2xl shadow-indigo-300"
-        >
-          <Text className="text-white font-bold">Request Quote</Text>
-        </Pressable>
+        <View className="flex-row items-center" style={{ gap: 8 }}>
+          <Pressable
+            onPress={() => {
+              const recipientUserId = extractId(c.user) || c._id || id;
+              if (recipientUserId) {
+                navigation.navigate('ChatScreen', {
+                  recipientId: recipientUserId,
+                  recipientName: c.companyName || c.businessName || 'Contractor',
+                } as any);
+              }
+            }}
+            className="w-12 h-12 items-center justify-center bg-neutral-100 dark:bg-neutral-800 rounded-xl"
+          >
+            <FontAwesome5 name="comment" size={18} color="#171717" />
+          </Pressable>
+          <Pressable
+            onPress={() => setIsQuoteModalVisible(true)}
+            className="bg-indigo-600 px-6 py-3.5 rounded-2xl shadow-indigo-300"
+          >
+            <Text className="text-white font-bold">Request Quote</Text>
+          </Pressable>
+        </View>
       </View>
 
       {/* Quote Modal */}

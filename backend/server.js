@@ -8,7 +8,7 @@ const admin = require('firebase-admin');
 if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
   try {
     const serviceAccount = JSON.parse(
-      Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT_KEY.replace(/\s/g, ''), 'base64').toString('ascii')
+      Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT_KEY.replace(/\s/g, ''), 'base64').toString('utf8')
     );
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
