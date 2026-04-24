@@ -25,7 +25,7 @@ export const NotificationsProvider: React.FC<{ children: ReactNode }> = ({ child
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
-  const refreshRef = useRef<() => Promise<void>>();
+  const refreshRef = useRef<() => Promise<void>>(null as any);
 
   // Keep refreshRef updated so socket callbacks always call the latest version
   useEffect(() => {

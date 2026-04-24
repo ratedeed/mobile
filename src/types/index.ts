@@ -13,6 +13,10 @@ export interface ContactInfo {
   zip?: string;
   phoneNumber?: string;
   address?: string;
+  phone?: string;
+  email?: string;
+  website?: string;
+  streetAddress?: string;
 }
 
 export interface Tag {
@@ -42,11 +46,22 @@ export interface Contractor {
   };
   businessName?: string;
   companyName?: string;
+  name?: string;
   slug?: string;
   profilePicture?: string;
+  profileImage?: string;
   bannerImage?: string;
+  coverImage?: string;
+  bannerUrl?: string;
+  imageUrl?: string;
   licenseDocumentUrl?: string;
   category?: string;
+  phone?: string;
+  phoneNumber?: string;
+  email?: string;
+  website?: string;
+  businessAddress?: string;
+  location?: string;
   contactInfo?: ContactInfo;
   contact?: {
     phone?: string;
@@ -55,7 +70,9 @@ export interface Contractor {
     address?: string;
   };
   zipCodesCovered?: string[];
+  zipCodes?: string[];
   zipCode?: string;
+  serviceArea?: string;
   averageRating?: number;
   numReviews?: number;
   rating?: number;
@@ -71,9 +88,11 @@ export interface Contractor {
   pricing?: string;
   certifications?: string[];
   yearsInBusiness?: number;
-  businessHours?: Record<string, { start: string; end: string }>;
+  businessHours?: Record<string, any>;
   licenseNumber?: string;
   licenseStatus?: string;
+  licenseDocument?: string;
+  verificationNotes?: string;
   status?: string;
   portfolio?: PortfolioItem[];
   posts?: Post[];

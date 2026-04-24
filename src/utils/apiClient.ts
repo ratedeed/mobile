@@ -104,69 +104,109 @@ export const del = async (url: string, headers: Record<string, string> = {}): Pr
 };
 
 // ---- Normalization Helpers (Ported from web version) ----
+/**
+ * Robust normalization of API contractor data to match the Frontend Contractor interface.
+ * Handles differences between Mongoose/MongoDB data and what the UI expects.
+ */
 export const normalizeApiContractor = (c: any): Contractor => {
   if (!c) return c;
-  const contractor = { ...c };
-  
-  // Ensure ID is normalized
-  contractor._id = contractor._id || contractor.id;
 
-  // Prioritize explicit city/state from signup/contact info over generic location string
-  let derivedCity = '';
-  let derivedState = '';
+  try {
+    // Some API responses might wrap the contractor object
+    const data = c.contractor || c;
 
-  if (c.contactInfo?.city && c.contactInfo?.state) {
-    derivedCity = c.contactInfo.city;
-    derivedState = c.contactInfo.state;
-  } else if ((c.contactInfo?.city || c.city) && (c.contactInfo?.state || c.state || c.contactInfo?.parsedState)) {
-    derivedCity = c.contactInfo?.city || c.city || '';
-    derivedState = c.contactInfo?.state || c.contactInfo?.parsedState?.toUpperCase() || c.state || '';
-  } else if (c.city && c.state) {
-    derivedCity = c.city;
-    derivedState = c.state;
-  } else {
-    // Fallback: try to parse from raw address string if explicit fields are missing
-    const address = c.contact?.address || c.address || c.businessAddress;
-    if (address && typeof address === 'string') {
-      const match = address.match(/([^,]+),\s*([A-Z]{2}|[a-zA-Z\s]+?)(?:\s+\d{5})?$/);
-      if (match) {
-        derivedCity = match[1].trim();
-        derivedState = match[2].trim();
-      } else if (address.includes(',')) {
-        const parts = address.split(',');
-        if (parts.length >= 2) {
-          derivedCity = parts[parts.length - 2].trim();
-          derivedState = parts[parts.length - 1].trim().split(' ')[0];
-        }
-      }
-    }
+    const id = data._id || data.id || '';
+    const userId = data.userId?._id || data.userId || data.user?._id || data.user || '';
+    const companyName = data.companyName || data.businessName || data.name || 'Company';
+    const category = data.category || data.type || '';
+    const slug = data.slug || '';
+
+    // Normalize services
+    const rawServices = (Array.isArray(data.servicesOffered) && data.servicesOffered.length > 0)
+      ? data.servicesOffered
+      : (Array.isArray(data.services) ? data.services : []);
+
+    const services = rawServices.map((s: any) => ({
+      name: typeof s === "string" ? s : s?.name || '',
+      description: s?.description || s?.desc || '',
+      priceRange: s?.priceEstimate || s?.priceRange || data.priceRange || ''
+    }));
+
+    // Normalize portfolio
+    const rawPortfolio = (Array.isArray(data.portfolio) && data.portfolio.length > 0)
+      ? data.portfolio
+      : (Array.isArray(data.projects) ? data.projects : []);
+
+    const portfolio = rawPortfolio.map((p: any, i: number) => ({
+      id: p?._id || p?.id || `p-${i}`,
+      name: p?.name || p?.title || p?.caption || 'Project',
+      description: p?.description || p?.caption || '',
+      imageUrl: p?.imageUrl || (Array.isArray(p?.images) ? p.images[0] : '') || '',
+      images: Array.isArray(p?.images) ? p.images : (p?.imageUrl ? [p.imageUrl] : []),
+      category: p?.category || (Array.isArray(p?.tags) ? p.tags[0] : null) || 'General',
+    }));
+
+    // Contact info - read the SAME way the web does
+    const contact = data.contactInfo || data.contact || {};
+    const phone = contact.phoneNumber || contact.phone || data.phone || data.phoneNumber || data.contactPhone || data.user?.phone || '';
+    const contactEmail = contact.email || data.email || data.user?.email || '';
+    const website = contact.website || data.website || '';
+    // Use contactInfo.streetAddress first (matches web), then contactInfo.address, then top-level businessAddress
+    const fullAddress = contact.streetAddress || contact.address || data.businessAddress || data.address || '';
+
+    // Pricing & Certifications
+    const pricing = data.pricing || data.pricingInfo || data.priceRange || '';
+    const certsRaw = data.certifications || data.certs || [];
+    const certifications = Array.isArray(certsRaw) ? certsRaw : (typeof certsRaw === 'string' ? certsRaw.split(',').map((s: string) => s.trim()) : []);
+
+    const normalized: any = {
+      ...data,
+      _id: id,
+      id,
+      userId,
+      companyName,
+      businessName: companyName,
+      category,
+      description: data.description || data.bio || '',
+      isVerified: data.isVerified || data.isTopRated || data.licenseStatus === 'Verified' || data.licenseStatus === 'approved' || false,
+      averageRating: data.averageRating || data.rating || 0,
+      reviewCount: data.numReviews || data.reviewCount || data.reviews || 0,
+      pricing: pricing,
+      pricingInfo: pricing,
+      priceRange: pricing,
+      businessHours: data.businessHours || {},
+      // Contact - faithful to the raw API data, matching web's reading pattern
+      contactInfo: {
+        phoneNumber: phone,
+        email: contactEmail,
+        website,
+        streetAddress: fullAddress,
+        address: fullAddress,
+        city: contact.city || '',
+        state: contact.state || '',
+        zipCode: contact.zipCode || data.zipCode || data.user?.zipCode || '',
+      },
+      phone,
+      email: contactEmail,
+      website,
+      businessAddress: fullAddress,
+      address: fullAddress,
+      serviceArea: typeof data.serviceArea === 'string' ? data.serviceArea : '',
+      serviceZipCodes: data.zipCodesCovered || data.serviceZipCodes || [],
+      zipCodesCovered: data.zipCodesCovered || [],
+      licenseNumber: data.licenseNumber || '',
+      servicesOffered: services,
+      portfolio,
+      certifications,
+      profilePicture: data.profilePicture || data.imageUrl || '',
+      bannerImage: data.bannerImage || data.bannerUrl || data.coverImage || '',
+    };
+
+    return normalized as Contractor;
+  } catch (err) {
+    console.error('Failed to normalize contractor:', err);
+    return c;
   }
-
-  // Final fallback: use location string or businessAddress directly
-  if (!derivedCity && !derivedState) {
-    const loc = c.location;
-    if (typeof loc === 'string' && loc.trim() && !loc.includes('{')) {
-      const locParts = loc.split(',');
-      if (locParts.length >= 2) {
-        derivedCity = locParts[0].trim();
-        derivedState = locParts[1].trim();
-      }
-    }
-    if (!derivedCity && c.businessAddress && typeof c.businessAddress === 'string') {
-      const match = c.businessAddress.match(/([^,]+),\s*([A-Z]{2})(?:\s+\d{5})?$/);
-      if (match) {
-        derivedCity = match[1].trim();
-        derivedState = match[2].trim();
-      }
-    }
-  }
-
-  // Update contactInfo with normalized data
-  if (!contractor.contactInfo) contractor.contactInfo = {};
-  if (derivedCity) contractor.contactInfo.city = derivedCity;
-  if (derivedState) contractor.contactInfo.state = derivedState;
-
-  return contractor;
 };
 
 export const adaptApiContractor = normalizeApiContractor;
@@ -276,6 +316,12 @@ export const updateContractorProfile = async (data: Partial<Contractor>): Promis
   const result = await put(`${API_BASE}/contractors/profile`, data, authHeaders);
   return normalizeApiContractor(result);
 };
+
+export const requestVerification = async (data: { licenseNumber: string; licenseDocumentUrl: string }): Promise<any> => {
+  const authHeaders = await getAuthHeaders();
+  return post(`${API_BASE}/contractors/request-verification`, data, authHeaders);
+};
+
 
 // ==========================================
 // Messaging & Socket API
@@ -688,6 +734,11 @@ export const getUserQuotes = async (): Promise<Quote[]> => {
   const authHeaders = await getAuthHeaders();
   return get(`${API_BASE}/quotes/client`, authHeaders);
 };
+
+export const createCheckoutSession = async (quoteId: string): Promise<{ url: string }> => { 
+  const authHeaders = await getAuthHeaders(); 
+  return post(`${API_BASE}/jobs/checkout`, { quoteId }, authHeaders); 
+}; 
 
 export const getContractorJobs = async (): Promise<Job[]> => {
   const authHeaders = await getAuthHeaders();

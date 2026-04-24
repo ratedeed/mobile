@@ -92,7 +92,7 @@ const BusinessDetailScreen: React.FC = () => {
       setContractorPosts(postsData?.posts || []);
       
       // SYNC: Robust review list extraction matching web version
-      let combinedReviews = [];
+      let combinedReviews: any[] = [];
       if (Array.isArray(reviewsData)) {
         combinedReviews = [...reviewsData];
       } else if (reviewsData && Array.isArray((reviewsData as any).reviews)) {
@@ -409,7 +409,7 @@ const BusinessDetailScreen: React.FC = () => {
           <View className="flex-row mt-6 py-4 border-y border-neutral-100 dark:border-neutral-800">
             <View className="flex-1 items-center">
               <FontAwesome5 name="award" size={18} color="#171717" />
-              <Text className="text-sm font-bold text-neutral-900 dark:text-neutral-50 mt-1">{c.yearsInBusiness || c.yearsExperience || 0}</Text>
+              <Text className="text-sm font-bold text-neutral-900 dark:text-neutral-50 mt-1">{(c as any).yearsInBusiness || (c as any).yearsExperience || 0}</Text>
               <Text className="text-[10px] text-neutral-500 dark:text-neutral-400">Years Exp.</Text>
             </View>
             <View className="flex-1 items-center">

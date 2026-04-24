@@ -86,6 +86,18 @@ const ContractorSignupScreen = () => {
 
   // ---- Logic ----
 
+  const formatPhone = (text) => {
+    const digits = text.replace(/\D/g, '').slice(0, 10);
+    if (digits.length === 0) return '';
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 6) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+    return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
+  };
+
+  const setFormattedPhone = (text) => {
+    setPhone(formatPhone(text));
+  };
+
   const searchAddress = (text) => {
     setBusinessAddress(text);
     if (searchTimer.current) clearTimeout(searchTimer.current);
@@ -123,12 +135,26 @@ const ContractorSignupScreen = () => {
   };
 
   const validateStep1 = () => {
-    if (!firstName || !lastName || !email || !phone || !password || !confirmPassword) {
-      Alert.alert('Required', 'Please fill in all personal information fields.');
+    if (!firstName.trim() || !lastName.trim()) {
+      Alert.alert('Required', 'Please enter your first and last name.');
       return false;
     }
-    if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters.');
+    if (!email.trim()) {
+      Alert.alert('Required', 'Please enter your email address.');
+      return false;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      Alert.alert('Invalid Email', 'Please enter a valid email address.');
+      return false;
+    }
+    const phoneDigits = phone.replace(/\D/g, '');
+    if (phoneDigits.length !== 10) {
+      Alert.alert('Invalid Phone', 'Please enter a valid 10-digit phone number.');
+      return false;
+    }
+    if (!password || password.length < 8) {
+      Alert.alert('Error', 'Password must be at least 8 characters.');
       return false;
     }
     if (password !== confirmPassword) {
@@ -206,6 +232,7 @@ const ContractorSignupScreen = () => {
         businessAddress: businessAddress.trim(),
         contactInfo: {
           phoneNumber: phone.trim(),
+          email: email.trim().toLowerCase(),
         },
         zipCodesCovered: zipCodes,
         businessHours: hours,
@@ -339,10 +366,11 @@ const ContractorSignupScreen = () => {
             <View>
               <Text className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1.5 ml-1">Phone Number *</Text>
               <TextInput
-                placeholder="(555) 123-4567"
+                placeholder="212-555-0123"
                 value={phone}
-                onChangeText={setPhone}
+                onChangeText={setFormattedPhone}
                 keyboardType="phone-pad"
+                maxLength={12}
                 className="border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-neutral-50"
                 placeholderTextColor="#a3a3a3"
               />

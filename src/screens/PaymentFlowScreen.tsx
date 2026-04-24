@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, Pressable, ScrollView, TextInput, ActivityIndicator } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, Pressable, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { createCheckoutSession } from '../api';
 import { FontAwesome5 } from '@expo/vector-icons';
 
-const STEP_LABELS = ['Payment', 'Review', 'Processing', 'Confirmed'];
+const STEP_LABELS = ['Review', 'Payment', 'Confirmed'];
 
 export default function PaymentFlowScreen() {
   const navigation = useNavigation<any>();
@@ -11,188 +13,141 @@ export default function PaymentFlowScreen() {
   const quoteId = route.params?.quoteId || '1';
 
   const [currentStep, setCurrentStep] = useState(0);
-  const [cardNumber, setCardNumber] = useState('');
-  const [expiry, setExpiry] = useState('');
-  const [cvv, setCvv] = useState('');
-  const [cardName, setCardName] = useState('');
+  const [paying, setPaying] = useState(false);
 
-  useEffect(() => {
-    if (currentStep === 2) {
-      const timer = setTimeout(() => setCurrentStep(3), 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [currentStep]);
-
+  // Mock data - In a real app, you'd fetch this from the quoteId
   const quoteTotal = 450;
   const contractorName = 'Acme Plumbing';
 
+  const handlePayment = async () => {
+    try {
+      setPaying(true);
+      const { url } = await createCheckoutSession(quoteId);
+      
+      await WebBrowser.openBrowserAsync(url, {
+        presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
+        toolbarColor: '#4F46E5',
+        controlsColor: '#FFFFFF',
+      });
+      
+      setCurrentStep(2);
+    } catch (err) {
+      console.error(err);
+      Alert.alert('Error', 'Failed to initiate secure payment. Please try again.');
+    } finally {
+      setPaying(false);
+    }
+  };
+
   return (
-    <View className="flex-1 bg-white">
+    <View style={{ flex: 1, backgroundColor: 'white' }}>
       {/* Header */}
-      <View className="flex-row items-center px-4 py-3 border-b border-neutral-200">
-        {currentStep <= 1 && (
-          <Pressable onPress={() => currentStep === 0 ? navigation.goBack() : setCurrentStep(0)} className="w-8 h-8 items-center justify-center">
+      <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#e5e5e5' }}>
+        {currentStep === 0 && (
+          <Pressable onPress={() => navigation.goBack()} style={{ width: 32, height: 32, alignItems: 'center', justifyContent: 'center' }}>
             <FontAwesome5 name="chevron-left" size={18} color="#171717" />
           </Pressable>
         )}
-        <Text className="text-sm font-bold text-neutral-900 flex-1 text-center">
-          {currentStep === 3 ? 'Payment Complete' : 'Payment'}
+        <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#171717', flex: 1, textAlign: 'center' }}>
+          {currentStep === 2 ? 'Payment Complete' : 'Secure Payment'}
         </Text>
-        <View className="w-8" />
+        <View style={{ width: 32 }} />
       </View>
 
       {/* Progress Steps */}
-      <View className="flex-row items-center justify-between px-6 py-4">
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 24, paddingVertical: 16 }}>
         {STEP_LABELS.map((label, i) => {
           const isActive = i === currentStep;
           const isDone = i < currentStep;
           return (
-            <View key={label} className="flex-1 items-center">
-              <View className={`w-7 h-7 rounded-full items-center justify-center ${
-                isDone ? 'bg-emerald-500' : isActive ? 'bg-neutral-900' : 'bg-neutral-100'
-              }`}>
+            <View key={label} style={{ flex: 1, alignItems: 'center' }}>
+              <View style={{
+                width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center',
+                backgroundColor: isDone ? '#10b981' : isActive ? '#171717' : '#f5f5f5'
+              }}>
                 {isDone ? (
                   <FontAwesome5 name="check" size={10} color="#fff" />
                 ) : (
-                  <Text className={`text-xs font-bold ${isActive ? 'text-white' : 'text-neutral-400'}`}>{i + 1}</Text>
+                  <Text style={{ fontSize: 12, fontWeight: 'bold', color: isActive ? 'white' : '#a3a3a3' }}>{i + 1}</Text>
                 )}
               </View>
-              <Text className={`text-[9px] mt-1 font-medium ${isActive ? 'text-neutral-900' : 'text-neutral-400'}`}>{label}</Text>
+              <Text style={{ fontSize: 9, marginTop: 4, fontWeight: '500', color: isActive ? '#171717' : '#a3a3a3' }}>{label}</Text>
             </View>
           );
         })}
       </View>
 
-      <ScrollView className="flex-1 px-4">
-        {/* Step 0: Payment Method */}
+      <ScrollView style={{ flex: 1, paddingHorizontal: 16 }}>
+        {/* Step 0: Review */}
         {currentStep === 0 && (
-          <View style={{ gap: 16 }}>
-            <View className="bg-white rounded-2xl border border-neutral-200 p-4">
-              <View className="flex-row items-center mb-4" style={{ gap: 8 }}>
-                <FontAwesome5 name="credit-card" size={16} color="#171717" />
-                <Text className="text-base font-bold text-neutral-900">Payment Method</Text>
-              </View>
-              <Text className="text-xs font-semibold text-neutral-500 mb-1">Card Number</Text>
-              <TextInput
-                value={cardNumber}
-                onChangeText={setCardNumber}
-                placeholder="1234 5678 9012 3456"
-                placeholderTextColor="#a3a3a3"
-                keyboardType="numeric"
-                className="w-full border border-neutral-200 rounded-xl px-4 py-2.5 text-sm mb-3"
-              />
-              <View className="flex-row" style={{ gap: 12 }}>
-                <View className="flex-1">
-                  <Text className="text-xs font-semibold text-neutral-500 mb-1">Expiry</Text>
-                  <TextInput
-                    value={expiry}
-                    onChangeText={setExpiry}
-                    placeholder="MM/YY"
-                    placeholderTextColor="#a3a3a3"
-                    keyboardType="numeric"
-                    className="w-full border border-neutral-200 rounded-xl px-4 py-2.5 text-sm"
-                  />
-                </View>
-                <View className="flex-1">
-                  <Text className="text-xs font-semibold text-neutral-500 mb-1">CVV</Text>
-                  <TextInput
-                    value={cvv}
-                    onChangeText={setCvv}
-                    placeholder="123"
-                    placeholderTextColor="#a3a3a3"
-                    keyboardType="numeric"
-                    secureTextEntry
-                    className="w-full border border-neutral-200 rounded-xl px-4 py-2.5 text-sm"
-                  />
-                </View>
-              </View>
-              <Text className="text-xs font-semibold text-neutral-500 mb-1 mt-3">Cardholder Name</Text>
-              <TextInput
-                value={cardName}
-                onChangeText={setCardName}
-                placeholder="John Doe"
-                placeholderTextColor="#a3a3a3"
-                className="w-full border border-neutral-200 rounded-xl px-4 py-2.5 text-sm"
-              />
-            </View>
-            <Pressable
-              onPress={() => setCurrentStep(1)}
-              className="w-full py-3.5 bg-indigo-600 rounded-xl items-center flex-row justify-center"
-              style={{ gap: 8 }}
-            >
-              <Text className="text-sm font-semibold text-white">Continue</Text>
-              <FontAwesome5 name="chevron-right" size={12} color="#fff" />
-            </Pressable>
-          </View>
-        )}
-
-        {/* Step 1: Review */}
-        {currentStep === 1 && (
           <View style={{ gap: 12 }}>
-            <View className="bg-white rounded-2xl border border-neutral-200 p-4">
-              <View className="flex-row justify-between items-center">
+            <View style={{ backgroundColor: 'white', borderRadius: 16, borderWidth: 1, borderColor: '#e5e5e5', padding: 16 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                 <View>
-                  <Text className="text-sm font-bold text-neutral-900">{contractorName}</Text>
-                  <Text className="text-xs text-neutral-500">Service Fee Included</Text>
+                  <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#171717' }}>{contractorName}</Text>
+                  <Text style={{ fontSize: 12, color: '#737373' }}>Service Fee Included</Text>
                 </View>
-                <Text className="text-lg font-bold text-neutral-900">${quoteTotal.toLocaleString()}</Text>
+                <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#171717' }}>${quoteTotal.toLocaleString()}</Text>
               </View>
             </View>
 
-            <View className="bg-neutral-900 rounded-2xl p-6 items-center">
-              <Text className="text-xs text-neutral-400 uppercase tracking-widest">Total Amount</Text>
-              <Text className="text-3xl font-bold text-white mt-1">${quoteTotal.toLocaleString()}</Text>
+            <View style={{ backgroundColor: '#171717', borderRadius: 16, padding: 24, alignItems: 'center' }}>
+              <Text style={{ fontSize: 12, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: 1 }}>Total Amount</Text>
+              <Text style={{ fontSize: 30, fontWeight: 'bold', color: 'white', marginTop: 4 }}>${quoteTotal.toLocaleString()}</Text>
             </View>
 
-            <View className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex-row items-start" style={{ gap: 12 }}>
-              <FontAwesome5 name="shield-alt" size={18} color="#059669" style={{ marginTop: 2 }} />
-              <View className="flex-1">
-                <Text className="text-sm font-semibold text-emerald-800">Escrow Protection</Text>
-                <Text className="text-xs text-emerald-700 mt-1 leading-4">
+            <View style={{ backgroundColor: '#ecfdf5', borderWidth: 1, borderColor: '#a7f3d0', borderRadius: 16, padding: 16, flexDirection: 'row', gap: 12 }}>
+              <FontAwesome5 name="shield-alt" size={18} color="#059669" />
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#065f46' }}>Escrow Protection</Text>
+                <Text style={{ fontSize: 12, color: '#047857', marginTop: 4, lineHeight: 18 }}>
                   Your payment will be held in escrow. Funds are only released when you confirm the job is complete.
                 </Text>
               </View>
             </View>
 
             <Pressable
-              onPress={() => setCurrentStep(2)}
-              className="w-full py-3.5 bg-indigo-600 rounded-xl items-center flex-row justify-center"
-              style={{ gap: 8 }}
+              onPress={handlePayment}
+              disabled={paying}
+              style={{
+                width: '100%', paddingVertical: 14, borderRadius: 12, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, marginTop: 16,
+                backgroundColor: paying ? '#d4d4d4' : '#4F46E5'
+              }}
             >
-              <FontAwesome5 name="lock" size={14} color="#fff" />
-              <Text className="text-base font-bold text-white">Pay ${quoteTotal.toLocaleString()}</Text>
+              {paying ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <>
+                  <FontAwesome5 name="lock" size={14} color="#fff" />
+                  <Text style={{ fontSize: 16, fontWeight: 'bold', color: 'white' }}>Secure Checkout</Text>
+                </>
+              )}
             </Pressable>
-          </View>
-        )}
-
-        {/* Step 2: Processing */}
-        {currentStep === 2 && (
-          <View className="items-center justify-center py-20">
-            <View className="w-20 h-20 bg-neutral-100 rounded-full items-center justify-center mb-6">
-              <ActivityIndicator size="large" color="#a3a3a3" />
+            
+            <View style={{ alignItems: 'center', marginTop: 16 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <FontAwesome5 name="stripe" size={32} color="#6366F1" />
+                <Text style={{ fontSize: 10, color: '#a3a3a3', fontWeight: '500' }}>PCI Compliant Checkout</Text>
+              </View>
             </View>
-            <Text className="text-xl font-bold text-neutral-900">Processing your payment...</Text>
-            <Text className="text-sm text-neutral-500 text-center mt-2 px-10">
-              Please don't close this page. Your payment is being processed securely.
-            </Text>
           </View>
         )}
 
-        {/* Step 3: Confirmed */}
-        {currentStep === 3 && (
-          <View className="items-center py-8">
-            <View className="w-20 h-20 bg-emerald-50 rounded-full items-center justify-center mb-6">
+        {/* Step 2: Confirmed */}
+        {currentStep === 2 && (
+          <View style={{ alignItems: 'center', paddingVertical: 32 }}>
+            <View style={{ width: 80, height: 80, backgroundColor: '#ecfdf5', borderRadius: 40, alignItems: 'center', justifyContent: 'center', marginBottom: 24 }}>
               <FontAwesome5 name="check" size={32} color="#10b981" />
             </View>
-            <Text className="text-xl font-bold text-neutral-900">Payment Confirmed!</Text>
-            <Text className="text-3xl font-bold text-neutral-900 mt-2">${quoteTotal.toLocaleString()}</Text>
-            <Text className="text-sm text-neutral-500">paid to {contractorName}</Text>
+            <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#171717' }}>Payment Confirmed!</Text>
+            <Text style={{ fontSize: 30, fontWeight: 'bold', color: '#171717', marginTop: 8 }}>${quoteTotal.toLocaleString()}</Text>
+            <Text style={{ fontSize: 14, color: '#737373' }}>paid to {contractorName}</Text>
 
-            <View className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex-row items-start mt-8 w-full" style={{ gap: 12 }}>
-              <FontAwesome5 name="shield-alt" size={18} color="#059669" style={{ marginTop: 2 }} />
-              <View className="flex-1">
-                <Text className="text-sm font-semibold text-emerald-800">Funds Held in Escrow</Text>
-                <Text className="text-xs text-emerald-700 mt-1 leading-4">
+            <View style={{ backgroundColor: '#ecfdf5', borderWidth: 1, borderColor: '#a7f3d0', borderRadius: 16, padding: 16, flexDirection: 'row', gap: 12, marginTop: 32, width: '100%' }}>
+              <FontAwesome5 name="shield-alt" size={18} color="#059669" />
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#065f46' }}>Funds Held in Escrow</Text>
+                <Text style={{ fontSize: 12, color: '#047857', marginTop: 4, lineHeight: 18 }}>
                   Your payment is securely held and will be released once you confirm the job is complete.
                 </Text>
               </View>
@@ -200,15 +155,14 @@ export default function PaymentFlowScreen() {
 
             <Pressable
               onPress={() => navigation.navigate('ActiveJobs')}
-              className="w-full py-3.5 bg-indigo-600 rounded-xl items-center flex-row justify-center mt-6"
-              style={{ gap: 8 }}
+              style={{ width: '100%', paddingVertical: 14, backgroundColor: '#4F46E5', borderRadius: 12, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, marginTop: 24 }}
             >
               <FontAwesome5 name="briefcase" size={14} color="#fff" />
-              <Text className="text-sm font-semibold text-white">View My Jobs</Text>
+              <Text style={{ fontSize: 14, fontWeight: 'bold', color: 'white' }}>View My Jobs</Text>
             </Pressable>
 
-            <Pressable onPress={() => navigation.navigate('Home')} className="mt-3 py-2">
-              <Text className="text-sm font-medium text-neutral-500">Back to Home</Text>
+            <Pressable onPress={() => navigation.navigate('Home')} style={{ marginTop: 12, paddingVertical: 8 }}>
+              <Text style={{ fontSize: 14, fontWeight: '500', color: '#737373' }}>Back to Home</Text>
             </Pressable>
           </View>
         )}

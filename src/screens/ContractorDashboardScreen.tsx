@@ -49,6 +49,30 @@ const TABS = [
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
+const TIME_OPTIONS = [
+  '00:00', '00:30', '01:00', '01:30', '02:00', '02:30', '03:00', '03:30', '04:00', '04:30', '05:00', '05:30', '06:00', '06:30', '07:00', '07:30', '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00', '22:30', '23:00', '23:30'
+];
+
+function formatTimeDisplay(t: string) {
+  if (!t) return '';
+  const [h, m] = t.split(':').map(Number);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const hour12 = h % 12 || 12;
+  return `${hour12}:${String(m).padStart(2, '0')} ${ampm}`;
+}
+
+function formatPhoneInput(text: string): string {
+  const digits = text.replace(/\D/g, '').slice(0, 10);
+  if (digits.length === 0) return '';
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 6) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+  return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
+}
+
+function stripPhone(phone: string): string {
+  return phone.replace(/\D/g, '');
+}
+
 function formatCurrency(amount: number) {
   return '$' + Number(amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
@@ -184,6 +208,7 @@ const ContractorDashboardScreen: React.FC = () => {
     zipCodes: [] as string[],
   });
   const [profileSaving, setProfileSaving] = useState(false);
+  const [hours, setHours] = useState<Record<string, { open: string; close: string; isOpen: boolean }>>({});
   const [bannerUrl, setBannerUrl] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
   const [contractorName, setContractorName] = useState('');
@@ -254,10 +279,12 @@ const ContractorDashboardScreen: React.FC = () => {
       const rawBanner = profile.bannerImage || profile.coverImage || (profile as any).bannerUrl || (profile as any).imageUrl || '';
       const rawAvatar = profile.profilePicture || profile.profileImage || profile.user?.profilePicture || '';
       
-      const phone = profile.phone || profile.contact?.phone || profile.contactInfo?.phoneNumber || profile.phoneNumber || "";
-      const email = profile.email || profile.contact?.email || profile.contactInfo?.email || "";
-      const website = profile.website || profile.contact?.website || profile.contactInfo?.website || "";
-      const address = profile.businessAddress || profile.location || profile.contact?.address || profile.contactInfo?.streetAddress || "";
+      const rawPhone = profile.phone || profile.contactInfo?.phoneNumber || profile.contact?.phone || profile.phoneNumber || "";
+      const phone = formatPhoneInput(rawPhone);
+      const email = profile.email || profile.contactInfo?.email || profile.contact?.email || "";
+      const website = profile.website || profile.contactInfo?.website || profile.contact?.website || "";
+      const rawLoc = (typeof profile.location === 'string') ? profile.location : '';
+      const address = profile.businessAddress || profile.contactInfo?.streetAddress || profile.contact?.address || rawLoc || "";
       
       const rawServices = profile.services || profile.servicesOffered || [];
       const normalizedServices = rawServices.map((s: any) => ({
@@ -301,6 +328,24 @@ const ContractorDashboardScreen: React.FC = () => {
         licenseNumber: profile.licenseNumber || "",
         zipCodes: zipsArray,
       });
+
+      // Business Hours (match web logic)
+      const existingHours: Record<string, any> = profile.businessHours || {};
+      const hasSavedHours = Object.keys(existingHours).length > 0;
+      const defaultHours: Record<string, { open: string; close: string; isOpen: boolean }> = {};
+      for (const day of DAYS) {
+        const h = existingHours[day] || existingHours[day.toLowerCase()];
+        if (h) {
+          defaultHours[day] = {
+            open: h.start || h.open || '09:00',
+            close: h.end || h.close || '17:00',
+            isOpen: h.isOpen !== false,
+          };
+        } else {
+          defaultHours[day] = { open: '09:00', close: '17:00', isOpen: hasSavedHours ? false : day !== 'Sunday' };
+        }
+      }
+      setHours(defaultHours);
 
     } catch (err) {
       console.error('Failed to load data:', err);
@@ -418,32 +463,43 @@ const ContractorDashboardScreen: React.FC = () => {
   const handleSaveProfile = async () => {
     setProfileSaving(true);
     try {
+      // Format business hours (match web logic)
+      const formattedHours: Record<string, { start: string; end: string }> = {};
+      for (const [day, val] of Object.entries(hours)) {
+        if (val.isOpen) {
+          formattedHours[day.toLowerCase()] = { start: val.open, end: val.close };
+        }
+      }
+
       const updateData: any = {
-        description: editableData.description,
-        pricing: editableData.pricing,
+        description: editableData.description || undefined,
+        pricing: editableData.pricing || undefined,
         certifications: Array.isArray(editableData.certifications) ? editableData.certifications : editableData.certifications?.split(",").map((s: string) => s.trim()).filter(Boolean) || [],
-        zipCodesCovered: editableData.zipCodes,
-        licenseNumber: editableData.licenseNumber,
+        zipCodesCovered: editableData.zipCodes.length > 0 ? editableData.zipCodes : undefined,
+        licenseNumber: editableData.licenseNumber || undefined,
+        businessHours: Object.keys(formattedHours).length > 0 ? formattedHours : undefined,
         // Match web version: send services as objects with priceEstimate
         servicesOffered: editableData.servicesOffered.map(s => ({
-          name: s.name,
-          description: s.description,
-          priceEstimate: s.priceRange
+          name: s.name || undefined,
+          description: s.description || undefined,
+          priceEstimate: s.priceRange || undefined,
         })),
         services: editableData.servicesOffered.map(s => s.name),
         // Match web version: map portfolio properly
         portfolio: portfolio.map(p => ({
           name: p.name,
-          description: p.description,
+          description: p.description || undefined,
           imageUrl: p.imageUrl,
-          images: p.images || [p.imageUrl].filter(Boolean)
+          images: p.images || [p.imageUrl].filter(Boolean),
         })),
-        // Include contact info nested
-        contact: {
-          phone: editableData.phone,
-          website: editableData.website,
-          address: editableData.address,
-        }
+        // Send contactInfo with same field names the web uses and backend schema expects
+        contactInfo: {
+          phoneNumber: editableData.phone || undefined,
+          website: editableData.website || undefined,
+          streetAddress: editableData.address || undefined,
+        },
+        phone: editableData.phone || undefined,
+        businessAddress: editableData.address || undefined,
       };
       const result = await updateContractorProfile(updateData);
       if (result && result.user) updateUser(result.user);
@@ -672,12 +728,18 @@ const ContractorDashboardScreen: React.FC = () => {
 
               <View className="bg-white rounded-xl border border-neutral-200 p-5">
                 <Text className="text-base font-semibold text-neutral-900 mb-3">Business Hours</Text>
-                {DAYS.map(day => (
-                  <View key={day} className="flex-row justify-between py-2 border-b border-neutral-100">
-                    <Text className="text-sm text-neutral-600">{day}</Text>
-                    <Text className="text-sm text-neutral-900 font-medium">9:00 AM - 5:00 PM</Text>
-                  </View>
-                ))}
+                {DAYS.map(day => {
+                  const h = hours[day];
+                  const isOpen = h?.isOpen !== false;
+                  return (
+                    <View key={day} className="flex-row justify-between py-2 border-b border-neutral-100">
+                      <Text className="text-sm text-neutral-600">{day}</Text>
+                      <Text className="text-sm text-neutral-900 font-medium">
+                        {isOpen ? `${formatTimeDisplay(h?.open || '09:00')} - ${formatTimeDisplay(h?.close || '17:00')}` : 'Closed'}
+                      </Text>
+                    </View>
+                  );
+                })}
               </View>
             </View>
           )}
@@ -1153,14 +1215,17 @@ const ContractorDashboardScreen: React.FC = () => {
               <View className="absolute inset-0 bg-neutral-300" />
             )}
             <View className="absolute inset-0 bg-black/20 items-center justify-center">
-              <Pressable 
-                onPress={() => handleUpdateImage("banner")}
-                className="bg-white/90 px-4 py-2 rounded-xl flex-row items-center"
-                style={{ gap: 8 }}
-              >
-                <FontAwesome5 name="camera" size={14} color="#404040" />
-                <Text className="text-xs font-bold text-neutral-800">Change Cover</Text>
-              </Pressable>
+              <View style={{ gap: 6 }} className="items-center">
+                <Pressable
+                  onPress={() => handleUpdateImage("banner")}
+                  className="bg-white/90 px-4 py-2 rounded-xl flex-row items-center"
+                  style={{ gap: 8 }}
+                >
+                  <FontAwesome5 name="camera" size={14} color="#404040" />
+                  <Text className="text-xs font-bold text-neutral-800">Change Cover</Text>
+                </Pressable>
+                <Text className="text-[10px] text-white/70 font-medium">Recommended: 1200 × 400 pixels</Text>
+              </View>
             </View>
           </View>
           
@@ -1304,12 +1369,26 @@ const ContractorDashboardScreen: React.FC = () => {
                   <Text className="text-xs font-semibold text-neutral-500 mb-1.5">Phone</Text>
                   <TextInput
                     value={editableData.phone}
-                    onChangeText={t => setEditableData(p => ({ ...p, phone: t }))}
-                    placeholder="(555) 123-4567"
+                    onChangeText={t => setEditableData(p => ({ ...p, phone: formatPhoneInput(t) }))}
+                    placeholder="212-555-0123"
                     placeholderTextColor="#a3a3a3"
                     keyboardType="phone-pad"
+                    maxLength={12}
                     className="w-full bg-white border border-neutral-200 rounded-xl px-4 py-2.5 text-sm"
                   />
+                </View>
+                <View>
+                  <Text className="text-xs font-semibold text-neutral-500 mb-1.5">Email</Text>
+                  <TextInput
+                    value={editableData.email}
+                    placeholder="your@email.com"
+                    placeholderTextColor="#a3a3a3"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    editable={false}
+                    className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-2.5 text-sm text-neutral-400"
+                  />
+                  <Text className="text-[10px] text-neutral-400 mt-1">Contact support to change your email.</Text>
                 </View>
                 <View>
                   <Text className="text-xs font-semibold text-neutral-500 mb-1.5">Website (Optional)</Text>
@@ -1378,6 +1457,76 @@ const ContractorDashboardScreen: React.FC = () => {
                     className="w-full bg-white border border-neutral-200 rounded-xl px-4 py-2.5 text-sm"
                   />
                 </View>
+              </View>
+            )}
+          </View>
+
+          {/* Business Hours Accordion */}
+          <View className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+            <Pressable
+              onPress={() => setActiveEditSection(activeEditSection === 'hours' ? null : 'hours')}
+              className="flex-row items-center justify-between p-4"
+            >
+              <View className="flex-row items-center" style={{ gap: 12 }}>
+                <View className="w-10 h-10 rounded-lg bg-neutral-50 items-center justify-center">
+                  <FontAwesome5 name="clock" size={16} color="#525252" />
+                </View>
+                <View>
+                  <Text className="text-sm font-bold text-neutral-900">Business Hours</Text>
+                  <Text className="text-[10px] text-neutral-500">Set your weekly availability</Text>
+                </View>
+              </View>
+              <FontAwesome5 name={activeEditSection === 'hours' ? "chevron-up" : "chevron-down"} size={12} color="#a3a3a3" />
+            </Pressable>
+
+            {activeEditSection === 'hours' && (
+              <View className="p-4 border-t border-neutral-100 bg-neutral-50/50">
+                {DAYS.map(day => (
+                  <View key={day} className="flex-row items-center justify-between py-2 border-b border-neutral-100">
+                    <Pressable
+                      onPress={() => setHours(prev => ({
+                        ...prev,
+                        [day]: { ...prev[day], isOpen: !prev[day]?.isOpen }
+                      }))}
+                      className="flex-row items-center"
+                      style={{ gap: 8, minWidth: 110 }}
+                    >
+                      <View className={`w-5 h-5 rounded border-2 items-center justify-center ${hours[day]?.isOpen !== false ? 'bg-indigo-600 border-indigo-600' : 'bg-white border-neutral-300'}`}>
+                        {hours[day]?.isOpen !== false && (
+                          <FontAwesome5 name="check" size={9} color="#fff" />
+                        )}
+                      </View>
+                      <Text className={`text-sm font-medium ${hours[day]?.isOpen !== false ? 'text-neutral-900' : 'text-neutral-400'}`}>{day.slice(0, 3)}</Text>
+                    </Pressable>
+                    {hours[day]?.isOpen !== false ? (
+                      <View className="flex-row items-center" style={{ gap: 8 }}>
+                        <Pressable
+                          onPress={() => {
+                            const currentIdx = TIME_OPTIONS.indexOf(hours[day]?.open || '09:00');
+                            const newIdx = (currentIdx + 1) % TIME_OPTIONS.length;
+                            setHours(prev => ({ ...prev, [day]: { ...prev[day], open: TIME_OPTIONS[newIdx] } }));
+                          }}
+                          className="bg-white border border-neutral-200 rounded-lg px-3 py-1.5"
+                        >
+                          <Text className="text-xs font-medium text-neutral-700">{formatTimeDisplay(hours[day]?.open || '09:00')}</Text>
+                        </Pressable>
+                        <Text className="text-xs text-neutral-400">to</Text>
+                        <Pressable
+                          onPress={() => {
+                            const currentIdx = TIME_OPTIONS.indexOf(hours[day]?.close || '17:00');
+                            const newIdx = (currentIdx + 1) % TIME_OPTIONS.length;
+                            setHours(prev => ({ ...prev, [day]: { ...prev[day], close: TIME_OPTIONS[newIdx] } }));
+                          }}
+                          className="bg-white border border-neutral-200 rounded-lg px-3 py-1.5"
+                        >
+                          <Text className="text-xs font-medium text-neutral-700">{formatTimeDisplay(hours[day]?.close || '17:00')}</Text>
+                        </Pressable>
+                      </View>
+                    ) : (
+                      <Text className="text-xs text-neutral-400 italic">Closed</Text>
+                    )}
+                  </View>
+                ))}
               </View>
             )}
           </View>

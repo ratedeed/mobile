@@ -19,6 +19,7 @@ import BusinessSearchScreen from '../screens/BusinessSearchScreen';
 import BusinessDetailScreen from '../screens/BusinessDetailScreen.tsx';
 import MessagesScreen from '../screens/MessagesScreen';
 import ContractorDashboardScreen from '../screens/ContractorDashboardScreen';
+import ContractorEditProfileScreen from '../screens/ContractorEditProfileScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import ActiveJobsScreen from '../screens/ActiveJobsScreen';
@@ -247,6 +248,7 @@ export default function MainNavigator() {
       <Stack.Screen name="Main" component={MainTabNavigator} options={{ headerShown: false }} />
       <Stack.Screen name="BusinessDetail" component={BusinessDetailScreen} options={{ title: '' }} />
       <Stack.Screen name="ContractorDashboard" component={ContractorDashboardScreen} options={{ title: '' }} />
+      <Stack.Screen name="ContractorEditProfile" component={ContractorEditProfileScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Notifications" component={NotificationsScreen} />
       <Stack.Screen name="ChatScreen" component={MessagesScreen} options={{ title: 'Chat' }} />
       <Stack.Screen name="ActiveJobs" component={ActiveJobsScreen} options={{ title: '', headerShown: false }} />
