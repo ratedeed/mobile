@@ -47,7 +47,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const decodedToken: any = jwtDecode(token);
             decodedId = decodedToken.id || decodedToken._id;
           } catch (e) {
-            console.error('Failed to decode token:', e);
+      // console.error('Failed to decode token:', e);
           }
         }
         
@@ -63,7 +63,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
     } catch (error) {
-      console.error('Error loading stored auth:', error);
+      // console.error('Error loading stored auth:', error);
     } finally {
       setIsLoading(false);
     }
@@ -100,7 +100,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUserId(updated._id || updated.id);
       }
     } catch (error) {
-      console.error('Error updating user info in AsyncStorage:', error);
+      // console.error('Error updating user info in AsyncStorage:', error);
     }
   }, []);
 

@@ -56,13 +56,13 @@ export const NotificationsProvider: React.FC<{ children: ReactNode }> = ({ child
           notifs = notifs.filter(n => !(n.type === 'new_message' && n.link && syntheticNotifs.some(sn => sn.link === n.link)));
           notifs = [...syntheticNotifs, ...notifs].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         } catch (convErr) {
-          console.error('Error fetching conversations for notifications:', convErr);
+      // console.error('Error fetching conversations for notifications:', convErr);
         }
         setNotifications(notifs);
         const unread = notifs.filter((n: Notification) => !n.read).length;
         await AsyncStorage.setItem('unreadNotifications', unread.toString());
       } catch (error) {
-        console.error('Error fetching notifications:', error);
+      // console.error('Error fetching notifications:', error);
       } finally {
         setIsLoading(false);
       }
@@ -118,7 +118,7 @@ export const NotificationsProvider: React.FC<{ children: ReactNode }> = ({ child
       const count = (convos || []).reduce((sum: number, c: any) => sum + (c.unreadCount || 0), 0);
       setUnreadMessagesCount(count);
     } catch (error) {
-      console.error('Error fetching unread messages count:', error);
+      // console.error('Error fetching unread messages count:', error);
     }
   }, [isAuthenticated]);
 
@@ -139,7 +139,7 @@ export const NotificationsProvider: React.FC<{ children: ReactNode }> = ({ child
         return updated;
       });
     } catch (error) {
-      console.error('Error marking notification read:', error);
+      // console.error('Error marking notification read:', error);
     }
   }, []);
 
@@ -153,7 +153,7 @@ export const NotificationsProvider: React.FC<{ children: ReactNode }> = ({ child
       });
       setUnreadMessagesCount(0);
     } catch (error) {
-      console.error('Error marking all notifications read:', error);
+      // console.error('Error marking all notifications read:', error);
     }
   }, []);
 
@@ -169,7 +169,7 @@ export const NotificationsProvider: React.FC<{ children: ReactNode }> = ({ child
         return updated;
       });
     } catch (error) {
-      console.error('Error deleting notification:', error);
+      // console.error('Error deleting notification:', error);
     }
   }, []);
 

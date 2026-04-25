@@ -205,7 +205,7 @@ const BusinessSearchScreen: React.FC = () => {
       setHasMore(data?.page < (data?.pages || 1));
       setPage(pageNum);
     } catch (error) {
-      console.error('Error fetching contractors:', error);
+      // console.error('Error fetching contractors:', error);
       if (!append) { setContractors([]); setTotalResults(0); }
     } finally {
       setLoading(false);

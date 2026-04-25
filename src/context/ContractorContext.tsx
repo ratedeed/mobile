@@ -40,7 +40,7 @@ export const ContractorProvider: React.FC<{ children: ReactNode }> = ({ children
       setJobs(jobsData);
       setEarnings(earningsData);
     } catch (error) {
-      console.error('Error fetching contractor data:', error);
+      // console.error('Error fetching contractor data:', error);
     } finally {
       setIsLoading(false);
     }

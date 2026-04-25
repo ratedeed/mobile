@@ -36,7 +36,7 @@ class ErrorBoundary extends Component<Props, State> {
       error,
       errorInfo,
     });
-    console.error('ErrorBoundary caught an error:', error, errorInfo);
+      // console.error('ErrorBoundary caught an error:', error, errorInfo);
   }
 
   handleReset = (): void => {

@@ -209,7 +209,7 @@ export default function ContractorEditProfileModal({ visible, onClose, onProfile
         const data = await response.json();
         setAddressSuggestions(data);
       } catch (error) {
-        console.error('Address search error:', error);
+      // console.error('Address search error:', error);
       } finally {
         setIsSearchingAddress(false);
       }
@@ -292,7 +292,7 @@ export default function ContractorEditProfileModal({ visible, onClose, onProfile
       setLicenseNumber(data.licenseNumber || '');
       setVerifLicenseNumber(data.licenseNumber || '');
     } catch (err) {
-      console.error('Failed to load contractor profile:', err);
+      // console.error('Failed to load contractor profile:', err);
       Alert.alert('Error', 'Failed to load profile data.');
     } finally {
       setLoading(false);
@@ -327,7 +327,7 @@ export default function ContractorEditProfileModal({ visible, onClose, onProfile
         }
       }
     } catch (err) {
-      console.error('Failed to pick image:', err);
+      // console.error('Failed to pick image:', err);
     }
   };
 
@@ -399,7 +399,7 @@ export default function ContractorEditProfileModal({ visible, onClose, onProfile
       if (onProfileUpdated) onProfileUpdated();
       onClose();
     } catch (err: any) {
-      console.error('Failed to save profile:', err);
+      // console.error('Failed to save profile:', err);
       Alert.alert('Error', err?.message || 'Failed to save profile.');
     } finally {
       setSaving(false);

@@ -97,7 +97,7 @@ export default function ContractorEditProfileScreen() {
         const data = await response.json();
         setAddressSuggestions(data);
       } catch (error) {
-        console.error('Address search error:', error);
+      // console.error('Address search error:', error);
       } finally {
         setIsSearchingAddress(false);
       }
@@ -145,7 +145,7 @@ export default function ContractorEditProfileScreen() {
         setPosts(data.posts);
       }
     } catch (err) {
-      console.error('Failed to load contractor profile:', err);
+      // console.error('Failed to load contractor profile:', err);
       Alert.alert('Error', 'Failed to load profile data.');
     } finally {
       setLoading(false);
@@ -177,7 +177,7 @@ export default function ContractorEditProfileScreen() {
         }
       }
     } catch (err) {
-      console.error('Failed to pick image:', err);
+      // console.error('Failed to pick image:', err);
     }
   };
 
@@ -191,7 +191,7 @@ export default function ContractorEditProfileScreen() {
         setLicenseDocUri(result.assets[0].uri);
       }
     } catch (err) {
-      console.error('Failed to pick license doc:', err);
+      // console.error('Failed to pick license doc:', err);
     }
   };
 
@@ -240,7 +240,7 @@ export default function ContractorEditProfileScreen() {
       
       setActiveSection(null);
     } catch (err: any) {
-      console.error('Failed to save profile:', err);
+      // console.error('Failed to save profile:', err);
       Alert.alert('Error', err?.message || 'Failed to save profile.');
     } finally {
       setSaving(false);

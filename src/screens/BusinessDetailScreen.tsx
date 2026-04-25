@@ -119,7 +119,7 @@ const BusinessDetailScreen: React.FC = () => {
       });
             
       if (__DEV__) {
-        console.log(`BusinessDetail: Final unique reviews count: ${uniqueReviews.length}`);
+      // console.log(`BusinessDetail: Final unique reviews count: ${uniqueReviews.length}`);
       }
       setContractorReviews(uniqueReviews);
 
@@ -133,11 +133,11 @@ const BusinessDetailScreen: React.FC = () => {
             .slice(0, 6);
           setSimilarContractors(filtered);
         } catch (e) {
-          console.error('Failed to load similar contractors:', e);
+      // console.error('Failed to load similar contractors:', e);
         }
       }
     } catch (error) {
-      console.error('Error loading contractor:', error);
+      // console.error('Error loading contractor:', error);
       Alert.alert('Error', 'Failed to load contractor details');
     } finally {
       setLoading(false);

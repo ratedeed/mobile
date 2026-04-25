@@ -61,7 +61,7 @@ export async function uploadToCloudinary(
     const data = await cloudinaryRes.json();
     return data.secure_url;
   } catch (error) {
-    console.error('uploadToCloudinary error:', error);
+      // console.error('uploadToCloudinary error:', error);
     throw error;
   }
 }

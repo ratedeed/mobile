@@ -70,7 +70,7 @@ const SavedScreen = () => {
 
       setAllContractors(list);
     } catch (error) {
-      console.error('Error loading saved contractors:', error);
+      // console.error('Error loading saved contractors:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);

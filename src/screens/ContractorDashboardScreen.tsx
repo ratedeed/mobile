@@ -236,7 +236,7 @@ const ContractorDashboardScreen: React.FC = () => {
         const data = await response.json();
         setAddressSuggestions(data);
       } catch (error) {
-        console.error('Address search error:', error);
+      // console.error('Address search error:', error);
       } finally {
         setIsSearchingAddress(false);
       }
@@ -278,7 +278,7 @@ const ContractorDashboardScreen: React.FC = () => {
       // 1. Fetch profile first using JWT to get the REAL contractor ID
       const profile = await getContractorProfile().catch(() => null);
       if (!profile) {
-        console.log('No contractor profile found for current user');
+      // console.log('No contractor profile found for current user');
         setLoading(false);
         setRefreshing(false);
         return;
@@ -380,7 +380,7 @@ const ContractorDashboardScreen: React.FC = () => {
       setHours(defaultHours);
 
     } catch (err) {
-      console.error('Failed to load data:', err);
+      // console.error('Failed to load data:', err);
     } finally {
       setLoading(false);
       setRefreshing(false);

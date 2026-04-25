@@ -25,6 +25,7 @@ import NotificationsScreen from '../screens/NotificationsScreen';
 import ActiveJobsScreen from '../screens/ActiveJobsScreen';
 import PaymentFlowScreen from '../screens/PaymentFlowScreen';
 import SavedScreen from '../screens/SavedScreen';
+import ReviewScreen from '../screens/ReviewScreen';
 
 import Typography from '../components/common/Typography';
 import { useAuth } from '../context/AuthContext';
@@ -253,6 +254,7 @@ export default function MainNavigator() {
       <Stack.Screen name="ChatScreen" component={MessagesScreen} options={{ title: 'Chat' }} />
       <Stack.Screen name="ActiveJobs" component={ActiveJobsScreen} options={{ title: '', headerShown: false }} />
       <Stack.Screen name="PaymentFlow" component={PaymentFlowScreen} options={{ title: '', headerShown: false }} />
+      <Stack.Screen name="ReviewScreen" component={ReviewScreen} options={{ title: 'Leave a Review' }} />
     </Stack.Navigator>
   );
 }

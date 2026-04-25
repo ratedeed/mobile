@@ -247,7 +247,7 @@ const HomeScreen = () => {
         }
       }
     } catch (err) {
-      console.error('Error fetching contractors:', err);
+      // console.error('Error fetching contractors:', err);
       if (mountedRef.current) {
         setAllContractors([]);
         setNearbyLabel('');

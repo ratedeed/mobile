@@ -41,7 +41,45 @@ export const getAuthHeaders = async (externalToken?: string): Promise<Record<str
   return token ? { 'Authorization': `Bearer ${token}` } : {};
 };
 
-export const handleResponse = async (response: Response): Promise<any> => {
+let isRefreshing = false;
+let refreshPromise: Promise<any> | null = null;
+
+const refreshTokenIfNeeded = async (): Promise<void> => {
+  const userInfo = await AsyncStorage.getItem('userInfo');
+  if (!userInfo) return;
+  const parsed = JSON.parse(userInfo);
+  if (!parsed.refreshToken) return;
+
+  if (isRefreshing && refreshPromise) {
+    await refreshPromise;
+    return;
+  }
+
+  isRefreshing = true;
+  refreshPromise = (async () => {
+    try {
+      const response = await fetch(`${API_BASE}/users/refresh-token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken: parsed.refreshToken }),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        await AsyncStorage.setItem('userInfo', JSON.stringify({ ...parsed, token: data.token, refreshToken: data.refreshToken }));
+      }
+    } catch {} finally {
+      isRefreshing = false;
+      refreshPromise = null;
+    }
+  })();
+  await refreshPromise;
+};
+
+export const handleResponse = async (response: Response, retryFn?: () => Promise<any>): Promise<any> => {
+  if (response.status === 401 && retryFn) {
+    await refreshTokenIfNeeded();
+    return retryFn();
+  }
   if (!response.ok) {
     const errorText = await response.text();
     let errorData: any = {};
@@ -64,43 +102,54 @@ export const handleResponse = async (response: Response): Promise<any> => {
 };
 
 export const get = async (url: string, headers: Record<string, string> = {}): Promise<any> => {
-  const response = await fetch(url, {
-    method: 'GET',
-    headers: { ...headers },
-  });
-  return handleResponse(response);
+  const makeRequest = async () => {
+    const currentHeaders = { ...headers };
+    if (!currentHeaders['Authorization']) {
+      const authH = await getAuthHeaders();
+      Object.assign(currentHeaders, authH);
+    }
+    return fetch(url, { method: 'GET', headers: currentHeaders });
+  };
+  const response = await makeRequest();
+  return handleResponse(response, makeRequest);
 };
 
 export const post = async (url: string, data: any, headers: Record<string, string> = {}): Promise<any> => {
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...headers,
-    },
-    body: JSON.stringify(data),
-  });
-  return handleResponse(response);
+  const makeRequest = async () => {
+    return fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...headers },
+      body: JSON.stringify(data),
+    });
+  };
+  const response = await makeRequest();
+  return handleResponse(response, Object.keys(headers).length > 0 ? undefined : makeRequest);
 };
 
 export const put = async (url: string, data: any, headers: Record<string, string> = {}): Promise<any> => {
-  const response = await fetch(url, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      ...headers,
-    },
-    body: JSON.stringify(data),
-  });
-  return handleResponse(response);
+  const makeRequest = async () => {
+    const currentHeaders: Record<string, string> = { 'Content-Type': 'application/json', ...headers };
+    if (!currentHeaders['Authorization']) {
+      const authH = await getAuthHeaders();
+      Object.assign(currentHeaders, authH);
+    }
+    return fetch(url, { method: 'PUT', headers: currentHeaders, body: JSON.stringify(data) });
+  };
+  const response = await makeRequest();
+  return handleResponse(response, makeRequest);
 };
 
 export const del = async (url: string, headers: Record<string, string> = {}): Promise<any> => {
-  const response = await fetch(url, {
-    method: 'DELETE',
-    headers: { ...headers },
-  });
-  return handleResponse(response);
+  const makeRequest = async () => {
+    const currentHeaders = { ...headers };
+    if (!currentHeaders['Authorization']) {
+      const authH = await getAuthHeaders();
+      Object.assign(currentHeaders, authH);
+    }
+    return fetch(url, { method: 'DELETE', headers: currentHeaders });
+  };
+  const response = await makeRequest();
+  return handleResponse(response, makeRequest);
 };
 
 // ---- Normalization Helpers (Ported from web version) ----
@@ -204,7 +253,7 @@ export const normalizeApiContractor = (c: any): Contractor => {
 
     return normalized as Contractor;
   } catch (err) {
-    console.error('Failed to normalize contractor:', err);
+      // console.error('Failed to normalize contractor:', err);
     return c;
   }
 };
@@ -336,12 +385,12 @@ let pendingListeners: Array<{ event: string; callback: Function }> = [];
 AppState.addEventListener('change', (nextAppState) => {
   if (nextAppState === 'background') {
     if (socket?.connected) {
-      console.log('App in background: disconnecting socket for FCM pushes');
+      // console.log('App in background: disconnecting socket for FCM pushes');
       socket.disconnect();
     }
   } else if (nextAppState === 'active') {
     if (socket?.disconnected && currentSocketUserId) {
-      console.log('App in foreground: reconnecting socket');
+      // console.log('App in foreground: reconnecting socket');
       socket.connect();
     }
   }
@@ -357,7 +406,7 @@ export const initializeSocket = async () => {
 
     // SYNC with web version: use standard transports and auth object
     // Also remove withCredentials which can cause handshake errors in some environments
-    console.log('Socket: Connecting to:', API_BASE_URL);
+      // console.log('Socket: Connecting to:', API_BASE_URL);
     socket = io(API_BASE_URL, {
       transports: ['websocket', 'polling'],
       auth: token ? { token } : undefined,
@@ -368,7 +417,7 @@ export const initializeSocket = async () => {
     });
 
     socket.on('connect', () => {
-      console.log('Socket connected:', socket?.id);
+      // console.log('Socket connected:', socket?.id);
       isInitializingSocket = false;
       // Flush any listeners that were registered before socket was ready
       pendingListeners.forEach(({ event, callback }) => {
@@ -379,19 +428,19 @@ export const initializeSocket = async () => {
     });
 
     socket.on('connect_error', (error) => {
-      console.error('Socket connection error:', error);
+      // console.error('Socket connection error:', error);
       isInitializingSocket = false;
     });
 
     socket.on('disconnect', (reason) => {
-      console.log('Socket disconnected:', reason);
+      // console.log('Socket disconnected:', reason);
       if (reason === 'io server disconnect') {
         // the disconnection was initiated by the server, you need to reconnect manually
         socket?.connect();
       }
     });
   } catch (error) {
-    console.error('Error initializing socket:', error);
+      // console.error('Error initializing socket:', error);
     isInitializingSocket = false;
   }
 };
@@ -409,7 +458,7 @@ export const registerSocket = async (userId: string) => {
 
   const emitRegister = () => {
     if (userId && socket?.connected) {
-      console.log(`Registering socket for user ${userId}`);
+      // console.log(`Registering socket for user ${userId}`);
       socket.emit("register", userId);
     }
   };

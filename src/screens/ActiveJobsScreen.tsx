@@ -42,7 +42,7 @@ export default function ActiveJobsScreen() {
       const data = await getUserQuotes();
       setQuotes(data || []);
     } catch (error) {
-      console.error('Error loading jobs:', error);
+      // console.error('Error loading jobs:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -176,7 +176,11 @@ export default function ActiveJobsScreen() {
 
                     {quote.status.toLowerCase() === 'completed' && !quote.hasReview && (
                       <Pressable
-                        onPress={() => navigation.navigate('ReviewScreen', { quoteId: quote._id })}
+                        onPress={() => navigation.navigate('ReviewScreen', {
+                          quoteId: quote._id,
+                          contractorId: quote.contractorId?._id || quote.contractorId?.id || quote.contractorId,
+                          contractorName: quote.contractorId?.companyName || quote.contractorId?.businessName || 'Contractor',
+                        })}
                         className="flex-row items-center mt-3"
                         style={{ gap: 6 }}
                       >

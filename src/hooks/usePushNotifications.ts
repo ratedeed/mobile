@@ -39,22 +39,22 @@ export const usePushNotifications = () => {
           authStatus === AuthorizationStatus.PROVISIONAL;
         if (enabled) {
           const fcmToken = await getToken(messaging);
-          console.log('========================================');
-          setExpoPushToken(fcmToken); console.log('FCM Token:', fcmToken);
-          console.log('Copy this token to Firebase Console > Cloud Messaging > Send test message');
-          console.log('========================================');
+      // console.log('========================================');
+          setExpoPushToken(fcmToken);
+      // console.log('Copy this token to Firebase Console > Cloud Messaging > Send test message');
+      // console.log('========================================');
 
           // Log APNS token to verify APNS registration
           try {
             const { getAPNSToken } = require('@react-native-firebase/messaging');
             const apnsToken = await getAPNSToken(messaging);
-            console.log('APNS Token:', apnsToken || 'NULL — push will NOT work');
+      // console.log('APNS Token:', apnsToken || 'NULL — push will NOT work');
           } catch (e) {
-            console.warn('Could not check APNS token:', e);
+      // console.warn('Could not check APNS token:', e);
           }
         }
       } catch (error) {
-        console.warn('Failed to get push token', error);
+      // console.warn('Failed to get push token', error);
       }
     };
     requestUserPermission();
@@ -64,7 +64,7 @@ export const usePushNotifications = () => {
   useEffect(() => {
     if (isAuthenticated && expoPushToken) {
       savePushToken(expoPushToken).catch(err =>
-        console.error('Error saving push token to backend:', err)
+      // console.error('Error saving push token to backend:', err)
       );
     }
   }, [isAuthenticated, expoPushToken]);
@@ -73,7 +73,7 @@ export const usePushNotifications = () => {
   useEffect(() => {
     const messaging = getMessaging();
     const unsubscribe = onMessage(messaging, async remoteMessage => {
-      console.log('A new FCM message arrived!');
+      // console.log('A new FCM message arrived!');
       await Notifications.scheduleNotificationAsync({
         content: {
           title: remoteMessage.notification?.title || 'New Notification',
@@ -86,7 +86,7 @@ export const usePushNotifications = () => {
     });
 
     const receivedListener = Notifications.addNotificationReceivedListener(notification => {
-      console.log('Foreground notification received!');
+      // console.log('Foreground notification received!');
       setNotification(notification);
     });
 
@@ -99,7 +99,7 @@ export const usePushNotifications = () => {
   // Effect 4: Notification response (tap) listener
   useEffect(() => {
     const responseListener = Notifications.addNotificationResponseReceivedListener(response => {
-      console.log('Notification tapped!');
+      // console.log('Notification tapped!');
       const data = response.notification.request.content.data;
       if (data?.type === 'new_message' && data?.conversationId) {
         // @ts-ignore

@@ -32,7 +32,7 @@ export default function PaymentFlowScreen() {
       
       setCurrentStep(2);
     } catch (err) {
-      console.error(err);
+      // console.error(err);
       Alert.alert('Error', 'Failed to initiate secure payment. Please try again.');
     } finally {
       setPaying(false);

@@ -29,7 +29,7 @@ export const SvgImage = ({ uri, width = '100%', height = '100%', style, preserve
             text = text.replace(/filter="drop-shadow\([^"]*\)"/g, '');
             setXml(text);
           } else if (isMounted) {
-            console.warn('SvgImage: Fetched content is not a valid SVG:', text.slice(0, 100));
+      // console.warn('SvgImage: Fetched content is not a valid SVG:', text.slice(0, 100));
             setXml('error');
           }
         } else if (uri.includes('<svg')) {
@@ -41,7 +41,7 @@ export const SvgImage = ({ uri, width = '100%', height = '100%', style, preserve
           setXml('error');
         }
       } catch (err) {
-        console.error('SvgImage Error fetching URI:', uri, err);
+      // console.error('SvgImage Error fetching URI:', uri, err);
         if (isMounted) setXml('error');
       }
     };

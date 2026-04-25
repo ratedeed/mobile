@@ -13,7 +13,7 @@ export const getFavorites = async (): Promise<string[]> => {
     const json = await AsyncStorage.getItem(FAVORITES_KEY);
     return json ? JSON.parse(json) : [];
   } catch (e) {
-    console.error('Failed to get favorites', e);
+      // console.error('Failed to get favorites', e);
     return [];
   }
 };
@@ -36,11 +36,11 @@ export const syncFavoritesWithServer = async () => {
         const local = await getFavorites();
         const merged = Array.from(new Set([...local, ...serverIds]));
         await AsyncStorage.setItem(FAVORITES_KEY, JSON.stringify(merged));
-        console.log('[Favorites] Mobile sync successful');
+      // console.log('[Favorites] Mobile sync successful');
       }
     }
   } catch (err) {
-    console.error('[Favorites] Sync failed:', err);
+      // console.error('[Favorites] Sync failed:', err);
   }
 };
 
@@ -61,7 +61,7 @@ export const addFavorite = async (id: string) => {
       }
     }
   } catch (e) {
-    console.error('Failed to add favorite', e);
+      // console.error('Failed to add favorite', e);
   }
 };
 
@@ -80,7 +80,7 @@ export const removeFavorite = async (id: string) => {
       });
     }
   } catch (e) {
-    console.error('Failed to remove favorite', e);
+      // console.error('Failed to remove favorite', e);
   }
 };
 

@@ -121,7 +121,7 @@ const ProfileScreen: React.FC = () => {
         zipCode: userData.zipCode || '',
       });
     } catch (err) {
-      console.error('Failed to load profile:', err);
+      // console.error('Failed to load profile:', err);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -149,12 +149,12 @@ const ProfileScreen: React.FC = () => {
           setUser(updatedUser);
           setEditMessage({ type: "success", text: "Profile picture updated!" });
         } catch (uploadErr) {
-          console.error("Image upload failed", uploadErr);
+      // console.error("Image upload failed", uploadErr);
           setEditMessage({ type: "error", text: "Failed to upload image. Please try again." });
         }
       }
     } catch (err) {
-      console.error("Failed to pick image:", err);
+      // console.error("Failed to pick image:", err);
       setEditMessage({ type: "error", text: "Failed to pick image." });
     } finally {
       setSaving(false);
