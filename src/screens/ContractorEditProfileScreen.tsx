@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -56,6 +56,11 @@ export default function ContractorEditProfileScreen() {
   const [category, setCategory] = useState('');
   const [location, setLocation] = useState('');
 
+  // Address autocomplete
+  const [addressSuggestions, setAddressSuggestions] = useState<any[]>([]);
+  const [isSearchingAddress, setIsSearchingAddress] = useState(false);
+  const addressSearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Local files to upload
   const [profilePicUri, setProfilePicUri] = useState<string | null>(null);
   const [bannerPicUri, setBannerPicUri] = useState<string | null>(null);
@@ -74,6 +79,35 @@ export default function ContractorEditProfileScreen() {
   const [licenseDocUri, setLicenseDocUri] = useState<string | null>(null);
   const [isSubmittingVerification, setIsSubmittingVerification] = useState(false);
   const [verificationResult, setVerificationResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  const searchAddress = (text: string) => {
+    setLocation(text);
+    if (addressSearchTimer.current) clearTimeout(addressSearchTimer.current);
+    if (text.length < 3) {
+      setAddressSuggestions([]);
+      return;
+    }
+    addressSearchTimer.current = setTimeout(async () => {
+      setIsSearchingAddress(true);
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(text)}&format=json&addressdetails=1&limit=5&countrycodes=us`,
+          { headers: { 'User-Agent': 'RateDeedMobile/1.0' } }
+        );
+        const data = await response.json();
+        setAddressSuggestions(data);
+      } catch (error) {
+        console.error('Address search error:', error);
+      } finally {
+        setIsSearchingAddress(false);
+      }
+    }, 500);
+  };
+
+  const handleSelectAddress = (item: any) => {
+    setLocation(item.display_name);
+    setAddressSuggestions([]);
+  };
 
   const loadProfile = useCallback(async () => {
     try {

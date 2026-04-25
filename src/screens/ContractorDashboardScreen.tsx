@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   ScrollView,
@@ -208,6 +208,9 @@ const ContractorDashboardScreen: React.FC = () => {
     zipCodes: [] as string[],
   });
   const [profileSaving, setProfileSaving] = useState(false);
+  const [addressSuggestions, setAddressSuggestions] = useState<any[]>([]);
+  const [isSearchingAddress, setIsSearchingAddress] = useState(false);
+  const addressSearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [hours, setHours] = useState<Record<string, { open: string; close: string; isOpen: boolean }>>({});
   const [bannerUrl, setBannerUrl] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
@@ -215,6 +218,35 @@ const ContractorDashboardScreen: React.FC = () => {
 
   const [imageLoading, setImageLoading] = useState(false);
   const contractorId = realContractorId || currentUserId;
+
+  const searchAddress = (text: string) => {
+    setEditableData(p => ({ ...p, address: text }));
+    if (addressSearchTimer.current) clearTimeout(addressSearchTimer.current);
+    if (text.length < 3) {
+      setAddressSuggestions([]);
+      return;
+    }
+    addressSearchTimer.current = setTimeout(async () => {
+      setIsSearchingAddress(true);
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(text)}&format=json&addressdetails=1&limit=5&countrycodes=us`,
+          { headers: { 'User-Agent': 'RateDeedMobile/1.0' } }
+        );
+        const data = await response.json();
+        setAddressSuggestions(data);
+      } catch (error) {
+        console.error('Address search error:', error);
+      } finally {
+        setIsSearchingAddress(false);
+      }
+    }, 500);
+  };
+
+  const handleSelectAddress = (item: any) => {
+    setEditableData(p => ({ ...p, address: item.display_name }));
+    setAddressSuggestions([]);
+  };
 
   const pickFromLibrary = async (): Promise<string | null> => {
     try {
@@ -1449,15 +1481,37 @@ const ContractorDashboardScreen: React.FC = () => {
                     </Pressable>
                   </View>
                 </View>
-                <View>
+                <View className="relative z-50">
                   <Text className="text-xs font-semibold text-neutral-500 mb-1.5">Address</Text>
                   <TextInput
                     value={editableData.address}
-                    onChangeText={t => setEditableData(p => ({ ...p, address: t }))}
-                    placeholder="123 Main St, City, State"
+                    onChangeText={searchAddress}
+                    placeholder="Start typing your address..."
                     placeholderTextColor="#a3a3a3"
                     className="w-full bg-white border border-neutral-200 rounded-xl px-4 py-2.5 text-sm"
                   />
+                  {isSearchingAddress && (
+                    <View className="absolute right-3 top-8">
+                      <ActivityIndicator size="small" color="#4F46E5" />
+                    </View>
+                  )}
+                  {addressSuggestions.length > 0 && (
+                    <View className="absolute top-[60px] left-0 right-0 bg-white border border-neutral-200 rounded-xl shadow-lg overflow-hidden z-50">
+                      {addressSuggestions.map((item: any, index: number) => (
+                        <Pressable
+                          key={index}
+                          onPress={() => handleSelectAddress(item)}
+                          className={`px-4 py-3 border-b border-neutral-100 active:bg-neutral-50 ${
+                            index === addressSuggestions.length - 1 ? 'border-b-0' : ''
+                          }`}
+                        >
+                          <Text className="text-xs text-neutral-900 font-medium" numberOfLines={1}>
+                            {item.display_name}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  )}
                 </View>
               </View>
             )}

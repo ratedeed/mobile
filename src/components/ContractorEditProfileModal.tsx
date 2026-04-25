@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -172,6 +172,9 @@ export default function ContractorEditProfileModal({ visible, onClose, onProfile
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [address, setAddress] = useState('');
+  const [addressSuggestions, setAddressSuggestions] = useState<any[]>([]);
+  const [isSearchingAddress, setIsSearchingAddress] = useState(false);
+  const addressSearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [zipCodes, setZipCodes] = useState<string[]>([]);
   const [zipInput, setZipInput] = useState('');
 
@@ -188,6 +191,35 @@ export default function ContractorEditProfileModal({ visible, onClose, onProfile
   
   const [showTimePicker, setShowTimePicker] = useState<{ day: string; type: 'open' | 'close' } | null>(null);
   const [hours, setHours] = useState<Record<string, { open: string; close: string; isOpen: boolean }>>({});
+
+  const searchAddress = (text: string) => {
+    setAddress(text);
+    if (addressSearchTimer.current) clearTimeout(addressSearchTimer.current);
+    if (text.length < 3) {
+      setAddressSuggestions([]);
+      return;
+    }
+    addressSearchTimer.current = setTimeout(async () => {
+      setIsSearchingAddress(true);
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(text)}&format=json&addressdetails=1&limit=5&countrycodes=us`,
+          { headers: { 'User-Agent': 'RateDeedMobile/1.0' } }
+        );
+        const data = await response.json();
+        setAddressSuggestions(data);
+      } catch (error) {
+        console.error('Address search error:', error);
+      } finally {
+        setIsSearchingAddress(false);
+      }
+    }, 500);
+  };
+
+  const handleSelectAddress = (item: any) => {
+    setAddress(item.display_name);
+    setAddressSuggestions([]);
+  };
 
   const formatPhoneNumber = (value: string): string => {
     if (!value) return value;
@@ -679,13 +711,35 @@ export default function ContractorEditProfileModal({ visible, onClose, onProfile
                         />
                       </View>
 
-                      <View>
+                      <View style={{ position: 'relative', zIndex: 50 }}>
                         <FieldLabel>Business address</FieldLabel>
-                        <RatedeedInput
+                        <TextInput
                           value={address}
-                          onChangeText={setAddress}
-                          placeholder="123 Main St, City, State"
+                          onChangeText={searchAddress}
+                          placeholder="Start typing your address..."
+                          placeholderTextColor="#a3a3a3"
+                          style={{ borderWidth: 1, borderColor: '#e5e5e5', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, backgroundColor: '#fafafa' }}
                         />
+                        {isSearchingAddress && (
+                          <View style={{ position: 'absolute', right: 12, top: 32 }}>
+                            <ActivityIndicator size="small" color="#4F46E5" />
+                          </View>
+                        )}
+                        {addressSuggestions.length > 0 && (
+                          <View style={{ position: 'absolute', top: 58, left: 0, right: 0, backgroundColor: '#fff', borderWidth: 1, borderColor: '#e5e5e5', borderRadius: 10, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 8, elevation: 5, overflow: 'hidden', zIndex: 50 }}>
+                            {addressSuggestions.map((item: any, index: number) => (
+                              <Pressable
+                                key={index}
+                                onPress={() => handleSelectAddress(item)}
+                                style={{ paddingHorizontal: 12, paddingVertical: 10, borderBottomWidth: index === addressSuggestions.length - 1 ? 0 : 1, borderBottomColor: '#f5f5f5' }}
+                              >
+                                <Text style={{ fontSize: 12, color: '#171717', fontWeight: '500' }} numberOfLines={1}>
+                                  {item.display_name}
+                                </Text>
+                              </Pressable>
+                            ))}
+                          </View>
+                        )}
                       </View>
                     </View>
                   )}
