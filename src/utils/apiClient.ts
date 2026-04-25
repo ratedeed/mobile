@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { API_BASE_URL } from '../config';
 import io, { Socket } from 'socket.io-client';
 import { auth as firebaseAuth } from '../firebaseConfig';

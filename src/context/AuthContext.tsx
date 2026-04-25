@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { AuthInfo, UserRole } from '../types';
 import { syncFavoritesWithServer } from '../utils/favoritesStore';
 
@@ -36,9 +37,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const loadStoredAuth = async () => {
     try {
       const storedUserInfo = await AsyncStorage.getItem('userInfo');
+      const secureToken = await SecureStore.getItemAsync('auth_token');
       if (storedUserInfo) {
         const parsed = JSON.parse(storedUserInfo);
-        const token = parsed.token || null;
+        const token = secureToken || parsed.token || null;
         setBackendToken(token);
         
         let decodedId = null;
@@ -78,6 +80,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = useCallback(async () => {
     await AsyncStorage.removeItem('userInfo');
     await AsyncStorage.removeItem('ratedeed-current-user');
+    await SecureStore.deleteItemAsync('auth_token');
+    await SecureStore.deleteItemAsync('refresh_token');
     setBackendToken(null);
     setUserId(null);
     setFirebaseUser(null);
@@ -125,6 +129,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     await AsyncStorage.setItem('userInfo', JSON.stringify(userInfo));
     await AsyncStorage.setItem('ratedeed-current-user', JSON.stringify(userInfo));
+    if (token) await SecureStore.setItemAsync('auth_token', token);
+    if (userInfo.refreshToken) await SecureStore.setItemAsync('refresh_token', userInfo.refreshToken);
     setBackendToken(token);
     setIsEmailVerified(emailVerifiedStatus);
     if (userInfo._id || userInfo.id || decodedId) {
