@@ -219,24 +219,26 @@ const ContractorSignupScreen = () => {
 
       const hours = {};
       Object.entries(businessHours).forEach(([day, val]) => {
-        if (val.isOpen) hours[day] = { start: val.open, end: val.close, isOpen: true };
+        if (val.isOpen) hours[day.toLowerCase()] = { start: val.open, end: val.close };
       });
 
-      await contractorSignup({
+      const payload = {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         email: email.trim().toLowerCase(),
-        companyName: companyName.trim(),
-        category,
-        firebaseUid: userCreated.uid,
-        businessAddress: businessAddress.trim(),
         contactInfo: {
           phoneNumber: phone.trim(),
           email: email.trim().toLowerCase(),
         },
+        companyName: companyName.trim(),
+        category,
         zipCodesCovered: zipCodes,
+        businessAddress: businessAddress.trim(),
         businessHours: hours,
-      });
+        firebaseUid: userCreated.uid,
+      };
+      console.log('SIGNUP PAYLOAD:', JSON.stringify(payload, null, 2));
+      await contractorSignup(payload);
 
       await auth.signOut();
       Alert.alert('Success', 'Registration successful! Please verify your email before signing in.');

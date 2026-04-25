@@ -492,11 +492,13 @@ const ContractorDashboardScreen: React.FC = () => {
           imageUrl: p.imageUrl,
           images: p.images || [p.imageUrl].filter(Boolean),
         })),
-        // Send contactInfo with same field names the web uses and backend schema expects
+        // Send both field name variants for compatibility with old and new backend
         contactInfo: {
           phoneNumber: editableData.phone || undefined,
+          phone: editableData.phone || undefined,
           website: editableData.website || undefined,
           streetAddress: editableData.address || undefined,
+          address: editableData.address || undefined,
         },
         phone: editableData.phone || undefined,
         businessAddress: editableData.address || undefined,
@@ -592,7 +594,7 @@ const ContractorDashboardScreen: React.FC = () => {
               <View className="flex-1 pb-1">
                 <View className="flex-row items-center" style={{ gap: 6 }}>
                   <Text className="text-xl font-bold text-neutral-900">{contractorName || "My Business"}</Text>
-                  <FontAwesome5 name="badge-check" size={16} color="#4F46E5" />
+                  <FontAwesome5 name="check-circle" size={16} color="#4F46E5" />
                 </View>
                 <View className="flex-row items-center mt-1" style={{ gap: 8 }}>
                   <StarRating rating={avgRating} />
@@ -1259,7 +1261,7 @@ const ContractorDashboardScreen: React.FC = () => {
             >
               <View className="flex-row items-center" style={{ gap: 12 }}>
                 <View className="w-10 h-10 rounded-lg bg-indigo-50 items-center justify-center">
-                  <FontAwesome5 name="shield-check" size={16} color="#4F46E5" />
+                  <FontAwesome5 name="shield-alt" size={16} color="#4F46E5" />
                 </View>
                 <View>
                   <Text className="text-sm font-bold text-neutral-900">License Verification</Text>

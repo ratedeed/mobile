@@ -334,7 +334,7 @@ export default function ContractorEditProfileScreen() {
           <View className="flex-1 pb-1">
             <View className="flex-row items-center">
               <Text className="text-sm font-bold text-neutral-900">{companyName || 'Your Business'}</Text>
-              {isVerified && <FontAwesome5 name="shield-check" size={12} color="#4F46E5" solid style={{ marginLeft: 6 }} />}
+              {isVerified && <FontAwesome5 name="shield-alt" size={12} color="#4F46E5" solid style={{ marginLeft: 6 }} />}
             </View>
             <Text className="text-xs text-neutral-500">{category}{location ? ` · ${location}` : ''}</Text>
           </View>
@@ -424,7 +424,7 @@ export default function ContractorEditProfileScreen() {
                         <ActivityIndicator size="small" color="#fff" />
                       ) : (
                         <>
-                          <FontAwesome5 name="shield-check" size={14} color={verifLicenseNumber.trim() && licenseDocUri ? "#fff" : "#a3a3a3"} />
+                          <FontAwesome5 name="shield-alt" size={14} color={verifLicenseNumber.trim() && licenseDocUri ? "#fff" : "#a3a3a3"} />
                           <Text className={`text-sm font-semibold ml-2 ${verifLicenseNumber.trim() && licenseDocUri ? 'text-white' : 'text-neutral-400'}`}>Submit for Verification</Text>
                         </>
                       )}

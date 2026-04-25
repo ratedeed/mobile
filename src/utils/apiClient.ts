@@ -251,7 +251,7 @@ export const forgotPassword = async (email: string): Promise<any> => {
 };
 
 export const contractorSignup = async (data: any): Promise<any> => {
-  return post(`${API_BASE}/contractors/`, data);
+  return post(`${API_BASE}/contractors`, data);
 };
 
 export const backendLoginFirebase = async (idToken: string, email: string): Promise<any> => {
