@@ -79,9 +79,9 @@ const LoginScreen = () => {
         const errorMap = {
           'auth/invalid-email': 'Invalid email address.',
           'auth/user-disabled': 'Your account has been disabled.',
-          'auth/user-not-found': 'The email or password you entered is incorrect.',
-          'auth/wrong-password': 'The email or password you entered is incorrect.',
-          'auth/invalid-credential': 'The email or password you entered is incorrect.',
+          'auth/user-not-found': 'Email or password is wrong',
+          'auth/wrong-password': 'Email or password is wrong',
+          'auth/invalid-credential': 'Email or password is wrong',
           'auth/too-many-requests': 'Too many login attempts. Please try again later.',
         };
         errorMessage = errorMap[error.code] || error.message;

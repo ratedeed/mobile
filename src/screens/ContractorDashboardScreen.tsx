@@ -1496,7 +1496,7 @@ const ContractorDashboardScreen: React.FC = () => {
                     </View>
                   )}
                   {addressSuggestions.length > 0 && (
-                    <View className="absolute top-[60px] left-0 right-0 bg-white border border-neutral-200 rounded-xl shadow-lg overflow-hidden z-50">
+                    <View className="mt-2 bg-white border border-neutral-200 rounded-xl overflow-hidden">
                       {addressSuggestions.map((item: any, index: number) => (
                         <Pressable
                           key={index}
