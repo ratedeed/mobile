@@ -37,6 +37,8 @@ export const getAuthHeaders = async (externalToken?: string): Promise<Record<str
   if (externalToken) {
     return { 'Authorization': `Bearer ${externalToken}` };
   }
+  const secureToken = await SecureStore.getItemAsync('auth_token');
+  if (secureToken) return { 'Authorization': `Bearer ${secureToken}` };
   const userInfo = await AsyncStorage.getItem('userInfo');
   const token = userInfo ? JSON.parse(userInfo).token : null;
   return token ? { 'Authorization': `Bearer ${token}` } : {};
@@ -46,10 +48,13 @@ let isRefreshing = false;
 let refreshPromise: Promise<any> | null = null;
 
 const refreshTokenIfNeeded = async (): Promise<void> => {
-  const userInfo = await AsyncStorage.getItem('userInfo');
-  if (!userInfo) return;
-  const parsed = JSON.parse(userInfo);
-  if (!parsed.refreshToken) return;
+  const refreshToken = await SecureStore.getItemAsync('refresh_token');
+  if (!refreshToken) {
+    const userInfo = await AsyncStorage.getItem('userInfo');
+    if (!userInfo) return;
+    const parsed = JSON.parse(userInfo);
+    if (!parsed.refreshToken) return;
+  }
 
   if (isRefreshing && refreshPromise) {
     await refreshPromise;
@@ -59,14 +64,25 @@ const refreshTokenIfNeeded = async (): Promise<void> => {
   isRefreshing = true;
   refreshPromise = (async () => {
     try {
+      const rt = await SecureStore.getItemAsync('refresh_token') || (() => {
+        const ui = AsyncStorage.getItem('userInfo');
+        return ui ? JSON.parse(ui as any).refreshToken : null;
+      })();
+      if (!rt) return;
       const response = await fetch(`${API_BASE}/users/refresh-token`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refreshToken: parsed.refreshToken }),
+        body: JSON.stringify({ refreshToken: rt }),
       });
       if (response.ok) {
         const data = await response.json();
-        await AsyncStorage.setItem('userInfo', JSON.stringify({ ...parsed, token: data.token, refreshToken: data.refreshToken }));
+        if (data.token) await SecureStore.setItemAsync('auth_token', data.token);
+        if (data.refreshToken) await SecureStore.setItemAsync('refresh_token', data.refreshToken);
+        const userInfo = await AsyncStorage.getItem('userInfo');
+        if (userInfo) {
+          const parsed = JSON.parse(userInfo);
+          await AsyncStorage.setItem('userInfo', JSON.stringify({ ...parsed, token: data.token, refreshToken: data.refreshToken }));
+        }
       }
     } catch {} finally {
       isRefreshing = false;
@@ -757,12 +773,12 @@ export const updateBannerImage = async (imageUrl: string): Promise<User> => {
 
 export const getStripeConnectUrl = async (): Promise<{ url: string }> => {
   const authHeaders = await getAuthHeaders();
-  return get(`${API_BASE}/stripe/connect-url`, authHeaders);
+  return post(`${API_BASE}/stripe/connect`, {}, authHeaders);
 };
 
 export const getStripeAccountStatus = async (): Promise<StripeConnectStatus> => {
   const authHeaders = await getAuthHeaders();
-  return get(`${API_BASE}/stripe/account-status`, authHeaders);
+  return get(`${API_BASE}/stripe/status`, authHeaders);
 };
 
 export const createQuote = async (quoteData: any): Promise<Quote> => {
@@ -865,4 +881,8 @@ export const getCloudinarySignature = async (folder: string): Promise<any> => {
 export const createLead = async (leadData: any): Promise<any> => {
   const authHeaders = await getAuthHeaders();
   return post(`${API_BASE}/leads`, leadData, authHeaders);
+};
+
+export const requestEmailChange = async (newEmail: string, currentPassword: string): Promise<any> => {
+  return post(`${API_BASE}/users/request-email-change`, { newEmail, currentPassword });
 };

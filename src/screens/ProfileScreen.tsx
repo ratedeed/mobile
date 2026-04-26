@@ -105,6 +105,10 @@ const ProfileScreen: React.FC = () => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [pwSaving, setPwSaving] = useState(false);
+  const [emailNew, setEmailNew] = useState("");
+  const [emailPassword, setEmailPassword] = useState("");
+  const [emailSaving, setEmailSaving] = useState(false);
+  const [emailMessage, setEmailMessage] = useState<{type: "success" | "error"; text: string} | null>(null);
   const [pwMessage, setPwMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // FAQ state
@@ -174,6 +178,26 @@ const ProfileScreen: React.FC = () => {
       setEditMessage({ type: 'error', text: err?.message || 'Failed to update.' });
     } finally {
       setSaving(false);
+    }
+  };
+
+  
+  const handleChangeEmail = async () => {
+    setEmailMessage(null);
+    if (!emailNew || !emailPassword) {
+      setEmailMessage({ type: 'error', text: 'New email and current password required.' });
+      return;
+    }
+    setEmailSaving(true);
+    try {
+      const { requestEmailChange } = require('../utils/apiClient');
+      await requestEmailChange(emailNew.trim(), emailPassword);
+      setEmailMessage({ type: 'success', text: 'Verification email sent to ' + emailNew.trim() });
+      setTimeout(() => { setActiveSheet(null); setEmailNew(''); setEmailPassword(''); }, 2000);
+    } catch (err: any) {
+      setEmailMessage({ type: 'error', text: err?.message || 'Failed to request email change.' });
+    } finally {
+      setEmailSaving(false);
     }
   };
 
@@ -400,6 +424,13 @@ const ProfileScreen: React.FC = () => {
             </View>
             <FontAwesome5 name="chevron-right" size={12} color="#a3a3a3" />
           </Pressable>
+          <Pressable onPress={() => { closeSheet(); setTimeout(() => setActiveSheet('change-email'), 300); }} className="flex-row items-center justify-between py-2 mb-2">
+            <View>
+              <Text className="text-sm font-medium text-neutral-900 dark:text-neutral-50">Change Email</Text>
+              <Text className="text-xs text-neutral-500 dark:text-neutral-400">Update your email address</Text>
+            </View>
+            <FontAwesome5 name="chevron-right" size={12} color="#a3a3a3" />
+          </Pressable>
           <Toggle label="Two-Factor Authentication" description="Add an extra layer of security" />
           <Toggle label="Biometric Login" description="Use Face ID or fingerprint to log in" defaultOn />
           <View className="pt-2 border-t border-neutral-100 dark:border-neutral-800 mt-2">
@@ -414,6 +445,34 @@ const ProfileScreen: React.FC = () => {
         </SettingsSheet>
       )}
 
+      
+      {/* Change Email Sheet */}
+      {activeSheet === 'change-email' && (
+        <SettingsSheet title="Change Email" onClose={closeSheet}>
+          {emailMessage && (
+            <View className={`mb-4 px-3 py-2 rounded-lg ${emailMessage.type === 'success' ? 'bg-emerald-50' : 'bg-indigo-50'}`}>
+              <Text className={`text-sm ${emailMessage.type === 'success' ? 'text-emerald-700' : 'text-indigo-700'}`}>{emailMessage.text}</Text>
+            </View>
+          )}
+          <Text className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 mb-1">Current Email</Text>
+          <TextInput value={user?.email} editable={false} className="w-full border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm mb-3 text-neutral-500 bg-neutral-50 dark:bg-neutral-800" />
+          
+          <Text className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 mb-1">New Email</Text>
+          <TextInput value={emailNew} onChangeText={setEmailNew} keyboardType="email-address" autoCapitalize="none" className="w-full border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm mb-3 text-neutral-900 dark:text-neutral-50" placeholderTextColor="#a3a3a3" />
+          
+          <Text className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 mb-1">Current Password</Text>
+          <TextInput value={emailPassword} onChangeText={setEmailPassword} secureTextEntry className="w-full border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm mb-3 text-neutral-900 dark:text-neutral-50" placeholderTextColor="#a3a3a3" />
+          
+          <Pressable onPress={handleChangeEmail} disabled={emailSaving} className="w-full py-3 bg-indigo-600 rounded-xl items-center flex-row justify-center mt-2" style={{ gap: 8 }}>
+            {emailSaving && <ActivityIndicator size="small" color="#fff" />}
+            <Text className="text-sm font-semibold text-white dark:text-neutral-900">{emailSaving ? 'Sending...' : 'Send Verification Email'}</Text>
+          </Pressable>
+          <Text className="text-xs text-neutral-400 text-center mt-3">
+            We'll send a verification link to your new email.
+          </Text>
+        </SettingsSheet>
+      )}
+  
       {/* Change Password Sheet */}
       {activeSheet === 'change-password' && (
         <SettingsSheet title="Change Password" onClose={closeSheet}>

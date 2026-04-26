@@ -26,6 +26,9 @@ import ActiveJobsScreen from '../screens/ActiveJobsScreen';
 import PaymentFlowScreen from '../screens/PaymentFlowScreen';
 import SavedScreen from '../screens/SavedScreen';
 import ReviewScreen from '../screens/ReviewScreen';
+import DisputeScreen from '../screens/DisputeScreen';
+import EarningsScreen from '../screens/EarningsScreen';
+import ChangeOrderScreen from '../screens/ChangeOrderScreen';
 
 import Typography from '../components/common/Typography';
 import { useAuth } from '../context/AuthContext';
@@ -255,6 +258,9 @@ export default function MainNavigator() {
       <Stack.Screen name="ActiveJobs" component={ActiveJobsScreen} options={{ title: '', headerShown: false }} />
       <Stack.Screen name="PaymentFlow" component={PaymentFlowScreen} options={{ title: '', headerShown: false }} />
       <Stack.Screen name="ReviewScreen" component={ReviewScreen} options={{ title: 'Leave a Review' }} />
+      <Stack.Screen name="DisputeScreen" component={DisputeScreen} options={{ title: 'File a Dispute' }} />
+      <Stack.Screen name="EarningsScreen" component={EarningsScreen} options={{ title: 'Earnings', headerShown: false }} />
+      <Stack.Screen name="ChangeOrderScreen" component={ChangeOrderScreen} options={{ title: 'Change Order' }} />
     </Stack.Navigator>
   );
 }

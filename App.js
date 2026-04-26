@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import AnimatedSplashScreen from './src/components/AnimatedSplashScreen';
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AuthNavigator from './src/navigation/AuthNavigator';
@@ -86,6 +87,8 @@ function AppContent() {
 }
 
 function App() {
+  const [splashComplete, setSplashComplete] = React.useState(false);
+
   return (
     <SafeAreaProvider>
       <ErrorBoundary>
@@ -93,6 +96,7 @@ function App() {
           <NotificationsProvider>
             <ContractorProvider>
               <AppContent />
+              {!splashComplete && <AnimatedSplashScreen onComplete={() => setSplashComplete(true)} minDuration={2800} />}
             </ContractorProvider>
           </NotificationsProvider>
         </AuthProvider>

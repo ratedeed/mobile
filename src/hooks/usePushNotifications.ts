@@ -63,9 +63,7 @@ export const usePushNotifications = () => {
   // Effect 2: Save token to backend whenever we have both token and auth
   useEffect(() => {
     if (isAuthenticated && expoPushToken) {
-      savePushToken(expoPushToken).catch(err =>
-      // console.error('Error saving push token to backend:', err)
-      );
+      savePushToken(expoPushToken).catch(() => {});
     }
   }, [isAuthenticated, expoPushToken]);
 

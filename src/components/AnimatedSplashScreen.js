@@ -1,12 +1,17 @@
-import React, { useEffect, useRef } from 'react';
-import { View, Text, Image, Animated, Easing, StyleSheet } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, Animated, Easing, StyleSheet } from 'react-native';
+import * as SplashScreen from 'expo-splash-screen';
+import { FontAwesome5 } from '@expo/vector-icons';
 
 const SPLASH_COLOR = '#ffffff'; 
 const LOGO_COLOR = '#4F46E5'; // Indigo-600
 
-const LoadingScreen = () => {
-  const logoScale = useRef(new Animated.Value(0.3)).current;
-  const logoOpacity = useRef(new Animated.Value(0)).current;
+// Keep the splash screen visible while we fetch resources
+SplashScreen.preventAutoHideAsync().catch(() => {});
+
+const AnimatedSplashScreen = ({ onComplete, minDuration = 2800 }) => {
+  const logoScale = useRef(new Animated.Value(1)).current;
+  const logoOpacity = useRef(new Animated.Value(1)).current;
   const wordmarkOpacity = useRef(new Animated.Value(0)).current;
   const wordmarkY = useRef(new Animated.Value(15)).current;
   
@@ -21,32 +26,31 @@ const LoadingScreen = () => {
   const dot2 = useRef(new Animated.Value(0)).current;
   const dot3 = useRef(new Animated.Value(0)).current;
 
+  const fadeAnim = useRef(new Animated.Value(1)).current; // For the entire overlay
+
   useEffect(() => {
-    // Custom cubic bezier roughly equivalent to Framer Motion's [0.22, 1, 0.36, 1]
+    // Hide the native splash screen immediately, as our identical-looking animated view is now ready.
+    setTimeout(() => {
+      SplashScreen.hideAsync().catch(() => {});
+    }, 50);
+
     const customEasing = Easing.bezier(0.22, 1, 0.36, 1);
 
-    // Logo Animation
-    Animated.parallel([
-      Animated.timing(logoOpacity, {
-        toValue: 1,
-        duration: 700, 
+    // Logo Animation: Do a slight heartbeat pulse since it starts at full size
+    Animated.sequence([
+      Animated.delay(200),
+      Animated.timing(logoScale, {
+        toValue: 1.1,
+        duration: 400,
         useNativeDriver: true,
         easing: Easing.out(Easing.ease),
       }),
-      Animated.sequence([
-        Animated.timing(logoScale, {
-          toValue: 1.08,
-          duration: 700,
-          useNativeDriver: true,
-          easing: customEasing,
-        }),
-        Animated.timing(logoScale, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-          easing: customEasing,
-        })
-      ])
+      Animated.timing(logoScale, {
+        toValue: 1,
+        duration: 400,
+        useNativeDriver: true,
+        easing: customEasing,
+      })
     ]).start();
 
     // Wordmark Animation
@@ -118,6 +122,19 @@ const LoadingScreen = () => {
     animateDot(dot2, 200);
     animateDot(dot3, 400);
 
+    // Fade out entire splash screen at the end
+    const timer = setTimeout(() => {
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 500,
+        useNativeDriver: true,
+        easing: Easing.inOut(Easing.ease),
+      }).start(() => {
+        onComplete();
+      });
+    }, minDuration);
+
+    return () => clearTimeout(timer);
   }, []);
 
   const getDotStyle = (anim) => ({
@@ -128,7 +145,7 @@ const LoadingScreen = () => {
   });
 
   return (
-    <View style={[styles.container, { backgroundColor: SPLASH_COLOR }]}>
+    <Animated.View style={[styles.container, { backgroundColor: SPLASH_COLOR, opacity: fadeAnim }]} pointerEvents="none">
       <View style={styles.logoContainer}>
         {/* Pulse 2 */}
         <Animated.View style={[styles.pulseRing, {
@@ -152,11 +169,7 @@ const LoadingScreen = () => {
           opacity: logoOpacity,
           zIndex: 10,
         }}>
-          <Image 
-            source={require('../../splash-ratedeed.png')} 
-            style={{ width: 100, height: 100 }}
-            resizeMode="contain"
-          />
+          <FontAwesome5 name="hammer" size={110} color={LOGO_COLOR} />
         </Animated.View>
 
         {/* Wordmark */}
@@ -178,15 +191,16 @@ const LoadingScreen = () => {
           <Animated.View style={[styles.dot, getDotStyle(dot3)]} />
         </View>
       </Animated.View>
-    </View>
+    </Animated.View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 99999,
   },
   logoContainer: {
     alignItems: 'center',
@@ -223,4 +237,4 @@ const styles = StyleSheet.create({
   }
 });
 
-export default LoadingScreen;
+export default AnimatedSplashScreen;

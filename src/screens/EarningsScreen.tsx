@@ -82,7 +82,7 @@ export default function EarningsScreen() {
   const loadData = useCallback(async () => {
     try {
       const data = await getContractorEarnings();
-      setEarnings(data);
+      setEarnings(data as any);
     } catch {
       setEarnings(null);
     } finally {
