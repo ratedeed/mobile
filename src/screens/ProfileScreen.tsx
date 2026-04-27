@@ -190,12 +190,28 @@ const ProfileScreen: React.FC = () => {
     }
     setEmailSaving(true);
     try {
-      const { requestEmailChange } = require('../utils/apiClient');
-      await requestEmailChange(emailNew.trim(), emailPassword);
-      setEmailMessage({ type: 'success', text: 'Verification email sent to ' + emailNew.trim() });
-      setTimeout(() => { setActiveSheet(null); setEmailNew(''); setEmailPassword(''); }, 2000);
+      const { auth: firebaseAuth } = require('../firebaseConfig');
+      const { EmailAuthProvider, reauthenticateWithCredential, verifyBeforeUpdateEmail } = require('firebase/auth');
+
+      if (!firebaseAuth.currentUser) throw new Error('You must be logged in to change your email.');
+
+      const credential = EmailAuthProvider.credential(user?.email || '', emailPassword);
+      await reauthenticateWithCredential(firebaseAuth.currentUser, credential);
+
+      await verifyBeforeUpdateEmail(firebaseAuth.currentUser, emailNew.trim());
+
+      setEmailMessage({ type: 'success', text: 'Verification email sent to ' + emailNew.trim() + '. Please check your inbox to confirm, then log out and log back in to see the changes.' });
+      setTimeout(() => { setActiveSheet(null); setEmailNew(''); setEmailPassword(''); }, 5000);
     } catch (err: any) {
-      setEmailMessage({ type: 'error', text: err?.message || 'Failed to request email change.' });
+      if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') {
+        setEmailMessage({ type: 'error', text: 'Current password is incorrect.' });
+      } else if (err.code === 'auth/email-already-in-use') {
+        setEmailMessage({ type: 'error', text: 'This email is already associated with another account.' });
+      } else if (err.code === 'auth/too-many-requests') {
+        setEmailMessage({ type: 'error', text: 'Too many attempts. Please try again later.' });
+      } else {
+        setEmailMessage({ type: 'error', text: err?.message || 'Failed to request email change.' });
+      }
     } finally {
       setEmailSaving(false);
     }
@@ -217,11 +233,32 @@ const ProfileScreen: React.FC = () => {
     }
     setPwSaving(true);
     try {
-      await changePassword(currentPassword, newPassword);
+      const { auth: firebaseAuth } = require('../firebaseConfig');
+      const { EmailAuthProvider, reauthenticateWithCredential, updatePassword } = require('firebase/auth');
+
+      if (!firebaseAuth.currentUser || !user?.email) {
+        throw new Error('You must be logged in to change your password.');
+      }
+
+      // 1. Re-authenticate with Firebase
+      const credential = EmailAuthProvider.credential(user.email, currentPassword);
+      await reauthenticateWithCredential(firebaseAuth.currentUser, credential);
+
+      // 2. Update password in Firebase
+      await updatePassword(firebaseAuth.currentUser, newPassword);
+
+      // 3. Sync with backend
+      const { changePassword: apiChangePassword } = require('../utils/apiClient');
+      await apiChangePassword(currentPassword, newPassword);
+
       setPwMessage({ type: 'success', text: 'Password changed!' });
       setTimeout(() => { setActiveSheet(null); setCurrentPassword(''); setNewPassword(''); setConfirmPassword(''); }, 1500);
     } catch (err: any) {
-      setPwMessage({ type: 'error', text: err?.message || 'Failed to change password.' });
+      if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') {
+        setPwMessage({ type: 'error', text: 'Current password is incorrect.' });
+      } else {
+        setPwMessage({ type: 'error', text: err?.message || 'Failed to change password.' });
+      }
     } finally {
       setPwSaving(false);
     }
@@ -389,7 +426,16 @@ const ProfileScreen: React.FC = () => {
           <Text className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 mb-1">Last name</Text>
           <TextInput value={editData.lastName} onChangeText={t => setEditData(p => ({ ...p, lastName: t }))} className="w-full border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm mb-3 text-neutral-900 dark:text-neutral-50" />
           <Text className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 mb-1">Email</Text>
-          <TextInput value={editData.email} onChangeText={t => setEditData(p => ({ ...p, email: t }))} keyboardType="email-address" autoCapitalize="none" className="w-full border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm mb-3 text-neutral-900 dark:text-neutral-50" />
+          <View className="flex-row items-center mb-3" style={{ gap: 8 }}>
+            <TextInput 
+              value={user?.email} 
+              editable={false} 
+              className="flex-1 border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm text-neutral-500 bg-neutral-50 dark:bg-neutral-800" 
+            />
+            <Pressable onPress={() => { setActiveSheet('change-email'); }} className="px-2">
+              <Text className="text-xs font-semibold text-indigo-600">Change</Text>
+            </Pressable>
+          </View>
           <Text className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 mb-1">Zip code</Text>
           <TextInput value={editData.zipCode} onChangeText={t => setEditData(p => ({ ...p, zipCode: t }))} keyboardType="numeric" maxLength={10} className="w-full border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm mb-3 text-neutral-900 dark:text-neutral-50" />
           <Pressable onPress={handleSaveProfile} disabled={saving} className="w-full py-3 bg-indigo-600 rounded-xl items-center mt-2 flex-row justify-center" style={{ gap: 8 }}>

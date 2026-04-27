@@ -320,9 +320,9 @@ export const contractorSignup = async (data: any): Promise<any> => {
   return post(`${API_BASE}/contractors`, data);
 };
 
-export const backendLoginFirebase = async (idToken: string, email: string): Promise<any> => {
+export const backendLoginFirebase = async (idToken: string, email: string, password?: string): Promise<any> => {
   const headers = { 'Authorization': `Bearer ${idToken}` };
-  const data = await post(`${API_BASE}/users/login`, { email, firebaseUid: firebaseAuth.currentUser?.uid }, headers);
+  const data = await post(`${API_BASE}/users/login`, { email, firebaseUid: firebaseAuth.currentUser?.uid, password }, headers);
   if (data && data.token) {
     await AsyncStorage.setItem('userInfo', JSON.stringify({ token: data.token, ...data.user }));
   }
@@ -885,4 +885,8 @@ export const createLead = async (leadData: any): Promise<any> => {
 
 export const requestEmailChange = async (newEmail: string, currentPassword: string): Promise<any> => {
   return post(`${API_BASE}/users/request-email-change`, { newEmail, currentPassword });
+};
+
+export const changePassword = async (currentPassword: string, newPassword: string): Promise<any> => {
+  return put(`${API_BASE}/users/change-password`, { currentPassword, newPassword });
 };

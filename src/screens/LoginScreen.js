@@ -63,7 +63,7 @@ const LoginScreen = () => {
       const idToken = await reloadedUser.getIdToken();
 
       try {
-        const backendResponse = await backendLoginFirebase(idToken, email);
+        const backendResponse = await backendLoginFirebase(idToken, email, password);
         if (backendResponse?.token) {
           await updateBackendToken(backendResponse.token, backendResponse.emailVerified, backendResponse.user);
           Toast.show({ type: 'success', text1: 'Success', text2: 'Logged in successfully!' });
