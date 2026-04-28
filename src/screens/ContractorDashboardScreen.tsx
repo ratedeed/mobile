@@ -1,3 +1,5 @@
+import { useNavigation } from '@react-navigation/native';
+import * as WebBrowser from 'expo-web-browser';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
@@ -164,6 +166,7 @@ function Sheet({ visible, onClose, title, children }: { visible: boolean; onClos
 // Main Component
 // ================================================================
 const ContractorDashboardScreen: React.FC = () => {
+  const navigation = useNavigation<any>();
   const { userId: currentUserId, updateUser } = useAuth();
   const [realContractorId, setRealContractorId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('posts');
@@ -956,8 +959,15 @@ const ContractorDashboardScreen: React.FC = () => {
                       {!stripeStatus?.chargesEnabled && (
                         <Pressable
                           onPress={async () => {
-                            try { const { url } = await getStripeConnectUrl(); Linking.openURL(url); }
-                            catch { Alert.alert('Error', 'Failed to connect Stripe'); }
+                            try { 
+                              const { url } = await getStripeConnectUrl(); 
+                              const result = await WebBrowser.openAuthSessionAsync(url, 'ratedeed://contractor-dashboard');
+                              if (result.type === 'success' && result.url.includes('stripe_return=true')) {
+                                Alert.alert('Success', 'Stripe account connected successfully!');
+                                // Force a refresh of the profile/status
+                                setTimeout(() => navigation.replace('ContractorDashboard'), 500);
+                              }
+                            } catch (e) { Alert.alert('Error', 'Failed to connect Stripe.'); }
                           }}
                           className="bg-indigo-600 px-3 py-2 rounded-lg"
                         >

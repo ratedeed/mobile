@@ -1,3 +1,6 @@
+import { auth } from '../firebaseConfig';
+import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, verifyBeforeUpdateEmail } from 'firebase/auth';
+import { requestEmailChange, changePassword as apiChangePassword } from '../utils/apiClient';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
@@ -190,15 +193,15 @@ const ProfileScreen: React.FC = () => {
     }
     setEmailSaving(true);
     try {
-      const { auth: firebaseAuth } = require('../firebaseConfig');
+      
       const { EmailAuthProvider, reauthenticateWithCredential, verifyBeforeUpdateEmail } = require('firebase/auth');
 
-      if (!firebaseAuth.currentUser) throw new Error('You must be logged in to change your email.');
+      if (!auth.currentUser) throw new Error('You must be logged in to change your email.');
 
       const credential = EmailAuthProvider.credential(user?.email || '', emailPassword);
-      await reauthenticateWithCredential(firebaseAuth.currentUser, credential);
+      await reauthenticateWithCredential(auth.currentUser, credential);
 
-      await verifyBeforeUpdateEmail(firebaseAuth.currentUser, emailNew.trim());
+      await verifyBeforeUpdateEmail(auth.currentUser, emailNew.trim());
 
       setEmailMessage({ type: 'success', text: 'Verification email sent to ' + emailNew.trim() + '. Please check your inbox to confirm, then log out and log back in to see the changes.' });
       setTimeout(() => { setActiveSheet(null); setEmailNew(''); setEmailPassword(''); }, 5000);
@@ -233,22 +236,22 @@ const ProfileScreen: React.FC = () => {
     }
     setPwSaving(true);
     try {
-      const { auth: firebaseAuth } = require('../firebaseConfig');
+      
       const { EmailAuthProvider, reauthenticateWithCredential, updatePassword } = require('firebase/auth');
 
-      if (!firebaseAuth.currentUser || !user?.email) {
+      if (!auth.currentUser || !user?.email) {
         throw new Error('You must be logged in to change your password.');
       }
 
       // 1. Re-authenticate with Firebase
       const credential = EmailAuthProvider.credential(user.email, currentPassword);
-      await reauthenticateWithCredential(firebaseAuth.currentUser, credential);
+      await reauthenticateWithCredential(auth.currentUser, credential);
 
       // 2. Update password in Firebase
-      await updatePassword(firebaseAuth.currentUser, newPassword);
+      await updatePassword(auth.currentUser, newPassword);
 
       // 3. Sync with backend
-      const { changePassword: apiChangePassword } = require('../utils/apiClient');
+      
       await apiChangePassword(currentPassword, newPassword);
 
       setPwMessage({ type: 'success', text: 'Password changed!' });

@@ -773,7 +773,7 @@ export const updateBannerImage = async (imageUrl: string): Promise<User> => {
 
 export const getStripeConnectUrl = async (): Promise<{ url: string }> => {
   const authHeaders = await getAuthHeaders();
-  return post(`${API_BASE}/stripe/connect`, {}, authHeaders);
+  return post(`${API_BASE}/stripe/connect`, { platform: 'mobile' }, authHeaders);
 };
 
 export const getStripeAccountStatus = async (): Promise<StripeConnectStatus> => {
@@ -803,7 +803,7 @@ export const getUserQuotes = async (): Promise<Quote[]> => {
 
 export const createCheckoutSession = async (quoteId: string): Promise<{ url: string }> => { 
   const authHeaders = await getAuthHeaders(); 
-  return post(`${API_BASE}/jobs/checkout`, { quoteId }, authHeaders); 
+  return post(`${API_BASE}/jobs/checkout`, { quoteId, platform: 'mobile' }, authHeaders); 
 }; 
 
 export const getContractorJobs = async (): Promise<Job[]> => {

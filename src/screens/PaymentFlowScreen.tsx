@@ -24,13 +24,15 @@ export default function PaymentFlowScreen() {
       setPaying(true);
       const { url } = await createCheckoutSession(quoteId);
       
-      await WebBrowser.openBrowserAsync(url, {
-        presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
-        toolbarColor: '#4F46E5',
-        controlsColor: '#FFFFFF',
-      });
+      const result = await WebBrowser.openAuthSessionAsync(url, 'ratedeed://profile');
       
-      setCurrentStep(2);
+      if (result.type === 'success' && result.url.includes('job_funded=true')) {
+        setCurrentStep(2);
+      } else if (result.type === 'success' && result.url.includes('job_canceled=true')) {
+        Alert.alert('Canceled', 'The payment process was canceled.');
+      } else if (result.type === 'cancel') {
+        // User closed the browser manually
+      }
     } catch (err) {
       // console.error(err);
       Alert.alert('Error', 'Failed to initiate secure payment. Please try again.');

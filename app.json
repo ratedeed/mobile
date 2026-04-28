@@ -86,6 +86,7 @@
       ],
       "expo-font",
       "expo-web-browser"
-    ]
+    ],
+    "scheme": "ratedeed"
   }
 }
