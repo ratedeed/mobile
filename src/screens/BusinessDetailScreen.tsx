@@ -389,7 +389,7 @@ const BusinessDetailScreen: React.FC = () => {
               {!!c.isVerified && (
                 <View className="bg-indigo-50 dark:bg-indigo-900/30 rounded-full px-2 py-0.5 flex-row items-center" style={{ gap: 4 }}>
                   <FontAwesome5 name="shield-alt" size={10} color="#4F46E5" />
-                  <Text className="text-[10px] font-bold text-indigo-700 dark:text-indigo-300">License Verified</Text>
+                  <Text className="text-[10px] font-bold text-indigo-700 dark:text-indigo-300">Verified</Text>
                 </View>
               )}
             </View>

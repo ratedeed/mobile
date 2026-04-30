@@ -368,7 +368,11 @@ export default function ContractorEditProfileScreen() {
           <View className="flex-1 pb-1">
             <View className="flex-row items-center">
               <Text className="text-sm font-bold text-neutral-900">{companyName || 'Your Business'}</Text>
-              {isVerified && <FontAwesome5 name="shield-alt" size={12} color="#4F46E5" solid style={{ marginLeft: 6 }} />}
+              {isVerified && (
+                <TouchableOpacity onPress={() => Alert.alert('Verified Pro', 'Identity & License Verified', [{ text: 'OK' }])} style={{ marginLeft: 6 }}>
+                  <FontAwesome5 name="shield-alt" size={12} color="#4F46E5" solid />
+                </TouchableOpacity>
+              )}
             </View>
             <Text className="text-xs text-neutral-500">{category}{location ? ` · ${location}` : ''}</Text>
           </View>

@@ -97,14 +97,14 @@ const ListingCard = ({
             resizeMode="cover"
           />
         ) : null}
-        {/* License Verified Badge */}
+        {/* Verified Badge */}
         {listing.isVerified && (
           <View
             className="absolute top-2 left-2 bg-white dark:bg-neutral-950 rounded-full px-2 py-0.5 shadow-sm flex-row items-center"
             style={{ gap: 4 }}
           >
             <FontAwesome5 name="shield-alt" size={10} color="#4F46E5" />
-            <Text className="text-[10px] font-bold text-neutral-900 dark:text-neutral-50">License Verified</Text>
+            <Text className="text-[10px] font-bold text-neutral-900 dark:text-neutral-50">Verified</Text>
           </View>
         )}
         {/* Favorite Heart */}
@@ -522,7 +522,7 @@ const HomeScreen = () => {
             <View className="w-10 h-1 bg-neutral-300 rounded-full mx-auto mb-5" />
             <Text className="text-lg font-bold text-neutral-900 dark:text-neutral-50 mb-4">Filters</Text>
             <View className="flex-col" style={{ gap: 16 }}>
-              {['License Verified', 'Available This Week', 'Under $10,000', 'Top Rated (4.5+)', 'Has Portfolio'].map(f => (
+              {['Verified', 'Available This Week', 'Under $10,000', 'Top Rated (4.5+)', 'Has Portfolio'].map(f => (
                 <Pressable
                   key={f}
                   className="flex-row items-center"
