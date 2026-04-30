@@ -1,4 +1,6 @@
 import React, { useState, useCallback, useMemo } from 'react';
+import { EmptyState } from "../components/common/EmptyState";
+
 import {
   View,
   Text,
@@ -141,7 +143,7 @@ const SavedScreen = () => {
           <View className="w-16 h-16 bg-neutral-100 dark:bg-neutral-900 rounded-full items-center justify-center mb-4">
             <Heart size={32} color="#d4d4d4" weight="bold" />
           </View>
-          <Text className="text-lg font-bold text-neutral-900 dark:text-neutral-50">No saved contractors</Text>
+          <EmptyState title="No saved contractors" message="Start exploring and save contractors you like." icon="❤️" />
           <Text className="text-sm text-neutral-500 dark:text-neutral-400 mt-1 text-center">
             Start exploring and save contractors you like.
           </Text>

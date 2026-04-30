@@ -1,3 +1,15 @@
+process.on("uncaughtException", (err) => {
+    console.error("UNCAUGHT EXCEPTION! 💥 Shutting down...");
+    console.error(err.name, err.message, err.stack);
+    process.exit(1);
+});
+
+process.on("unhandledRejection", (err) => {
+    console.error("UNHANDLED REJECTION! 💥 Shutting down...");
+    console.error(err.name, err.message, err.stack);
+    process.exit(1);
+});
+
 const express = require('express');
 const path = require('path');
 const cors = require('cors');
@@ -45,7 +57,8 @@ const PORT = process.env.PORT || 5001;
 connectDB();
 
 // JSON + CORS middleware
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(cors({
   origin: function (origin, callback) { callback(null, true); },
   credentials: true

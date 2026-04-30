@@ -191,6 +191,9 @@ contractorSchema.virtual('userDetails').get(function() {
 contractorSchema.set('toJSON', { virtuals: true });
 contractorSchema.set('toObject', { virtuals: true });
 
+contractorSchema.index({ user: 1 });
+contractorSchema.index({ category: 1, zipCode: 1 });
+
 const Contractor = mongoose.model('Contractor', contractorSchema);
 
 module.exports = Contractor;

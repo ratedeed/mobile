@@ -94,8 +94,8 @@ export default function DisputeScreen() {
 
     setSubmitting(true);
     try {
-      const reason = `[${category}] ${description.trim()}${photos.length > 0 ? `\n\nEvidence: ${photos.join(', ')}` : ''}`;
-      await raiseDispute(jobId, reason);
+      const reason = `[${category}] ${description.trim()}`;
+      await raiseDispute(jobId, reason, undefined, photos);
 
       Alert.alert(
         'Dispute Filed',

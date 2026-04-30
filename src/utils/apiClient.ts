@@ -692,7 +692,7 @@ export const fetchContractorReviews = async (contractorId: string): Promise<Revi
   return [];
 };
 
-export const submitReview = async (contractorId: string, reviewData: Partial<Review>): Promise<Review> => {
+export const submitReview = async (contractorId: string, reviewData: Partial<Review> & { jobId: string }): Promise<Review> => {
   const authHeaders = await getAuthHeaders();
   return post(`${API_BASE}/contractors/${contractorId}/reviews`, reviewData, authHeaders);
 };
@@ -821,9 +821,9 @@ export const markJobComplete = async (jobId: string): Promise<any> => {
   return post(`${API_BASE}/jobs/${jobId}/complete`, {}, authHeaders);
 };
 
-export const raiseDispute = async (jobId: string, reason: string, milestoneId?: string): Promise<any> => {
+export const raiseDispute = async (jobId: string, reason: string, milestoneId?: string, evidence?: string[]): Promise<any> => {
   const authHeaders = await getAuthHeaders();
-  return post(`${API_BASE}/jobs/${jobId}/dispute`, { reason, milestoneId }, authHeaders);
+  return post(`${API_BASE}/jobs/${jobId}/dispute`, { reason, milestoneId, evidence }, authHeaders);
 };
 
 export const createChangeOrder = async (jobId: string, data: { title: string; description: string; amount: number }): Promise<any> => {

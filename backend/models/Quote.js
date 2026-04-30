@@ -103,6 +103,11 @@ quoteSchema.pre('save', function(next) {
   next();
 });
 
+quoteSchema.index({ client: 1 });
+quoteSchema.index({ contractor: 1 });
+quoteSchema.index({ contractorUser: 1 });
+quoteSchema.index({ status: 1 });
+
 const Quote = mongoose.model('Quote', quoteSchema);
 
 module.exports = Quote;
