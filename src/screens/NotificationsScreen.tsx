@@ -55,11 +55,11 @@ const NotificationsScreen: React.FC = () => {
       const conversationId = item.link.split('/')[2];
       navigation.navigate('ChatScreen', { conversationId });
     } else if (item.link.startsWith('/leads/')) {
-      navigation.navigate('Main', { screen: 'Dashboard' });
+      navigation.navigate('ContractorDashboard');
     } else if (item.link.startsWith('/quotes/')) {
-      navigation.navigate('Main', { screen: 'Jobs' });
+      navigation.navigate('Jobs');
     } else if (item.link.startsWith('/jobs/')) {
-      navigation.navigate('Main', { screen: 'Jobs' });
+      navigation.navigate('Jobs');
     }
   };
 

@@ -162,7 +162,7 @@ export default function PaymentFlowScreen() {
               <Text style={{ fontSize: 14, fontWeight: 'bold', color: 'white' }}>View My Jobs</Text>
             </Pressable>
 
-            <Pressable onPress={() => navigation.navigate('Home')} style={{ marginTop: 12, paddingVertical: 8 }}>
+            <Pressable onPress={() => navigation.navigate('Explore')} style={{ marginTop: 12, paddingVertical: 8 }}>
               <Text style={{ fontSize: 14, fontWeight: '500', color: '#737373' }}>Back to Home</Text>
             </Pressable>
           </View>

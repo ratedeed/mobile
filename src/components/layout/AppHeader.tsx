@@ -35,11 +35,11 @@ export function AppHeader({
   };
 
   const handleNavigateHome = () => {
-    navigation.navigate('Home' as never);
+    navigation.navigate('Explore' as never);
   };
 
   const handleNavigateSearch = () => {
-    navigation.navigate('Search' as never);
+    navigation.navigate('BusinessSearch' as never);
   };
 
   const handleToggleNotifications = () => {

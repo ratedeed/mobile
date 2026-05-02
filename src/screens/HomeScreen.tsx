@@ -180,6 +180,7 @@ const HomeScreen = () => {
   const [allContractors, setAllContractors] = useState<Contractor[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [activeCategory, setActiveCategory] = useState('all');
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [showFilters, setShowFilters] = useState(false);
@@ -228,10 +229,11 @@ const HomeScreen = () => {
 
   const loadContractors = useCallback(async (zip?: string | null) => {
     setLoading(true);
+    setLoadError(false);
     try {
       const result: any = await browseContractors({ zip: zip || undefined, limit: 50 });
       const list = extractList(result);
-      
+
       if (mountedRef.current) {
         setAllContractors(list);
         
@@ -247,10 +249,10 @@ const HomeScreen = () => {
         }
       }
     } catch (err) {
-      // console.error('Error fetching contractors:', err);
       if (mountedRef.current) {
         setAllContractors([]);
         setNearbyLabel('');
+        setLoadError(true);
       }
     } finally {
       if (mountedRef.current) {
@@ -452,6 +454,14 @@ const HomeScreen = () => {
                   </View>
                 </View>
               ))}
+            </View>
+          ) : loadError ? (
+            <View className="items-center justify-center py-20 px-6">
+              <View className="w-16 h-16 bg-red-50 dark:bg-red-900/20 rounded-full items-center justify-center mb-4">
+                <FontAwesome5 name="exclamation-triangle" size={24} color="#ef4444" />
+              </View>
+              <Text className="text-lg font-bold text-neutral-900 dark:text-neutral-50">Something went wrong</Text>
+              <Text className="text-sm text-neutral-500 dark:text-neutral-400 mt-1 text-center">Could not load contractors. Pull down to retry.</Text>
             </View>
           ) : activeCategory === 'all' ? (
             /* Bunch by Category View */

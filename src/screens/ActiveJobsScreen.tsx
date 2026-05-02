@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { View, Text, Pressable, ScrollView, Image, ActivityIndicator, SafeAreaView, RefreshControl } from 'react-native';
+import { View, Text, Pressable, ScrollView, Image, ActivityIndicator, SafeAreaView, RefreshControl, Alert } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { SvgImage } from '../components/common/SvgImage';
-import { getUserQuotes } from '../utils/apiClient';
+import { getUserQuotes, cancelJob } from '../utils/apiClient';
 import { getProfileImageUrl, isSvgUrl } from '../utils/avatarUtils';
 
 type TabFilter = 'all' | 'active' | 'completed';
@@ -18,6 +18,8 @@ const getStatusBadge = (status: string) => {
   if (s.includes('quote') || s === 'quoted') return { label: 'Quote Ready', color: '#1d4ed8', bg: '#dbeafe' };
   if (s === 'declined') return { label: 'Declined', color: '#6b7280', bg: '#f3f4f6' };
   if (s === 'disputed') return { label: 'Disputed', color: '#be123c', bg: '#ffe4e6' };
+  if (s === 'refunded') return { label: 'Refunded', color: '#c2410c', bg: '#ffedd5' };
+  if (s === 'cancelled') return { label: 'Cancelled', color: '#b91c1c', bg: '#fee2e2' };
   return { label: status.replace('_', ' '), color: '#b45309', bg: '#fef3c7' };
 };
 
@@ -36,13 +38,15 @@ export default function ActiveJobsScreen() {
   const [activeTab, setActiveTab] = useState<TabFilter>('all');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const loadJobs = useCallback(async () => {
     try {
+      setError(null);
       const data = await getUserQuotes();
       setQuotes(data || []);
-    } catch (error) {
-      // console.error('Error loading jobs:', error);
+    } catch {
+      setError('Failed to load jobs. Pull down to retry.');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -58,6 +62,15 @@ export default function ActiveJobsScreen() {
   const onRefresh = () => {
     setRefreshing(true);
     loadJobs();
+  };
+
+  const handleCancel = async (jobId: string) => {
+    try {
+      await cancelJob(jobId);
+      loadJobs();
+    } catch (err: any) {
+      Alert.alert('Error', err?.message || 'Failed to cancel job');
+    }
   };
 
   const filteredQuotes = useMemo(() => {
@@ -114,12 +127,22 @@ export default function ActiveJobsScreen() {
         </View>
       </View>
 
-      <ScrollView 
-        className="flex-1 px-4 pt-2" 
+      <ScrollView
+        className="flex-1 px-4 pt-2"
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#171717" />}
       >
-        {filteredQuotes.length === 0 ? (
+        {error ? (
+          <View className="items-center justify-center py-20 px-6">
+            <View className="w-16 h-16 bg-red-50 dark:bg-red-900/20 rounded-full items-center justify-center mb-4">
+              <FontAwesome5 name="exclamation-triangle" size={24} color="#ef4444" />
+            </View>
+            <Text className="text-sm text-neutral-500 dark:text-neutral-400 text-center">{error}</Text>
+            <Pressable onPress={onRefresh} className="mt-4 bg-neutral-900 dark:bg-neutral-50 px-6 py-2.5 rounded-xl">
+              <Text className="text-white dark:text-neutral-900 font-bold text-sm">Retry</Text>
+            </Pressable>
+          </View>
+        ) : filteredQuotes.length === 0 ? (
           <View className="items-center justify-center py-20 px-6">
             <View className="w-16 h-16 bg-neutral-100 dark:bg-neutral-900 rounded-full items-center justify-center mb-4">
               <FontAwesome5 name="briefcase" size={28} color="#d4d4d4" />
@@ -193,6 +216,40 @@ export default function ActiveJobsScreen() {
                         <Text className="text-xs font-semibold text-amber-600">Leave a Review</Text>
                         <FontAwesome5 name="arrow-right" size={10} color="#d97706" />
                       </Pressable>
+                    )}
+
+                    {(quote.status.toLowerCase() === 'awaiting_payment' || quote.status.toLowerCase() === 'funded_in_progress' || quote.status.toLowerCase() === 'quoted' || quote.status.toLowerCase() === 'pending_user_approval') && (
+                      <Pressable
+                        onPress={() => Alert.alert(
+                          'Cancel Job',
+                          quote.status.toLowerCase() === 'funded_in_progress'
+                            ? 'This will cancel the job and refund your payment from escrow. Continue?'
+                            : 'This will cancel the job. Continue?',
+                          [
+                            { text: 'Keep Job', style: 'cancel' },
+                            { text: 'Cancel Job', style: 'destructive', onPress: () => handleCancel(quote._id) }
+                          ]
+                        )}
+                        className="flex-row items-center mt-3"
+                        style={{ gap: 6 }}
+                      >
+                        <FontAwesome5 name="times-circle" size={12} color="#ef4444" />
+                        <Text className="text-xs font-semibold text-red-500">Cancel Job</Text>
+                      </Pressable>
+                    )}
+
+                    {quote.status.toLowerCase() === 'refunded' && (
+                      <View className="flex-row items-center mt-3" style={{ gap: 6 }}>
+                        <FontAwesome5 name="undo" size={12} color="#c2410c" />
+                        <Text className="text-xs font-semibold text-orange-600">Refund Processed</Text>
+                      </View>
+                    )}
+
+                    {quote.status.toLowerCase() === 'cancelled' && (
+                      <View className="flex-row items-center mt-3" style={{ gap: 6 }}>
+                        <FontAwesome5 name="ban" size={12} color="#b91c1c" />
+                        <Text className="text-xs font-semibold text-red-600">Job Cancelled</Text>
+                      </View>
                     )}
                   </View>
                 </View>

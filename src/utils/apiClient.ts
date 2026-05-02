@@ -83,8 +83,20 @@ const refreshTokenIfNeeded = async (): Promise<void> => {
           const parsed = JSON.parse(userInfo);
           await AsyncStorage.setItem('userInfo', JSON.stringify({ ...parsed, token: data.token, refreshToken: data.refreshToken }));
         }
+      } else {
+        // Refresh token expired/revoked — sign out user
+        await SecureStore.deleteItemAsync('auth_token');
+        await SecureStore.deleteItemAsync('refresh_token');
+        await AsyncStorage.removeItem('userInfo');
+        firebaseAuth.signOut();
       }
-    } catch {} finally {
+    } catch {
+      // Network error during refresh — sign out
+      await SecureStore.deleteItemAsync('auth_token');
+      await SecureStore.deleteItemAsync('refresh_token');
+      await AsyncStorage.removeItem('userInfo');
+      firebaseAuth.signOut();
+    } finally {
       isRefreshing = false;
       refreshPromise = null;
     }
@@ -824,6 +836,16 @@ export const markJobComplete = async (jobId: string): Promise<any> => {
 export const raiseDispute = async (jobId: string, reason: string, milestoneId?: string, evidence?: string[]): Promise<any> => {
   const authHeaders = await getAuthHeaders();
   return post(`${API_BASE}/jobs/${jobId}/dispute`, { reason, milestoneId, evidence }, authHeaders);
+};
+
+export const cancelJob = async (jobId: string, reason?: string): Promise<any> => {
+  const authHeaders = await getAuthHeaders();
+  return post(`${API_BASE}/jobs/${jobId}/cancel`, { reason }, authHeaders);
+};
+
+export const refundJob = async (jobId: string, amount?: number, reason?: string): Promise<any> => {
+  const authHeaders = await getAuthHeaders();
+  return post(`${API_BASE}/jobs/${jobId}/refund`, { amount, reason }, authHeaders);
 };
 
 export const createChangeOrder = async (jobId: string, data: { title: string; description: string; amount: number }): Promise<any> => {

@@ -14,7 +14,7 @@ import {
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Heart, SquaresFour } from 'phosphor-react-native';
+import { Heart, SquaresFour, Warning, Star } from 'phosphor-react-native';
 import { SvgImage } from '../components/common/SvgImage';
 import { browseContractors } from '../utils/apiClient';
 import { Contractor, RootStackParamList } from '../types';
@@ -46,10 +46,12 @@ const SavedScreen = () => {
   const [savedIds, setSavedIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [activeCategory, setActiveCategory] = useState('all');
 
   const loadData = useCallback(async () => {
     try {
+      setLoadError(false);
       const ids = await getFavorites();
       setSavedIds(ids);
       
@@ -72,7 +74,7 @@ const SavedScreen = () => {
 
       setAllContractors(list);
     } catch (error) {
-      // console.error('Error loading saved contractors:', error);
+      setLoadError(true);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -138,7 +140,15 @@ const SavedScreen = () => {
         </Text>
       </View>
 
-      {savedContractors.length === 0 ? (
+      {loadError ? (
+        <View className="flex-1 items-center justify-center px-8">
+          <View className="w-16 h-16 bg-red-50 dark:bg-red-900/20 rounded-full items-center justify-center mb-4">
+            <Warning size={28} color="#ef4444" weight="bold" />
+          </View>
+          <Text className="text-lg font-bold text-neutral-900 dark:text-neutral-50">Something went wrong</Text>
+          <Text className="text-sm text-neutral-500 dark:text-neutral-400 mt-1 text-center">Could not load saved contractors. Pull down to retry.</Text>
+        </View>
+      ) : savedContractors.length === 0 ? (
         <View className="flex-1 items-center justify-center px-8">
           <View className="w-16 h-16 bg-neutral-100 dark:bg-neutral-900 rounded-full items-center justify-center mb-4">
             <Heart size={32} color="#d4d4d4" weight="bold" />
@@ -216,7 +226,7 @@ const SavedScreen = () => {
                         {contractor.companyName || contractor.businessName || 'Company'}
                       </Text>
                       <View className="flex-row items-center mt-0.5" style={{ gap: 4 }}>
-                        <Icon name="star" size={10} color="#eab308" weight="fill" />
+                        <Star size={10} color="#eab308" weight="fill" />
                         <Text className="text-xs font-bold text-slate-600 dark:text-slate-400">{(contractor.averageRating || 0).toFixed(2)}</Text>
                       </View>
                       <Text className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5" numberOfLines={1}>
@@ -233,12 +243,6 @@ const SavedScreen = () => {
       )}
     </View>
   );
-};
-
-// Simple Icon helper for the star since FontAwesome isn't imported here
-const Icon = ({ name, size, color, weight }: any) => {
-  if (name === 'star') return <SquaresFour size={size} color={color} weight={weight} />; // Fallback
-  return null;
 };
 
 export default SavedScreen;

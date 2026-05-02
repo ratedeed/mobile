@@ -104,7 +104,7 @@ export const usePushNotifications = () => {
         navigation.navigate('ChatScreen', { conversationId: data.conversationId });
       } else if (data?.type === 'new_review') {
         // @ts-ignore
-        navigation.navigate('Main', { screen: 'Profile' });
+        navigation.navigate('Profile');
       } else if (data?.type === 'new_lead') {
         // @ts-ignore
         navigation.navigate('ContractorDashboard');

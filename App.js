@@ -27,16 +27,18 @@ const linking = {
     screens: {
       Main: {
         screens: {
-          Home: '',
+          Explore: '',
           Search: 'search',
+          Saved: 'saved',
+          Jobs: 'jobs',
           Messages: 'messages',
           Profile: 'profile',
-          Dashboard: 'dashboard',
         },
       },
       BusinessDetail: 'contractor/:slug',
       ChatScreen: 'chat/:recipientId',
       Notifications: 'notifications',
+      BusinessSearch: 'search',
     },
   },
 };

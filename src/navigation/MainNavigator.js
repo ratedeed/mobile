@@ -261,6 +261,7 @@ export default function MainNavigator() {
       <Stack.Screen name="DisputeScreen" component={DisputeScreen} options={{ title: 'File a Dispute' }} />
       <Stack.Screen name="EarningsScreen" component={EarningsScreen} options={{ title: 'Earnings', headerShown: false }} />
       <Stack.Screen name="ChangeOrderScreen" component={ChangeOrderScreen} options={{ title: 'Change Order' }} />
+      <Stack.Screen name="BusinessSearch" component={BusinessSearchScreen} options={{ title: '', headerShown: false }} />
     </Stack.Navigator>
   );
 }
