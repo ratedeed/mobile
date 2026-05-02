@@ -218,6 +218,8 @@ const ContractorDashboardScreen: React.FC = () => {
   const [bannerUrl, setBannerUrl] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
   const [contractorName, setContractorName] = useState('');
+  const [onboardingComplete, setOnboardingComplete] = useState(true);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
 
   const [imageLoading, setImageLoading] = useState(false);
   const contractorId = realContractorId || currentUserId;
@@ -289,14 +291,7 @@ const ContractorDashboardScreen: React.FC = () => {
 
       const cid = profile._id;
       if (cid) setRealContractorId(cid);
-
-      // Redirect to onboarding wizard if profile is incomplete
-      if (profile.onboardingComplete === false) {
-        navigation.navigate('ContractorOnboarding' as never);
-        setLoading(false);
-        setRefreshing(false);
-        return;
-      }
+      setOnboardingComplete(profile.onboardingComplete === true);
 
       // 2. Now fetch everything else using that REAL ID
       const [postsData, reviewsData, portfolioData, earningsData, leadsData, quotesData, jobsData, stripeData] = await Promise.all([
@@ -577,8 +572,62 @@ const ContractorDashboardScreen: React.FC = () => {
     );
   }
 
+  // Profile completion tracking (Airbnb-style)
+  const completionSteps = [
+    { key: 'photo', done: !!avatarUrl, label: 'Photo' },
+    { key: 'description', done: !!editableData.description, label: 'Description' },
+    { key: 'services', done: editableData.servicesOffered.length > 0, label: 'Services' },
+    { key: 'location', done: editableData.zipCodes.length > 0, label: 'Area' },
+  ];
+  const completedCount = completionSteps.filter(s => s.done).length;
+  const completionPct = Math.round((completedCount / completionSteps.length) * 100);
+  const showBanner = !onboardingComplete && !bannerDismissed && completedCount < completionSteps.length;
+
   return (
     <View className="flex-1 bg-neutral-50">
+      {/* Profile Completion Banner (Airbnb-style) */}
+      {showBanner && (
+        <View className="bg-white border-b border-neutral-100 px-4 py-3">
+          <View className="flex-row items-center justify-between mb-1.5">
+            <Text className="text-[11px] font-bold text-neutral-900">
+              {completionPct}% complete
+            </Text>
+            <Pressable onPress={() => setBannerDismissed(true)} className="p-1">
+              <FontAwesome5 name="times" size={10} color="#a3a3a3" />
+            </Pressable>
+          </View>
+          <View className="h-1.5 bg-neutral-100 rounded-full overflow-hidden mb-2">
+            <View
+              className="h-full bg-neutral-900 rounded-full"
+              style={{ width: `${completionPct}%` }}
+            />
+          </View>
+          <View className="flex-row items-center justify-between">
+            <View className="flex-row flex-wrap" style={{ gap: 8 }}>
+              {completionSteps.map(step => (
+                <View key={step.key} className="flex-row items-center" style={{ gap: 3 }}>
+                  <FontAwesome5
+                    name={step.done ? 'check' : 'circle'}
+                    size={8}
+                    color={step.done ? '#a3a3a3' : '#525252'}
+                    solid={step.done}
+                  />
+                  <Text className={`text-[10px] font-semibold ${step.done ? 'text-neutral-400 line-through' : 'text-neutral-700'}`}>
+                    {step.label}
+                  </Text>
+                </View>
+              ))}
+            </View>
+            <Pressable
+              onPress={() => navigation.navigate('ContractorOnboarding' as never)}
+              className="bg-neutral-900 px-3 py-1.5 rounded-lg"
+            >
+              <Text className="text-[10px] font-bold text-white">Complete</Text>
+            </Pressable>
+          </View>
+        </View>
+      )}
+
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
