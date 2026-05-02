@@ -20,6 +20,7 @@ export const CLOUDINARY_FOLDERS = {
   LICENSES: 'ratedeed/licenses',
   USER_PROFILE: 'ratedeed/user_profile_pictures',
   USER_BANNER: 'ratedeed/user_banner_images',
+  CHAT: 'ratedeed/chat',
 } as const;
 
 /**

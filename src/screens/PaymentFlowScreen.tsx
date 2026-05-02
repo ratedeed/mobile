@@ -10,14 +10,13 @@ const STEP_LABELS = ['Review', 'Payment', 'Confirmed'];
 export default function PaymentFlowScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const quoteId = route.params?.quoteId || '1';
+  const quoteId = route.params?.quoteId || '';
+  const quoteTotal = route.params?.totalAmount || 0;
+  const contractorName = route.params?.contractorName || 'Contractor';
+  const quoteDescription = route.params?.description || '';
 
   const [currentStep, setCurrentStep] = useState(0);
   const [paying, setPaying] = useState(false);
-
-  // Mock data - In a real app, you'd fetch this from the quoteId
-  const quoteTotal = 450;
-  const contractorName = 'Acme Plumbing';
 
   const handlePayment = async () => {
     try {

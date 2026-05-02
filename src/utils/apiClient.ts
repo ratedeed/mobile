@@ -890,3 +890,8 @@ export const requestEmailChange = async (newEmail: string, currentPassword: stri
 export const changePassword = async (currentPassword: string, newPassword: string): Promise<any> => {
   return put(`${API_BASE}/users/change-password`, { currentPassword, newPassword });
 };
+
+export const deleteAccount = async (): Promise<any> => {
+  const authHeaders = await getAuthHeaders();
+  return del(`${API_BASE}/users/profile`, authHeaders);
+};

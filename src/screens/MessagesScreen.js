@@ -281,8 +281,14 @@ const MessagesScreen = () => {
       let attachmentUrl = undefined;
       if (pendingAttachment) {
         setIsUploading(true);
-        // Upload would happen here via apiClient
-        attachmentUrl = "https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg";
+        try {
+          const { uploadToCloudinary, CLOUDINARY_FOLDERS } = require('../utils/cloudinary');
+          attachmentUrl = await uploadToCloudinary(pendingAttachment.uri, CLOUDINARY_FOLDERS.CHAT);
+        } catch (uploadErr) {
+          setIsUploading(false);
+          Alert.alert('Upload Failed', 'Could not upload image. Please try again.');
+          return;
+        }
         setIsUploading(false);
       }
 

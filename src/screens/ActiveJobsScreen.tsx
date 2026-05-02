@@ -147,7 +147,12 @@ export default function ActiveJobsScreen() {
               <Pressable 
                 key={quote._id} 
                 className="bg-white dark:bg-neutral-950 rounded-2xl border border-neutral-100 dark:border-neutral-800 p-4 mb-3 shadow-sm"
-                onPress={() => navigation.navigate('PaymentFlow', { quoteId: quote._id })}
+                onPress={() => navigation.navigate('PaymentFlow', {
+                  quoteId: quote._id,
+                  totalAmount: quote.totalAmount || quote.quoteTotal || 0,
+                  contractorName: quote.contractorId?.companyName || quote.contractorId?.businessName || 'Contractor',
+                  description: quote.description || quote.projectTitle || 'Home Project',
+                })}
               >
                 <View className="flex-row" style={{ gap: 12 }}>
                   <View className="w-12 h-12 rounded-xl bg-neutral-100 dark:bg-neutral-900 items-center justify-center shrink-0 overflow-hidden">

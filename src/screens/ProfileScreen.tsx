@@ -1,6 +1,6 @@
 import { auth } from '../firebaseConfig';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, verifyBeforeUpdateEmail } from 'firebase/auth';
-import { requestEmailChange, changePassword as apiChangePassword } from '../utils/apiClient';
+import { requestEmailChange, changePassword as apiChangePassword, deleteAccount } from '../utils/apiClient';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
@@ -13,6 +13,7 @@ import {
   RefreshControl,
   TextInput,
   SafeAreaView,
+  Linking,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -488,7 +489,23 @@ const ProfileScreen: React.FC = () => {
             <Toggle label="Location Services" description="Allow access to your location for nearby results" defaultOn />
           </View>
           <View className="pt-4 border-t border-neutral-100 dark:border-neutral-800 mt-2">
-            <Pressable><Text className="text-sm font-medium text-indigo-500">Delete Account</Text></Pressable>
+            <Pressable onPress={() => {
+              Alert.alert(
+                'Delete Account',
+                'This will permanently delete your account and all associated data. This cannot be undone.',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  { text: 'Delete', style: 'destructive', onPress: async () => {
+                    try {
+                      await deleteAccount();
+                      await auth.signOut();
+                    } catch {
+                      Alert.alert('Error', 'Failed to delete account. Please try again.');
+                    }
+                  }},
+                ]
+              );
+            }}><Text className="text-sm font-medium text-red-500">Delete Account</Text></Pressable>
             <Text className="text-[11px] text-neutral-400 mt-0.5">Permanently delete your account and all data</Text>
           </View>
         </SettingsSheet>
@@ -582,7 +599,7 @@ const ProfileScreen: React.FC = () => {
           ))}
           <View className="pt-4 border-t border-neutral-100 dark:border-neutral-800 mt-2 items-center">
             <Text className="text-sm text-neutral-500 dark:text-neutral-400 mb-3">Still need help?</Text>
-            <Pressable className="w-full py-3 border border-indigo-600 rounded-xl items-center">
+            <Pressable onPress={() => Linking.openURL('mailto:support@ratedeed.com')} className="w-full py-3 border border-indigo-600 rounded-xl items-center">
               <Text className="text-sm font-semibold text-indigo-600">Contact Support</Text>
             </Pressable>
           </View>
