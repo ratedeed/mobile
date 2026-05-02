@@ -22,6 +22,7 @@ import { fetchContractorDetails, fetchContractorPosts, createLead, fetchContract
 import { API_BASE_URL } from '../config';
 import { getCoverImageUrl, getProfileImageUrl, isSvgUrl } from '../utils/avatarUtils';
 import { isFavorite, addFavorite, removeFavorite } from '../utils/favoritesStore';
+import { VerifiedBadge } from '../components/common/VerifiedBadge';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -388,10 +389,7 @@ const BusinessDetailScreen: React.FC = () => {
                 <Text className="text-sm text-neutral-500 dark:text-neutral-400">({reviewCount} reviews)</Text>
               </View>
               {!!c.isVerified && (
-                <View className="bg-indigo-50 dark:bg-indigo-900/30 rounded-full px-2 py-0.5 flex-row items-center" style={{ gap: 4 }}>
-                  <FontAwesome5 name="shield-alt" size={10} color="#4F46E5" />
-                  <Text className="text-[10px] font-bold text-indigo-700 dark:text-indigo-300">Verified</Text>
-                </View>
+                <VerifiedBadge size="md" />
               )}
             </View>
           </View>
@@ -600,9 +598,8 @@ const BusinessDetailScreen: React.FC = () => {
                           <Image source={{ uri: scCover }} className="w-full h-full" resizeMode="cover" />
                         )}
                         {sc.isVerified && (
-                          <View className="absolute top-1.5 left-1.5 bg-white dark:bg-neutral-800 rounded-full px-1.5 py-0.5 flex-row items-center shadow-sm" style={{ gap: 2 }}>
-                            <FontAwesome5 name="shield-alt" size={6} color="#4F46E5" />
-                            <Text className="text-[8px] font-bold text-neutral-900 dark:text-neutral-100">Verified</Text>
+                          <View className="absolute top-1.5 left-1.5">
+                            <VerifiedBadge size="sm" variant="glass" />
                           </View>
                         )}
                       </View>

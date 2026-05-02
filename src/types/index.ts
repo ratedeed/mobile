@@ -94,6 +94,7 @@ export interface Contractor {
   licenseDocument?: string;
   verificationNotes?: string;
   status?: string;
+  onboardingComplete?: boolean;
   portfolio?: PortfolioItem[];
   posts?: Post[];
   reviewsList?: Review[];

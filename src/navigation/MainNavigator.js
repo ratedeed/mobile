@@ -29,6 +29,7 @@ import ReviewScreen from '../screens/ReviewScreen';
 import DisputeScreen from '../screens/DisputeScreen';
 import EarningsScreen from '../screens/EarningsScreen';
 import ChangeOrderScreen from '../screens/ChangeOrderScreen';
+import ContractorOnboardingScreen from '../screens/ContractorOnboardingScreen';
 
 import Typography from '../components/common/Typography';
 import { useAuth } from '../context/AuthContext';
@@ -252,6 +253,7 @@ export default function MainNavigator() {
       <Stack.Screen name="Main" component={MainTabNavigator} options={{ headerShown: false }} />
       <Stack.Screen name="BusinessDetail" component={BusinessDetailScreen} options={{ title: '' }} />
       <Stack.Screen name="ContractorDashboard" component={ContractorDashboardScreen} options={{ title: '' }} />
+      <Stack.Screen name="ContractorOnboarding" component={ContractorOnboardingScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ContractorEditProfile" component={ContractorEditProfileScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Notifications" component={NotificationsScreen} />
       <Stack.Screen name="ChatScreen" component={MessagesScreen} options={{ title: 'Chat' }} />

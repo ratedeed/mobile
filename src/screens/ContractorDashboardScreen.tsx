@@ -290,6 +290,14 @@ const ContractorDashboardScreen: React.FC = () => {
       const cid = profile._id;
       if (cid) setRealContractorId(cid);
 
+      // Redirect to onboarding wizard if profile is incomplete
+      if (profile.onboardingComplete === false) {
+        navigation.navigate('ContractorOnboarding' as never);
+        setLoading(false);
+        setRefreshing(false);
+        return;
+      }
+
       // 2. Now fetch everything else using that REAL ID
       const [postsData, reviewsData, portfolioData, earningsData, leadsData, quotesData, jobsData, stripeData] = await Promise.all([
         fetchContractorPosts(cid).catch(() => ({ posts: [] })),

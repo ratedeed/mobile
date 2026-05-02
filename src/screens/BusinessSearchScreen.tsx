@@ -20,6 +20,7 @@ import { browseContractors } from '../api';
 import { Contractor } from '../types';
 import { getCoverImageUrl, isSvgUrl } from '../utils/avatarUtils';
 import { getFavorites, addFavorite, removeFavorite } from '../utils/favoritesStore';
+import { VerifiedBadge } from '../components/common/VerifiedBadge';
 
 // Categories matching web version (same as HomeScreen)
 const CATEGORIES = [
@@ -102,9 +103,8 @@ const ListingCard = ({
         ) : null}
 
         {listing.isVerified && (
-          <View className="absolute top-2 left-2 bg-white dark:bg-neutral-950 rounded-full px-2 py-0.5 shadow-sm flex-row items-center" style={{ gap: 4 }}>
-            <FontAwesome5 name="shield-alt" size={10} color="#4F46E5" />
-            <Text className="text-[10px] font-bold text-neutral-900 dark:text-neutral-50">Verified</Text>
+          <View className="absolute top-2 left-2">
+            <VerifiedBadge size="sm" variant="glass" />
           </View>
         )}
         <View className="absolute top-2 right-2">
