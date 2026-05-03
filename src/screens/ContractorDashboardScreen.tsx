@@ -12,6 +12,8 @@ import {
   Image,
   TextInput,
   Linking,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import {
@@ -584,7 +586,7 @@ const ContractorDashboardScreen: React.FC = () => {
   const showBanner = !onboardingComplete && !bannerDismissed && completedCount < completionSteps.length;
 
   return (
-    <View className="flex-1 bg-neutral-50">
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1 bg-neutral-50">
       {/* Profile Completion Banner (Airbnb-style) */}
       {showBanner && (
         <View className="bg-white border-b border-neutral-100 px-4 py-3">
@@ -1755,7 +1757,7 @@ const ContractorDashboardScreen: React.FC = () => {
           </Pressable>
         </View>
       </Sheet>
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 

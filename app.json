@@ -40,7 +40,11 @@
         "image": "./assets/splash.png",
         "resizeMode": "contain",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./icon.png"
@@ -87,6 +91,12 @@
       "expo-font",
       "expo-web-browser"
     ],
-    "scheme": "ratedeed"
+    "scheme": "ratedeed",
+    "extra": {
+      "eas": {
+        "projectId": "db15905a-a695-4ad4-b95a-0f2a762b193b"
+      }
+    },
+    "owner": "ratedeeds-organization"
   }
 }

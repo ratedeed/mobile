@@ -62,6 +62,8 @@ const AnimatedGradientText = ({ text }: { text: string }) => {
   );
 };
 
+let hasShownEscrowBanner = false;
+
 export const EscrowTrustBanner = () => {
   const [visible, setVisible] = useState(false);
   
@@ -158,7 +160,11 @@ export const EscrowTrustBanner = () => {
   }, [slideAnim, opacityAnim, text1Opacity, text1Y, text2Opacity, text2Y, text3Opacity, text3Y, hammerRotate]);
 
   useEffect(() => {
-    const timer = setTimeout(show, 1000);
+    if (hasShownEscrowBanner) return;
+    const timer = setTimeout(() => {
+      show();
+      hasShownEscrowBanner = true;
+    }, 1000);
     return () => clearTimeout(timer);
   }, [show]);
 

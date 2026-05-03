@@ -13,6 +13,8 @@ import {
   RefreshControl,
   TextInput,
   SafeAreaView,
+  KeyboardAvoidingView,
+  Platform,
   Linking,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';

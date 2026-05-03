@@ -17,7 +17,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useColorScheme } from 'nativewind';
 
 Sentry.init({
-  dsn: 'https://placeholder@sentry.io/1234567', // Replace with your actual Sentry DSN
+  dsn: 'https://9551400459289c85e05f957e50a65941@o4511186039603200.ingest.us.sentry.io/4511186048843776',
   debug: false,
 });
 
