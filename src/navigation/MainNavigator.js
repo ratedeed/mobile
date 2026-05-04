@@ -4,7 +4,6 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { Image, View, TouchableOpacity, Text as RNText } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useColorScheme } from 'nativewind';
 import { 
   MagnifyingGlass, 
   Heart, 
@@ -95,8 +94,6 @@ function MainTabNavigator() {
   const insets = useSafeAreaInsets();
   const { userRole } = useAuth();
   const { unreadCount, unreadMessagesCount } = useNotifications();
-  const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
 
   return (
     <Tab.Navigator
@@ -114,12 +111,12 @@ function MainTabNavigator() {
           }
           return null;
         },
-        tabBarActiveTintColor: isDark ? '#FFFFFF' : '#171717',
-        tabBarInactiveTintColor: isDark ? '#A3A3A3' : '#737373',
+        tabBarActiveTintColor: '#171717',
+        tabBarInactiveTintColor: '#737373',
         tabBarStyle: {
-          backgroundColor: isDark ? '#0A0A0A' : '#FFFFFF',
+          backgroundColor: '#FFFFFF',
           borderTopWidth: 1,
-          borderTopColor: isDark ? '#262626' : '#F0F0F0',
+          borderTopColor: '#F0F0F0',
           height: 64 + insets.bottom,
           paddingBottom: insets.bottom + 4,
           paddingTop: 10,
@@ -141,9 +138,9 @@ function MainTabNavigator() {
           title: 'Explore',
           headerShown: true,
           headerStyle: {
-            backgroundColor: isDark ? '#0A0A0A' : '#FFFFFF',
+            backgroundColor: '#FFFFFF',
             borderBottomWidth: 1,
-            borderBottomColor: isDark ? '#262626' : '#E4E4E7',
+            borderBottomColor: '#E4E4E7',
             shadowOpacity: 0,
             elevation: 0,
           },
@@ -153,7 +150,7 @@ function MainTabNavigator() {
                 source={require('../../assets/faviiocon.png')}
                 style={{ width: 28, height: 28, marginRight: 8, borderRadius: 6 }}
               />
-              <Typography variant="h4" style={{ color: isDark ? '#FAFAFA' : '#09090B' }}>Ratedeed</Typography>
+              <Typography variant="h4" style={{ color: '#09090B' }}>Ratedeed</Typography>
             </View>
           ),
           headerTitle: '',
@@ -163,7 +160,7 @@ function MainTabNavigator() {
               onPress={() => navigation.navigate('Notifications')}
             >
               <View>
-                <Bell size={22} color={isDark ? '#FAFAFA' : '#09090B'} />
+                <Bell size={22} color={'#09090B'} />
                 {unreadCount > 0 && (
                   <View 
                     style={{ 
@@ -177,7 +174,7 @@ function MainTabNavigator() {
                       justifyContent: 'center', 
                       alignItems: 'center',
                       borderWidth: 2,
-                      borderColor: isDark ? '#0A0A0A' : '#FFFFFF',
+                      borderColor: '#FFFFFF',
                       paddingHorizontal: 2
                     }}
                   >
@@ -228,23 +225,20 @@ function MainTabNavigator() {
 }
 
 export default function MainNavigator() {
-  const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
-
   const dynamicScreenOptions = {
     headerStyle: {
-      backgroundColor: isDark ? '#0A0A0A' : '#FFFFFF',
+      backgroundColor: '#FFFFFF',
       borderBottomWidth: 1,
-      borderBottomColor: isDark ? '#262626' : '#E4E4E7',
+      borderBottomColor: '#E4E4E7',
       shadowOpacity: 0,
       elevation: 0,
     },
     headerTitleStyle: {
       fontWeight: '600',
       fontSize: 18,
-      color: isDark ? '#FAFAFA' : '#09090B',
+      color: '#09090B',
     },
-    headerTintColor: isDark ? '#6366F1' : '#2563EB',
+    headerTintColor: '#2563EB',
     cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
   };
 

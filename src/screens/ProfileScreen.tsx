@@ -34,7 +34,6 @@ const changePassword = async (currentPassword: string, newPassword: string) => {
 import { useAuth } from '../context/AuthContext';
 import { User } from '../types';
 import { FontAwesome5 } from '@expo/vector-icons';
-import { useColorScheme } from 'nativewind';
 import { SvgImage } from '../components/common/SvgImage';
 import { getProfileImageUrl, isSvgUrl } from '../utils/avatarUtils';
 
@@ -98,7 +97,6 @@ const ProfileScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activeSheet, setActiveSheet] = useState<string | null>(null);
-  const { colorScheme, setColorScheme } = useColorScheme();
 
 
   // Edit profile state
@@ -573,12 +571,6 @@ const ProfileScreen: React.FC = () => {
           </View>
           <Text className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 mb-1">Default Service Area</Text>
           <TextInput defaultValue={user?.zipCode || '10001'} className="w-full border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm mb-3 text-neutral-900 dark:text-neutral-50" />
-          <Toggle 
-            label="Dark Mode" 
-            description="Switch between light and dark themes" 
-            defaultOn={colorScheme === 'dark'}
-            onValueChange={(val) => setColorScheme(val ? 'dark' : 'light')} 
-          />
           <Toggle label="Auto-play Videos" description="Play videos automatically when scrolling" defaultOn />
           <Toggle label="Haptic Feedback" description="Vibrate on button taps and interactions" defaultOn />
           <View className="pt-2 border-t border-neutral-100 dark:border-neutral-800 mt-2">

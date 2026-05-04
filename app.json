@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "icon": "./icon.png",
     "newArchEnabled": true,
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
@@ -17,6 +17,8 @@
       "bundleIdentifier": "com.ratedeed.app",
       "infoPlist": {
         "UIBackgroundModes": [
+          "fetch",
+          "remote-notification",
           "fetch",
           "remote-notification"
         ]
@@ -42,6 +44,8 @@
         "backgroundColor": "#ffffff"
       },
       "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO"
       ]
@@ -97,6 +101,10 @@
         "projectId": "db15905a-a695-4ad4-b95a-0f2a762b193b"
       }
     },
-    "owner": "ratedeeds-organization"
+    "owner": "ratedeeds-organization",
+    "runtimeVersion": "1.0.0",
+    "updates": {
+      "url": "https://u.expo.dev/db15905a-a695-4ad4-b95a-0f2a762b193b"
+    }
   }
 }

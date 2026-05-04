@@ -45,12 +45,17 @@ const linking = {
 
 function AppNavigator() {
   const { isAuthenticated } = useAuth();
-  const { colorScheme } = useColorScheme();
+  const { colorScheme, setColorScheme } = useColorScheme();
+  
+  useEffect(() => {
+    setColorScheme('light');
+  }, [setColorScheme]);
+
   usePushNotifications(); // Initialize push notification listeners inside NavigationContainer
 
   return (
     <>
-      <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+      <StatusBar style="dark" />
       {isAuthenticated ? (
         <>
           <MainNavigator />

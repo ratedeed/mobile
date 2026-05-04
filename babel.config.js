@@ -1,13 +1,15 @@
 module.exports = function (api) {
-  api.cache(true);
+  // Using api.env() automatically configures caching based on the environment.
+  // We cannot use api.cache(true) because the config depends on the environment.
+  const isProd = api.env('production');
   
   const plugins = [];
   
-  if (api.env('production')) {
+  if (isProd) {
     plugins.push('transform-remove-console');
   }
   
-  // react-native-reanimated/plugin MUST be the last plugin
+  // react-native-reanimated/plugin MUST be the absolute last plugin
   plugins.push('react-native-reanimated/plugin');
 
   return {
