@@ -14,6 +14,7 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import HapticFeedback from '../utils/haptics';
 import { SvgImage } from '../components/common/SvgImage';
 import { CategoryIcon } from '../components/common/CategoryIcon';
+import { VerifiedBadge } from '../components/common/VerifiedBadge';
 import { browseContractors } from '../utils/apiClient';
 import { Contractor, RootStackParamList } from '../types';
 import { getCoverImageUrl, isSvgUrl } from '../utils/avatarUtils';
@@ -100,12 +101,8 @@ const ListingCard = ({
         ) : null}
         {/* Verified Badge */}
         {listing.isVerified && (
-          <View
-            className="absolute top-2 left-2 bg-white dark:bg-neutral-950 rounded-full px-2 py-0.5 shadow-sm flex-row items-center"
-            style={{ gap: 4 }}
-          >
-            <FontAwesome5 name="shield-alt" size={10} color="#4F46E5" />
-            <Text className="text-[10px] font-bold text-neutral-900 dark:text-neutral-50">Verified</Text>
+          <View className="absolute top-2 left-2">
+            <VerifiedBadge size="sm" />
           </View>
         )}
         {/* Favorite Heart */}

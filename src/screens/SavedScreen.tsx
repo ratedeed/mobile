@@ -20,6 +20,7 @@ import { browseContractors } from '../utils/apiClient';
 import { Contractor, RootStackParamList } from '../types';
 import { getCoverImageUrl, isSvgUrl } from '../utils/avatarUtils';
 import { getFavorites, removeFavorite } from '../utils/favoritesStore';
+import HapticFeedback from '../utils/haptics';
 
 import { CategoryIcon } from '../components/common/CategoryIcon';
 
@@ -93,6 +94,7 @@ const SavedScreen = () => {
   }, [loadData]);
 
   const handleRemove = async (id: string) => {
+    HapticFeedback.selection();
     await removeFavorite(id);
     setSavedIds(prev => prev.filter(sid => sid !== id));
   };

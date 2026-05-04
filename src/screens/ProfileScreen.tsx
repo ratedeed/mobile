@@ -98,6 +98,7 @@ const ProfileScreen: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [activeSheet, setActiveSheet] = useState<string | null>(null);
   const [ipZipCode, setIpZipCode] = useState<string>('');
+  const [hapticsEnabled, setHapticsEnabled] = useState<boolean>(true);
 
   const fetchIpZipCode = useCallback(async () => {
     try {
@@ -111,7 +112,27 @@ const ProfileScreen: React.FC = () => {
     }
   }, []);
 
-  useFocusEffect(useCallback(() => { loadProfile(); fetchIpZipCode(); }, [loadProfile, fetchIpZipCode]));
+  const loadHapticsSetting = useCallback(async () => {
+    try {
+      const val = await AsyncStorage.getItem('haptics_enabled');
+      if (val !== null) {
+        setHapticsEnabled(val === 'true');
+      }
+    } catch {}
+  }, []);
+
+  const saveHapticsSetting = async (enabled: boolean) => {
+    try {
+      setHapticsEnabled(enabled);
+      await AsyncStorage.setItem('haptics_enabled', enabled.toString());
+    } catch {}
+  };
+
+  useFocusEffect(useCallback(() => { 
+    loadProfile(); 
+    fetchIpZipCode();
+    loadHapticsSetting();
+  }, [loadProfile, fetchIpZipCode, loadHapticsSetting]));
 
   // Edit profile state
   const [editData, setEditData] = useState({ firstName: '', lastName: '', email: '', zipCode: '' });
@@ -582,7 +603,12 @@ const ProfileScreen: React.FC = () => {
           </View>
           <Text className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 mb-1">Default Service Area</Text>
           <TextInput defaultValue={user?.zipCode || ipZipCode} className="w-full border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm mb-3 text-neutral-900 dark:text-neutral-50" />
-          <Toggle label="Haptic Feedback" description="Vibrate on button taps and interactions" defaultOn />
+          <Toggle 
+            label="Haptic Feedback" 
+            description="Vibrate on button taps and interactions" 
+            defaultOn={hapticsEnabled} 
+            onValueChange={saveHapticsSetting}
+          />
           <View className="pt-2 border-t border-neutral-100 dark:border-neutral-800 mt-2">
             <Text className="text-xs text-neutral-400">Version 1.0.0 · Build 2026.04</Text>
           </View>

@@ -372,6 +372,7 @@ const ContractorDashboardScreen: React.FC = () => {
       setStripeStatus(stripeData);
 
       // 3. Standardize and Map Data (Match web version robust mapping)
+      setLicenseStatus(profile.licenseStatus || 'not_submitted');
       const name = profile.companyName || profile.businessName || profile.name || '';
       const cat = profile.category || '';
       const rawBanner = profile.bannerImage || profile.coverImage || (profile as any).bannerUrl || (profile as any).imageUrl || '';
@@ -1431,20 +1432,94 @@ const ContractorDashboardScreen: React.FC = () => {
             </Pressable>
             
             {activeEditSection === 'license' && (
-              <View className="p-4 border-t border-neutral-100 bg-neutral-50/50">
-                <Text className="text-xs font-semibold text-neutral-500 mb-1.5">License Number</Text>
-                <TextInput
-                  value={editableData.licenseNumber}
-                  onChangeText={t => setEditableData(p => ({ ...p, licenseNumber: t }))}
-                  placeholder="e.g. #12345678"
-                  placeholderTextColor="#a3a3a3"
-                  className="w-full bg-white border border-neutral-200 rounded-xl px-4 py-2.5 text-sm mb-4"
-                />
-                <View className="bg-indigo-50 p-3 rounded-lg border border-indigo-100">
-                  <Text className="text-[11px] text-indigo-700 leading-4">
-                    Get verified to display a badge on your profile. Verification usually takes 1-2 business days.
-                  </Text>
-                </View>
+              <View className="p-4 border-t border-neutral-100 bg-neutral-50/50" style={{ gap: 16 }}>
+                {licenseStatus === 'approved' ? (
+                  <View className="bg-emerald-50 rounded-xl p-4 border border-emerald-100 items-center">
+                    <View className="w-12 h-12 rounded-full bg-emerald-100 items-center justify-center mb-3">
+                      <FontAwesome5 name="shield-alt" size={20} color="#059669" solid />
+                    </View>
+                    <Text className="text-sm font-bold text-emerald-900 text-center">Identity & License Verified</Text>
+                    <Text className="text-[11px] text-emerald-700 text-center mt-1">Your business is verified and the badge is visible on your profile.</Text>
+                    <View className="mt-3 bg-white px-3 py-1 rounded-lg border border-emerald-100">
+                      <Text className="text-[11px] font-bold text-emerald-600">LIC: {editableData.licenseNumber}</Text>
+                    </View>
+                  </View>
+                ) : licenseStatus === 'pending' ? (
+                  <View className="bg-amber-50 rounded-xl p-4 border border-amber-100 items-center">
+                    <View className="w-12 h-12 rounded-full bg-amber-100 items-center justify-center mb-3">
+                      <FontAwesome5 name="clock" size={20} color="#d97706" solid />
+                    </View>
+                    <Text className="text-sm font-bold text-amber-900 text-center">Verification Pending</Text>
+                    <Text className="text-[11px] text-amber-700 text-center mt-1">Our team is reviewing your documents. This usually takes 2-3 business days.</Text>
+                  </View>
+                ) : (
+                  <>
+                    {licenseStatus === 'rejected' && (
+                      <View className="bg-red-50 rounded-xl p-4 border border-red-100 mb-2">
+                        <View className="flex-row items-center mb-1">
+                          <FontAwesome5 name="exclamation-circle" size={14} color="#ef4444" />
+                          <Text className="text-sm font-bold text-red-900 ml-2">Verification Denied</Text>
+                        </View>
+                        <Text className="text-[11px] text-red-700">Please review your information and resubmit valid documentation.</Text>
+                      </View>
+                    )}
+                    
+                    <View>
+                      <Text className="text-xs font-semibold text-neutral-500 mb-1.5">License Number</Text>
+                      <TextInput
+                        value={editableData.licenseNumber}
+                        onChangeText={t => setEditableData(p => ({ ...p, licenseNumber: t }))}
+                        placeholder="e.g. #12345678"
+                        placeholderTextColor="#a3a3a3"
+                        className="w-full bg-white border border-neutral-200 rounded-xl px-4 py-2.5 text-sm"
+                      />
+                    </View>
+
+                    <View>
+                      <Text className="text-xs font-semibold text-neutral-500 mb-1.5">License Document (Photo)</Text>
+                      {licenseDocUri ? (
+                        <View className="flex-row items-center bg-indigo-50 p-3 rounded-xl border border-indigo-200">
+                          <FontAwesome5 name="file-image" size={16} color="#4F46E5" />
+                          <Text className="text-xs font-semibold text-indigo-900 ml-2 flex-1 truncate" numberOfLines={1}>Document Attached</Text>
+                          <Pressable onPress={() => setLicenseDocUri(null)} className="p-1">
+                            <FontAwesome5 name="times-circle" size={14} color="#a3a3a3" />
+                          </Pressable>
+                        </View>
+                      ) : (
+                        <Pressable 
+                          onPress={handleLicenseDocSelect}
+                          className="w-full flex-row items-center justify-center py-6 border-2 border-dashed border-neutral-200 rounded-xl bg-white"
+                        >
+                          <FontAwesome5 name="cloud-upload-alt" size={18} color="#737373" />
+                          <Text className="text-sm text-neutral-500 font-medium ml-2">Upload License Photo</Text>
+                        </Pressable>
+                      )}
+                    </View>
+
+                    {verificationResult && (
+                      <View className={`rounded-xl p-3 border ${verificationResult.success ? 'bg-emerald-50 border-emerald-100' : 'bg-red-50 border-red-100'}`}>
+                        <Text className={`text-[11px] font-semibold ${verificationResult.success ? 'text-emerald-800' : 'text-red-800'}`}>{verificationResult.message}</Text>
+                      </View>
+                    )}
+
+                    <Pressable 
+                      onPress={handleSubmitVerification}
+                      disabled={!editableData.licenseNumber.trim() || !licenseDocUri || isSubmittingVerification}
+                      className={`w-full flex-row justify-center py-3.5 rounded-xl items-center ${
+                        editableData.licenseNumber.trim() && licenseDocUri && !isSubmittingVerification ? 'bg-indigo-600' : 'bg-neutral-200'
+                      }`}
+                    >
+                      {isSubmittingVerification ? (
+                        <ActivityIndicator size="small" color="#fff" />
+                      ) : (
+                        <>
+                          <FontAwesome5 name="shield-alt" size={14} color={editableData.licenseNumber.trim() && licenseDocUri ? "#fff" : "#a3a3a3"} />
+                          <Text className={`text-sm font-bold ml-2 ${editableData.licenseNumber.trim() && licenseDocUri ? 'text-white' : 'text-neutral-400'}`}>Submit for Review</Text>
+                        </>
+                      )}
+                    </Pressable>
+                  </>
+                )}
               </View>
             )}
           </View>

@@ -17,6 +17,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getContractorProfile, updateContractorProfile, requestVerification } from '../api';
+import { VerifiedBadge } from '../components/common/VerifiedBadge';
 import { uploadToCloudinary, CLOUDINARY_FOLDERS } from '../utils/cloudinary';
 import { useAuth } from '../context/AuthContext';
 
@@ -370,7 +371,7 @@ export default function ContractorEditProfileScreen() {
               <Text className="text-sm font-bold text-neutral-900">{companyName || 'Your Business'}</Text>
               {isVerified && (
                 <TouchableOpacity onPress={() => Alert.alert('Verified Pro', 'Identity & License Verified', [{ text: 'OK' }])} style={{ marginLeft: 6 }}>
-                  <FontAwesome5 name="shield-alt" size={12} color="#4F46E5" solid />
+                  <VerifiedBadge size={16} animate={false} />
                 </TouchableOpacity>
               )}
             </View>
