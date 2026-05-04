@@ -11,6 +11,7 @@ import {
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { FontAwesome5 } from '@expo/vector-icons';
+import HapticFeedback from '../utils/haptics';
 import { SvgImage } from '../components/common/SvgImage';
 import { CategoryIcon } from '../components/common/CategoryIcon';
 import { browseContractors } from '../utils/apiClient';
@@ -286,6 +287,7 @@ const HomeScreen = () => {
   }, [fetchLocationAndData]);
 
   const toggleFav = async (id: string) => {
+    HapticFeedback.selection();
     const isFav = favorites.has(id);
     if (isFav) {
       await removeFavorite(id);

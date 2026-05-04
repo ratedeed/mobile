@@ -114,6 +114,7 @@ export default function DisputeScreen() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
       className="flex-1 bg-white"
     >
       <ScrollView

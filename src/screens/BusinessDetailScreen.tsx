@@ -17,6 +17,7 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList, Review, Contractor, Post } from '../types';
 import { FontAwesome5 } from '@expo/vector-icons';
+import HapticFeedback from '../utils/haptics';
 import { SvgImage } from '../components/common/SvgImage';
 import { fetchContractorDetails, fetchContractorPosts, createLead, fetchContractorReviews, extractId, browseContractors, getAuthHeaders } from '../api';
 import { API_BASE_URL } from '../config';
@@ -197,6 +198,7 @@ const BusinessDetailScreen: React.FC = () => {
   };
 
   const toggleFavorite = async () => {
+    HapticFeedback.selection();
     const contractorId = contractor?._id || id;
     if (isSaved) {
       await removeFavorite(contractorId);

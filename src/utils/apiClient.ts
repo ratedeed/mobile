@@ -395,9 +395,16 @@ export const updateContractorProfile = async (data: Partial<Contractor>): Promis
   return normalizeApiContractor(result);
 };
 
-export const requestVerification = async (data: { licenseNumber: string; licenseDocumentUrl: string }): Promise<any> => {
+export const requestVerification = async (data: { licenseNumber: string; licenseDocumentUrl?: string; licenseDocumentFile?: string }): Promise<any> => {
   const authHeaders = await getAuthHeaders();
-  return post(`${API_BASE}/contractors/request-verification`, data, authHeaders);
+  
+  // Create a copy of the data and rename url to file if needed to match backend
+  const payload = { ...data };
+  if (payload.licenseDocumentUrl && !payload.licenseDocumentFile) {
+    payload.licenseDocumentFile = payload.licenseDocumentUrl;
+  }
+  
+  return post(`${API_BASE}/contractors/request-verification`, payload, authHeaders);
 };
 
 

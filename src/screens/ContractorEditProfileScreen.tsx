@@ -324,7 +324,7 @@ export default function ContractorEditProfileScreen() {
   };
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1 bg-neutral-50">
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0} className="flex-1 bg-neutral-50">
       {/* Header */}
       <View className="bg-white border-b border-neutral-200 flex-row items-center justify-between px-4" style={{ paddingTop: Math.max(insets.top, 16), paddingBottom: 12, zIndex: 40 }}>
         <TouchableOpacity onPress={() => navigation.goBack()} className="w-8 h-8 items-center justify-center rounded-full bg-neutral-100">

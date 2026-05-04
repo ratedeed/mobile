@@ -207,7 +207,8 @@ export default function ContractorOnboardingScreen() {
 
       {/* Content */}
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
         className="flex-1"
       >
         <ScrollView className="flex-1 px-6" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">

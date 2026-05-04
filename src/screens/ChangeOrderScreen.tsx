@@ -78,12 +78,13 @@ export default function ChangeOrderScreen() {
     parseFloat(amount) > 0;
 
   const isCreate = mode === 'create';
-
-  return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      className="flex-1 bg-white"
-    >
+return (
+  <KeyboardAvoidingView
+    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+    className="flex-1 bg-white"
+  >
+    <ScrollView
       {/* Header */}
       <View className="border-b border-neutral-200 px-4 py-3 flex-row items-center">
         <Pressable

@@ -334,7 +334,7 @@ const MessagesScreen = () => {
   const showChatView = selectedConversation || route.name === 'ChatScreen';
 
   return (
-    <KeyboardAvoidingView className="flex-1 bg-white dark:bg-neutral-950" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView className="flex-1 bg-white dark:bg-neutral-950" behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}>
       <View className="flex-1" style={{ paddingTop: insets.top }}>
         {!showChatView ? (
           <View className="flex-1">

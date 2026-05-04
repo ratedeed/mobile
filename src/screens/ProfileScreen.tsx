@@ -97,7 +97,21 @@ const ProfileScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activeSheet, setActiveSheet] = useState<string | null>(null);
+  const [ipZipCode, setIpZipCode] = useState<string>('');
 
+  const fetchIpZipCode = useCallback(async () => {
+    try {
+      const response = await fetch('https://free.freeipapi.com/api/json');
+      const data = await response.json();
+      if (data.zipCode) {
+        setIpZipCode(data.zipCode);
+      }
+    } catch (error) {
+      console.log('Failed to fetch IP zip code:', error);
+    }
+  }, []);
+
+  useFocusEffect(useCallback(() => { loadProfile(); fetchIpZipCode(); }, [loadProfile, fetchIpZipCode]));
 
   // Edit profile state
   const [editData, setEditData] = useState({ firstName: '', lastName: '', email: '', zipCode: '' });
@@ -481,11 +495,8 @@ const ProfileScreen: React.FC = () => {
             </View>
             <FontAwesome5 name="chevron-right" size={12} color="#a3a3a3" />
           </Pressable>
-          <Toggle label="Two-Factor Authentication" description="Add an extra layer of security" />
-          <Toggle label="Biometric Login" description="Use Face ID or fingerprint to log in" defaultOn />
           <View className="pt-2 border-t border-neutral-100 dark:border-neutral-800 mt-2">
             <Text className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-2">Data & Privacy</Text>
-            <Toggle label="Share Usage Data" description="Help us improve with anonymous usage data" defaultOn />
             <Toggle label="Location Services" description="Allow access to your location for nearby results" defaultOn />
           </View>
           <View className="pt-4 border-t border-neutral-100 dark:border-neutral-800 mt-2">
@@ -570,8 +581,7 @@ const ProfileScreen: React.FC = () => {
             <FontAwesome5 name="chevron-down" size={12} color="#a3a3a3" />
           </View>
           <Text className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 mb-1">Default Service Area</Text>
-          <TextInput defaultValue={user?.zipCode || '10001'} className="w-full border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm mb-3 text-neutral-900 dark:text-neutral-50" />
-          <Toggle label="Auto-play Videos" description="Play videos automatically when scrolling" defaultOn />
+          <TextInput defaultValue={user?.zipCode || ipZipCode} className="w-full border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm mb-3 text-neutral-900 dark:text-neutral-50" />
           <Toggle label="Haptic Feedback" description="Vibrate on button taps and interactions" defaultOn />
           <View className="pt-2 border-t border-neutral-100 dark:border-neutral-800 mt-2">
             <Text className="text-xs text-neutral-400">Version 1.0.0 · Build 2026.04</Text>

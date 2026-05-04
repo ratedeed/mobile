@@ -30,6 +30,7 @@ import {
   getStripeAccountStatus,
   fetchContractorReviews,
   updateContractorProfile, getContractorProfile,
+  requestVerification,
   getContractorDetails,
   get,
   getAuthHeaders,
@@ -37,6 +38,7 @@ import {
 } from '../api';
 import * as ImagePicker from 'expo-image-picker';
 import { API_BASE_URL } from '../config';
+import { uploadToCloudinary, CLOUDINARY_FOLDERS } from '../utils/cloudinary';
 import { getCoverImageUrl, getProfileImageUrl, isSvgUrl } from '../utils/avatarUtils';
 import { SvgImage } from '../components/common/SvgImage';
 import { useAuth } from '../context/AuthContext';
@@ -200,6 +202,10 @@ const ContractorDashboardScreen: React.FC = () => {
   const [portfolioItem, setPortfolioItem] = useState({ name: '', description: '', imageUrl: '' });
   const [portfolioSubmitting, setPortfolioSubmitting] = useState(false);
 
+  const [licenseDocUri, setLicenseDocUri] = useState<string | null>(null);
+  const [isSubmittingVerification, setIsSubmittingVerification] = useState(false);
+  const [verificationResult, setVerificationResult] = useState<{ success: boolean; message: string } | null>(null);
+
   const [editableData, setEditableData] = useState({
     description: "",
     pricing: "",
@@ -220,6 +226,7 @@ const ContractorDashboardScreen: React.FC = () => {
   const [bannerUrl, setBannerUrl] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
   const [contractorName, setContractorName] = useState('');
+  const [licenseStatus, setLicenseStatus] = useState<string>('not_submitted');
   const [onboardingComplete, setOnboardingComplete] = useState(true);
   const [bannerDismissed, setBannerDismissed] = useState(false);
 
@@ -253,6 +260,57 @@ const ContractorDashboardScreen: React.FC = () => {
   const handleSelectAddress = (item: any) => {
     setEditableData(p => ({ ...p, address: item.display_name }));
     setAddressSuggestions([]);
+  };
+
+  const handleLicenseDocSelect = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.7,
+      });
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setLicenseDocUri(result.assets[0].uri);
+      }
+    } catch (err) {
+      console.log('Failed to pick license doc:', err);
+    }
+  };
+
+  const handleSubmitVerification = async () => {
+    if (!editableData.licenseNumber.trim() || !licenseDocUri) {
+      Alert.alert('Error', 'Please provide both license number and a photo of your license.');
+      return;
+    }
+    setIsSubmittingVerification(true);
+    setVerificationResult(null);
+
+    try {
+      const uploadedDocUrl = await uploadToCloudinary(licenseDocUri, CLOUDINARY_FOLDERS.LICENSES);
+      await requestVerification({
+        licenseNumber: editableData.licenseNumber.trim(),
+        licenseDocumentUrl: uploadedDocUrl,
+      });
+      setVerificationResult({
+        success: true,
+        message: 'Verification request submitted! We will review it within 2-3 business days.',
+      });
+      setLicenseDocUri(null);
+      // Refresh contractor data
+      const refreshedProfile = await getContractorProfile();
+      if (refreshedProfile) {
+        setEditableData(prev => ({
+          ...prev,
+          licenseNumber: refreshedProfile.licenseNumber || '',
+        }));
+      }
+    } catch (err: any) {
+      setVerificationResult({
+        success: false,
+        message: err?.message || 'Failed to submit verification request.',
+      });
+    } finally {
+      setIsSubmittingVerification(false);
+    }
   };
 
   const pickFromLibrary = async (): Promise<string | null> => {
@@ -586,7 +644,7 @@ const ContractorDashboardScreen: React.FC = () => {
   const showBanner = !onboardingComplete && !bannerDismissed && completedCount < completionSteps.length;
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1 bg-neutral-50">
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0} className="flex-1 bg-neutral-50">
       {/* Profile Completion Banner (Airbnb-style) */}
       {showBanner && (
         <View className="bg-white border-b border-neutral-100 px-4 py-3">
