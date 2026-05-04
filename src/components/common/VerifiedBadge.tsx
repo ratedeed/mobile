@@ -213,8 +213,9 @@ export const VerifiedBadge = memo(({
           
           <AnimatedG animatedProps={textProps}>
             <SvgText
-              fontSize={5.8}
-              fill={'url(#gold-dark-' + uid + ')'}
+              fontSize={6.4}
+              fontWeight='bold'
+              fill='#4A3100'
               fontFamily='Georgia'
               textAnchor='middle'
             >
@@ -228,13 +229,19 @@ export const VerifiedBadge = memo(({
           </AnimatedG>
 
           <AnimatedG animatedProps={col1Props}>
-            <Rect x={35} y={48.5} width={4.5} height={13.5} fill={'url(#gold-col-' + uid + ')'} />
+            <Rect x={35} y={49.5} width={4.5} height={11.5} fill={'url(#gold-col-' + uid + ')'} />
+            <Polygon points='34,48.5 40.5,48.5 39.5,49.5 35,49.5' fill={'url(#gold-grad-' + uid + ')'} />
+            <Polygon points='35,61 39.5,61 40.5,62 34,62' fill={'url(#gold-grad-' + uid + ')'} />
           </AnimatedG>
           <AnimatedG animatedProps={col2Props}>
-            <Rect x={47.75} y={48.5} width={4.5} height={13.5} fill={'url(#gold-col-' + uid + ')'} />
+            <Rect x={47.75} y={49.5} width={4.5} height={11.5} fill={'url(#gold-col-' + uid + ')'} />
+            <Polygon points='46.75,48.5 53.25,48.5 52.25,49.5 47.75,49.5' fill={'url(#gold-grad-' + uid + ')'} />
+            <Polygon points='47.75,61 52.25,61 53.25,62 46.75,62' fill={'url(#gold-grad-' + uid + ')'} />
           </AnimatedG>
           <AnimatedG animatedProps={col3Props}>
-            <Rect x={60.5} y={48.5} width={4.5} height={13.5} fill={'url(#gold-col-' + uid + ')'} />
+            <Rect x={60.5} y={49.5} width={4.5} height={11.5} fill={'url(#gold-col-' + uid + ')'} />
+            <Polygon points='59.5,48.5 66,48.5 65,49.5 60.5,49.5' fill={'url(#gold-grad-' + uid + ')'} />
+            <Polygon points='60.5,61 65,61 66,62 59.5,62' fill={'url(#gold-grad-' + uid + ')'} />
           </AnimatedG>
 
           <AnimatedG animatedProps={roofProps}>

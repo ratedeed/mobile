@@ -17,17 +17,28 @@ const firebaseConfig = {
   appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Initialize Firebase App:
-// Checks if a Firebase app instance already exists to prevent re-initialization
-// errors, which can occur in development with hot reloading.
-const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+let app;
+let auth;
 
-// Initialize Firebase Authentication:
-// Configures Firebase Auth to use React Native's AsyncStorage for persistence.
-// This ensures user sessions are maintained across app restarts.
-const auth = initializeAuth(app, {
-  persistence: getReactNativePersistence(AsyncStorage),
-});
+try {
+  // Initialize Firebase App:
+  // Checks if a Firebase app instance already exists to prevent re-initialization
+  // errors, which can occur in development with hot reloading.
+  app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+
+  // Initialize Firebase Authentication:
+  // Configures Firebase Auth to use React Native's AsyncStorage for persistence.
+  // This ensures user sessions are maintained across app restarts.
+  auth = initializeAuth(app, {
+    persistence: getReactNativePersistence(AsyncStorage),
+  });
+} catch (error) {
+  console.error("Firebase initialization error. Are your EXPO_PUBLIC_ variables set in EAS secrets?", error);
+  // Provide empty fallback objects so the JS bundle doesn't instantly crash on load (causing a white screen).
+  // The app will mount and ErrorBoundary can catch subsequent errors.
+  app = {};
+  auth = {};
+}
 
 // Export initialized Firebase services for use throughout the application.
 // Add other services (e.g., getFirestore, getStorage) here as needed.
