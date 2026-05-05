@@ -4,7 +4,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { SvgImage } from '../components/common/SvgImage';
-import { getUserQuotes, cancelJob } from '../utils/apiClient';
+import { getUserQuotes, cancelJob, resolveDispute, updateQuoteStatus } from '../utils/apiClient';
 import { getProfileImageUrl, isSvgUrl } from '../utils/avatarUtils';
 
 type TabFilter = 'all' | 'active' | 'completed';
@@ -62,6 +62,36 @@ export default function ActiveJobsScreen() {
   const onRefresh = () => {
     setRefreshing(true);
     loadJobs();
+  };
+
+  const handleAcceptQuote = async (quoteId: string) => {
+    try {
+      await updateQuoteStatus(quoteId, 'accepted');
+      loadJobs();
+    } catch (err: any) {
+      Alert.alert('Error', err?.message || 'Failed to accept quote.');
+    }
+  };
+
+  const handleRejectQuote = async (quoteId: string) => {
+    try {
+      await updateQuoteStatus(quoteId, 'rejected');
+      loadJobs();
+    } catch (err: any) {
+      Alert.alert('Error', err?.message || 'Failed to decline quote.');
+    }
+  };
+
+  const handleResolveDispute = async (jobId: string, action: 'resume_job' | 'refund') => {
+    try {
+      await resolveDispute(jobId, action);
+      const actionLabel = action === 'refund' ? 'refund issued' : 'job resumed';
+      Alert.alert('Dispute Resolved', `The dispute has been resolved and ${actionLabel}.`, [
+        { text: 'OK', onPress: () => loadJobs() },
+      ]);
+    } catch (err: any) {
+      Alert.alert('Error', err?.message || 'Failed to resolve dispute.');
+    }
   };
 
   const handleCancel = async (jobId: string) => {
@@ -216,6 +246,69 @@ export default function ActiveJobsScreen() {
                         <Text className="text-xs font-semibold text-amber-600">Leave a Review</Text>
                         <FontAwesome5 name="arrow-right" size={10} color="#d97706" />
                       </Pressable>
+                    )}
+
+                    {quote.status.toLowerCase() === 'pending_user_approval' && !quote.jobId && (
+                      <View className="flex-row mt-3" style={{ gap: 8 }}>
+                        <Pressable
+                          onPress={() => handleAcceptQuote(quote._id)}
+                          className="flex-1 py-2 rounded-lg bg-emerald-600 flex-row items-center justify-center"
+                          style={{ gap: 4 }}
+                        >
+                          <FontAwesome5 name="check" size={10} color="#fff" />
+                          <Text className="text-xs font-bold text-white">Accept Quote</Text>
+                        </Pressable>
+                        <Pressable
+                          onPress={() => Alert.alert(
+                            'Decline Quote',
+                            'Are you sure you want to decline this quote?',
+                            [
+                              { text: 'Cancel', style: 'cancel' },
+                              { text: 'Decline', style: 'destructive', onPress: () => handleRejectQuote(quote._id) },
+                            ]
+                          )}
+                          className="flex-1 py-2 rounded-lg bg-white border border-neutral-300 flex-row items-center justify-center"
+                          style={{ gap: 4 }}
+                        >
+                          <FontAwesome5 name="times" size={10} color="#737373" />
+                          <Text className="text-xs font-bold text-neutral-600">Decline</Text>
+                        </Pressable>
+                      </View>
+                    )}
+
+                    {quote.status.toLowerCase() === 'disputed' && (
+                      <View className="mt-3 bg-red-50 border border-red-100 rounded-xl p-3" style={{ gap: 8 }}>
+                        <Text className="text-xs font-semibold text-red-800">Resolve Dispute</Text>
+                        <Text className="text-xs text-red-600 leading-4">Choose how to resolve this dispute.</Text>
+                        <View className="flex-row" style={{ gap: 8 }}>
+                          <Pressable
+                            onPress={() => Alert.alert(
+                              'Resume Job',
+                              'Release the escrowed funds to the contractor and mark the job as complete?',
+                              [
+                                { text: 'Cancel', style: 'cancel' },
+                                { text: 'Resume', onPress: () => handleResolveDispute(quote._id, 'resume_job') },
+                              ]
+                            )}
+                            className="flex-1 py-2 rounded-lg bg-white border border-red-200 items-center"
+                          >
+                            <Text className="text-xs font-semibold text-red-700">Resume Job</Text>
+                          </Pressable>
+                          <Pressable
+                            onPress={() => Alert.alert(
+                              'Issue Refund',
+                              'Refund the escrowed payment back to you?',
+                              [
+                                { text: 'Cancel', style: 'cancel' },
+                                { text: 'Refund', style: 'destructive', onPress: () => handleResolveDispute(quote._id, 'refund') },
+                              ]
+                            )}
+                            className="flex-1 py-2 rounded-lg bg-red-600 items-center"
+                          >
+                            <Text className="text-xs font-semibold text-white">Issue Refund</Text>
+                          </Pressable>
+                        </View>
+                      </View>
                     )}
 
                     {(quote.status.toLowerCase() === 'awaiting_payment' || quote.status.toLowerCase() === 'funded_in_progress' || quote.status.toLowerCase() === 'quoted' || quote.status.toLowerCase() === 'pending_user_approval') && (

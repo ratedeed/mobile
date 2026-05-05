@@ -29,6 +29,8 @@ import DisputeScreen from '../screens/DisputeScreen';
 import EarningsScreen from '../screens/EarningsScreen';
 import ChangeOrderScreen from '../screens/ChangeOrderScreen';
 import ContractorOnboardingScreen from '../screens/ContractorOnboardingScreen';
+import QuoteReviewScreen from '../screens/QuoteReviewScreen';
+import VerifyEmailChangeScreen from '../screens/VerifyEmailChangeScreen';
 
 import Typography from '../components/common/Typography';
 import { useAuth } from '../context/AuthContext';
@@ -258,6 +260,8 @@ export default function MainNavigator() {
       <Stack.Screen name="EarningsScreen" component={EarningsScreen} options={{ title: 'Earnings', headerShown: false }} />
       <Stack.Screen name="ChangeOrderScreen" component={ChangeOrderScreen} options={{ title: 'Change Order' }} />
       <Stack.Screen name="BusinessSearch" component={BusinessSearchScreen} options={{ title: '', headerShown: false }} />
+      <Stack.Screen name="QuoteReview" component={QuoteReviewScreen} options={{ title: 'Review Quote' }} />
+      <Stack.Screen name="VerifyEmailChange" component={VerifyEmailChangeScreen} options={{ title: 'Verify Email', headerShown: false }} />
     </Stack.Navigator>
   );
 }

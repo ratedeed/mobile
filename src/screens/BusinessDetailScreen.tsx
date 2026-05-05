@@ -19,8 +19,10 @@ import { RootStackParamList, Review, Contractor, Post } from '../types';
 import { FontAwesome5 } from '@expo/vector-icons';
 import HapticFeedback from '../utils/haptics';
 import { SvgImage } from '../components/common/SvgImage';
-import { fetchContractorDetails, fetchContractorPosts, createLead, fetchContractorReviews, extractId, browseContractors, post as apiPost } from '../api';
+import * as ImagePicker from 'expo-image-picker';
+import { fetchContractorDetails, fetchContractorPosts, createLead, fetchContractorReviews, extractId, browseContractors, post as apiPost, submitClaim } from '../api';
 import { API_BASE_URL } from '../config';
+import { uploadToCloudinary, CLOUDINARY_FOLDERS } from '../utils/cloudinary';
 import { getCoverImageUrl, getProfileImageUrl, isSvgUrl } from '../utils/avatarUtils';
 import { isFavorite, addFavorite, removeFavorite } from '../utils/favoritesStore';
 import { VerifiedBadge } from '../components/common/VerifiedBadge';
@@ -74,6 +76,49 @@ const BusinessDetailScreen: React.FC = () => {
   const [quoteContactPreference, setQuoteContactPreference] = useState('email');
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [similarContractors, setSimilarContractors] = useState<Contractor[]>([]);
+  const [showClaimModal, setShowClaimModal] = useState(false);
+  const [claimDocumentUploading, setClaimDocumentUploading] = useState(false);
+  const [claimDocumentFile, setClaimDocumentFile] = useState<string | null>(null);
+  const [claimSubmitting, setClaimSubmitting] = useState(false);
+  const [claimError, setClaimError] = useState<string | null>(null);
+
+  const handleClaimDocumentPick = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        quality: 0.8,
+        allowsMultipleSelection: false,
+      });
+      if (result.canceled || !result.assets?.length) return;
+      setClaimDocumentUploading(true);
+      const uri = result.assets[0].uri;
+      const uploadedUrl = await uploadToCloudinary(uri, CLOUDINARY_FOLDERS.LICENSES);
+      setClaimDocumentFile(uploadedUrl);
+    } catch (err: any) {
+      Alert.alert('Error', err?.message || 'Failed to upload document');
+    } finally {
+      setClaimDocumentUploading(false);
+    }
+  };
+
+  const handleSubmitClaim = async () => {
+    if (!claimDocumentFile) {
+      Alert.alert('Required', 'Please upload a verification document.');
+      return;
+    }
+    setClaimSubmitting(true);
+    setClaimError(null);
+    try {
+      await submitClaim(id, claimDocumentFile);
+      Alert.alert('Claim Submitted', 'Your claim request has been submitted. Our team will review it within 1-3 business days.');
+      setShowClaimModal(false);
+      setClaimDocumentFile(null);
+    } catch (err: any) {
+      setClaimError(err?.message || 'Failed to submit claim.');
+    } finally {
+      setClaimSubmitting(false);
+    }
+  };
 
   const loadContractorDetails = async () => {
     try {
@@ -368,6 +413,14 @@ const BusinessDetailScreen: React.FC = () => {
               >
                 <FontAwesome5 name="flag" size={14} color="#737373" />
               </Pressable>
+              {(!(contractor?.isVerified) && !contractor?.user) && (
+                <Pressable
+                  onPress={() => setShowClaimModal(true)}
+                  className="w-8 h-8 items-center justify-center bg-white dark:bg-neutral-950 rounded-full shadow-sm"
+                >
+                  <FontAwesome5 name="shield-alt" size={14} color="#4F46E5" />
+                </Pressable>
+              )}
             </View>
           </View>
         </View>
@@ -698,6 +751,79 @@ const BusinessDetailScreen: React.FC = () => {
             />
             <Pressable onPress={handleReport} className="bg-red-500 py-4 rounded-xl items-center">
               {reportSubmitting ? <ActivityIndicator color="#fff" /> : <Text className="text-white font-bold">Submit Report</Text>}
+            </Pressable>
+          </View>
+        </View>
+      )}
+
+      {/* Claim Profile Modal */}
+      {showClaimModal && (
+        <View className="absolute inset-0 z-[100] justify-end" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <Pressable className="flex-1" onPress={() => { setShowClaimModal(false); setClaimDocumentFile(null); setClaimError(null); }} />
+          <View className="bg-white rounded-t-3xl p-6">
+            <View className="flex-row justify-between items-center mb-4">
+              <Text className="text-xl font-bold text-neutral-900">Claim This Profile</Text>
+              <Pressable onPress={() => { setShowClaimModal(false); setClaimDocumentFile(null); setClaimError(null); }} className="w-8 h-8 items-center justify-center rounded-full">
+                <FontAwesome5 name="times" size={14} color="#737373" />
+              </Pressable>
+            </View>
+
+            <View className="bg-indigo-50 border border-indigo-100 rounded-xl p-3 flex-row items-start mb-4" style={{ gap: 10 }}>
+              <FontAwesome5 name="shield-alt" size={16} color="#4F46E5" style={{ marginTop: 2 }} />
+              <Text className="text-xs text-indigo-700 leading-4 flex-1">
+                To claim this profile and gain control over its content, reviews, and leads, please upload a document proving you own or operate this business (e.g., Business License, Utility Bill, or Tax Document).
+              </Text>
+            </View>
+
+            {claimError && (
+              <View className="bg-red-50 border border-red-100 rounded-xl p-3 flex-row items-center mb-4" style={{ gap: 10 }}>
+                <FontAwesome5 name="exclamation-circle" size={14} color="#dc2626" />
+                <Text className="text-sm text-red-700 flex-1">{claimError}</Text>
+              </View>
+            )}
+
+            <Text className="text-sm font-semibold text-neutral-700 mb-2">Verification Document</Text>
+
+            {!claimDocumentFile ? (
+              <Pressable
+                onPress={handleClaimDocumentPick}
+                disabled={claimDocumentUploading}
+                className="border-2 border-dashed border-neutral-300 rounded-xl p-6 items-center justify-center mb-4"
+              >
+                {claimDocumentUploading ? (
+                  <ActivityIndicator size="small" color="#4F46E5" />
+                ) : (
+                  <>
+                    <FontAwesome5 name="cloud-upload-alt" size={24} color="#a3a3a3" />
+                    <Text className="text-sm font-semibold text-neutral-700 mt-2">Tap to upload document</Text>
+                    <Text className="text-xs text-neutral-500 mt-1">JPEG, PNG, or PDF (Max 5MB)</Text>
+                  </>
+                )}
+              </Pressable>
+            ) : (
+              <View className="flex-row items-center justify-between p-4 bg-neutral-50 border border-neutral-200 rounded-xl mb-4">
+                <View className="flex-row items-center flex-1" style={{ gap: 10 }}>
+                  <View className="w-8 h-8 rounded-lg bg-indigo-100 items-center justify-center">
+                    <FontAwesome5 name="shield-alt" size={12} color="#4F46E5" />
+                  </View>
+                  <Text className="text-sm font-semibold text-neutral-900 flex-1" numberOfLines={1}>Document uploaded</Text>
+                </View>
+                <Pressable onPress={() => setClaimDocumentFile(null)} className="p-2">
+                  <FontAwesome5 name="times" size={12} color="#737373" />
+                </Pressable>
+              </View>
+            )}
+
+            <Pressable
+              onPress={handleSubmitClaim}
+              disabled={!claimDocumentFile || claimSubmitting}
+              className={`py-3.5 rounded-xl items-center ${!claimDocumentFile || claimSubmitting ? 'bg-indigo-300' : 'bg-indigo-600'}`}
+            >
+              {claimSubmitting ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text className="text-white font-bold text-sm">Submit Claim Request</Text>
+              )}
             </Pressable>
           </View>
         </View>

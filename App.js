@@ -44,6 +44,9 @@ const linking = {
       ChatScreen: 'chat/:recipientId',
       Notifications: 'notifications',
       BusinessSearch: 'search',
+      QuoteReview: 'quote-review/:quoteId',
+      VerifyEmailChange: 'verify-email-change',
+      ResetPassword: 'reset-password',
     },
   },
 };

@@ -5,6 +5,7 @@ import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
 import ContractorSignupScreen from '../screens/ContractorSignupScreen';
+import ResetPasswordScreen from '../screens/ResetPasswordScreen';
 
 const Stack = createStackNavigator();
 
@@ -34,6 +35,7 @@ export default function AuthNavigator() {
       <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Register" component={RegisterScreen} options={{ title: 'Create Account' }} />
       <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} options={{ title: 'Reset Password' }} />
+      <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} options={{ title: 'Set New Password' }} />
       <Stack.Screen name="ContractorSignup" component={ContractorSignupScreen} options={{ title: 'Join as Pro' }} />
     </Stack.Navigator>
   );

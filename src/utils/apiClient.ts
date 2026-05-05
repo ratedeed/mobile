@@ -914,3 +914,51 @@ export const deleteAccount = async (): Promise<any> => {
   const authHeaders = await getAuthHeaders();
   return del(`${API_BASE}/users/profile`, authHeaders);
 };
+
+// ==========================================
+// Reset Password (token-based)
+// ==========================================
+
+export const resetPassword = async (token: string, newPassword: string): Promise<any> => {
+  return post(`${API_BASE}/users/reset-password`, { token, newPassword });
+};
+
+// ==========================================
+// Verify Email Change
+// ==========================================
+
+export const verifyEmailChange = async (token: string): Promise<any> => {
+  return post(`${API_BASE}/users/verify-email-change`, { token });
+};
+
+// ==========================================
+// Quote Detail & Status
+// ==========================================
+
+export const getQuote = async (quoteId: string): Promise<any> => {
+  const authHeaders = await getAuthHeaders();
+  return get(`${API_BASE}/quotes/${quoteId}`, authHeaders);
+};
+
+export const updateQuoteStatus = async (quoteId: string, status: 'accepted' | 'rejected'): Promise<any> => {
+  const authHeaders = await getAuthHeaders();
+  return put(`${API_BASE}/quotes/${quoteId}/status`, { status }, authHeaders);
+};
+
+// ==========================================
+// Dispute Resolution
+// ==========================================
+
+export const resolveDispute = async (jobId: string, action: 'resume_job' | 'refund'): Promise<any> => {
+  const authHeaders = await getAuthHeaders();
+  return post(`${API_BASE}/jobs/${jobId}/dispute/resolve`, { action }, authHeaders);
+};
+
+// ==========================================
+// Contractor Claim Profile
+// ==========================================
+
+export const submitClaim = async (contractorId: string, businessDocumentFile: string): Promise<any> => {
+  const authHeaders = await getAuthHeaders();
+  return post(`${API_BASE}/contractors/${contractorId}/claim`, { businessDocumentFile }, authHeaders);
+};

@@ -489,8 +489,11 @@ export type RootStackParamList = {
   EditProfile: undefined;
   Settings: undefined;
   QuoteDetail: { quoteId: string };
+  QuoteReview: { quoteId: string };
   JobDetail: { jobId: string };
   LeadDetail: { leadId: string };
+  ResetPassword: { oobCode?: string; token?: string };
+  VerifyEmailChange: { token?: string };
 };
 
 export type UserRole = 'user' | 'contractor' | 'admin';
