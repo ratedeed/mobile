@@ -9,8 +9,9 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { API_BASE_URL } from '../config';
+import { post as apiPost } from '../utils/apiClient';
 import Typography from './common/Typography';
 import Button from './common/Button';
 import Card from './common/Card';
@@ -86,14 +87,6 @@ const ReportButton: React.FC<ReportButtonProps> = ({
 
     setIsSubmitting(true);
     try {
-      const userInfo = await AsyncStorage.getItem('userInfo');
-      const token = userInfo ? JSON.parse(userInfo).token : null;
-
-      if (!token) {
-        Alert.alert('Error', 'Please log in to submit a report');
-        return;
-      }
-
       const reportData = {
         reportedItem: reportedItemId,
         onModel,
@@ -101,19 +94,7 @@ const ReportButton: React.FC<ReportButtonProps> = ({
         additionalDetails: additionalDetails.trim() || undefined,
       };
 
-      const response = await fetch(`${API_BASE_URL}/api/reports`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(reportData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to submit report');
-      }
+      await apiPost(`${API_BASE_URL}/api/reports`, reportData);
 
       setSubmitted(true);
     } catch (error) {

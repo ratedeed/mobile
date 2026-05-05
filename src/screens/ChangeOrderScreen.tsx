@@ -84,20 +84,19 @@ return (
     keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
     className="flex-1 bg-white"
   >
-    <ScrollView
-      {/* Header */}
-      <View className="border-b border-neutral-200 px-4 py-3 flex-row items-center">
-        <Pressable
-          onPress={() => navigation.goBack()}
-          className="w-8 h-8 items-center justify-center"
-        >
-          <FontAwesome5 name="chevron-left" size={18} color="#171717" />
-        </Pressable>
-        <Text className="flex-1 text-sm font-bold text-neutral-900 text-center">
-          {isCreate ? 'New Change Order' : 'Change Order Details'}
-        </Text>
-        <View className="w-8" />
-      </View>
+    {/* Header */}
+    <View className="border-b border-neutral-200 px-4 py-3 flex-row items-center">
+      <Pressable
+        onPress={() => navigation.goBack()}
+        className="w-8 h-8 items-center justify-center"
+      >
+        <FontAwesome5 name="chevron-left" size={18} color="#171717" />
+      </Pressable>
+      <Text className="flex-1 text-sm font-bold text-neutral-900 text-center">
+        {isCreate ? 'New Change Order' : 'Change Order Details'}
+      </Text>
+      <View className="w-8" />
+    </View>
 
       <ScrollView
         className="flex-1 px-6"

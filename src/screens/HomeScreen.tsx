@@ -7,6 +7,8 @@ import {
   Text,
   TextInput,
   RefreshControl,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -19,6 +21,7 @@ import { browseContractors } from '../utils/apiClient';
 import { Contractor, RootStackParamList } from '../types';
 import { getCoverImageUrl, isSvgUrl } from '../utils/avatarUtils';
 import { getFavorites, addFavorite, removeFavorite } from '../utils/favoritesStore';
+import { IP_GEOLOCATION_URL } from '../config';
 
 // ---- Categories matching web version (constants.ts) ----
 const CATEGORIES = [
@@ -39,14 +42,13 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 // ---- Helpers ----
 function deriveLocation(c: Contractor): string {
-  const city = c.contactInfo?.city || (c as any).city || '';
-  const state = c.contactInfo?.state || (c as any).state || '';
+  const city = c.contactInfo?.city || '';
+  const state = c.contactInfo?.state || '';
   if (city && state) return `${city}, ${state}`;
   if (city || state) return city || state;
-  // Fallback: try location string or businessAddress
-  const loc = (c as any).location;
+  const loc = c.location;
   if (typeof loc === 'string' && loc.trim() && !loc.includes('{')) return loc.trim();
-  const addr = (c as any).businessAddress || c.contact?.address;
+  const addr = c.businessAddress || c.contact?.address;
   if (typeof addr === 'string' && addr.trim()) return addr.trim();
   return '';
 }
@@ -56,7 +58,7 @@ function derivePrice(c: Contractor): string | null {
   if (c.servicesOffered?.length) {
     const svc = c.servicesOffered[0];
     if (typeof svc === 'object' && svc !== null) {
-      const range = (svc as any).priceEstimate || (svc as any).priceRange;
+      const range = svc.priceEstimate || svc.priceRange;
       if (range) return range.split('–')[0]?.trim();
     }
   }
@@ -79,10 +81,10 @@ const ListingCard = ({
 }) => {
   const location = deriveLocation(listing);
   const price = derivePrice(listing);
-  const rawImage = (listing as any).bannerUrl || listing.bannerImage || (listing as any).imageUrl || listing.profilePicture || '';
+  const rawImage = listing.bannerUrl || listing.bannerImage || listing.imageUrl || listing.profilePicture || '';
   const coverImage = getCoverImageUrl(listing.companyName || listing.businessName || 'Contractor', rawImage, listing.category, 400, 400);
   const serviceZips = listing.zipCodesCovered || [];
-  const distance = (listing as any).distance;
+  const distance = listing.distance;
 
   return (
     <Pressable className="mb-4" onPress={onPress}>
@@ -223,8 +225,6 @@ const HomeScreen = () => {
   // Tier 1: exact zip match
   // Tier 2: 3-digit prefix (same local area) — checks serviceZipCodes
   // Tier 3: 2-digit prefix (wider region/state) — checks serviceZipCodes
-  const MIN_RESULTS = 16;
-
   const loadContractors = useCallback(async (zip?: string | null) => {
     setLoading(true);
     setLoadError(false);
@@ -262,7 +262,7 @@ const HomeScreen = () => {
   const fetchLocationAndData = useCallback(async () => {
     let zip: string | null = null;
     try {
-      const response = await fetch('https://free.freeipapi.com/api/json');
+      const response = await fetch(IP_GEOLOCATION_URL);
       const data = await response.json();
       zip = data.zipCode || null;
       if (mountedRef.current) setIpZipCode(zip);
@@ -331,7 +331,7 @@ const HomeScreen = () => {
   }, [allContractors, activeCategory, searchName]);
 
   return (
-    <View className="flex-1 bg-white dark:bg-neutral-950">
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1 bg-white dark:bg-neutral-950">
       <ScrollView
         className="flex-1"
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
@@ -561,7 +561,7 @@ const HomeScreen = () => {
           </View>
         </View>
       )}
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 

@@ -31,12 +31,11 @@ class ErrorBoundary extends Component<Props, State> {
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
+componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     this.setState({
       error,
       errorInfo,
     });
-      // console.error('ErrorBoundary caught an error:', error, errorInfo);
   }
 
   handleReset = (): void => {

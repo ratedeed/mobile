@@ -20,7 +20,6 @@ export const SvgImage = ({ uri, width = '100%', height = '100%', style, preserve
             if (isMounted) setXml(decoded);
           }
         } else if (uri.startsWith('http')) {
-          if (__DEV__) console.log('SvgImage: Fetching remote SVG:', uri);
           const response = await fetch(uri);
           let text = await response.text();
           if (text.includes('<svg') && isMounted) {
@@ -29,7 +28,6 @@ export const SvgImage = ({ uri, width = '100%', height = '100%', style, preserve
             text = text.replace(/filter="drop-shadow\([^"]*\)"/g, '');
             setXml(text);
           } else if (isMounted) {
-      // console.warn('SvgImage: Fetched content is not a valid SVG:', text.slice(0, 100));
             setXml('error');
           }
         } else if (uri.includes('<svg')) {
@@ -40,8 +38,7 @@ export const SvgImage = ({ uri, width = '100%', height = '100%', style, preserve
         } else if (isMounted) {
           setXml('error');
         }
-      } catch (err) {
-      // console.error('SvgImage Error fetching URI:', uri, err);
+      } catch {
         if (isMounted) setXml('error');
       }
     };

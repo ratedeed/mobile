@@ -1,46 +1,32 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { API_BASE_URL } from '../config';
+import { get, post as apiPost, del } from './apiClient';
 
 const FAVORITES_KEY = 'ratedeed_favorites';
-
-async function getAuthToken(): Promise<string | null> {
-  const userInfo = await AsyncStorage.getItem('userInfo');
-  return userInfo ? JSON.parse(userInfo).token : null;
-}
 
 export const getFavorites = async (): Promise<string[]> => {
   try {
     const json = await AsyncStorage.getItem(FAVORITES_KEY);
     return json ? JSON.parse(json) : [];
-  } catch (e) {
-      // console.error('Failed to get favorites', e);
+  } catch {
     return [];
   }
 };
 
-/**
- * Syncs local favorites with the server (merges them)
- */
 export const syncFavoritesWithServer = async () => {
-  const token = await getAuthToken();
+  const token = await SecureStore.getItemAsync('auth_token');
   if (!token) return;
 
   try {
-    const response = await fetch(`${API_BASE_URL}/api/users/favorites`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    
-    if (response.ok) {
-      const serverIds = await response.json();
-      if (Array.isArray(serverIds)) {
-        const local = await getFavorites();
-        const merged = Array.from(new Set([...local, ...serverIds]));
-        await AsyncStorage.setItem(FAVORITES_KEY, JSON.stringify(merged));
-      // console.log('[Favorites] Mobile sync successful');
-      }
+    const serverIds = await get(`${API_BASE_URL}/api/users/favorites`);
+    if (Array.isArray(serverIds)) {
+      const local = await getFavorites();
+      const merged = Array.from(new Set([...local, ...serverIds]));
+      await AsyncStorage.setItem(FAVORITES_KEY, JSON.stringify(merged));
     }
-  } catch (err) {
-      // console.error('[Favorites] Sync failed:', err);
+  } catch {
+    // sync failure is non-critical
   }
 };
 
@@ -50,18 +36,10 @@ export const addFavorite = async (id: string) => {
     if (!current.includes(id)) {
       const updated = [...current, id];
       await AsyncStorage.setItem(FAVORITES_KEY, JSON.stringify(updated));
-      
-      const token = await getAuthToken();
-      if (token) {
-        // Toggle endpoint on backend handles add/remove
-        await fetch(`${API_BASE_URL}/api/users/favorite/${id}`, {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-      }
     }
-  } catch (e) {
-      // console.error('Failed to add favorite', e);
+    await apiPost(`${API_BASE_URL}/api/users/favorite/${id}`, {});
+  } catch {
+    // favorite failure is non-critical
   }
 };
 
@@ -70,17 +48,9 @@ export const removeFavorite = async (id: string) => {
     const current = await getFavorites();
     const updated = current.filter(fid => fid !== id);
     await AsyncStorage.setItem(FAVORITES_KEY, JSON.stringify(updated));
-    
-    const token = await getAuthToken();
-    if (token) {
-      // Toggle endpoint on backend handles add/remove
-      await fetch(`${API_BASE_URL}/api/users/favorite/${id}`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-    }
-  } catch (e) {
-      // console.error('Failed to remove favorite', e);
+    await del(`${API_BASE_URL}/api/users/favorite/${id}`);
+  } catch {
+    // favorite removal failure is non-critical
   }
 };
 

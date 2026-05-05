@@ -25,6 +25,9 @@ export interface Tag {
 
 export interface Service {
   name: string;
+  description?: string;
+  priceEstimate?: string;
+  priceRange?: string;
 }
 
 export interface ContractorUser {
@@ -80,6 +83,7 @@ export interface Contractor {
   isVerified?: boolean;
   isSponsored?: boolean;
   isPremium?: boolean;
+  distance?: number | string;
   tags?: Array<Tag | string>;
   servicesOffered?: Array<Service | string>;
   services?: string[];
@@ -171,6 +175,7 @@ export interface Notification {
 
 export interface AuthInfo {
   _id?: string;
+  id?: string;
   token?: string;
   firstName?: string;
   lastName?: string;

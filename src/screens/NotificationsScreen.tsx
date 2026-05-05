@@ -1,33 +1,50 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useMemo } from 'react';
 import {
   View,
-  FlatList,
+  SectionList,
   Pressable,
   Text,
   RefreshControl,
   Alert,
-  ActivityIndicator,
+  StyleSheet,
 } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useNotifications } from '../context/NotificationsContext';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { SkeletonLoader } from '../components/common/SkeletonLoader';
+import { EmptyState } from '../components/common/EmptyState';
+import { Colors, Shadows, Spacing, Radii, FontSizes, FontWeights } from '../constants/designTokens';
+
+type NotificationItem = {
+  _id: string;
+  message: string;
+  link?: string;
+  read: boolean;
+  type?: string;
+  createdAt?: string;
+  [key: string]: any;
+};
+
+type NotificationSection = {
+  title: string;
+  data: NotificationItem[];
+};
 
 const NotificationsScreen: React.FC = () => {
   const navigation = useNavigation<any>();
-  const { 
-    notifications, 
-    unreadCount, 
-    isLoading, 
-    refreshNotifications, 
-    markAsRead, 
-    markAllAsRead, 
-    deleteNotification 
+  const {
+    notifications,
+    unreadCount,
+    isLoading,
+    refreshNotifications,
+    toggleRead,
+    markAllAsRead,
+    deleteNotification,
   } = useNotifications();
-  
+
   const [refreshing, setRefreshing] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
 
-  // Auto-refresh when the tab comes into focus
   useFocusEffect(
     useCallback(() => {
       let isMounted = true;
@@ -44,13 +61,11 @@ const NotificationsScreen: React.FC = () => {
     setRefreshing(false);
   }, [refreshNotifications]);
 
-  const handleNotificationPress = async (item: any) => {
+  const handleNotificationPress = async (item: NotificationItem) => {
     if (!item.read) {
-      await markAsRead(item._id);
+      await toggleRead(item._id);
     }
-
     if (!item.link) return;
-
     if (item.link.startsWith('/messages/')) {
       const conversationId = item.link.split('/')[2];
       navigation.navigate('ChatScreen', { conversationId });
@@ -63,115 +78,316 @@ const NotificationsScreen: React.FC = () => {
     }
   };
 
+  const getDateGroup = (dateStr?: string): string => {
+    if (!dateStr) return 'Earlier';
+    const date = new Date(dateStr);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterday = new Date(today.getTime() - 86400000);
+    const notifDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    if (notifDate.getTime() === today.getTime()) return 'Today';
+    if (notifDate.getTime() === yesterday.getTime()) return 'Yesterday';
+    return 'Earlier';
+  };
+
+  const groupedNotifications: NotificationSection[] = useMemo(() => {
+    const groups: Record<string, NotificationItem[]> = {};
+    const order = ['Today', 'Yesterday', 'Earlier'];
+    for (const notif of notifications) {
+      const group = getDateGroup(notif.createdAt);
+      if (!groups[group]) groups[group] = [];
+      groups[group].push(notif);
+    }
+    return order
+      .filter(title => groups[title]?.length > 0)
+      .map(title => ({ title, data: groups[title] }));
+  }, [notifications]);
+
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return '';
     const date = new Date(dateStr);
     const now = new Date();
     const diff = now.getTime() - date.getTime();
     const mins = Math.floor(diff / 60000);
-    
     if (mins < 1) return 'Just now';
     if (mins < 60) return `${mins}m ago`;
     const hours = Math.floor(mins / 60);
     if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    if (days === 1) return 'Yesterday';
+    if (days < 7) return `${days}d ago`;
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
-  const getNotificationIcon = (type: string, message: string) => {
+  const getNotificationIcon = (type?: string, message?: string) => {
     const m = (message || '').toLowerCase();
     if (type === 'new_review' || m.includes('review')) return { name: 'star', color: '#f59e0b', bg: '#fef3c7' };
     if (type === 'new_message' || m.includes('message')) return { name: 'comment', color: '#3b82f6', bg: '#dbeafe' };
-    if (m.includes('quote') || m.includes('payment')) return { name: 'dollar-sign', color: '#10b981', bg: '#d1fae5' };
+    if (m.includes('quote') || m.includes('payment') || type === 'job_funded') return { name: 'dollar-sign', color: '#10b981', bg: '#d1fae5' };
     if (type === 'new_lead' || m.includes('lead') || m.includes('project')) return { name: 'briefcase', color: '#8b5cf6', bg: '#ede9fe' };
+    if (type === 'job_update') return { name: 'wrench', color: '#f97316', bg: '#ffedd5' };
+    if (type === 'admin_alert' || type === 'system_update') return { name: 'info-circle', color: '#6366f1', bg: '#eef2ff' };
     return { name: 'bell', color: '#4F46E5', bg: '#eef2ff' };
   };
 
-  const renderNotification = ({ item }: { item: any }) => {
+  const renderNotification = ({ item }: { item: NotificationItem }) => {
     const icon = getNotificationIcon(item.type, item.message);
     return (
       <Pressable
         onPress={() => handleNotificationPress(item)}
         onLongPress={() => {
-          Alert.alert('Notification Actions', '', [
+          Alert.alert('Notification Actions', undefined, [
+            {
+              text: item.read ? 'Mark as unread' : 'Mark as read',
+              onPress: () => toggleRead(item._id),
+            },
             { text: 'Delete', style: 'destructive', onPress: () => deleteNotification(item._id) },
             { text: 'Cancel', style: 'cancel' },
           ]);
         }}
-        className={`flex-row items-start px-4 py-4 ${!item.read ? 'bg-indigo-50/40 dark:bg-indigo-900/10' : 'bg-white dark:bg-neutral-950'} border-b border-neutral-100 dark:border-neutral-800`}
-        style={{ gap: 14 }}
+        style={[styles.card, !item.read && styles.cardUnread]}
       >
-        <View className="w-10 h-10 rounded-full items-center justify-center shrink-0 mt-0.5" style={{ backgroundColor: icon.bg }}>
+        <View style={[styles.iconCircle, { backgroundColor: icon.bg }]}>
           <FontAwesome5 name={icon.name as any} size={15} color={icon.color} />
         </View>
-        <View className="flex-1">
-          <Text className={`text-[14px] leading-5 ${!item.read ? 'font-bold text-neutral-900 dark:text-neutral-50' : 'text-neutral-700 dark:text-neutral-300'}`}>
+
+        <View style={styles.cardBody}>
+          <Text
+            style={[styles.cardMessage, !item.read && styles.cardMessageUnread]}
+            numberOfLines={2}
+          >
             {item.message}
           </Text>
-          <Text className="text-[12px] text-neutral-400 mt-1.5 font-medium">{formatDate(item.createdAt)}</Text>
+          <View style={styles.cardMeta}>
+            <Text style={styles.cardTime}>{formatDate(item.createdAt)}</Text>
+            <Pressable
+              hitSlop={12}
+              onPress={() => toggleRead(item._id)}
+              style={styles.toggleReadBtn}
+            >
+              <FontAwesome5
+                name={item.read ? 'envelope' : 'envelope-open'}
+                size={11}
+                color={Colors.neutral400}
+              />
+            </Pressable>
+          </View>
         </View>
-        {!item.read && <View className="w-2 h-2 rounded-full bg-indigo-500 shrink-0 mt-2" />}
+
+        {!item.read && <View style={styles.unreadDot} />}
       </Pressable>
     );
   };
 
-  // Only show the full-screen spinner if we are loading AND have zero notifications to show (initial load)
+  const renderSectionHeader = ({ section }: { section: NotificationSection }) => (
+    <View style={styles.sectionHeader}>
+      <Text style={styles.sectionTitle}>{section.title}</Text>
+      {section.title === 'Today' && unreadCount > 0 && (
+        <Pressable onPress={markAllAsRead} style={styles.markAllBtn}>
+          <Text style={styles.markAllText}>Mark all read</Text>
+        </Pressable>
+      )}
+    </View>
+  );
+
   if (isLoading && isInitialLoad && notifications.length === 0) {
     return (
-      <View className="flex-1 bg-white dark:bg-neutral-950 items-center justify-center">
-        <ActivityIndicator size="small" color="#6366f1" />
-        <Text className="text-sm text-neutral-400 mt-3 font-medium">Updating notifications...</Text>
+      <View style={styles.root}>
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.headerTitle}>Notifications</Text>
+            <SkeletonLoader type="text" count={1} />
+          </View>
+        </View>
+        <View style={styles.skeletonList}>
+          <SkeletonLoader type="notification" count={6} />
+        </View>
+      </View>
+    );
+  }
+
+  if (!isLoading && notifications.length === 0) {
+    return (
+      <View style={styles.root}>
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.headerTitle}>Notifications</Text>
+            <Text style={styles.headerSubtitle}>All caught up!</Text>
+          </View>
+        </View>
+        <EmptyState
+          title="No notifications yet"
+          message="When you receive messages, leads, or updates, they'll appear here for quick access."
+        />
       </View>
     );
   }
 
   return (
-    <View className="flex-1 bg-white dark:bg-neutral-950">
-      {/* Header */}
-      <View className="px-5 pt-5 pb-3 flex-row items-center justify-between border-b border-neutral-50 dark:border-neutral-900">
+    <View style={styles.root}>
+      <View style={styles.header}>
         <View>
-          <Text className="text-2xl font-bold text-neutral-900 dark:text-neutral-50">Notifications</Text>
-          <Text className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5 font-medium">
+          <Text style={styles.headerTitle}>Notifications</Text>
+          <Text style={styles.headerSubtitle}>
             {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up!'}
           </Text>
         </View>
         {unreadCount > 0 && (
-          <Pressable 
-            onPress={markAllAsRead}
-            className="bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1.5 rounded-full"
-          >
-            <Text className="text-xs font-bold text-indigo-600 dark:text-indigo-400">Mark all read</Text>
+          <Pressable onPress={markAllAsRead} style={styles.markAllHeaderBtn}>
+            <Text style={styles.markAllHeaderText}>Mark all read</Text>
           </Pressable>
         )}
       </View>
 
-      {notifications.length === 0 ? (
-        <View className="flex-1 items-center justify-center px-10">
-          <View className="w-20 h-20 bg-neutral-50 dark:bg-neutral-900 rounded-full items-center justify-center mb-6">
-            <FontAwesome5 name="bell" size={32} color="#e5e5e5" />
-          </View>
-          <Text className="text-xl font-bold text-neutral-900 dark:text-neutral-50">Stay updated</Text>
-          <Text className="text-sm text-neutral-500 dark:text-neutral-400 mt-2 text-center leading-5">
-            When you receive messages, leads, or updates, they'll appear here for quick access.
-          </Text>
-        </View>
-      ) : (
-        <FlatList
-          data={notifications}
-          renderItem={renderNotification}
-          keyExtractor={(item, index) => item._id || `notif-${index}`}
-          contentContainerStyle={{ paddingBottom: 20 }}
-          refreshControl={
-            <RefreshControl 
-              refreshing={refreshing} 
-              onRefresh={onRefresh}
-              tintColor="#6366f1"
-              colors={['#6366f1']}
-            />
-          }
-        />
-      )}
+      <SectionList
+        sections={groupedNotifications}
+        keyExtractor={(item, index) => item._id || `notif-${index}`}
+        renderItem={renderNotification}
+        renderSectionHeader={renderSectionHeader}
+        stickySectionHeadersEnabled={false}
+        contentContainerStyle={styles.listContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={Colors.primary500}
+            colors={[Colors.primary500]}
+          />
+        }
+      />
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: Colors.neutral50,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.sm,
+    backgroundColor: '#fff',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: Colors.neutral200,
+  },
+  headerTitle: {
+    fontSize: FontSizes.xxl,
+    fontWeight: FontWeights.bold as any,
+    color: Colors.neutral900,
+  },
+  headerSubtitle: {
+    fontSize: FontSizes.xs,
+    color: Colors.neutral500,
+    fontWeight: FontWeights.medium as any,
+    marginTop: 2,
+  },
+  markAllHeaderBtn: {
+    backgroundColor: Colors.primary50,
+    paddingHorizontal: Spacing.sm + 2,
+    paddingVertical: Spacing.xs + 2,
+    borderRadius: Radii.round,
+  },
+  markAllHeaderText: {
+    fontSize: FontSizes.xs,
+    fontWeight: FontWeights.bold as any,
+    color: Colors.primary600,
+  },
+  skeletonList: {
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.sm,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.xs,
+    backgroundColor: Colors.neutral50,
+  },
+  sectionTitle: {
+    fontSize: FontSizes.xs,
+    fontWeight: FontWeights.bold as any,
+    color: Colors.neutral500,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  markAllBtn: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xxs,
+  },
+  markAllText: {
+    fontSize: FontSizes.xs,
+    fontWeight: FontWeights.semibold as any,
+    color: Colors.primary600,
+  },
+  card: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#fff',
+    marginHorizontal: Spacing.md,
+    marginBottom: Spacing.xs,
+    padding: Spacing.md,
+    borderRadius: Radii.md,
+    ...Shadows.xs,
+  },
+  cardUnread: {
+    backgroundColor: Colors.primary50,
+    borderLeftWidth: 3,
+    borderLeftColor: Colors.primary500,
+  },
+  iconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: Spacing.sm + 2,
+    marginTop: 1,
+  },
+  cardBody: {
+    flex: 1,
+  },
+  cardMessage: {
+    fontSize: FontSizes.sm,
+    lineHeight: 20,
+    color: Colors.neutral700,
+    fontWeight: FontWeights.medium as any,
+  },
+  cardMessageUnread: {
+    color: Colors.neutral900,
+    fontWeight: FontWeights.bold as any,
+  },
+  cardMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: Spacing.xs,
+  },
+  cardTime: {
+    fontSize: FontSizes.xs,
+    color: Colors.neutral400,
+    fontWeight: FontWeights.medium as any,
+  },
+  toggleReadBtn: {
+    padding: Spacing.xxs + 1,
+  },
+  unreadDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.primary500,
+    marginTop: 6,
+    marginLeft: Spacing.xs,
+  },
+  listContent: {
+    paddingBottom: Spacing.xl,
+  },
+});
 
 export default NotificationsScreen;

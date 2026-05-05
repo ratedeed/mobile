@@ -18,8 +18,6 @@
       "infoPlist": {
         "UIBackgroundModes": [
           "fetch",
-          "remote-notification",
-          "fetch",
           "remote-notification"
         ]
       },
@@ -44,8 +42,6 @@
         "backgroundColor": "#ffffff"
       },
       "permissions": [
-        "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO",
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO"
       ]
@@ -93,13 +89,21 @@
         }
       ],
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "@stripe/stripe-react-native",
+        {
+          "merchantIdentifier": "com.ratedeed.app",
+          "enableApplePay": true
+        }
+      ]
     ],
     "scheme": "ratedeed",
     "extra": {
       "eas": {
         "projectId": "db15905a-a695-4ad4-b95a-0f2a762b193b"
-      }
+      },
+      "sentryDsn": "https://9551400459289c85e05f957e50a65941@o4511186039603200.ingest.us.sentry.io/4511186048843776"
     },
     "owner": "ratedeeds-organization",
     "runtimeVersion": "1.0.0",

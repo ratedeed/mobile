@@ -42,13 +42,13 @@ const RegisterScreen = () => {
       userCreated = userCredential.user;
       await sendEmailVerification(userCreated);
       await AsyncStorage.removeItem('userInfo');
+      await AsyncStorage.removeItem('ratedeed-user-data');
       await register({
         firstName,
         lastName,
         email,
-        password,
-        zipCode,
         firebaseUid: userCreated.uid,
+        ...(zipCode ? { zipCode } : {}),
       });
       await auth.signOut();
 
@@ -60,7 +60,7 @@ const RegisterScreen = () => {
       navigation.navigate('Login');
     } catch (error) {
       if (userCreated) {
-        try { await deleteUser(userCreated); } catch {}
+        try { await deleteUser(userCreated); } catch {/* cleanup failed silently */}
       }
       let errorMessage = 'An error occurred during registration.';
       if (error.code) {

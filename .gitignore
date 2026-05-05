@@ -35,9 +35,10 @@ sentry.properties
 
 # local env files
 .env*.local
+.env
+**/.env
+.env.production
+.env.staging
 
 # typescript
 *.tsbuildinfo
-
-.env.local
-.env

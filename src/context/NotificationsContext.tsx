@@ -15,6 +15,7 @@ interface NotificationsContextType {
   refreshUnreadMessagesCount: () => Promise<void>;
   markAsRead: (id: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
+  toggleRead: (id: string) => Promise<void>;
   deleteNotification: (id: string) => Promise<void>;
 }
 
@@ -55,14 +56,12 @@ export const NotificationsProvider: React.FC<{ children: ReactNode }> = ({ child
           });
           notifs = notifs.filter(n => !(n.type === 'new_message' && n.link && syntheticNotifs.some(sn => sn.link === n.link)));
           notifs = [...syntheticNotifs, ...notifs].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        } catch (convErr) {
-      // console.error('Error fetching conversations for notifications:', convErr);
-        }
+} catch {
+          }
         setNotifications(notifs);
         const unread = notifs.filter((n: Notification) => !n.read).length;
         await AsyncStorage.setItem('unreadNotifications', unread.toString());
-      } catch (error) {
-      // console.error('Error fetching notifications:', error);
+      } catch {
       } finally {
         setIsLoading(false);
       }
@@ -117,8 +116,8 @@ export const NotificationsProvider: React.FC<{ children: ReactNode }> = ({ child
       const convos = await apiClient.fetchConversations();
       const count = (convos || []).reduce((sum: number, c: any) => sum + (c.unreadCount || 0), 0);
       setUnreadMessagesCount(count);
-    } catch (error) {
-      // console.error('Error fetching unread messages count:', error);
+    } catch {
+      /* non-critical */
     }
   }, [isAuthenticated]);
 
@@ -138,8 +137,8 @@ export const NotificationsProvider: React.FC<{ children: ReactNode }> = ({ child
         AsyncStorage.setItem('unreadNotifications', unread.toString());
         return updated;
       });
-    } catch (error) {
-      // console.error('Error marking notification read:', error);
+    } catch {
+      /* non-critical */
     }
   }, []);
 
@@ -152,10 +151,39 @@ export const NotificationsProvider: React.FC<{ children: ReactNode }> = ({ child
         return updated;
       });
       setUnreadMessagesCount(0);
-    } catch (error) {
-      // console.error('Error marking all notifications read:', error);
+    } catch {
+      /* non-critical */
     }
   }, []);
+
+  const toggleRead = useCallback(async (id: string) => {
+    try {
+      const notification = notifications.find(n => n._id === id);
+      const newReadState = !(notification?.read ?? true);
+
+      if (newReadState) {
+        if (!id.startsWith('msg-notif-')) {
+          await apiClient.markNotificationRead(id);
+        } else {
+          const conversationId = id.replace('msg-notif-', '');
+          await apiClient.markConversationAsRead(conversationId);
+        }
+      } else {
+        if (!id.startsWith('msg-notif-')) {
+          await apiClient.markNotificationUnread?.(id);
+        }
+      }
+
+      setNotifications(prev => {
+        const updated = prev.map(n => n._id === id ? { ...n, read: newReadState } : n);
+        const unread = updated.filter((n: Notification) => !n.read).length;
+        AsyncStorage.setItem('unreadNotifications', unread.toString());
+        return updated;
+      });
+    } catch {
+      /* non-critical */
+    }
+  }, [notifications]);
 
   const deleteNotification = useCallback(async (id: string) => {
     try {
@@ -168,8 +196,8 @@ export const NotificationsProvider: React.FC<{ children: ReactNode }> = ({ child
         AsyncStorage.setItem('unreadNotifications', unread.toString());
         return updated;
       });
-    } catch (error) {
-      // console.error('Error deleting notification:', error);
+    } catch {
+      /* non-critical */
     }
   }, []);
 
@@ -198,6 +226,7 @@ export const NotificationsProvider: React.FC<{ children: ReactNode }> = ({ child
         refreshUnreadMessagesCount,
         markAsRead,
         markAllAsRead,
+        toggleRead,
         deleteNotification,
       }}
     >

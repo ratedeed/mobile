@@ -115,8 +115,7 @@ const ContractorSignupScreen = () => {
         );
         const data = await response.json();
         setAddressSuggestions(data);
-      } catch (error) {
-      // console.error('Address search error:', error);
+      } catch {
       } finally {
         setIsSearchingAddress(false);
       }
@@ -237,7 +236,6 @@ const ContractorSignupScreen = () => {
         businessHours: hours,
         firebaseUid: userCreated.uid,
       };
-      // console.log('SIGNUP PAYLOAD:', JSON.stringify(payload, null, 2));
       await contractorSignup(payload);
 
       await auth.signOut();

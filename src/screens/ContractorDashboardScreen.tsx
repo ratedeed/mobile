@@ -33,6 +33,7 @@ import {
   requestVerification,
   getContractorDetails,
   get,
+  del,
   getAuthHeaders,
   post as apiPost,
 } from '../api';
@@ -150,18 +151,20 @@ function Sheet({ visible, onClose, title, children }: { visible: boolean; onClos
   return (
     <View className="absolute inset-0 z-[90] justify-end" style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
       <Pressable className="flex-1" onPress={onClose} />
-      <View className="bg-white rounded-t-2xl max-h-[85vh]">
-        <View className="w-10 h-1 rounded-full bg-neutral-300 mx-auto mt-3" />
-        <View className="flex-row items-center justify-between px-5 pt-4 pb-2 border-b border-neutral-100">
-          <Text className="text-lg font-bold text-neutral-900">{title}</Text>
-          <Pressable onPress={onClose} className="w-8 h-8 items-center justify-center rounded-full">
-            <FontAwesome5 name="times" size={16} color="#737373" />
-          </Pressable>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <View className="bg-white rounded-t-2xl max-h-[85vh]">
+          <View className="w-10 h-1 rounded-full bg-neutral-300 mx-auto mt-3" />
+          <View className="flex-row items-center justify-between px-5 pt-4 pb-2 border-b border-neutral-100">
+            <Text className="text-lg font-bold text-neutral-900">{title}</Text>
+            <Pressable onPress={onClose} className="w-8 h-8 items-center justify-center rounded-full">
+              <FontAwesome5 name="times" size={16} color="#737373" />
+            </Pressable>
+          </View>
+          <ScrollView className="px-5 py-4 pb-10" keyboardShouldPersistTaps="handled">
+            {children}
+          </ScrollView>
         </View>
-        <ScrollView className="px-5 py-4 pb-10">
-          {children}
-        </ScrollView>
-      </View>
+      </KeyboardAvoidingView>
     </View>
   );
 }
@@ -249,8 +252,7 @@ const ContractorDashboardScreen: React.FC = () => {
         );
         const data = await response.json();
         setAddressSuggestions(data);
-      } catch (error) {
-      // console.error('Address search error:', error);
+      } catch {
       } finally {
         setIsSearchingAddress(false);
       }
@@ -271,8 +273,8 @@ const ContractorDashboardScreen: React.FC = () => {
       if (!result.canceled && result.assets && result.assets.length > 0) {
         setLicenseDocUri(result.assets[0].uri);
       }
-    } catch (err) {
-      console.log('Failed to pick license doc:', err);
+    } catch {
+      /* non-critical */
     }
   };
 
@@ -335,7 +337,7 @@ const ContractorDashboardScreen: React.FC = () => {
   };
   const deletePortfolioItem = async (itemId: string) => {
     const headers = await getAuthHeaders();
-    return await get(`${API_BASE_URL}/api/contractors/portfolio/${itemId}`, headers);
+    return await del(`${API_BASE_URL}/api/contractors/portfolio/${itemId}`, headers);
   };
 
   const loadData = useCallback(async () => {
@@ -343,7 +345,6 @@ const ContractorDashboardScreen: React.FC = () => {
       // 1. Fetch profile first using JWT to get the REAL contractor ID
       const profile = await getContractorProfile().catch(() => null);
       if (!profile) {
-      // console.log('No contractor profile found for current user');
         setLoading(false);
         setRefreshing(false);
         return;
@@ -446,8 +447,8 @@ const ContractorDashboardScreen: React.FC = () => {
       }
       setHours(defaultHours);
 
-    } catch (err) {
-      // console.error('Failed to load data:', err);
+    } catch {
+      /* non-critical */
     } finally {
       setLoading(false);
       setRefreshing(false);

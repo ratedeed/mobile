@@ -58,7 +58,7 @@ export const Skeleton: React.FC<SkeletonProps> = ({
 };
 
 interface SkeletonLoaderProps {
-  type?: 'card' | 'list' | 'profile' | 'post' | 'text';
+  type?: 'card' | 'list' | 'profile' | 'post' | 'text' | 'notification';
   count?: number;
 }
 
@@ -115,6 +115,17 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
             <View style={styles.postActions}>
               <Skeleton width={60} height={20} />
               <Skeleton width={60} height={20} />
+            </View>
+          </View>
+        );
+
+      case 'notification':
+        return (
+          <View style={styles.notification}>
+            <Skeleton width={40} height={40} borderRadius={20} />
+            <View style={styles.notificationContent}>
+              <Skeleton width="70%" height={14} style={styles.mb8} />
+              <Skeleton width="45%" height={10} />
             </View>
           </View>
         );
@@ -200,5 +211,17 @@ const styles = StyleSheet.create({
   },
   mt16: {
     marginTop: 16,
+  },
+  notification: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: Colors.neutral50,
+    borderRadius: 12,
+    marginBottom: 8,
+  },
+  notificationContent: {
+    marginLeft: 12,
+    flex: 1,
   },
 });

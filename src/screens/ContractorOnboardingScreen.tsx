@@ -17,6 +17,7 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { updateContractorProfile, getStripeConnectUrl } from '../api';
 import { uploadToCloudinary, CLOUDINARY_FOLDERS } from '../utils/cloudinary';
+import { Linking } from 'react-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -146,6 +147,7 @@ export default function ContractorOnboardingScreen() {
         setCurrentStep(currentStep + 1);
       }
     } catch {
+      Alert.alert('Error', 'Failed to save. Your changes may not have been saved.');
       if (currentStep < STEPS.length - 1) {
         setCurrentStep(currentStep + 1);
       }
@@ -171,11 +173,10 @@ export default function ContractorOnboardingScreen() {
       const { url } = await getStripeConnectUrl();
       if (url) {
         Alert.alert('Stripe Connect', 'Opening Stripe setup in your browser.');
-        const { Linking } = require('react-native');
         Linking.openURL(url);
       }
     } catch {
-      // silent
+      Alert.alert('Error', 'Failed to connect to Stripe. Please try again later.');
     }
   };
 

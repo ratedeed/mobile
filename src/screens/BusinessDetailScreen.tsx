@@ -19,7 +19,7 @@ import { RootStackParamList, Review, Contractor, Post } from '../types';
 import { FontAwesome5 } from '@expo/vector-icons';
 import HapticFeedback from '../utils/haptics';
 import { SvgImage } from '../components/common/SvgImage';
-import { fetchContractorDetails, fetchContractorPosts, createLead, fetchContractorReviews, extractId, browseContractors, getAuthHeaders } from '../api';
+import { fetchContractorDetails, fetchContractorPosts, createLead, fetchContractorReviews, extractId, browseContractors, post as apiPost } from '../api';
 import { API_BASE_URL } from '../config';
 import { getCoverImageUrl, getProfileImageUrl, isSvgUrl } from '../utils/avatarUtils';
 import { isFavorite, addFavorite, removeFavorite } from '../utils/favoritesStore';
@@ -79,7 +79,7 @@ const BusinessDetailScreen: React.FC = () => {
     try {
       setLoading(true);
       const data = await fetchContractorDetails(id);
-      if (__DEV__) console.log('BusinessDetail: Fetched contractor data');
+      
       setContractor(data);
 
       const contractorId = data?._id || (data as any).id || id;
@@ -120,9 +120,6 @@ const BusinessDetailScreen: React.FC = () => {
         return true;
       });
             
-      if (__DEV__) {
-      // console.log(`BusinessDetail: Final unique reviews count: ${uniqueReviews.length}`);
-      }
       setContractorReviews(uniqueReviews);
 
       // Fetch similar contractors by category (matching web version)
@@ -181,12 +178,7 @@ const BusinessDetailScreen: React.FC = () => {
     setReportSubmitting(true);
     try {
       const contractorId = contractor?._id || id;
-      const authHeaders = await getAuthHeaders();
-      await fetch(`${API_BASE_URL}/api/reports`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders },
-        body: JSON.stringify({ contractorId, reason: reportReason }),
-      });
+      await apiPost(`${API_BASE_URL}/api/reports`, { contractorId, reason: reportReason });
       Alert.alert('Success', 'Report submitted');
       setShowReportDialog(false);
       setReportReason('');

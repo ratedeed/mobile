@@ -22,6 +22,17 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const USER_DATA_KEY = 'ratedeed-user-data';
+
+const saveUserData = async (data: Record<string, any>) => {
+  await AsyncStorage.setItem(USER_DATA_KEY, JSON.stringify(data));
+};
+
+const loadUserData = async (): Promise<Record<string, any> | null> => {
+  const raw = await AsyncStorage.getItem(USER_DATA_KEY);
+  return raw ? JSON.parse(raw) : null;
+};
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [firebaseUser, setFirebaseUser] = useState<any>(null);
   const [backendToken, setBackendToken] = useState<string | null>(null);
@@ -36,52 +47,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const loadStoredAuth = async () => {
     try {
-      const storedUserInfo = await AsyncStorage.getItem('userInfo');
-      const secureToken = await SecureStore.getItemAsync('auth_token');
-      if (storedUserInfo) {
-        const parsed = JSON.parse(storedUserInfo);
-        const token = secureToken || parsed.token || null;
+      const token = await SecureStore.getItemAsync('auth_token');
+      if (token) {
         setBackendToken(token);
-        
+
         let decodedId = null;
-        if (token) {
-          try {
-            const decodedToken: any = jwtDecode(token);
-            decodedId = decodedToken.id || decodedToken._id;
-          } catch (e) {
-      // console.error('Failed to decode token:', e);
-          }
+        try {
+          const decodedToken: any = jwtDecode(token);
+          decodedId = decodedToken.id || decodedToken._id;
+        } catch {
+          /* token decode failure is non-critical */
         }
-        
-        setUserId(parsed._id || parsed.id || decodedId || null);
-        setIsEmailVerified(parsed.emailVerified || false);
-        setUserRole(parsed.role || null);
-        // Sync favorites on load if token exists
-        if (token) {
-          syncFavoritesWithServer();
+
+        const userData = await loadUserData();
+        setUserId(userData?._id || userData?.id || decodedId || null);
+        setIsEmailVerified(userData?.emailVerified || false);
+        setUserRole(userData?.role || null);
+        if (userData?.firstName) {
+          setFirebaseUser({ email: userData.email });
         }
-        if (parsed.firstName) {
-          setFirebaseUser({ email: parsed.email });
-        }
+
+        syncFavoritesWithServer();
       }
-    } catch (error) {
-      // console.error('Error loading stored auth:', error);
+    } catch {
+      /* non-critical */
     } finally {
       setIsLoading(false);
     }
   };
 
   const login = useCallback(async (email: string, password: string) => {
-    // This is handled by LoginScreen through Firebase + backend
-    // This function is for non-Firebase login if needed
     throw new Error('Use Firebase login flow');
   }, []);
 
   const logout = useCallback(async () => {
-    await AsyncStorage.removeItem('userInfo');
-    await AsyncStorage.removeItem('ratedeed-current-user');
     await SecureStore.deleteItemAsync('auth_token');
     await SecureStore.deleteItemAsync('refresh_token');
+    await AsyncStorage.removeItem(USER_DATA_KEY);
+    await AsyncStorage.removeItem('ratedeed-current-user');
     setBackendToken(null);
     setUserId(null);
     setFirebaseUser(null);
@@ -91,55 +94,55 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const updateUser = useCallback(async (userData: Partial<AuthInfo>) => {
     try {
-      const currentUserInfo = await AsyncStorage.getItem('userInfo');
-      const userInfo = currentUserInfo ? JSON.parse(currentUserInfo) : {};
-      const updated = { ...userInfo, ...userData };
-      await AsyncStorage.setItem('userInfo', JSON.stringify(updated));
-      await AsyncStorage.setItem('ratedeed-current-user', JSON.stringify(updated));
-      
+      const current = await loadUserData() || {};
+      const updated = { ...current, ...userData };
+      await saveUserData(updated);
+
       if (userData.role) {
         setUserRole(userData.role as UserRole);
       }
       if (updated._id || updated.id) {
-        setUserId(updated._id || updated.id);
+        setUserId(updated._id || updated.id || null);
       }
-    } catch (error) {
-      // console.error('Error updating user info in AsyncStorage:', error);
+    } catch {
+      /* non-critical */
     }
   }, []);
 
   const updateBackendToken = useCallback(async (token: string, emailVerifiedStatus: boolean, userData?: any) => {
-    const currentUserInfo = await AsyncStorage.getItem('userInfo');
-    const userInfo = currentUserInfo ? JSON.parse(currentUserInfo) : {};
-    userInfo.token = token;
-    userInfo.emailVerified = emailVerifiedStatus;
-    
-    // Merge new userData if provided
-    if (userData) {
-      Object.assign(userInfo, userData);
+    if (token) {
+      await SecureStore.setItemAsync('auth_token', token);
     }
-    
+
+    const currentData = await loadUserData() || {};
+    const mergedData = { ...currentData, ...userData, emailVerified: emailVerifiedStatus };
+
+    if (userData?.refreshToken) {
+      await SecureStore.setItemAsync('refresh_token', userData.refreshToken);
+      delete mergedData.refreshToken;
+    }
+    delete mergedData.token;
+
+    await saveUserData(mergedData);
+
     let decodedId = null;
     if (token) {
       try {
         const decodedToken: any = jwtDecode(token);
         decodedId = decodedToken.id || decodedToken._id;
-      } catch (e) {}
+      } catch {
+        /* token decode failure is non-critical */
+      }
     }
 
-    await AsyncStorage.setItem('userInfo', JSON.stringify(userInfo));
-    await AsyncStorage.setItem('ratedeed-current-user', JSON.stringify(userInfo));
-    if (token) await SecureStore.setItemAsync('auth_token', token);
-    if (userInfo.refreshToken) await SecureStore.setItemAsync('refresh_token', userInfo.refreshToken);
     setBackendToken(token);
     setIsEmailVerified(emailVerifiedStatus);
-    if (userInfo._id || userInfo.id || decodedId) {
-      setUserId(userInfo._id || userInfo.id || decodedId);
+    if (mergedData._id || mergedData.id || decodedId) {
+      setUserId((mergedData._id || mergedData.id || decodedId) ?? null);
     }
-    if (userInfo.role) {
-      setUserRole(userInfo.role as UserRole);
+    if (mergedData.role) {
+      setUserRole(mergedData.role as UserRole);
     }
-    // Sync favorites on login
     syncFavoritesWithServer();
   }, []);
 

@@ -39,22 +39,16 @@ export const usePushNotifications = () => {
           authStatus === AuthorizationStatus.PROVISIONAL;
         if (enabled) {
           const fcmToken = await getToken(messaging);
-      // console.log('========================================');
           setExpoPushToken(fcmToken);
-      // console.log('Copy this token to Firebase Console > Cloud Messaging > Send test message');
-      // console.log('========================================');
 
-          // Log APNS token to verify APNS registration
           try {
             const { getAPNSToken } = require('@react-native-firebase/messaging');
             const apnsToken = await getAPNSToken(messaging);
-      // console.log('APNS Token:', apnsToken || 'NULL — push will NOT work');
-          } catch (e) {
-      // console.warn('Could not check APNS token:', e);
+            void apnsToken;
+          } catch {
           }
         }
-      } catch (error) {
-      // console.warn('Failed to get push token', error);
+      } catch {
       }
     };
     requestUserPermission();
@@ -71,7 +65,6 @@ export const usePushNotifications = () => {
   useEffect(() => {
     const messaging = getMessaging();
     const unsubscribe = onMessage(messaging, async remoteMessage => {
-      // console.log('A new FCM message arrived!');
       await Notifications.scheduleNotificationAsync({
         content: {
           title: remoteMessage.notification?.title || 'New Notification',
@@ -80,11 +73,10 @@ export const usePushNotifications = () => {
         },
         trigger: null,
       });
-      refreshNotifications().catch(e => console.error('Failed to refresh after FCM:', e));
+      refreshNotifications().catch(() => {});
     });
 
     const receivedListener = Notifications.addNotificationReceivedListener(notification => {
-      // console.log('Foreground notification received!');
       setNotification(notification);
     });
 
@@ -97,7 +89,6 @@ export const usePushNotifications = () => {
   // Effect 4: Notification response (tap) listener
   useEffect(() => {
     const responseListener = Notifications.addNotificationResponseReceivedListener(response => {
-      // console.log('Notification tapped!');
       const data = response.notification.request.content.data;
       if (data?.type === 'new_message' && data?.conversationId) {
         // @ts-ignore

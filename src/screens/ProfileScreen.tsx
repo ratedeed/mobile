@@ -1,7 +1,9 @@
-import { auth } from '../firebaseConfig';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+// @ts-expect-error firebaseConfig is a JS module
+import { auth as authModule } from '../firebaseConfig';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, verifyBeforeUpdateEmail } from 'firebase/auth';
-import { requestEmailChange, changePassword as apiChangePassword, deleteAccount } from '../utils/apiClient';
-import React, { useState, useEffect, useCallback } from 'react';
+import { changePassword as apiChangePassword, deleteAccount } from '../utils/apiClient';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   ScrollView,
@@ -24,18 +26,15 @@ import * as ImagePicker from "expo-image-picker";
 import { uploadToCloudinary, CLOUDINARY_FOLDERS } from "../utils/cloudinary";
 
 import { getUserProfile, updateUserProfile, updateProfilePicture } from '../api';
-import { put, getAuthHeaders } from '../api';
-import { API_BASE_URL } from '../config';
-
-const changePassword = async (currentPassword: string, newPassword: string) => {
-  const headers = await getAuthHeaders();
-  return put(`${API_BASE_URL}/api/users/password`, { currentPassword, newPassword }, headers);
-};
 import { useAuth } from '../context/AuthContext';
 import { User } from '../types';
+import { IP_GEOLOCATION_URL } from '../config';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { SvgImage } from '../components/common/SvgImage';
 import { getProfileImageUrl, isSvgUrl } from '../utils/avatarUtils';
+
+// @ts-ignore - firebaseConfig is a JS module
+const auth = authModule as unknown as import('firebase/auth').Auth;
 
 type RootStackParamList = {
   Profile: undefined;
@@ -72,17 +71,19 @@ function SettingsSheet({ title, onClose, children }: { title: string; onClose: (
   return (
     <View className="absolute inset-0 z-[90] justify-end" style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
       <Pressable className="flex-1" onPress={onClose} />
-      <View className="bg-white dark:bg-neutral-950 rounded-t-3xl">
-        <View className="flex-row items-center justify-between px-5 pt-4 pb-2 border-b border-neutral-100 dark:border-neutral-800">
-          <Text className="text-lg font-bold text-neutral-900 dark:text-neutral-50">{title}</Text>
-          <Pressable onPress={onClose} className="w-8 h-8 items-center justify-center rounded-full">
-            <FontAwesome5 name="times" size={16} color="#737373" />
-          </Pressable>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <View className="bg-white dark:bg-neutral-950 rounded-t-3xl">
+          <View className="flex-row items-center justify-between px-5 pt-4 pb-2 border-b border-neutral-100 dark:border-neutral-800">
+            <Text className="text-lg font-bold text-neutral-900 dark:text-neutral-50">{title}</Text>
+            <Pressable onPress={onClose} className="w-8 h-8 items-center justify-center rounded-full">
+              <FontAwesome5 name="times" size={16} color="#737373" />
+            </Pressable>
+          </View>
+          <ScrollView className="px-5 py-4 pb-10 max-h-[70vh]" keyboardShouldPersistTaps="handled">
+            {children}
+          </ScrollView>
         </View>
-        <ScrollView className="px-5 py-4 pb-10 max-h-[70vh]">
-          {children}
-        </ScrollView>
-      </View>
+      </KeyboardAvoidingView>
     </View>
   );
 }
@@ -102,14 +103,12 @@ const ProfileScreen: React.FC = () => {
 
   const fetchIpZipCode = useCallback(async () => {
     try {
-      const response = await fetch('https://free.freeipapi.com/api/json');
+      const response = await fetch(IP_GEOLOCATION_URL);
       const data = await response.json();
       if (data.zipCode) {
         setIpZipCode(data.zipCode);
       }
-    } catch (error) {
-      console.log('Failed to fetch IP zip code:', error);
-    }
+    } catch {/* IP geolocation optional */}
   }, []);
 
   const loadHapticsSetting = useCallback(async () => {
@@ -118,21 +117,20 @@ const ProfileScreen: React.FC = () => {
       if (val !== null) {
         setHapticsEnabled(val === 'true');
       }
-    } catch {}
+    } catch { /* haptics setting optional */ }
   }, []);
 
   const saveHapticsSetting = async (enabled: boolean) => {
     try {
       setHapticsEnabled(enabled);
       await AsyncStorage.setItem('haptics_enabled', enabled.toString());
-    } catch {}
+    } catch { /* non-critical */ }
   };
 
   useFocusEffect(useCallback(() => { 
-    loadProfile(); 
     fetchIpZipCode();
     loadHapticsSetting();
-  }, [loadProfile, fetchIpZipCode, loadHapticsSetting]));
+  }, [fetchIpZipCode, loadHapticsSetting]));
 
   // Edit profile state
   const [editData, setEditData] = useState({ firstName: '', lastName: '', email: '', zipCode: '' });
@@ -229,9 +227,6 @@ const ProfileScreen: React.FC = () => {
     }
     setEmailSaving(true);
     try {
-      
-      const { EmailAuthProvider, reauthenticateWithCredential, verifyBeforeUpdateEmail } = require('firebase/auth');
-
       if (!auth.currentUser) throw new Error('You must be logged in to change your email.');
 
       const credential = EmailAuthProvider.credential(user?.email || '', emailPassword);
@@ -272,22 +267,15 @@ const ProfileScreen: React.FC = () => {
     }
     setPwSaving(true);
     try {
-      
-      const { EmailAuthProvider, reauthenticateWithCredential, updatePassword } = require('firebase/auth');
-
       if (!auth.currentUser || !user?.email) {
         throw new Error('You must be logged in to change your password.');
       }
 
-      // 1. Re-authenticate with Firebase
       const credential = EmailAuthProvider.credential(user.email, currentPassword);
       await reauthenticateWithCredential(auth.currentUser, credential);
 
-      // 2. Update password in Firebase
       await updatePassword(auth.currentUser, newPassword);
 
-      // 3. Sync with backend
-      
       await apiChangePassword(currentPassword, newPassword);
 
       setPwMessage({ type: 'success', text: 'Password changed!' });
@@ -338,7 +326,7 @@ const ProfileScreen: React.FC = () => {
 
   return (
     <View className="flex-1 bg-white dark:bg-neutral-950" style={{ paddingTop: Math.max(insets.top, 16) }}>
-      <ScrollView showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
+      <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
         {/* Profile Header */}
         <View className="bg-white dark:bg-neutral-950 px-4 pb-5">
           <View className="flex-row items-center" style={{ gap: 16 }}>
@@ -517,8 +505,14 @@ const ProfileScreen: React.FC = () => {
             <FontAwesome5 name="chevron-right" size={12} color="#a3a3a3" />
           </Pressable>
           <View className="pt-2 border-t border-neutral-100 dark:border-neutral-800 mt-2">
-            <Text className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-2">Data & Privacy</Text>
-            <Toggle label="Location Services" description="Allow access to your location for nearby results" defaultOn />
+            <Text className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-2">Data &amp; Privacy</Text>
+            <Pressable onPress={() => { closeSheet(); setTimeout(() => setActiveSheet('privacy'), 300); }} className="flex-row items-center justify-between py-2">
+              <View>
+                <Text className="text-sm font-medium text-neutral-900 dark:text-neutral-50">Privacy Policy</Text>
+                <Text className="text-xs text-neutral-500 dark:text-neutral-400">View our privacy policy</Text>
+              </View>
+              <FontAwesome5 name="chevron-right" size={12} color="#a3a3a3" />
+            </Pressable>
           </View>
           <View className="pt-4 border-t border-neutral-100 dark:border-neutral-800 mt-2">
             <Pressable onPress={() => {
@@ -530,7 +524,7 @@ const ProfileScreen: React.FC = () => {
                   { text: 'Delete', style: 'destructive', onPress: async () => {
                     try {
                       await deleteAccount();
-                      await auth.signOut();
+                      await logout();
                     } catch {
                       Alert.alert('Error', 'Failed to delete account. Please try again.');
                     }

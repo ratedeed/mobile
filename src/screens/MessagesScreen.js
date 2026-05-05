@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
   View,
   ScrollView,
@@ -37,6 +37,7 @@ import {
 import { useAuth } from "../context/AuthContext";
 import { SvgImage } from "../components/common/SvgImage";
 import { getProfileImageUrl, isSvgUrl } from "../utils/avatarUtils";
+import { uploadToCloudinary, CLOUDINARY_FOLDERS } from "../utils/cloudinary";
 
 const REPORT_CATEGORIES = [
   "Harassment or bullying",
@@ -121,7 +122,6 @@ const MessagesScreen = () => {
   const insets = useSafeAreaInsets();
   const { recipientId, recipientName, conversationId: routeConversationId } = route.params || {};
   const { userId: currentUserId, userRole: role } = useAuth();
-  if (__DEV__) console.log('MessagesScreen: Current Role:', role);
 
   const [conversations, setConversations] = useState({});
   const [selectedConversation, setSelectedConversation] = useState(null);
@@ -244,7 +244,7 @@ const MessagesScreen = () => {
         }, {});
         setConversations(conversationsMap);
       }
-    } catch (e) { console.error(e); }
+    } catch { /* non-critical */ }
     finally { setLoading(false); }
   };
 
@@ -256,7 +256,7 @@ const MessagesScreen = () => {
       const data = await fetchMessages(conversationId);
       const msgs = Array.isArray(data) ? data : data?.messages || [];
       setMessages([...msgs].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt)));
-    } catch (e) { console.error(e); }
+    } catch { /* non-critical */ }
     finally { setLoading(false); }
   };
 
@@ -282,7 +282,6 @@ const MessagesScreen = () => {
       if (pendingAttachment) {
         setIsUploading(true);
         try {
-          const { uploadToCloudinary, CLOUDINARY_FOLDERS } = require('../utils/cloudinary');
           attachmentUrl = await uploadToCloudinary(pendingAttachment.uri, CLOUDINARY_FOLDERS.CHAT);
         } catch (uploadErr) {
           setIsUploading(false);

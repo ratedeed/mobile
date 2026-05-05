@@ -1,4 +1,6 @@
 import React, { useEffect } from 'react';
+import { StatusBar } from 'expo-status-bar';
+import { useColorScheme } from 'nativewind';
 import AnimatedSplashScreen from './src/components/AnimatedSplashScreen';
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -8,16 +10,19 @@ import LoadingScreen from './src/screens/LoadingScreen';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { ContractorProvider } from './src/context/ContractorContext';
 import { NotificationsProvider } from './src/context/NotificationsContext';
+import { StripeProvider } from '@stripe/stripe-react-native';
 import { registerSocket } from './src/utils/apiClient';
 import ErrorBoundary from './src/components/ErrorBoundary';
-import * as Sentry from '@sentry/react-native';
 import { usePushNotifications } from './src/hooks/usePushNotifications';
 import { EscrowTrustBanner } from './src/components/EscrowTrustBanner';
-import { StatusBar } from 'expo-status-bar';
-import { useColorScheme } from 'nativewind';
+import * as Sentry from '@sentry/react-native';
+import Constants from 'expo-constants';
+
+// TODO: Replace with your actual Stripe Publishable Key
+const STRIPE_PUBLISHABLE_KEY = 'pk_test_your_key_here';
 
 Sentry.init({
-  dsn: 'https://9551400459289c85e05f957e50a65941@o4511186039603200.ingest.us.sentry.io/4511186048843776',
+  dsn: Constants.expoConfig?.extra?.sentryDsn || '',
   debug: false,
 });
 
@@ -99,14 +104,19 @@ function App() {
   return (
     <SafeAreaProvider>
       <ErrorBoundary>
-        <AuthProvider>
-          <NotificationsProvider>
-            <ContractorProvider>
-              <AppContent />
-              {!splashComplete && <AnimatedSplashScreen onComplete={() => setSplashComplete(true)} minDuration={2800} />}
-            </ContractorProvider>
-          </NotificationsProvider>
-        </AuthProvider>
+        <StripeProvider
+          publishableKey={STRIPE_PUBLISHABLE_KEY}
+          merchantIdentifier="merchant.com.ratedeed.app"
+        >
+          <AuthProvider>
+            <NotificationsProvider>
+              <ContractorProvider>
+                <AppContent />
+                {!splashComplete && <AnimatedSplashScreen onComplete={() => setSplashComplete(true)} minDuration={2800} />}
+              </ContractorProvider>
+            </NotificationsProvider>
+          </AuthProvider>
+        </StripeProvider>
       </ErrorBoundary>
     </SafeAreaProvider>
   );

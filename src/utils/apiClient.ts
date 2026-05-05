@@ -1,10 +1,16 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import { API_BASE_URL } from '../config';
 import io, { Socket } from 'socket.io-client';
-import { auth as firebaseAuth } from '../firebaseConfig';
+// @ts-expect-error firebaseConfig is a JS module
+import { auth } from '../firebaseConfig';
+import { Auth } from 'firebase/auth';
 import { jwtDecode } from 'jwt-decode';
 import { AppState } from 'react-native';
+
+// @ts-ignore - firebaseConfig is a JS module
+const firebaseAuth: Auth = auth as unknown as Auth;
 import {
   Contractor,
   Post,
@@ -29,6 +35,8 @@ import {
 
 const API_BASE = `${API_BASE_URL}/api`;
 
+const USER_DATA_KEY = 'ratedeed-user-data';
+
 // ==========================================
 // Base API Client Functions
 // ==========================================
@@ -37,10 +45,7 @@ export const getAuthHeaders = async (externalToken?: string): Promise<Record<str
   if (externalToken) {
     return { 'Authorization': `Bearer ${externalToken}` };
   }
-  const secureToken = await SecureStore.getItemAsync('auth_token');
-  if (secureToken) return { 'Authorization': `Bearer ${secureToken}` };
-  const userInfo = await AsyncStorage.getItem('userInfo');
-  const token = userInfo ? JSON.parse(userInfo).token : null;
+  const token = await SecureStore.getItemAsync('auth_token');
   return token ? { 'Authorization': `Bearer ${token}` } : {};
 };
 
@@ -48,13 +53,8 @@ let isRefreshing = false;
 let refreshPromise: Promise<any> | null = null;
 
 const refreshTokenIfNeeded = async (): Promise<void> => {
-  const refreshToken = await SecureStore.getItemAsync('refresh_token');
-  if (!refreshToken) {
-    const userInfo = await AsyncStorage.getItem('userInfo');
-    if (!userInfo) return;
-    const parsed = JSON.parse(userInfo);
-    if (!parsed.refreshToken) return;
-  }
+  const rt = await SecureStore.getItemAsync('refresh_token');
+  if (!rt) return;
 
   if (isRefreshing && refreshPromise) {
     await refreshPromise;
@@ -64,10 +64,6 @@ const refreshTokenIfNeeded = async (): Promise<void> => {
   isRefreshing = true;
   refreshPromise = (async () => {
     try {
-      const rt = await SecureStore.getItemAsync('refresh_token') || (() => {
-        const ui = AsyncStorage.getItem('userInfo');
-        return ui ? JSON.parse(ui as any).refreshToken : null;
-      })();
       if (!rt) return;
       const response = await fetch(`${API_BASE}/users/refresh-token`, {
         method: 'POST',
@@ -78,23 +74,16 @@ const refreshTokenIfNeeded = async (): Promise<void> => {
         const data = await response.json();
         if (data.token) await SecureStore.setItemAsync('auth_token', data.token);
         if (data.refreshToken) await SecureStore.setItemAsync('refresh_token', data.refreshToken);
-        const userInfo = await AsyncStorage.getItem('userInfo');
-        if (userInfo) {
-          const parsed = JSON.parse(userInfo);
-          await AsyncStorage.setItem('userInfo', JSON.stringify({ ...parsed, token: data.token, refreshToken: data.refreshToken }));
-        }
       } else {
-        // Refresh token expired/revoked — sign out user
         await SecureStore.deleteItemAsync('auth_token');
         await SecureStore.deleteItemAsync('refresh_token');
-        await AsyncStorage.removeItem('userInfo');
+        await AsyncStorage.removeItem(USER_DATA_KEY);
         firebaseAuth.signOut();
       }
     } catch {
-      // Network error during refresh — sign out
       await SecureStore.deleteItemAsync('auth_token');
       await SecureStore.deleteItemAsync('refresh_token');
-      await AsyncStorage.removeItem('userInfo');
+      await AsyncStorage.removeItem(USER_DATA_KEY);
       firebaseAuth.signOut();
     } finally {
       isRefreshing = false;
@@ -282,7 +271,6 @@ export const normalizeApiContractor = (c: any): Contractor => {
 
     return normalized as Contractor;
   } catch (err) {
-      // console.error('Failed to normalize contractor:', err);
     return c;
   }
 };
@@ -307,13 +295,20 @@ const normalizeContractors = (list: any[]): Contractor[] => {
 export const login = async (email: string, password: string): Promise<any> => {
   const data = await post(`${API_BASE}/users/login`, { email, password });
   if (data && data.token) {
-    await AsyncStorage.setItem('userInfo', JSON.stringify({ token: data.token, ...data.user }));
+    await SecureStore.setItemAsync('auth_token', data.token);
+    if (data.refreshToken) await SecureStore.setItemAsync('refresh_token', data.refreshToken);
+    const userData = { ...data.user };
+    delete userData.token;
+    delete userData.refreshToken;
+    await AsyncStorage.setItem(USER_DATA_KEY, JSON.stringify(userData));
   }
   return data;
 };
 
 export const logout = async (): Promise<void> => {
-  await AsyncStorage.removeItem('userInfo');
+  await SecureStore.deleteItemAsync('auth_token');
+  await SecureStore.deleteItemAsync('refresh_token');
+  await AsyncStorage.removeItem(USER_DATA_KEY);
 };
 
 export const register = async (data: any): Promise<any> => {
@@ -332,11 +327,16 @@ export const contractorSignup = async (data: any): Promise<any> => {
   return post(`${API_BASE}/contractors`, data);
 };
 
-export const backendLoginFirebase = async (idToken: string, email: string, password?: string): Promise<any> => {
+export const backendLoginFirebase = async (idToken: string, email: string): Promise<any> => {
   const headers = { 'Authorization': `Bearer ${idToken}` };
-  const data = await post(`${API_BASE}/users/login`, { email, firebaseUid: firebaseAuth.currentUser?.uid, password }, headers);
+  const data = await post(`${API_BASE}/users/login`, { email, firebaseUid: firebaseAuth.currentUser?.uid }, headers);
   if (data && data.token) {
-    await AsyncStorage.setItem('userInfo', JSON.stringify({ token: data.token, ...data.user }));
+    await SecureStore.setItemAsync('auth_token', data.token);
+    if (data.refreshToken) await SecureStore.setItemAsync('refresh_token', data.refreshToken);
+    const userData = { ...data.user };
+    delete userData.token;
+    delete userData.refreshToken;
+    await AsyncStorage.setItem(USER_DATA_KEY, JSON.stringify(userData));
   }
   return data;
 };
@@ -421,12 +421,10 @@ let pendingListeners: Array<{ event: string; callback: Function }> = [];
 AppState.addEventListener('change', (nextAppState) => {
   if (nextAppState === 'background') {
     if (socket?.connected) {
-      // console.log('App in background: disconnecting socket for FCM pushes');
       socket.disconnect();
     }
   } else if (nextAppState === 'active') {
     if (socket?.disconnected && currentSocketUserId) {
-      // console.log('App in foreground: reconnecting socket');
       socket.connect();
     }
   }
@@ -437,12 +435,8 @@ export const initializeSocket = async () => {
   isInitializingSocket = true;
 
   try {
-    const userInfo = await AsyncStorage.getItem('userInfo');
-    const token = userInfo ? JSON.parse(userInfo).token : null;
+    const token = await SecureStore.getItemAsync('auth_token');
 
-    // SYNC with web version: use standard transports and auth object
-    // Also remove withCredentials which can cause handshake errors in some environments
-      // console.log('Socket: Connecting to:', API_BASE_URL);
     socket = io(API_BASE_URL, {
       transports: ['websocket', 'polling'],
       auth: token ? { token } : undefined,
@@ -453,9 +447,7 @@ export const initializeSocket = async () => {
     });
 
     socket.on('connect', () => {
-      // console.log('Socket connected:', socket?.id);
       isInitializingSocket = false;
-      // Flush any listeners that were registered before socket was ready
       pendingListeners.forEach(({ event, callback }) => {
         socket?.off(event, callback as any);
         socket?.on(event, callback as any);
@@ -463,20 +455,16 @@ export const initializeSocket = async () => {
       pendingListeners = [];
     });
 
-    socket.on('connect_error', (error) => {
-      // console.error('Socket connection error:', error);
+    socket.on('connect_error', () => {
       isInitializingSocket = false;
     });
 
     socket.on('disconnect', (reason) => {
-      // console.log('Socket disconnected:', reason);
       if (reason === 'io server disconnect') {
-        // the disconnection was initiated by the server, you need to reconnect manually
         socket?.connect();
       }
     });
-  } catch (error) {
-      // console.error('Error initializing socket:', error);
+  } catch {
     isInitializingSocket = false;
   }
 };
@@ -494,7 +482,6 @@ export const registerSocket = async (userId: string) => {
 
   const emitRegister = () => {
     if (userId && socket?.connected) {
-      // console.log(`Registering socket for user ${userId}`);
       socket.emit("register", userId);
     }
   };
@@ -740,6 +727,11 @@ export const deleteNotification = async (notificationId: string): Promise<void> 
   return del(`${API_BASE}/notifications/${notificationId}`, authHeaders);
 };
 
+export const markNotificationUnread = async (notificationId: string): Promise<void> => {
+  const authHeaders = await getAuthHeaders();
+  return put(`${API_BASE}/notifications/${notificationId}/unread`, {}, authHeaders);
+};
+
 // ==========================================
 // User API
 // ==========================================
@@ -747,13 +739,11 @@ export const deleteNotification = async (notificationId: string): Promise<void> 
 export const getUserProfile = async (): Promise<User> => {
   const authHeaders = await getAuthHeaders();
   const user = await get(`${API_BASE}/users/profile`, authHeaders);
-  // Backend doesn't return createdAt — use JWT iat as fallback
   if (!user.createdAt) {
     try {
-      const userInfo = await AsyncStorage.getItem('userInfo');
-      const parsed = userInfo ? JSON.parse(userInfo) : {};
-      if (parsed.token) {
-        const decoded: any = jwtDecode(parsed.token);
+      const token = await SecureStore.getItemAsync('auth_token');
+      if (token) {
+        const decoded: any = jwtDecode(token);
         if (decoded.iat) {
           user.createdAt = new Date(decoded.iat * 1000).toISOString();
         }

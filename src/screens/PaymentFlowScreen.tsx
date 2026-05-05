@@ -1,15 +1,19 @@
-import React, { useState } from 'react';
-import { View, Text, Pressable, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, Pressable, ScrollView, ActivityIndicator, Alert, Platform, StyleSheet } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { createCheckoutSession } from '../api';
 import { FontAwesome5 } from '@expo/vector-icons';
+import { useStripe, usePlatformPay } from '@stripe/stripe-react-native';
 
 const STEP_LABELS = ['Review', 'Payment', 'Confirmed'];
 
 export default function PaymentFlowScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
+  const { initPaymentSheet, presentPaymentSheet } = useStripe();
+  const { isPlatformPaySupported } = usePlatformPay();
+
   const quoteId = route.params?.quoteId || '';
   const quoteTotal = route.params?.totalAmount || 0;
   const contractorName = route.params?.contractorName || 'Contractor';
@@ -17,6 +21,34 @@ export default function PaymentFlowScreen() {
 
   const [currentStep, setCurrentStep] = useState(0);
   const [paying, setPaying] = useState(false);
+  const [applePayAvailable, setApplePayAvailable] = useState(false);
+
+  useEffect(() => {
+    async function checkApplePay() {
+      const supported = await isPlatformPaySupported({ googlePay: { testEnv: true } });
+      setApplePayAvailable(supported);
+    }
+    if (Platform.OS === 'ios') {
+      checkApplePay();
+    }
+  }, [isPlatformPaySupported]);
+
+  const handleApplePay = async () => {
+    try {
+      setPaying(true);
+      // NOTE: Native Apple Pay requires a PaymentIntent client secret from the backend.
+      // If your backend only supports Stripe Checkout (URL), you may need to add a new endpoint.
+      // For now, we'll alert that it needs backend configuration.
+      Alert.alert(
+        'Apple Pay',
+        'Native Apple Pay requires a PaymentIntent client secret. Please ensure your backend is configured to return this for mobile requests.'
+      );
+    } catch (err) {
+      Alert.alert('Error', 'Apple Pay failed to initialize.');
+    } finally {
+      setPaying(false);
+    }
+  };
 
   const handlePayment = async () => {
     try {
@@ -29,11 +61,8 @@ export default function PaymentFlowScreen() {
         setCurrentStep(2);
       } else if (result.type === 'success' && result.url.includes('job_canceled=true')) {
         Alert.alert('Canceled', 'The payment process was canceled.');
-      } else if (result.type === 'cancel') {
-        // User closed the browser manually
       }
     } catch (err) {
-      // console.error(err);
       Alert.alert('Error', 'Failed to initiate secure payment. Please try again.');
     } finally {
       setPaying(false);
@@ -107,6 +136,28 @@ export default function PaymentFlowScreen() {
               </View>
             </View>
 
+            {applePayAvailable && (
+              <Pressable
+                onPress={handleApplePay}
+                style={styles.applePayBtn}
+              >
+                <View style={styles.applePayContent}>
+                  <FontAwesome5 name="apple" size={18} color="#fff" brand solid />
+                  <Text style={styles.applePayText}>Pay</Text>
+                </View>
+              </Pressable>
+            )}
+
+            <View style={{ height: 12, alignItems: 'center', justifyContent: 'center' }}>
+              {applePayAvailable && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <View style={{ flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: '#e5e5e5' }} />
+                  <Text style={{ fontSize: 11, color: '#a3a3a3', fontWeight: '500' }}>OR</Text>
+                  <View style={{ flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: '#e5e5e5' }} />
+                </View>
+              )}
+            </View>
+
             <Pressable
               onPress={handlePayment}
               disabled={paying}
@@ -168,6 +219,31 @@ export default function PaymentFlowScreen() {
           </View>
         )}
       </ScrollView>
+
+      {/* Apple Pay + General Styles */}
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  applePayBtn: {
+    width: '100%',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#000000',
+    marginTop: 16,
+  },
+  applePayContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  applePayText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#ffffff',
+    letterSpacing: 0.5,
+  },
+});

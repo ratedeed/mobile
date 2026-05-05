@@ -10,6 +10,8 @@ import {
   RefreshControl,
   Text,
   SafeAreaView,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -256,7 +258,8 @@ const BusinessSearchScreen: React.FC = () => {
   const hasSearch = searchZip.trim().length > 0 || searchName.trim().length > 0 || activeCategory !== 'all';
 
   return (
-    <SafeAreaView className="flex-1 bg-white dark:bg-neutral-950">
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1 bg-white dark:bg-neutral-950">
+      <SafeAreaView className="flex-1 bg-white dark:bg-neutral-950">
       {/* Search Header */}
       <View className="bg-white dark:bg-neutral-950 border-b border-neutral-200 dark:border-neutral-700 px-4 py-3">
         <View className="flex-row items-center" style={{ gap: 8 }}>
@@ -412,7 +415,8 @@ const BusinessSearchScreen: React.FC = () => {
           <Text className="text-neutral-500 dark:text-neutral-400 text-sm mt-3">Enter a zip code or contractor name to search</Text>
         </View>
       )}
-    </SafeAreaView>
+      </SafeAreaView>
+    </KeyboardAvoidingView>
   );
 };
 
