@@ -15,6 +15,15 @@ const path = require('path');
 const cors = require('cors');
 require('dotenv').config();
 
+// Initialize Cloudinary SDK
+const cloudinary = require('cloudinary').v2;
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME || (process.env.CLOUDINARY_URL ? process.env.CLOUDINARY_URL.split('@')[1] : ''),
+  api_key: process.env.CLOUDINARY_API_KEY || (process.env.CLOUDINARY_URL ? process.env.CLOUDINARY_URL.split('://')[1].split(':')[0] : ''),
+  api_secret: process.env.CLOUDINARY_API_SECRET || (process.env.CLOUDINARY_URL ? process.env.CLOUDINARY_URL.split(':')[2].split('@')[0] : ''),
+  secure: true,
+});
+
 // Initialize Firebase Admin SDK for push notifications
 const admin = require('firebase-admin');
 if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
