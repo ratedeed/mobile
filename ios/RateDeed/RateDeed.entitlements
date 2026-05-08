@@ -6,7 +6,7 @@
     <string>development</string>
     <key>com.apple.developer.in-app-payments</key>
     <array>
-      <string>com.ratedeed.app</string>
+      <string>merchant.com.ratedeed.app</string>
     </array>
   </dict>
 </plist>

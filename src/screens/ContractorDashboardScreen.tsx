@@ -38,6 +38,7 @@ import {
   post as apiPost,
 } from '../api';
 import * as ImagePicker from 'expo-image-picker';
+import ServiceAreaMap from '../components/common/ServiceAreaMap';
 import { API_BASE_URL } from '../config';
 import { uploadToCloudinary, CLOUDINARY_FOLDERS } from '../utils/cloudinary';
 import { getCoverImageUrl, getProfileImageUrl, isSvgUrl } from '../utils/avatarUtils';
@@ -267,11 +268,12 @@ const ContractorDashboardScreen: React.FC = () => {
   const handleLicenseDocSelect = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         quality: 0.7,
+        base64: true,
       });
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        setLicenseDocUri(result.assets[0].uri);
+        setLicenseDocUri(`data:image/jpeg;base64,${result.assets[0].base64}`);
       }
     } catch {
       /* non-critical */
@@ -287,10 +289,9 @@ const ContractorDashboardScreen: React.FC = () => {
     setVerificationResult(null);
 
     try {
-      const uploadedDocUrl = await uploadToCloudinary(licenseDocUri, CLOUDINARY_FOLDERS.LICENSES);
       await requestVerification({
         licenseNumber: editableData.licenseNumber.trim(),
-        licenseDocumentUrl: uploadedDocUrl,
+        licenseDocumentFile: licenseDocUri, // Pass the base64 string directly
       });
       setVerificationResult({
         success: true,
@@ -464,8 +465,11 @@ const ContractorDashboardScreen: React.FC = () => {
     if (!postCaption.trim()) { Alert.alert('Error', 'Caption is required'); return; }
     setPostSubmitting(true);
     try {
+      const uploadedUrls = await Promise.all(
+        postImages.map(img => uploadToCloudinary(img, CLOUDINARY_FOLDERS.POST_IMAGES))
+      );
       const tags = postTags.split(',').map(t => t.trim()).filter(Boolean);
-      await createPost({ caption: postCaption, images: postImages, tags, location: postLocation });
+      await createPost({ caption: postCaption, images: uploadedUrls, tags, location: postLocation });
       setPostCaption(''); setPostTags(''); setPostLocation(''); setPostImages([]);
       setShowCreatePost(false);
       loadData();
@@ -495,12 +499,13 @@ const ContractorDashboardScreen: React.FC = () => {
       const uri = await pickFromLibrary();
       if (!uri) return;
       setImageLoading(true);
-      const { uploadToCloudinary, CLOUDINARY_FOLDERS } = await import("../utils/cloudinary");
+      
       const folder = type === "avatar" ? CLOUDINARY_FOLDERS.CONTRACTOR_PROFILE : CLOUDINARY_FOLDERS.CONTRACTOR_BANNER;
       const uploadedUrl = await uploadToCloudinary(uri, folder);
+      
       const updateData: any = {};
       if (type === "avatar") updateData.profilePicture = uploadedUrl;
-      else updateData.bannerImage = uploadedUrl;
+      else { updateData.bannerImage = uploadedUrl; updateData.bannerUrl = uploadedUrl; }
       const result = await updateContractorProfile(updateData);
       if (result && result.user) updateUser(result.user);
       loadData();
@@ -516,9 +521,7 @@ const ContractorDashboardScreen: React.FC = () => {
       const uri = await pickFromLibrary();
       if (!uri) return;
       setImageLoading(true);
-      const { uploadToCloudinary, CLOUDINARY_FOLDERS } = await import("../utils/cloudinary");
-      const uploadedUrl = await uploadToCloudinary(uri, CLOUDINARY_FOLDERS.POST_IMAGES);
-      setPostImages(prev => [...prev, uploadedUrl]);
+      setPostImages(prev => [...prev, uri]);
     } catch (err: any) {
       Alert.alert("Error", err?.message || "Upload failed");
     } finally {
@@ -550,9 +553,7 @@ const ContractorDashboardScreen: React.FC = () => {
       const uri = await pickFromLibrary();
       if (!uri) return;
       setImageLoading(true);
-      const { uploadToCloudinary, CLOUDINARY_FOLDERS } = await import("../utils/cloudinary");
-      const uploadedUrl = await uploadToCloudinary(uri, CLOUDINARY_FOLDERS.PORTFOLIO);
-      setPortfolioItem(prev => ({ ...prev, imageUrl: uploadedUrl }));
+      setPortfolioItem(prev => ({ ...prev, imageUrl: uri }));
     } catch (err: any) {
       Alert.alert("Error", err?.message || "Upload failed");
     } finally {
@@ -869,8 +870,14 @@ const ContractorDashboardScreen: React.FC = () => {
 
               <View className="bg-white rounded-xl border border-neutral-200 p-5">
                 <Text className="text-base font-semibold text-neutral-900 mb-3">Service Areas</Text>
+                <ServiceAreaMap
+                  businessName={contractorName || 'My Business'}
+                  locationName={editableData.address}
+                  zipCodes={editableData.zipCodes}
+                  height={160}
+                />
                 {editableData.zipCodes.length > 0 ? (
-                  <View className="flex-row flex-wrap" style={{ gap: 8 }}>
+                  <View className="flex-row flex-wrap mt-3" style={{ gap: 8 }}>
                     {editableData.zipCodes.map(zip => (
                       <View key={zip} className="bg-neutral-100 px-3 py-1.5 rounded-full">
                         <Text className="text-xs font-medium text-neutral-600">{zip}</Text>
@@ -878,7 +885,7 @@ const ContractorDashboardScreen: React.FC = () => {
                     ))}
                   </View>
                 ) : (
-                  <Text className="text-sm text-neutral-500 italic">No service areas listed</Text>
+                  <Text className="text-sm text-neutral-500 italic mt-2">No service areas listed — edit your profile to add zip codes</Text>
                 )}
               </View>
 

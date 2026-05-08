@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   ScrollView,
@@ -12,6 +12,7 @@ import {
   TextInput,
   Dimensions,
   FlatList,
+  Linking,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -26,6 +27,7 @@ import { uploadToCloudinary, CLOUDINARY_FOLDERS } from '../utils/cloudinary';
 import { getCoverImageUrl, getProfileImageUrl, isSvgUrl } from '../utils/avatarUtils';
 import { isFavorite, addFavorite, removeFavorite } from '../utils/favoritesStore';
 import { VerifiedBadge } from '../components/common/VerifiedBadge';
+import ServiceAreaMap from '../components/common/ServiceAreaMap';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -37,6 +39,17 @@ function formatDate(dateStr: string | Date): string {
     const d = typeof dateStr === 'string' ? new Date(dateStr) : dateStr;
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   } catch { return ''; }
+}
+
+function formatTime(timeStr: string): string {
+  if (!timeStr) return '';
+  if (/\d+\s*(am|pm)/i.test(timeStr)) return timeStr;
+  const [h, m] = timeStr.split(':');
+  const hr = parseInt(h, 10);
+  if (isNaN(hr)) return timeStr;
+  const ampm = hr >= 12 ? 'PM' : 'AM';
+  const h12 = hr % 12 || 12;
+  return `${h12}:${m} ${ampm}`;
 }
 
 function formatRelativeTime(dateStr: string): string {
@@ -81,6 +94,11 @@ const BusinessDetailScreen: React.FC = () => {
   const [claimDocumentFile, setClaimDocumentFile] = useState<string | null>(null);
   const [claimSubmitting, setClaimSubmitting] = useState(false);
   const [claimError, setClaimError] = useState<string | null>(null);
+  const [descExpanded, setDescExpanded] = useState(false);
+  const [showBackToTop, setShowBackToTop] = useState(false);
+  const [showPhotoGallery, setShowPhotoGallery] = useState(false);
+  const scrollViewRef = useRef<ScrollView>(null);
+  const flatListRef = useRef<FlatList>(null);
 
   const handleClaimDocumentPick = async () => {
     try {
@@ -88,14 +106,14 @@ const BusinessDetailScreen: React.FC = () => {
         mediaTypes: ['images'],
         quality: 0.8,
         allowsMultipleSelection: false,
+        base64: true,
       });
       if (result.canceled || !result.assets?.length) return;
-      setClaimDocumentUploading(true);
+      
       const uri = result.assets[0].uri;
-      const uploadedUrl = await uploadToCloudinary(uri, CLOUDINARY_FOLDERS.LICENSES);
-      setClaimDocumentFile(uploadedUrl);
+      setClaimDocumentFile(uri);
     } catch (err: any) {
-      Alert.alert('Error', err?.message || 'Failed to upload document');
+      Alert.alert('Error', err?.message || 'Failed to select document');
     } finally {
       setClaimDocumentUploading(false);
     }
@@ -109,7 +127,8 @@ const BusinessDetailScreen: React.FC = () => {
     setClaimSubmitting(true);
     setClaimError(null);
     try {
-      await submitClaim(id, claimDocumentFile);
+      const cloudinaryUrl = await uploadToCloudinary(claimDocumentFile, CLOUDINARY_FOLDERS.LICENSES);
+      await submitClaim(id, cloudinaryUrl);
       Alert.alert('Claim Submitted', 'Your claim request has been submitted. Our team will review it within 1-3 business days.');
       setShowClaimModal(false);
       setClaimDocumentFile(null);
@@ -246,6 +265,8 @@ const BusinessDetailScreen: React.FC = () => {
     }
   };
 
+  const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+
   if (loading) {
     return (
       <View className="flex-1 bg-white dark:bg-neutral-950 items-center justify-center">
@@ -267,14 +288,14 @@ const BusinessDetailScreen: React.FC = () => {
   }
 
   const c = contractor;
-  
+
   // SYNC: Review normalization matching web version logic exactly
   const normalizedReviews: any[] = contractorReviews.map((r: any, i: number) => {
     const firstName = r.user?.firstName || r.firstName || 'Ratedeed';
     const lastName = r.user?.lastName || r.lastName || 'User';
     const fullName = `${firstName} ${lastName}`.trim();
     const profilePicture = getProfileImageUrl(fullName, r.user?.profilePicture || r.profilePicture || '', c.category);
-    
+
     return {
       _id: r._id || r.id || `r-${i}`,
       user: {
@@ -324,17 +345,38 @@ const BusinessDetailScreen: React.FC = () => {
     ...(portfolio || []).flatMap((p: any) => p.images || (p.imageUrl ? [p.imageUrl] : [])).slice(0, 7)
   ].filter(img => typeof img === 'string' && img.length > 0);
 
+  const serviceBadges = (() => {
+    const badges: { icon: string; label: string }[] = [];
+    if (c.isVerified) badges.push({ icon: 'shield-alt', label: 'Licensed & Insured' });
+    if (services.some((s: any) => typeof s !== 'string' && s.emergencyAvailable)) badges.push({ icon: 'ambulance', label: '24/7 Emergency' });
+    if (c.isVerified) badges.push({ icon: 'bolt', label: 'Same-Day Service' });
+    if (badges.length === 0 && ((c as any).yearsInBusiness || 0) > 5) badges.push({ icon: 'award', label: 'Experienced Professional' });
+    return badges;
+  })();
+
+  const featuredReview = normalizedReviews.length >= 3
+    ? normalizedReviews.reduce((best: any, r: any) => {
+        if (r.rating > best.rating) return r;
+        if (r.rating === best.rating && (r.comment?.length || 0) > (best.comment?.length || 0)) return r;
+        return best;
+      }, normalizedReviews[0])
+    : null;
+
   return (
     <View className="flex-1 bg-white dark:bg-neutral-950">
       <ScrollView
+        ref={scrollViewRef}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ flexGrow: 1 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        onScroll={(e) => setShowBackToTop(e.nativeEvent.contentOffset.y > 400)}
+        scrollEventThrottle={16}
       >
         {/* Hero Carousel */}
         <View className="relative w-full" style={{ aspectRatio: 16 / 9 }}>
           {heroImages.length > 0 ? (
             <FlatList
+              ref={flatListRef}
               data={heroImages}
               horizontal
               pagingEnabled
@@ -343,6 +385,7 @@ const BusinessDetailScreen: React.FC = () => {
                 const index = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
                 setActiveImageIndex(index);
               }}
+              getItemLayout={(_, index) => ({ length: SCREEN_WIDTH, offset: SCREEN_WIDTH * index, index })}
               keyExtractor={(_, i) => i.toString()}
               renderItem={({ item }) => (
                 <View style={{ width: SCREEN_WIDTH, height: '100%' }}>
@@ -362,6 +405,29 @@ const BusinessDetailScreen: React.FC = () => {
             </View>
           )}
 
+          {/* Gradient overlay */}
+          {heroImages.length > 0 && (
+            <View className="absolute bottom-0 left-0 right-0 h-24" style={{ backgroundColor: 'rgba(0,0,0,0.3)' }} />
+          )}
+
+          {/* Carousel arrows */}
+          {heroImages.length > 1 && activeImageIndex > 0 && (
+            <Pressable
+              onPress={() => flatListRef.current?.scrollToIndex({ index: activeImageIndex - 1, animated: true })}
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 items-center justify-center shadow-sm"
+            >
+              <FontAwesome5 name="chevron-left" size={14} color="#171717" />
+            </Pressable>
+          )}
+          {heroImages.length > 1 && activeImageIndex < heroImages.length - 1 && (
+            <Pressable
+              onPress={() => flatListRef.current?.scrollToIndex({ index: activeImageIndex + 1, animated: true })}
+              className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 items-center justify-center shadow-sm"
+            >
+              <FontAwesome5 name="chevron-right" size={14} color="#171717" />
+            </Pressable>
+          )}
+
           {heroImages.length > 1 && (
             <View className="absolute bottom-4 left-0 right-0 flex-row justify-center" style={{ gap: 6 }}>
               {heroImages.map((_, i) => (
@@ -371,6 +437,18 @@ const BusinessDetailScreen: React.FC = () => {
                 />
               ))}
             </View>
+          )}
+
+          {/* Show all photos button */}
+          {heroImages.length > 1 && (
+            <Pressable
+              onPress={() => setShowPhotoGallery(true)}
+              className="absolute bottom-4 right-4 flex-row items-center rounded-full px-3 py-1.5"
+              style={{ gap: 6, backgroundColor: 'rgba(0,0,0,0.4)' }}
+            >
+              <FontAwesome5 name="camera" size={10} color="white" />
+              <Text className="text-[10px] font-bold text-white">Show all photos</Text>
+            </Pressable>
           )}
 
           <View className="absolute top-12 left-0 right-0 px-4 flex-row items-center justify-between">
@@ -474,7 +552,29 @@ const BusinessDetailScreen: React.FC = () => {
           {!!c.description && (
             <View className="mt-6">
               <Text className="text-base font-bold text-neutral-900 dark:text-neutral-50 mb-2">About Us</Text>
-              <Text className="text-sm text-neutral-700 dark:text-neutral-300 leading-5">{c.description}</Text>
+              <Text
+                className="text-sm text-neutral-700 dark:text-neutral-300 leading-5"
+                numberOfLines={descExpanded ? undefined : 3}
+              >
+                {c.description}
+              </Text>
+              {(c.description?.length || 0) > 120 && (
+                <Pressable onPress={() => setDescExpanded(!descExpanded)} className="mt-1">
+                  <Text className="text-sm font-semibold text-indigo-600">{descExpanded ? 'Show less' : 'Show more'}</Text>
+                </Pressable>
+              )}
+            </View>
+          )}
+
+          {/* Service Badges */}
+          {serviceBadges.length > 0 && (
+            <View className="flex-row flex-wrap mt-4" style={{ gap: 8 }}>
+              {serviceBadges.map((b, i) => (
+                <View key={i} className="flex-row items-center bg-indigo-50 dark:bg-indigo-950 border border-indigo-200 dark:border-indigo-800 rounded-full px-3 py-1.5" style={{ gap: 6 }}>
+                  <FontAwesome5 name={b.icon} size={10} color="#4F46E5" />
+                  <Text className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">{b.label}</Text>
+                </View>
+              ))}
             </View>
           )}
 
@@ -501,16 +601,17 @@ const BusinessDetailScreen: React.FC = () => {
           {portfolio.length > 0 && (
             <View className="mt-8">
               <Text className="text-base font-bold text-neutral-900 dark:text-neutral-50 mb-3">Portfolio</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
+              <View className="flex-row flex-wrap" style={{ gap: 12 }}>
                 {portfolio.map((project: any, i: number) => {
                   const images = project.images || (project.imageUrl ? [project.imageUrl] : []);
                   return (
                     <Pressable
                       key={i}
                       onPress={() => { if (images.length > 0) { setGalleryProject({ ...project, images }); setGalleryIndex(0); } }}
-                      className="w-48 bg-white dark:bg-neutral-900 rounded-xl border border-neutral-100 dark:border-neutral-800 overflow-hidden"
+                      style={{ width: '47%' }}
+                      className="bg-white dark:bg-neutral-900 rounded-xl border border-neutral-100 dark:border-neutral-800 overflow-hidden"
                     >
-                      <View style={{ height: 120 }}>
+                      <View style={{ aspectRatio: 1 }}>
                         {images[0] ? (
                           <Image source={{ uri: images[0] }} className="w-full h-full" resizeMode="cover" />
                         ) : (
@@ -525,7 +626,7 @@ const BusinessDetailScreen: React.FC = () => {
                     </Pressable>
                   );
                 })}
-              </ScrollView>
+              </View>
             </View>
           )}
 
@@ -543,6 +644,119 @@ const BusinessDetailScreen: React.FC = () => {
               ))}
             </View>
           )}
+
+          {/* Business Hours */}
+          {(() => {
+            const bh = (c as any).businessHours;
+            if (!bh || typeof bh !== 'object') return null;
+            const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+            const hasAny = days.some(d => bh[d]);
+            if (!hasAny) return null;
+            return (
+              <View className="mt-8">
+                <Text className="text-base font-bold text-neutral-900 dark:text-neutral-50 mb-3">Business Hours</Text>
+                <View className="bg-white dark:bg-neutral-900 rounded-xl border border-neutral-100 dark:border-neutral-800 overflow-hidden">
+                  {days.map((day) => {
+                    const hours = bh[day];
+                    if (!hours) return null;
+                    const isToday = day === today;
+                    return (
+                      <View
+                        key={day}
+                        className={`flex-row items-center justify-between px-4 py-2.5 ${isToday ? 'bg-indigo-50 dark:bg-indigo-950' : ''}`}
+                        style={{ borderBottomWidth: 1, borderBottomColor: isToday ? 'transparent' : '#f5f5f5' }}
+                      >
+                        <View className="flex-row items-center" style={{ gap: 8 }}>
+                          {isToday && (
+                            <View className="bg-indigo-600 rounded px-1.5 py-0.5">
+                              <Text className="text-[9px] font-bold text-white">TODAY</Text>
+                            </View>
+                          )}
+                          <Text className={`text-sm ${isToday ? 'font-bold text-indigo-700 dark:text-indigo-300' : 'text-neutral-700 dark:text-neutral-300'}`}>{day}</Text>
+                        </View>
+                        <Text className={`text-sm ${isToday ? 'font-semibold text-indigo-600 dark:text-indigo-400' : 'text-neutral-600 dark:text-neutral-400'}`}>
+                          {hours === 'Closed' ? 'Closed' : typeof hours === 'string' ? hours.split('-').map((t: string) => formatTime(t.trim())).join(' – ') : String(hours)}
+                        </Text>
+                      </View>
+                    );
+                  })}
+                </View>
+              </View>
+            );
+          })()}
+
+          {/* Certifications & Licenses */}
+          {(() => {
+            const certs = (c as any).certifications;
+            const license = (c as any).licenseNumber;
+            if ((!certs || !Array.isArray(certs) || certs.length === 0) && !license) return null;
+            return (
+              <View className="mt-8">
+                <Text className="text-base font-bold text-neutral-900 dark:text-neutral-50 mb-3">Certifications & Licenses</Text>
+                <View style={{ gap: 8 }}>
+                  {license && (
+                    <View className="flex-row items-center bg-white dark:bg-neutral-900 rounded-xl border border-neutral-100 dark:border-neutral-800 p-3" style={{ gap: 12 }}>
+                      <View className="w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-950 items-center justify-center">
+                        <FontAwesome5 name="id-badge" size={12} color="#059669" />
+                      </View>
+                      <View className="flex-1">
+                        <Text className="text-sm font-semibold text-neutral-900 dark:text-neutral-50">License #{license}</Text>
+                        {(c as any).isVerified && <Text className="text-xs text-emerald-600">Verified</Text>}
+                      </View>
+                      <FontAwesome5 name="check-circle" size={16} color="#059669" />
+                    </View>
+                  )}
+                  {Array.isArray(certs) && certs.map((cert: string, i: number) => (
+                    <View key={i} className="flex-row items-center bg-white dark:bg-neutral-900 rounded-xl border border-neutral-100 dark:border-neutral-800 p-3" style={{ gap: 12 }}>
+                      <View className="w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-950 items-center justify-center">
+                        <FontAwesome5 name="award" size={12} color="#059669" />
+                      </View>
+                      <Text className="flex-1 text-sm font-medium text-neutral-900 dark:text-neutral-50">{cert}</Text>
+                      <FontAwesome5 name="check-circle" size={14} color="#059669" />
+                    </View>
+                  ))}
+                </View>
+              </View>
+            );
+          })()}
+
+          {/* Service Area */}
+          {(() => {
+            const zipCodes = (c as any).serviceZipCodes || (c as any).zipCodesCovered || [];
+            const serviceAreaText = (c as any).serviceArea || location;
+            const hasMapData = !!serviceAreaText || (zipCodes && zipCodes.length > 0);
+            if (!hasMapData) return null;
+            const zipNames = (zipCodes || []).map((zc: any) => typeof zc === 'string' ? zc : zc.name || zc.zip);
+            return (
+              <View className="mt-8">
+                <Text className="text-base font-bold text-neutral-900 dark:text-neutral-50 mb-1">Service Area</Text>
+                {!!serviceAreaText && (
+                  <Text className="text-xs text-neutral-500 dark:text-neutral-400 mb-3">
+                    {serviceAreaText}
+                    {zipCodes.length > 0 && ` · ${zipCodes.length} zip codes served`}
+                  </Text>
+                )}
+                <ServiceAreaMap
+                  businessName={c.companyName || c.businessName || 'Contractor'}
+                  locationName={serviceAreaText}
+                  zipCodes={zipNames}
+                  height={180}
+                />
+                {zipCodes.length > 0 && (
+                  <View className="flex-row flex-wrap mt-3" style={{ gap: 6 }}>
+                    {zipCodes.map((zc: any, i: number) => {
+                      const name = typeof zc === 'string' ? zc : zc.name || zc.zip;
+                      return (
+                        <View key={i} className="bg-indigo-50 dark:bg-indigo-950 border border-indigo-200 dark:border-indigo-800 rounded-full px-2.5 py-1">
+                          <Text className="text-[10px] font-semibold text-indigo-700 dark:text-indigo-400">{name}</Text>
+                        </View>
+                      );
+                    })}
+                  </View>
+                )}
+              </View>
+            );
+          })()}
 
           {/* REVIEWS SECTION */}
           <View className="mt-8 pt-6 border-t border-neutral-100 dark:border-neutral-800">
@@ -568,6 +782,35 @@ const BusinessDetailScreen: React.FC = () => {
                     </View>
                   ))}
                 </View>
+
+                {/* Featured Review */}
+                {featuredReview && (
+                  <View className="mb-6 bg-indigo-50 dark:bg-indigo-950 border border-indigo-100 dark:border-indigo-800 rounded-xl p-4">
+                    <FontAwesome5 name="quote-left" size={16} color="#4F46E5" style={{ marginBottom: 8 }} />
+                    <Text className="text-sm text-neutral-800 dark:text-neutral-200 leading-5 mb-3">{featuredReview.comment}</Text>
+                    <View className="flex-row items-center" style={{ gap: 10 }}>
+                      {isSvgUrl(featuredReview.user?.profilePicture) ? (
+                        <View className="w-8 h-8 rounded-full overflow-hidden">
+                          <SvgImage uri={featuredReview.user.profilePicture} width="100%" height="100%" />
+                        </View>
+                      ) : featuredReview.user?.profilePicture ? (
+                        <Image source={{ uri: featuredReview.user.profilePicture }} className="w-8 h-8 rounded-full" />
+                      ) : (
+                        <View className="w-8 h-8 rounded-full bg-indigo-200 items-center justify-center">
+                          <FontAwesome5 name="user" size={10} color="#4F46E5" />
+                        </View>
+                      )}
+                      <View className="flex-1">
+                        <Text className="text-xs font-bold text-neutral-900 dark:text-neutral-50">{featuredReview.user?.firstName} {featuredReview.user?.lastName}</Text>
+                        <Text className="text-[10px] text-neutral-500">{formatDate(featuredReview.createdAt)}</Text>
+                      </View>
+                      <View className="flex-row items-center" style={{ gap: 2 }}>
+                        <FontAwesome5 name="star" solid size={10} color="#eab308" />
+                        <Text className="text-xs font-bold text-neutral-900 dark:text-neutral-50">{featuredReview.rating}</Text>
+                      </View>
+                    </View>
+                  </View>
+                )}
 
                 {/* List */}
                 <View style={{ gap: 20 }}>
@@ -679,6 +922,14 @@ const BusinessDetailScreen: React.FC = () => {
           <Text className="text-[10px] text-neutral-500 uppercase tracking-tighter">Starting Project Price</Text>
         </View>
         <View className="flex-row items-center" style={{ gap: 8 }}>
+          {(c.contactInfo?.phoneNumber || (c as any).phone) && (
+            <Pressable
+              onPress={() => Linking.openURL(`tel:${c.contactInfo?.phoneNumber || (c as any).phone}`)}
+              className="w-12 h-12 items-center justify-center bg-emerald-50 dark:bg-emerald-950 rounded-xl"
+            >
+              <FontAwesome5 name="phone" size={18} color="#059669" />
+            </Pressable>
+          )}
           <Pressable
             onPress={() => {
               const recipientUserId = extractId(c.user) || c._id || id;
@@ -826,6 +1077,56 @@ const BusinessDetailScreen: React.FC = () => {
               )}
             </Pressable>
           </View>
+        </View>
+      )}
+
+      {/* Back to Top */}
+      {showBackToTop && (
+        <Pressable
+          onPress={() => scrollViewRef.current?.scrollTo({ y: 0, animated: true })}
+          className="absolute bottom-24 right-4 w-10 h-10 rounded-full bg-indigo-600 items-center justify-center shadow-lg"
+          style={{ elevation: 4 }}
+        >
+          <FontAwesome5 name="chevron-up" size={14} color="white" />
+        </Pressable>
+      )}
+
+      {/* Photo Gallery Modal */}
+      {showPhotoGallery && heroImages.length > 0 && (
+        <View className="absolute inset-0 z-[200] bg-black">
+          <View className="absolute top-12 left-0 right-0 z-10 flex-row items-center justify-between px-4">
+            <Text className="text-white font-bold text-sm">{activeImageIndex + 1} / {heroImages.length}</Text>
+            <Pressable
+              onPress={() => setShowPhotoGallery(false)}
+              className="w-8 h-8 items-center justify-center bg-white/20 rounded-full"
+            >
+              <FontAwesome5 name="times" size={14} color="white" />
+            </Pressable>
+          </View>
+          <FlatList
+            data={heroImages}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            initialScrollIndex={Math.min(activeImageIndex, heroImages.length - 1)}
+            getItemLayout={(_, index) => ({ length: SCREEN_WIDTH, offset: SCREEN_WIDTH * index, index })}
+            onMomentumScrollEnd={(e) => {
+              const index = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+              setActiveImageIndex(index);
+            }}
+            keyExtractor={(_, i) => i.toString()}
+            renderItem={({ item }) => (
+              <View style={{ width: SCREEN_WIDTH, flex: 1 }} className="items-center justify-center">
+                {isSvgUrl(item) ? (
+                  <View className="w-full h-3/4">
+                    <SvgImage uri={item} width="100%" height="100%" />
+                  </View>
+                ) : (
+                  <Image source={{ uri: item }} className="w-full h-3/4" resizeMode="contain" />
+                )}
+              </View>
+            )}
+          />
         </View>
       )}
     </View>

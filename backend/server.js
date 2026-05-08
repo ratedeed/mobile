@@ -38,6 +38,7 @@ const connectDB = require('./config/db');
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
 const contractorRoutes = require('./routes/contractors');
+const cloudinaryRoutes = require('./routes/cloudinary');
 const messageRoutes = require('./routes/messages');
 const notificationRoutes = require('./routes/notificationRoutes');
 const reportRoutes = require('./routes/reportRoutes');
@@ -68,6 +69,7 @@ app.use(cors({
 app.use('/api/users', userRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/contractors', contractorRoutes);
+app.use('/api/cloudinary', cloudinaryRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/reports', reportRoutes);

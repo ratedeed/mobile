@@ -54,16 +54,15 @@ export default function DisputeScreen() {
         mediaTypes: ['images'],
         quality: 0.8,
         allowsMultipleSelection: false,
+        base64: true,
       });
 
       if (result.canceled || !result.assets?.length) return;
 
-      setUploading(true);
       const uri = result.assets[0].uri;
-      const uploadedUrl = await uploadToCloudinary(uri, CLOUDINARY_FOLDERS.POST_IMAGES);
-      setPhotos((prev) => [...prev, uploadedUrl]);
+      setPhotos((prev) => [...prev, uri]);
     } catch (err: any) {
-      Alert.alert('Error', err?.message || 'Failed to upload photo');
+      Alert.alert('Error', err?.message || 'Failed to select photo');
     } finally {
       setUploading(false);
     }
@@ -94,8 +93,11 @@ export default function DisputeScreen() {
 
     setSubmitting(true);
     try {
+      const uploadedUrls = await Promise.all(
+        photos.map(p => uploadToCloudinary(p, CLOUDINARY_FOLDERS.CHAT))
+      );
       const reason = `[${category}] ${description.trim()}`;
-      await raiseDispute(jobId, reason, undefined, photos);
+      await raiseDispute(jobId, reason, undefined, uploadedUrls);
 
       Alert.alert(
         'Dispute Filed',

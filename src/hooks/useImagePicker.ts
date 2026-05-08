@@ -1,16 +1,14 @@
 import { useCallback, useState } from 'react';
 import { launchImageLibrary, launchCamera, ImagePickerResponse } from 'react-native-image-picker';
-import { uploadToCloudinary } from '../api/admin';
 
 interface UseImagePickerOptions {
-  folder?: string;
   maxWidth?: number;
   maxHeight?: number;
   quality?: 0 | 0.1 | 0.2 | 0.3 | 0.4 | 0.5 | 0.6 | 0.7 | 0.8 | 0.9 | 1;
 }
 
 export const useImagePicker = (options: UseImagePickerOptions = {}) => {
-  const { folder = 'ratedeed/uploads', maxWidth = 1920, maxHeight = 1920, quality = 0.8 } = options;
+  const { maxWidth = 1920, maxHeight = 1920, quality = 0.8 } = options;
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,7 +23,7 @@ export const useImagePicker = (options: UseImagePickerOptions = {}) => {
         maxWidth,
         maxHeight,
         quality,
-        includeBase64: false,
+        includeBase64: true,
       });
 
       if (result.didCancel || !result.assets || result.assets.length === 0) {
@@ -33,19 +31,18 @@ export const useImagePicker = (options: UseImagePickerOptions = {}) => {
       }
 
       const asset = result.assets[0];
-      if (!asset.uri) {
-        throw new Error('No image URI returned');
+      if (!asset.base64) {
+        throw new Error('No base64 data returned');
       }
 
-      const imageUrl = await uploadToCloudinary(asset.uri, folder);
-      return imageUrl;
+      return `data:${asset.type || 'image/jpeg'};base64,${asset.base64}`;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to pick image');
       return null;
     } finally {
       setLoading(false);
     }
-  }, [folder, maxWidth, maxHeight, quality]);
+  }, [maxWidth, maxHeight, quality]);
 
   const takePhoto = useCallback(async (): Promise<string | null> => {
     setLoading(true);
@@ -57,7 +54,7 @@ export const useImagePicker = (options: UseImagePickerOptions = {}) => {
         maxWidth,
         maxHeight,
         quality,
-        includeBase64: false,
+        includeBase64: true,
         cameraType: 'back',
       });
 
@@ -66,19 +63,18 @@ export const useImagePicker = (options: UseImagePickerOptions = {}) => {
       }
 
       const asset = result.assets[0];
-      if (!asset.uri) {
-        throw new Error('No image URI returned');
+      if (!asset.base64) {
+        throw new Error('No base64 data returned');
       }
 
-      const imageUrl = await uploadToCloudinary(asset.uri, folder);
-      return imageUrl;
+      return `data:${asset.type || 'image/jpeg'};base64,${asset.base64}`;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to take photo');
       return null;
     } finally {
       setLoading(false);
     }
-  }, [folder, maxWidth, maxHeight, quality]);
+  }, [maxWidth, maxHeight, quality]);
 
   const pickMultiple = useCallback(async (): Promise<string[]> => {
     setLoading(true);
@@ -90,7 +86,7 @@ export const useImagePicker = (options: UseImagePickerOptions = {}) => {
         maxWidth,
         maxHeight,
         quality,
-        includeBase64: false,
+        includeBase64: true,
         selectionLimit: 10,
       });
 
@@ -100,9 +96,8 @@ export const useImagePicker = (options: UseImagePickerOptions = {}) => {
 
       const urls: string[] = [];
       for (const asset of result.assets) {
-        if (asset.uri) {
-          const imageUrl = await uploadToCloudinary(asset.uri, folder);
-          urls.push(imageUrl);
+        if (asset.base64) {
+          urls.push(`data:${asset.type || 'image/jpeg'};base64,${asset.base64}`);
         }
       }
 
@@ -113,7 +108,7 @@ export const useImagePicker = (options: UseImagePickerOptions = {}) => {
     } finally {
       setLoading(false);
     }
-  }, [folder, maxWidth, maxHeight, quality]);
+  }, [maxWidth, maxHeight, quality]);
 
   return {
     pickFromLibrary,

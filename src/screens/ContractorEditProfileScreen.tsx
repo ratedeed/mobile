@@ -164,7 +164,7 @@ export default function ContractorEditProfileScreen() {
   const handleImageSelect = async (type: 'profile' | 'banner') => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: type === 'profile' ? [1, 1] : [16, 9],
         quality: 0.7,
@@ -185,7 +185,7 @@ export default function ContractorEditProfileScreen() {
   const handleLicenseDocSelect = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         quality: 0.7,
       });
       if (!result.canceled && result.assets && result.assets.length > 0) {
@@ -216,6 +216,7 @@ export default function ContractorEditProfileScreen() {
         zipCodesCovered: serviceArea.split(',').map(s => s.trim()).filter(Boolean),
         licenseNumber: licenseNumber || undefined,
         profilePicture: finalProfilePicUrl || undefined,
+        bannerUrl: finalCoverImageUrl || undefined,
         bannerImage: finalCoverImageUrl || undefined,
         servicesOffered: services.map(s => ({
           name: s.name || undefined,
@@ -254,10 +255,10 @@ export default function ContractorEditProfileScreen() {
     setVerificationResult(null);
 
     try {
-      const uploadedDocUrl = await uploadToCloudinary(licenseDocUri, CLOUDINARY_FOLDERS.LICENSES);
+      const cloudinaryUrl = await uploadToCloudinary(licenseDocUri, CLOUDINARY_FOLDERS.LICENSES);
       await requestVerification({
         licenseNumber: verifLicenseNumber.trim(),
-        licenseDocumentUrl: uploadedDocUrl,
+        licenseDocumentFile: cloudinaryUrl,
       });
       setVerificationResult({
         success: true,

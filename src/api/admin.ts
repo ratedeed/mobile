@@ -11,6 +11,11 @@ export async function uploadToCloudinary(
   fileUri: string,
   folder: string = 'ratedeed/uploads'
 ): Promise<string> {
+  // SAFETY: If the URI is already a base64 string, return it as-is.
+  if (fileUri.startsWith('data:')) {
+    return fileUri;
+  }
+
   try {
     // Step 1: Get signed upload parameters from backend
     const signData = await getCloudinarySignature(folder);

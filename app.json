@@ -19,7 +19,8 @@
         "UIBackgroundModes": [
           "fetch",
           "remote-notification"
-        ]
+        ],
+        "NSMicrophoneUsageDescription": "Allow RateDeed to access your microphone to record voice messages and videos."
       },
       "googleServicesFile": "./GoogleService-Info.plist",
       "splash": {
@@ -93,7 +94,7 @@
       [
         "@stripe/stripe-react-native",
         {
-          "merchantIdentifier": "com.ratedeed.app",
+          "merchantIdentifier": "merchant.com.ratedeed.app",
           "enableApplePay": true
         }
       ]

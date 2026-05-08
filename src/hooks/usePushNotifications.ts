@@ -92,7 +92,7 @@ export const usePushNotifications = () => {
       const data = response.notification.request.content.data;
       if (data?.type === 'new_message' && data?.conversationId) {
         // @ts-ignore
-        navigation.navigate('ChatScreen', { conversationId: data.conversationId });
+        navigation.navigate('Messages', { conversationId: data.conversationId });
       } else if (data?.type === 'new_review') {
         // @ts-ignore
         navigation.navigate('Profile');

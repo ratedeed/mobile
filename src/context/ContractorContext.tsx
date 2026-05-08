@@ -29,12 +29,14 @@ export const ContractorProvider: React.FC<{ children: ReactNode }> = ({ children
     
     setIsLoading(true);
     try {
-      const [leadsData, quotesData, jobsData, earningsData] = await Promise.all([
+      const [profileData, leadsData, quotesData, jobsData, earningsData] = await Promise.all([
+        apiClient.getContractorProfile(),
         apiClient.getContractorLeads(),
         apiClient.getContractorQuotes(),
         apiClient.getContractorJobs(),
         apiClient.getContractorEarnings()
       ]);
+      setContractorProfile(profileData);
       setLeads(leadsData);
       setQuotes(quotesData);
       setJobs(jobsData);

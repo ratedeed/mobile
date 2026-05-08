@@ -74,6 +74,7 @@ interface PortfolioProject {
   title: string;
   images: string[];
   category: string;
+  _fileUri?: string;
 }
 
 interface Props {
@@ -182,7 +183,9 @@ export default function ContractorEditProfileModal({ visible, onClose, onProfile
   const [coverImage, setCoverImage] = useState<string>('');
   const [profilePicture, setProfilePicture] = useState<string>('');
   const [profilePicUri, setProfilePicUri] = useState<string | null>(null);
+  const [profileFileUri, setProfileFileUri] = useState<string | null>(null);
   const [bannerPicUri, setBannerPicUri] = useState<string | null>(null);
+  const [bannerFileUri, setBannerFileUri] = useState<string | null>(null);
   const [portfolio, setPortfolio] = useState<PortfolioProject[]>([]);
 
   // Services & Hours
@@ -308,20 +311,24 @@ export default function ContractorEditProfileModal({ visible, onClose, onProfile
   const handleImageSelect = async (type: 'profile' | 'banner' | 'license' | 'portfolio', portfolioIndex?: number) => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: type === 'profile' || type === 'banner',
         aspect: type === 'profile' ? [1, 1] : type === 'banner' ? [16, 9] : undefined,
         quality: 0.7,
+        base64: true,
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        const uri = result.assets[0].uri;
-        if (type === 'profile') setProfilePicUri(uri);
-        else if (type === 'banner') setBannerPicUri(uri);
-        else if (type === 'license') setLicenseDocUri(uri);
+        const asset = result.assets[0];
+        const previewUri = `data:${asset.mimeType || 'image/jpeg'};base64,${asset.base64}`;
+        const fileUri = asset.uri;
+        if (type === 'profile') { setProfilePicUri(previewUri); setProfileFileUri(fileUri); }
+        else if (type === 'banner') { setBannerPicUri(previewUri); setBannerFileUri(fileUri); }
+        else if (type === 'license') setLicenseDocUri(previewUri);
         else if (type === 'portfolio' && portfolioIndex !== undefined) {
           const updated = [...portfolio];
-          updated[portfolioIndex].images = [uri];
+          updated[portfolioIndex].images = [previewUri];
+          updated[portfolioIndex]._fileUri = fileUri;
           setPortfolio(updated);
         }
       }
@@ -336,17 +343,20 @@ export default function ContractorEditProfileModal({ visible, onClose, onProfile
       let finalProfilePicUrl = profilePicture;
       let finalCoverImageUrl = coverImage;
 
-      if (profilePicUri) {
-        finalProfilePicUrl = await uploadToCloudinary(profilePicUri, CLOUDINARY_FOLDERS.CONTRACTOR_PROFILE);
+      // Use file URI for upload (more reliable than data URI with RN FormData)
+      if (profileFileUri) {
+        finalProfilePicUrl = await uploadToCloudinary(profileFileUri, CLOUDINARY_FOLDERS.CONTRACTOR_PROFILE);
       }
-      if (bannerPicUri) {
-        finalCoverImageUrl = await uploadToCloudinary(bannerPicUri, CLOUDINARY_FOLDERS.CONTRACTOR_BANNER);
+      if (bannerFileUri) {
+        finalCoverImageUrl = await uploadToCloudinary(bannerFileUri, CLOUDINARY_FOLDERS.CONTRACTOR_BANNER);
       }
 
       const processedPortfolio = await Promise.all(portfolio.map(async (p) => {
         let imageUrl = p.images[0] || '';
-        if (imageUrl && !imageUrl.startsWith('http')) {
-          imageUrl = await uploadToCloudinary(imageUrl, CLOUDINARY_FOLDERS.PORTFOLIO);
+        const fileSrc = (p as any)._fileUri || imageUrl;
+        // Upload if it's a local file that hasn't been uploaded yet
+        if (fileSrc.startsWith('file://') || imageUrl.startsWith('data:')) {
+          imageUrl = await uploadToCloudinary(fileSrc.startsWith('file://') ? fileSrc : imageUrl, CLOUDINARY_FOLDERS.PORTFOLIO);
         }
         return {
           name: p.title,
@@ -383,6 +393,7 @@ export default function ContractorEditProfileModal({ visible, onClose, onProfile
         zipCodesCovered: zipCodes.length > 0 ? zipCodes : undefined,
         licenseNumber: licenseNumber || undefined,
         profilePicture: finalProfilePicUrl || undefined,
+        bannerUrl: finalCoverImageUrl || undefined,
         bannerImage: finalCoverImageUrl || undefined,
         servicesOffered: servicesList.map(s => ({
           name: s,
@@ -394,6 +405,13 @@ export default function ContractorEditProfileModal({ visible, onClose, onProfile
 
       await updateContractorProfile(updateData);
       Alert.alert('Success', 'Profile updated successfully!');
+
+      setProfilePicUri(null);
+      setProfileFileUri(null);
+      setBannerPicUri(null);
+      setBannerFileUri(null);
+      if (finalProfilePicUrl) setProfilePicture(finalProfilePicUrl);
+      if (finalCoverImageUrl) setCoverImage(finalCoverImageUrl);
 
       if (onProfileUpdated) onProfileUpdated();
       onClose();
@@ -410,10 +428,10 @@ export default function ContractorEditProfileModal({ visible, onClose, onProfile
     setVerificationResult(null);
 
     try {
-      const uploadedDocUrl = await uploadToCloudinary(licenseDocUri, CLOUDINARY_FOLDERS.LICENSES);
+      const cloudinaryUrl = await uploadToCloudinary(licenseDocUri, CLOUDINARY_FOLDERS.LICENSES);
       await requestVerification({
         licenseNumber: verifLicenseNumber.trim(),
-        licenseDocumentUrl: uploadedDocUrl,
+        licenseDocumentFile: cloudinaryUrl,
       });
       setVerificationResult({
         success: true,
@@ -1356,4 +1374,4 @@ export default function ContractorEditProfileModal({ visible, onClose, onProfile
     </Modal>
     </>
     );
-    }
+}

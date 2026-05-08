@@ -104,7 +104,7 @@ const ListingCard = ({
         {/* Verified Badge */}
         {listing.isVerified && (
           <View className="absolute top-2 left-2">
-            <VerifiedBadge size="sm" />
+            <VerifiedBadge size="sm" animate={false} />
           </View>
         )}
         {/* Favorite Heart */}

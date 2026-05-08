@@ -136,6 +136,8 @@ const ProfileScreen: React.FC = () => {
   const [editData, setEditData] = useState({ firstName: '', lastName: '', email: '', zipCode: '' });
   const [saving, setSaving] = useState(false);
   const [editMessage, setEditMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [profilePicPreview, setProfilePicPreview] = useState<string>('');
+  const [profilePicUri, setProfilePicUri] = useState<string | null>(null);
 
   // Change password state
   const [currentPassword, setCurrentPassword] = useState('');
@@ -175,30 +177,17 @@ const ProfileScreen: React.FC = () => {
   const handleUpdateProfilePic = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ["images"],
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
       });
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        setSaving(true);
-        setEditMessage(null);
-        const localUri = result.assets[0].uri;
-        try {
-          const secureUrl = await uploadToCloudinary(localUri, CLOUDINARY_FOLDERS.USER_PROFILE);
-          const updatedUser = await updateProfilePicture(secureUrl);
-          setUser(updatedUser);
-          setEditMessage({ type: "success", text: "Profile picture updated!" });
-        } catch (uploadErr) {
-      // console.error("Image upload failed", uploadErr);
-          setEditMessage({ type: "error", text: "Failed to upload image. Please try again." });
-        }
+        setProfilePicUri(result.assets[0].uri);
+        setProfilePicPreview(result.assets[0].uri);
       }
     } catch (err) {
-      // console.error("Failed to pick image:", err);
       setEditMessage({ type: "error", text: "Failed to pick image." });
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -207,10 +196,14 @@ const ProfileScreen: React.FC = () => {
     setSaving(true);
     setEditMessage(null);
     try {
-      const data = await updateUserProfile(editData);
+      let finalProfilePicUrl = user?.profilePicture;
+      if (profilePicUri) {
+        finalProfilePicUrl = await uploadToCloudinary(profilePicUri, CLOUDINARY_FOLDERS.USER_PROFILE);
+      }
+      const data = await updateUserProfile({ ...editData, profilePicture: finalProfilePicUrl });
       setUser(data);
       setEditMessage({ type: 'success', text: 'Profile updated!' });
-      setTimeout(() => setActiveSheet(null), 1500);
+      setTimeout(() => { setActiveSheet(null); setProfilePicPreview(''); setProfilePicUri(null); }, 1500);
     } catch (err: any) {
       setEditMessage({ type: 'error', text: err?.message || 'Failed to update.' });
     } finally {
@@ -433,7 +426,7 @@ const ProfileScreen: React.FC = () => {
             <View className="relative">
               <Pressable onPress={handleUpdateProfilePic}>
                 <Image
-                  source={{ uri: user?.profilePicture || "" }}
+                  source={{ uri: profilePicPreview || user?.profilePicture || "" }}
                   className="w-20 h-20 rounded-full bg-neutral-200 dark:bg-neutral-800"
                 />
                 <View className="absolute -bottom-1 -right-1 w-7 h-7 bg-indigo-600 rounded-full items-center justify-center border-2 border-white">

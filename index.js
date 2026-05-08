@@ -19,10 +19,9 @@ setBackgroundMessageHandler(getMessaging(), async remoteMessage => {
   } else {
     await Promise.resolve();
   }
-  
+
   return Promise.resolve();
 });
-
 import App from './App';
 
 registerRootComponent(App);

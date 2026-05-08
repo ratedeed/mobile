@@ -20,41 +20,38 @@ import Animated, {
   withTiming,
   Easing,
   interpolate,
-  useAnimatedStyle,
 } from 'react-native-reanimated';
 
 const AnimatedG = Animated.createAnimatedComponent(G);
-const AnimatedSvg = Animated.createAnimatedComponent(Svg);
 
 const DURATION = 2800;
 
-const SIZE_MAP = {
-  sm: 20,
-  md: 28,
+const SIZE_MAP: Record<string, number> = {
+  sm: 16,
+  md: 24,
   lg: 44,
 };
 
-export const VerifiedBadge = memo(({ 
-  size = 28, 
+export const VerifiedBadge = memo(function VerifiedBadge({
+  size = 24,
   animate = true,
-  // Compatibility props
   variant,
   text,
   style,
-}: { 
-  size?: number | 'sm' | 'md' | 'lg'; 
+}: {
+  size?: number | string;
   animate?: boolean;
   variant?: string;
   text?: string;
   style?: any;
-}) => {
+}) {
   const uid = useId().replace(/:/g, '-');
   const progress = useSharedValue(0);
 
-  const finalSize = typeof size === 'string' ? SIZE_MAP[size] || 28 : size;
+  const finalSize = typeof size === 'string' ? SIZE_MAP[size] || 24 : size;
 
   useEffect(() => {
-    if (animate) {
+    if (animate && finalSize >= 32) {
       progress.value = 0;
       progress.value = withTiming(1, {
         duration: DURATION,
@@ -63,18 +60,47 @@ export const VerifiedBadge = memo(({
     } else {
       progress.value = 1;
     }
-  }, [animate]);
+  }, [animate, finalSize]);
 
-  const animatedSvgStyle = useAnimatedStyle(() => {
+  // For small sizes, render a crisp, un-pixelated shield icon
+  if (finalSize < 32) {
+    return (
+      <View style={[{ width: finalSize, height: finalSize, justifyContent: 'center', alignItems: 'center' }, style]}>
+        <Svg width={finalSize} height={finalSize} viewBox="0 0 24 24">
+          <Defs>
+            <LinearGradient id={'gold-grad-simple-' + uid} x1='0' y1='0' x2='1' y2='1'>
+              <Stop offset='0%' stopColor='#FFECA8' />
+              <Stop offset='25%' stopColor='#D4AF37' />
+              <Stop offset='50%' stopColor='#AA7C11' />
+              <Stop offset='75%' stopColor='#D4AF37' />
+              <Stop offset='100%' stopColor='#8A6308' />
+            </LinearGradient>
+          </Defs>
+          <Path 
+            d="M12 2.02L4 5v5.08c0 5.08 3.39 9.85 8 11.4 4.61-1.55 8-6.32 8-11.4V5l-8-2.98zM11 16l-4-4 1.41-1.41L11 13.17l5.59-5.59L18 9l-7 7z" 
+            fill={'url(#gold-grad-simple-' + uid + ')'} 
+          />
+        </Svg>
+      </View>
+    );
+  }
+
+  // Complex Architectural Seal for larger sizes (like profile page)
+  const animatedGProps = useAnimatedProps(() => {
     const scale = interpolate(
       progress.value,
       [0, 0.15, 0.8, 1],
-      [0, 4.5, 4.5, 1]
+      [0, 1.2, 1.1, 1],
+      'clamp'
     );
-    const zIndex = progress.value < 0.95 ? 50 : 1;
     return {
-      transform: [{ scale }],
-      zIndex,
+      transform: [
+        { translateX: 50 },
+        { translateY: 50 },
+        { scale },
+        { translateX: -50 },
+        { translateY: -50 },
+      ],
     };
   });
 
@@ -148,11 +174,11 @@ export const VerifiedBadge = memo(({
 
   return (
     <View style={[{ width: finalSize, height: finalSize }, style]}>
-      <AnimatedSvg
+      <Svg
         width={finalSize}
         height={finalSize}
         viewBox='0 0 100 100'
-        style={[animatedSvgStyle, { overflow: 'visible' }]}
+        style={{ overflow: 'visible' }}
       >
         <Defs>
           <RadialGradient id={'badge-bg-' + uid} cx='50%' cy='50%' r='50%' gradientUnits='userSpaceOnUse'>
@@ -188,7 +214,7 @@ export const VerifiedBadge = memo(({
           <Path id={'text-arc-' + uid} d='M 6,50 A 44,44 0 0,0 94,50' />
         </Defs>
 
-        <G>
+        <AnimatedG animatedProps={animatedGProps}>
           <Circle cx='50' cy='50' r={49} fill={'url(#badge-bg-' + uid + ')'} />
           <Circle cx='50' cy='50' r={46.5} fill='none' stroke={'url(#gold-grad-' + uid + ')'} strokeWidth={2.5} />
           
@@ -213,10 +239,10 @@ export const VerifiedBadge = memo(({
           
           <AnimatedG animatedProps={textProps}>
             <SvgText
-              fontSize={6.4}
-              fontWeight='bold'
+              fontSize={6}
+              fontWeight='900'
               fill='#4A3100'
-              fontFamily='Georgia'
+              fontFamily='System'
               textAnchor='middle'
             >
               <TextPath href={'#text-arc-' + uid} startOffset='50%'>✦ RATEDEED · VERIFIED ✦</TextPath>
@@ -258,8 +284,8 @@ export const VerifiedBadge = memo(({
               <Rect x='0' y='-50' width='3' height='200' fill='#FFFFFF' opacity={0.9} transform='rotate(35, 50, 50)' />
             </AnimatedG>
           </G>
-        </G>
-      </AnimatedSvg>
+        </AnimatedG>
+      </Svg>
     </View>
   );
 });

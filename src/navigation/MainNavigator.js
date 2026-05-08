@@ -10,7 +10,8 @@ import {
   Briefcase, 
   ChatCircle, 
   User as UserIcon,
-  Bell
+  Bell,
+  CaretLeft
 } from 'phosphor-react-native';
 
 import HomeScreen from '../screens/HomeScreen';
@@ -240,7 +241,25 @@ export default function MainNavigator() {
       fontSize: 18,
       color: '#09090B',
     },
-    headerTintColor: '#2563EB',
+    headerTintColor: '#09090B',
+    headerBackTitleVisible: false,
+    headerLeft: ({ canGoBack, onPress }) => 
+      canGoBack ? (
+        <TouchableOpacity 
+          onPress={onPress} 
+          style={{
+            marginLeft: 16,
+            width: 36,
+            height: 36,
+            borderRadius: 18,
+            backgroundColor: '#F4F4F5',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <CaretLeft size={20} color="#09090B" weight="bold" />
+        </TouchableOpacity>
+      ) : null,
     cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
   };
 

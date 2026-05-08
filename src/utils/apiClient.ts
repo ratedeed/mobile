@@ -894,7 +894,7 @@ export const getPlatformStats = async (): Promise<PlatformStats> => {
 
 export const getCloudinarySignature = async (folder: string): Promise<any> => {
   const authHeaders = await getAuthHeaders();
-  return post(`${API_BASE}/admin/cloudinary-sign`, { folder }, authHeaders);
+  return post(`${API_BASE}/cloudinary/sign`, { folder }, authHeaders);
 };
 
 export const createLead = async (leadData: any): Promise<any> => {

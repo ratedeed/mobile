@@ -1,5 +1,7 @@
 import React from 'react';
+import { TouchableOpacity } from 'react-native';
 import { createStackNavigator, CardStyleInterpolators } from '@react-navigation/stack';
+import { CaretLeft } from 'phosphor-react-native';
 
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
@@ -22,8 +24,25 @@ const screenOptions = {
     fontSize: 18,
     color: '#09090B', // shadcn foreground
   },
-  headerTintColor: '#2563EB', // shadcn primary
+  headerTintColor: '#09090B',
   headerBackTitleVisible: false,
+  headerLeft: ({ canGoBack, onPress }) => 
+    canGoBack ? (
+      <TouchableOpacity 
+        onPress={onPress} 
+        style={{
+          marginLeft: 16,
+          width: 36,
+          height: 36,
+          borderRadius: 18,
+          backgroundColor: '#F4F4F5',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <CaretLeft size={20} color="#09090B" weight="bold" />
+      </TouchableOpacity>
+    ) : null,
   cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
   gestureEnabled: true,
   gestureDirection: 'horizontal',

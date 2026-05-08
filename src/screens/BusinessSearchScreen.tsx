@@ -106,7 +106,7 @@ const ListingCard = ({
 
         {listing.isVerified && (
           <View className="absolute top-2 left-2">
-            <VerifiedBadge size="sm" variant="glass" />
+            <VerifiedBadge size="sm" variant="glass" animate={false} />
           </View>
         )}
         <View className="absolute top-2 right-2">

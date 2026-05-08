@@ -27,16 +27,12 @@ router.post('/', protect, async (req, res) => {
         let senderUserForSocket = req.user; // Default to req.user for socket room ID
 
         // Determine actualSenderId and senderOnModel
-        // Always use req.user._id (User's _id) for senderId so the frontend's currentUserId matches.
-        // senderOnModel still distinguishes whether the sender is a User or Contractor.
         if (req.user.role === 'contractor') {
             const senderContractor = await Contractor.findOne({ user: req.user._id });
             if (!senderContractor) {
                 return res.status(404).json({ message: 'Sender Contractor profile not found' });
             }
-            // Use User's _id (req.user._id) for senderId so frontend comparison works.
-            // senderOnModel = 'Contractor' still tells the frontend this is a contractor message.
-            actualSenderId = req.user._id;
+            actualSenderId = senderContractor._id;
             senderOnModel = 'Contractor';
             // For socket room, we still use the User's _id
             senderUserForSocket = req.user;
@@ -273,7 +269,7 @@ router.get('/conversations', protect, async (req, res) => {
                         otherParticipantDetails = { _id: user._id, firstName: user.firstName, lastName: user.lastName, profilePicture: user.profilePicture, role: 'User' };
                     }
                 } else if (otherModel === 'Contractor') {
-                    const contractor = await Contractor.findOne({ user: otherUserId }).select('_id firstName lastName businessName profilePicture user').lean();
+                    const contractor = await Contractor.findOne({ user: otherUserId }).select('_id firstName lastName businessName profilePicture user isVerified isTopRated').lean();
                     if (contractor) {
                         const linkedUser = await User.findById(contractor.user).select('firstName lastName').lean();
                         otherParticipantDetails = {
@@ -282,6 +278,8 @@ router.get('/conversations', protect, async (req, res) => {
                             lastName: contractor.lastName || (linkedUser ? linkedUser.lastName : ''),
                             businessName: contractor.businessName,
                             profilePicture: contractor.profilePicture,
+                            isVerified: contractor.isVerified,
+                            isTopRated: contractor.isTopRated,
                             role: 'Contractor'
                         };
                     }

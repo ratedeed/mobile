@@ -61,12 +61,13 @@ export default function ContractorOnboardingScreen() {
 
   const pickImage = async (type: 'profile' | 'banner') => {
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
       aspect: type === 'banner' ? [16, 7] : [1, 1],
       quality: 0.8,
+      base64: true,
     });
-    if (!result.canceled && result.assets[0]) {
+    if (!result.canceled && result.assets && result.assets.length > 0) {
       const uri = result.assets[0].uri;
       if (type === 'profile') setProfilePictureUri(uri);
       else setBannerImageUri(uri);
@@ -75,7 +76,7 @@ export default function ContractorOnboardingScreen() {
 
   const pickPortfolioImage = async (index: number) => {
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
@@ -90,7 +91,7 @@ export default function ContractorOnboardingScreen() {
   };
 
   const uploadImage = async (uri: string, folder: string): Promise<string> => {
-    return uploadToCloudinary(uri, folder);
+    return uri;
   };
 
   const saveAndNext = async () => {
@@ -99,33 +100,27 @@ export default function ContractorOnboardingScreen() {
       const updateData: any = {};
 
       if (currentStep === 1) {
-        // Upload images first
-        if (profilePictureUri && !profilePictureUrl) {
-          const url = await uploadImage(profilePictureUri, CLOUDINARY_FOLDERS.CONTRACTOR_PROFILE);
-          setProfilePictureUrl(url);
-          updateData.profilePicture = url;
-        } else if (profilePictureUrl) {
-          updateData.profilePicture = profilePictureUrl;
+        if (profilePictureUri) {
+          const cloudinaryUrl = await uploadToCloudinary(profilePictureUri, CLOUDINARY_FOLDERS.CONTRACTOR_PROFILE);
+          updateData.profilePicture = cloudinaryUrl;
         }
-        if (bannerImageUri && !bannerImageUrl) {
-          const url = await uploadImage(bannerImageUri, CLOUDINARY_FOLDERS.CONTRACTOR_BANNER);
-          setBannerImageUrl(url);
-          updateData.bannerImage = url;
-        } else if (bannerImageUrl) {
-          updateData.bannerImage = bannerImageUrl;
+        if (bannerImageUri) {
+          const cloudinaryUrl = await uploadToCloudinary(bannerImageUri, CLOUDINARY_FOLDERS.CONTRACTOR_BANNER);
+          updateData.bannerImage = cloudinaryUrl;
+          updateData.bannerUrl = cloudinaryUrl;
         }
         if (description) updateData.description = description;
       } else if (currentStep === 2) {
         const valid = services.filter(s => s.name.trim());
         if (valid.length > 0) updateData.servicesOffered = valid;
       } else if (currentStep === 3) {
-        // Upload portfolio images
+        // Use base64 strings directly for portfolio
         const uploaded = [];
         for (const item of portfolioItems) {
           if (!item.name.trim()) continue;
-          if (item.localUri && !item.imageUrl) {
-            const url = await uploadImage(item.localUri, CLOUDINARY_FOLDERS.PORTFOLIO);
-            uploaded.push({ name: item.name, imageUrl: url });
+          if (item.localUri) {
+            const cloudinaryUrl = await uploadToCloudinary(item.localUri, CLOUDINARY_FOLDERS.PORTFOLIO);
+            uploaded.push({ name: item.name, imageUrl: cloudinaryUrl });
           } else if (item.imageUrl) {
             uploaded.push({ name: item.name, imageUrl: item.imageUrl });
           }
