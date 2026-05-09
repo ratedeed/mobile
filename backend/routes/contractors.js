@@ -6,6 +6,7 @@ const Lead = require('../models/Lead');
 const Job = require('../models/Job');
 const Quote = require('../models/Quote');
 const { protect } = require('../middleware/authMiddleware');
+const { geocodeZip } = require('../utils/geocodeZip');
 
 // @desc    Get all contractors or search
 // @route   GET /api/contractors
@@ -391,6 +392,37 @@ router.put('/profile', protect, asyncHandler(async (req, res) => {
         if (updates.contact.email) contractor.email = updates.contact.email;
         
         delete updates.contact;
+      }
+
+      // Geocode on write for zipCodesCovered
+      if (updates.zipCodesCovered && Array.isArray(updates.zipCodesCovered)) {
+        const currentGeoData = contractor.zipGeoData || [];
+        const newGeoData = [];
+        
+        // Retain existing geoData for zip codes that are still covered
+        for (const geo of currentGeoData) {
+          if (updates.zipCodesCovered.includes(geo.zip)) {
+            newGeoData.push(geo);
+          }
+        }
+        
+        // Geocode new zip codes that aren't already in geoData
+        for (const zip of updates.zipCodesCovered) {
+          if (!newGeoData.find(g => g.zip === zip)) {
+            console.log(`Geocoding new zip code: ${zip}`);
+            
+            // Add a small delay to respect Nominatim's 1 req/sec limit
+            await new Promise(resolve => setTimeout(resolve, 1200));
+            
+            const geo = await geocodeZip(zip);
+            if (geo) {
+              if (geo.bounds && Array.isArray(geo.bounds) && geo.bounds.length === 2) {
+                newGeoData.push(geo);
+              }
+            }
+          }
+        }
+        contractor.zipGeoData = newGeoData;
       }
 
       // Handle other updates

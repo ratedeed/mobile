@@ -137,6 +137,13 @@ const contractorSchema = new mongoose.Schema({
   },
   areasServed: [String],
   zipCodesCovered: [String],
+  zipGeoData: [{
+    zip: String,
+    name: String,
+    center: [Number], // [lat, lon]
+    bounds: [[Number]], // [[swLat, swLon], [neLat, neLon]]
+    polygon: mongoose.Schema.Types.Mixed // GeoJSON polygon
+  }],
   businessHours: {
     type: Map,
     of: {

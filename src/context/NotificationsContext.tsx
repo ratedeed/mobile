@@ -78,13 +78,18 @@ export const NotificationsProvider: React.FC<{ children: ReactNode }> = ({ child
     const handleNewMessage = () => {
       refreshRef.current?.();
     };
+    const handleMessageRead = () => {
+      refreshRef.current?.();
+    };
 
     apiClient.onNewNotification(handleNewNotification);
     apiClient.onNewMessage(handleNewMessage);
+    apiClient.onMessageRead(handleMessageRead);
 
     return () => {
       apiClient.offNewNotification(handleNewNotification);
       apiClient.offNewMessage(handleNewMessage);
+      apiClient.offMessageRead(handleMessageRead);
     };
   }, [isAuthenticated]);
 

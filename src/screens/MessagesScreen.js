@@ -42,6 +42,7 @@ import {
 } from "../api";
 import { useAuth } from "../context/AuthContext";
 import { useContractor } from "../context/ContractorContext";
+import { useNotifications } from "../context/NotificationsContext";
 import { SvgImage } from "../components/common/SvgImage";
 import { getProfileImageUrl, isSvgUrl } from "../utils/avatarUtils";
 import { uploadToCloudinary, CLOUDINARY_FOLDERS } from "../utils/cloudinary";
@@ -301,6 +302,7 @@ const MessagesScreen = () => {
   const insets = useSafeAreaInsets();
   const { userId: currentUserId } = useAuth();
   const { contractorProfile } = useContractor();
+  const { refreshUnreadMessagesCount } = useNotifications();
   const myContractorId = contractorProfile?._id || contractorProfile?.id;
 
   const recipientId = route.params?.recipientId;
@@ -366,7 +368,10 @@ const MessagesScreen = () => {
           if (prev.some((m) => m._id === msg._id)) return prev;
           return [...prev, msg].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
         });
-        if (!isMessageFromMe(msg)) emitMessageRead(msg._id, currentUserId, selectedConvRef.current?.conversationId);
+        if (!isMessageFromMe(msg)) {
+          emitMessageRead(msg._id, currentUserId, selectedConvRef.current?.conversationId);
+          refreshUnreadMessagesCount();
+        }
       }
     };
 
@@ -482,8 +487,19 @@ const MessagesScreen = () => {
       const data = await fetchMessages(conversationId);
       const msgs = Array.isArray(data) ? data : data?.messages || [];
       setMessages([...msgs].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt)));
+      
+      // Immediately clear the unread dot locally to avoid UI lag
+      setConversations(prev => ({
+        ...prev,
+        [conversationId]: {
+          ...prev[conversationId],
+          unreadCount: 0
+        }
+      }));
+      
+      refreshUnreadMessagesCount(); // Update global badge when chat is opened
     } catch {} finally { setLoading(false); }
-  }, [currentUserId]);
+  }, [currentUserId, refreshUnreadMessagesCount]);
 
   useEffect(() => {
     const cId = selectedConversation?.conversationId;

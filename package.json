@@ -23,6 +23,7 @@
     "@stripe/stripe-react-native": "^0.65.0",
     "@types/leaflet": "^1.9.21",
     "@types/react": "~19.1.10",
+    "axios": "^1.16.0",
     "expo": "~54.0.0",
     "expo-build-properties": "~1.0.10",
     "expo-camera": "~17.0.10",
