@@ -39,6 +39,7 @@ import {
 } from '../api';
 import * as ImagePicker from 'expo-image-picker';
 import ServiceAreaMap from '../components/common/ServiceAreaMap';
+import AnalyticsTab from '../components/contractor/AnalyticsTab';
 import { API_BASE_URL } from '../config';
 import { uploadToCloudinary, CLOUDINARY_FOLDERS } from '../utils/cloudinary';
 import { getCoverImageUrl, getProfileImageUrl, isSvgUrl } from '../utils/avatarUtils';
@@ -52,6 +53,7 @@ const TABS = [
   { key: 'portfolio', label: 'Portfolio' },
   { key: 'reviews', label: 'Reviews' },
   { key: 'payments', label: 'Payments & Jobs' },
+  { key: 'analytics', label: 'Analytics' },
   { key: 'promote', label: 'Promote' },
 ];
 
@@ -232,7 +234,7 @@ const ContractorDashboardScreen: React.FC = () => {
   const [contractorName, setContractorName] = useState('');
   const [licenseStatus, setLicenseStatus] = useState<string>('not_submitted');
   const [onboardingComplete, setOnboardingComplete] = useState(true);
-  const [bannerDismissed, setBannerDismissed] = useState(false);
+  const [bannerDismissed, setBannerDismissed] = useState(true);
 
   const [imageLoading, setImageLoading] = useState(false);
   const contractorId = realContractorId || currentUserId;
@@ -1198,6 +1200,17 @@ const ContractorDashboardScreen: React.FC = () => {
                 </View>
               )}
             </View>
+          )}
+
+          {/* TAB: Analytics */}
+          {activeTab === 'analytics' && (
+            <AnalyticsTab
+              jobs={jobs}
+              quotes={quotes}
+              reviews={reviews}
+              profile={editableData}
+              loading={loading}
+            />
           )}
 
           {/* TAB: Promote */}

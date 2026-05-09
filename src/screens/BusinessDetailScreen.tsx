@@ -726,7 +726,7 @@ const BusinessDetailScreen: React.FC = () => {
             const serviceAreaText = (c as any).serviceArea || location;
             const hasMapData = !!serviceAreaText || (zipCodes && zipCodes.length > 0);
             if (!hasMapData) return null;
-            const zipNames = (zipCodes || []).map((zc: any) => typeof zc === 'string' ? zc : zc.name || zc.zip);
+            const zipStrings = (zipCodes || []).map((zc: any) => typeof zc === 'string' ? zc : zc.zip || zc.name);
             return (
               <View className="mt-8">
                 <Text className="text-base font-bold text-neutral-900 dark:text-neutral-50 mb-1">Service Area</Text>
@@ -739,7 +739,7 @@ const BusinessDetailScreen: React.FC = () => {
                 <ServiceAreaMap
                   businessName={c.companyName || c.businessName || 'Contractor'}
                   locationName={serviceAreaText}
-                  zipCodes={zipNames}
+                  zipCodes={zipStrings}
                   height={180}
                 />
                 {zipCodes.length > 0 && (

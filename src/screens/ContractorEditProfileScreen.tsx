@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
+  FlatList,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
@@ -213,6 +214,8 @@ export default function ContractorEditProfileScreen() {
         companyName: companyName || undefined,
         businessName: companyName || undefined,
         description: description || undefined,
+        address: location || undefined,
+        businessAddress: location || undefined,
         zipCodesCovered: serviceArea.split(',').map(s => s.trim()).filter(Boolean),
         licenseNumber: licenseNumber || undefined,
         profilePicture: finalProfilePicUrl || undefined,
@@ -345,7 +348,7 @@ export default function ContractorEditProfileScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={{ paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 100 }} showsVerticalScrollIndicator={false} onScrollBeginDrag={() => setAddressSuggestions([])} keyboardShouldPersistTaps="handled">
         {/* Cover Image */}
         <View className="relative w-full aspect-video bg-neutral-200">
           <Image source={{ uri: bannerPicUri || coverImage || 'https://via.placeholder.com/1200x400' }} className="w-full h-full" resizeMode="cover" />
@@ -496,6 +499,43 @@ export default function ContractorEditProfileScreen() {
                 <View>
                   <Text className="text-xs font-semibold text-neutral-500 mb-1">Category</Text>
                   <TextInput value={category} onChangeText={setCategory} placeholder="e.g. Plumber" className="w-full border border-neutral-200 rounded-xl px-3 py-2.5 text-sm" />
+                </View>
+                <View className="relative z-20">
+                  <Text className="text-xs font-semibold text-neutral-500 mb-1">Business Address</Text>
+                  <View className="flex-row items-center border border-neutral-200 rounded-xl px-3 py-2.5">
+                    <FontAwesome5 name="map-marker-alt" size={12} color="#a3a3a3" />
+                    <TextInput
+                      value={location}
+                      onChangeText={searchAddress}
+                      placeholder="Start typing your address..."
+                      className="flex-1 text-sm ml-2"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                    />
+                    {isSearchingAddress && (
+                      <ActivityIndicator size="small" color="#4F46E5" />
+                    )}
+                  </View>
+                  {addressSuggestions.length > 0 && (
+                    <View className="absolute top-full left-0 right-0 bg-white border border-neutral-200 rounded-xl mt-1 shadow-lg max-h-[160px] overflow-hidden z-50">
+                      <FlatList
+                        data={addressSuggestions}
+                        keyExtractor={(_, i) => `suggestion-${i}`}
+                        renderItem={({ item }) => (
+                          <TouchableOpacity
+                            onPress={() => handleSelectAddress(item)}
+                            className="px-3 py-2.5 border-b border-neutral-50 flex-row items-start"
+                          >
+                            <FontAwesome5 name="map-pin" size={10} color="#4F46E5" style={{ marginTop: 3 }} />
+                            <Text className="text-xs text-neutral-700 ml-2 flex-1" numberOfLines={2}>
+                              {item.display_name}
+                            </Text>
+                          </TouchableOpacity>
+                        )}
+                        keyboardShouldPersistTaps="handled"
+                      />
+                    </View>
+                  )}
                 </View>
                 <View>
                   <Text className="text-xs font-semibold text-neutral-500 mb-1">Business Description</Text>

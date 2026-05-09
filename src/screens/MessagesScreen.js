@@ -47,6 +47,7 @@ import { SvgImage } from "../components/common/SvgImage";
 import { getProfileImageUrl, isSvgUrl } from "../utils/avatarUtils";
 import { uploadToCloudinary, CLOUDINARY_FOLDERS } from "../utils/cloudinary";
 import ActionSheet from "../components/common/ActionSheet";
+import QuoteCreationSheet from "../components/contractor/QuoteCreationSheet";
 import { VerifiedBadge } from "../components/common/VerifiedBadge";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -324,6 +325,7 @@ const MessagesScreen = () => {
   const [activeImage, setActiveImage] = useState(null);
   const [isOtherTyping, setIsOtherTyping] = useState(false);
   const [showScrollBtn, setShowScrollBtn] = useState(false);
+  const [showQuoteSheet, setShowQuoteSheet] = useState(false);
   
   const messagesRef = useRef();
   const selectedConvRef = useRef();
@@ -693,7 +695,7 @@ const MessagesScreen = () => {
 
             <View className="px-4 py-3 bg-white border-t border-neutral-100 flex-row items-end" style={{ gap: 8, paddingBottom: insets.bottom + 12 || 12 }}>
               <Pressable onPress={pickImage} className="w-9 h-9 items-center justify-center rounded-full bg-neutral-50"><FontAwesome5 name="image" size={15} color="#737373" /></Pressable>
-              <Pressable onPress={() => Alert.alert("Coming Soon", "File attachments are coming soon.")} className="w-9 h-9 items-center justify-center rounded-full bg-neutral-50"><FontAwesome5 name="paperclip" size={15} color="#737373" /></Pressable>
+              {contractorProfile && selectedConversation?.conversationId && <Pressable onPress={() => setShowQuoteSheet(true)} className="w-9 h-9 items-center justify-center rounded-full bg-indigo-50"><FontAwesome5 name="tag" size={13} color="#4F46E5" /></Pressable>}
               <View className="flex-1 bg-neutral-100 rounded-2xl px-4 py-2.5 max-h-[120px]"><TextInput className="text-[15px] text-neutral-800 leading-5" placeholder="Type a message..." placeholderTextColor="#a3a3a3" value={newMessage} onChangeText={handleTextChange} multiline style={{ maxHeight: 100 }} /></View>
               <Pressable onPress={handleSendMessage} disabled={(!newMessage.trim() && !pendingAttachment) || isUploading} className={`w-10 h-10 rounded-full items-center justify-center mb-0.5 ${newMessage.trim() || pendingAttachment ? "bg-indigo-600" : "bg-neutral-200"}`} style={newMessage.trim() || pendingAttachment ? { shadowColor: "#4F46E5", shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { height: 2 }, elevation: 3 } : undefined}>
                 {isUploading ? <ActivityIndicator size="small" color="white" /> : <FontAwesome5 name="paper-plane" size={14} color={newMessage.trim() || pendingAttachment ? "white" : "#a3a3a3"} />}
@@ -708,6 +710,22 @@ const MessagesScreen = () => {
       <ActionSheet visible={actionSheetVisible} onClose={() => setActionSheetVisible(false)} title="Chat Options" options={[{ id: "viewProfile", label: "View Profile", icon: "user", onPress: () => {} }, { id: "report", label: "Report User", icon: "flag", isDestructive: true, onPress: () => { setActionSheetVisible(false); setTimeout(() => setReportModalVisible(true), 300); } }, { id: "block", label: "Block User", icon: "ban", isDestructive: true, onPress: () => Alert.alert("Block User", "Are you sure?", [{ text: "Cancel", style: "cancel" }, { text: "Block", style: "destructive", onPress: () => {} }]) }]} />
       
       <ReportModal visible={reportModalVisible} onClose={() => setReportModalVisible(false)} userName={chatName} onReport={handleReport} />
+
+      {contractorProfile && selectedConversation?.conversationId && (
+        <QuoteCreationSheet
+          visible={showQuoteSheet}
+          onClose={() => setShowQuoteSheet(false)}
+          conversationId={selectedConversation.conversationId}
+          recipientName={selectedConversation.otherParticipant?.firstName || chatName || "Client"}
+          recipientPicture={selectedConversation.otherParticipant?.profilePicture}
+          services={(contractorProfile.servicesOffered || []).map((s) => s.name || s).filter(Boolean)}
+          onCreated={() => {
+            if (selectedConversation?.conversationId) {
+              loadMessages(selectedConversation.conversationId);
+            }
+          }}
+        />
+      )}
     </KeyboardAvoidingView>
   );
 };
