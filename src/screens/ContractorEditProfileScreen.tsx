@@ -649,9 +649,6 @@ export default function ContractorEditProfileScreen() {
                       <Text className="text-xs text-neutral-500" numberOfLines={2}>
                         {post.caption || 'No caption'}
                       </Text>
-                      <Text className="text-[10px] text-neutral-400 mt-1">
-                        {post.likes?.length || 0} likes
-                      </Text>
                     </View>
                   </View>
                 ))}

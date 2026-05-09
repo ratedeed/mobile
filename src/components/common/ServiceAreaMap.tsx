@@ -94,7 +94,7 @@ export default function ServiceAreaMap({
       >
         {/* CARTO light basemap — same as web */}
         <UrlTile
-          urlTemplate="https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+          urlTemplate="https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png"
           maximumZ={19}
           flipY={false}
         />

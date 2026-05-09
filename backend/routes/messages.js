@@ -134,8 +134,7 @@ router.post('/', protect, async (req, res) => {
         // Manually add sender details for the frontend response
         let senderDetailsForFrontend;
         if (senderOnModel === 'Contractor') {
-            // actualSenderId is now the User's _id (not Contractor._id), so look up by user field
-            const senderContractorProfile = await Contractor.findOne({ user: actualSenderId }).select('_id firstName lastName businessName profilePicture user');
+            const senderContractorProfile = await Contractor.findById(actualSenderId).select('_id firstName lastName businessName profilePicture user');
             // Also get the linked User's firstName/lastName if needed for display
             const linkedUser = await User.findById(req.user._id).select('firstName lastName');
             senderDetailsForFrontend = {
@@ -387,7 +386,7 @@ router.get('/conversation/:conversationId', protect, async (req, res) => {
             if (!c) c = contractorByIdMap.get(id.toString());
             if (!c) return null;
             const u = c.user ? resolveUser(c.user) : null;
-            return { _id: c.user, firstName: c.firstName || (u ? u.firstName : ''), lastName: c.lastName || (u ? u.lastName : ''), businessName: c.businessName || '', profilePicture: c.profilePicture, role: 'Contractor' };
+            return { _id: c._id, firstName: c.firstName || (u ? u.firstName : ''), lastName: c.lastName || (u ? u.lastName : ''), businessName: c.businessName || '', profilePicture: c.profilePicture, role: 'Contractor' };
         };
 
         const populatedMessages = messages.map(msg => {

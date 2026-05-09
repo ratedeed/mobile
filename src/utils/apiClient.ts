@@ -134,14 +134,19 @@ export const get = async (url: string, headers: Record<string, string> = {}): Pr
 
 export const post = async (url: string, data: any, headers: Record<string, string> = {}): Promise<any> => {
   const makeRequest = async () => {
+    const currentHeaders: Record<string, string> = { 'Content-Type': 'application/json', ...headers };
+    if (!currentHeaders['Authorization']) {
+      const authH = await getAuthHeaders();
+      Object.assign(currentHeaders, authH);
+    }
     return fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...headers },
+      headers: currentHeaders,
       body: JSON.stringify(data),
     });
   };
   const response = await makeRequest();
-  return handleResponse(response, Object.keys(headers).length > 0 ? undefined : makeRequest);
+  return handleResponse(response, makeRequest);
 };
 
 export const put = async (url: string, data: any, headers: Record<string, string> = {}): Promise<any> => {
@@ -903,7 +908,8 @@ export const createLead = async (leadData: any): Promise<any> => {
 };
 
 export const requestEmailChange = async (newEmail: string, currentPassword: string): Promise<any> => {
-  return post(`${API_BASE}/users/request-email-change`, { newEmail, currentPassword });
+  const authHeaders = await getAuthHeaders();
+  return post(`${API_BASE}/users/request-email-change`, { newEmail, currentPassword }, authHeaders);
 };
 
 export const changePassword = async (currentPassword: string, newPassword: string): Promise<any> => {

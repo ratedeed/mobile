@@ -101,17 +101,6 @@ const collectAllIds = (obj) => {
   return ids;
 };
 
-/** Extracts ALL possible IDs from a message sender */
-const collectSenderIds = (msg) => {
-  const ids = new Set();
-  const addIds = (obj) => collectAllIds(obj).forEach((id) => ids.add(id));
-  if (msg.senderId) addIds(msg.senderId);
-  if (msg.sender) addIds(msg.sender);
-  if (msg.sentBy) addIds(msg.sentBy);
-  if (msg.from) addIds(msg.from);
-  return [...ids];
-};
-
 const getParticipantDisplayName = (entity) => {
   if (!entity) return "Unknown";
   const firstLast = `${entity.firstName || ""} ${entity.lastName || ""}`.trim();
@@ -310,7 +299,7 @@ const MessagesScreen = () => {
   const route = useRoute();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const { userId: currentUserId, userRole: role } = useAuth();
+  const { userId: currentUserId } = useAuth();
   const { contractorProfile } = useContractor();
   const myContractorId = contractorProfile?._id || contractorProfile?.id;
 
@@ -340,42 +329,22 @@ const MessagesScreen = () => {
   const typingTimeoutRef = useRef(null);
   const lastTypingEmit = useRef(0);
 
-  // ─── isMe detection (simple direct comparison) ──────────────────────────────
+  // ─── isMe detection (unified User identity) ──────────────────────────────────
   const myIds = useMemo(() => {
     const ids = new Set();
-    [currentUserId, myContractorId].forEach((id) => {
-      const r = resolveId(id);
-      if (r) ids.add(r);
-    });
+    const id = resolveId(currentUserId);
+    if (id) ids.add(id);
     return ids;
-  }, [currentUserId, myContractorId]);
+  }, [currentUserId]);
 
   const isMessageFromMe = useCallback(
     (msg) => {
       if (msg.__isLocalSent) return true;
       if (msg.type === "system") return false;
-
-      // 1. ID-based matching (most precise)
-      const senderIds = collectSenderIds(msg);
-      if (senderIds.some((id) => myIds.has(id))) return true;
-
-      // 2. Role-based fallback (for 1-on-1 chats between different roles)
-      const myRole = role?.toLowerCase();
-      const other = selectedConvRef.current?.otherParticipant;
-      const otherRole = other?.role?.toLowerCase();
-      const msgModel = (msg.senderOnModel || "").toLowerCase();
-
-      if (msgModel === "contractor") {
-        if (myRole === "contractor" && otherRole !== "contractor") return true;
-        if (otherRole === "contractor" && myRole !== "contractor") return false;
-      } else if (msgModel === "user" || msgModel === "client") {
-        if ((myRole === "user" || myRole === "client") && (otherRole !== "user" && otherRole !== "client")) return true;
-        if ((otherRole === "user" || otherRole === "client") && (myRole !== "user" && myRole !== "client")) return false;
-      }
-
-      return false;
+      const senderId = resolveId(msg.senderId);
+      return senderId === resolveId(currentUserId);
     },
-    [myIds, role]
+    [currentUserId]
   );
 
   // ─── Socket setup ──────────────────────────────────────────────────────────
@@ -609,7 +578,7 @@ const MessagesScreen = () => {
     const cId = selectedConversation?.conversationId;
     if (cId && !cId.startsWith("temp-")) {
       const now = Date.now();
-      if (now - lastTypingEmit.current > 2000) { emitTyping({ conversationId: cId, userId: currentUserId }); lastTypingEmit.current = now; }
+      if (now - lastTypingEmit.current > 2000) { emitTyping(cId, currentUserId, true); lastTypingEmit.current = now; }
     }
   }, [selectedConversation, currentUserId]);
 
@@ -663,14 +632,12 @@ const MessagesScreen = () => {
               </Pressable>
               <View className="relative">
                 {isSvgUrl(chatAvatar) ? <View className="w-10 h-10 rounded-full overflow-hidden"><SvgImage uri={chatAvatar} width="100%" height="100%" /></View> : <Image source={{ uri: chatAvatar }} className="w-10 h-10 rounded-full bg-neutral-100" />}
-                {chatOnline && <View className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white" />}
               </View>
               <View className="flex-1 min-w-0">
                 <View className="flex-row items-center" style={{ gap: 4 }}>
                   <Text className="text-[15px] font-bold text-neutral-900 truncate" numberOfLines={1}>{chatName}</Text>
                   {chatOther?.role === "contractor" && (chatOther?.isVerified || chatOther?.isTopRated) && <VerifiedBadge size={14} animate={false} />}
                 </View>
-                <Text className="text-[11px] text-neutral-400 font-medium">{chatOnline ? "Online now" : "Offline"}</Text>
               </View>
               <Pressable onPress={() => setActionSheetVisible(true)} className="w-9 h-9 items-center justify-center rounded-full"><FontAwesome5 name="ellipsis-h" size={16} color="#525252" /></Pressable>
             </View>

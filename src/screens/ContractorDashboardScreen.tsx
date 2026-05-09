@@ -827,17 +827,7 @@ const ContractorDashboardScreen: React.FC = () => {
                       )}
                       <View className="p-4">
                         <Text className="text-sm text-neutral-800" style={{ lineHeight: 20 }}>{post.caption}</Text>
-                        <View className="flex-row items-center justify-between mt-3">
-                          <View className="flex-row items-center" style={{ gap: 12 }}>
-                            <Pressable onPress={() => handleLikePost(post._id, post.likes.includes(currentUserId))} className="flex-row items-center" style={{ gap: 4 }}>
-                              <FontAwesome5 name="heart" solid={post.likes.includes(currentUserId)} size={14} color={post.likes.includes(currentUserId) ? '#ef4444' : '#737373'} />
-                              <Text className="text-xs text-neutral-500">{post.likes.length}</Text>
-                            </Pressable>
-                            <View className="flex-row items-center" style={{ gap: 4 }}>
-                              <FontAwesome5 name="comment" size={14} color="#737373" />
-                              <Text className="text-xs text-neutral-500">{post.comments?.length || 0}</Text>
-                            </View>
-                          </View>
+                        <View className="flex-row items-center justify-end mt-3">
                           <View className="flex-row items-center" style={{ gap: 8 }}>
                             <Text className="text-xs text-neutral-400">{formatDate(post.createdAt)}</Text>
                             <Pressable onPress={() => handleDeletePost(post._id)}>
