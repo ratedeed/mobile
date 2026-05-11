@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, Pressable, ScrollView, ActivityIndicator, Alert, Platform, StyleSheet } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { createCheckoutSession } from '../api';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useStripe, usePlatformPay } from '@stripe/stripe-react-native';
@@ -9,6 +10,7 @@ import { useStripe, usePlatformPay } from '@stripe/stripe-react-native';
 const STEP_LABELS = ['Review', 'Payment', 'Confirmed'];
 
 export default function PaymentFlowScreen() {
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
@@ -72,16 +74,16 @@ export default function PaymentFlowScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: 'white' }}>
       {/* Header */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#e5e5e5' }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: Math.max(insets.top, 12), paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#e5e5e5' }}>
         {currentStep === 0 && (
-          <Pressable onPress={() => navigation.goBack()} style={{ width: 32, height: 32, alignItems: 'center', justifyContent: 'center' }}>
+          <Pressable onPress={() => navigation.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center', marginLeft: -8 }}>
             <FontAwesome5 name="chevron-left" size={18} color="#171717" />
           </Pressable>
         )}
         <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#171717', flex: 1, textAlign: 'center' }}>
           {currentStep === 2 ? 'Payment Complete' : 'Secure Payment'}
         </Text>
-        <View style={{ width: 32 }} />
+        <View style={{ width: 40 }} />
       </View>
 
       {/* Progress Steps */}
@@ -117,13 +119,13 @@ export default function PaymentFlowScreen() {
                   <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#171717' }}>{contractorName}</Text>
                   <Text style={{ fontSize: 12, color: '#737373' }}>Service Fee Included</Text>
                 </View>
-                <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#171717' }}>${quoteTotal.toLocaleString()}</Text>
+                <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#171717' }}>${(quoteTotal / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
               </View>
             </View>
 
             <View style={{ backgroundColor: '#171717', borderRadius: 16, padding: 24, alignItems: 'center' }}>
               <Text style={{ fontSize: 12, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: 1 }}>Total Amount</Text>
-              <Text style={{ fontSize: 30, fontWeight: 'bold', color: 'white', marginTop: 4 }}>${quoteTotal.toLocaleString()}</Text>
+              <Text style={{ fontSize: 30, fontWeight: 'bold', color: 'white', marginTop: 4 }}>${(quoteTotal / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
             </View>
 
             <View style={{ backgroundColor: '#ecfdf5', borderWidth: 1, borderColor: '#a7f3d0', borderRadius: 16, padding: 16, flexDirection: 'row', gap: 12 }}>
@@ -192,7 +194,7 @@ export default function PaymentFlowScreen() {
               <FontAwesome5 name="check" size={32} color="#10b981" />
             </View>
             <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#171717' }}>Payment Confirmed!</Text>
-            <Text style={{ fontSize: 30, fontWeight: 'bold', color: '#171717', marginTop: 8 }}>${quoteTotal.toLocaleString()}</Text>
+            <Text style={{ fontSize: 30, fontWeight: 'bold', color: '#171717', marginTop: 8 }}>${(quoteTotal / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
             <Text style={{ fontSize: 14, color: '#737373' }}>paid to {contractorName}</Text>
 
             <View style={{ backgroundColor: '#ecfdf5', borderWidth: 1, borderColor: '#a7f3d0', borderRadius: 16, padding: 16, flexDirection: 'row', gap: 12, marginTop: 32, width: '100%' }}>

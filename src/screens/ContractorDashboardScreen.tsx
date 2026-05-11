@@ -1085,7 +1085,7 @@ const ContractorDashboardScreen: React.FC = () => {
                                 // Force a refresh of the profile/status
                                 setTimeout(() => navigation.replace('ContractorDashboard'), 500);
                               }
-                            } catch (e) { Alert.alert('Error', 'Failed to connect Stripe.'); }
+                            } catch (e) { Alert.alert('Stripe Error', (e as any)?.message || 'Failed to connect Stripe. Check your internet connection and try again.'); }
                           }}
                           className="bg-indigo-600 px-3 py-2 rounded-lg"
                         >

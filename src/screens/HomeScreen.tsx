@@ -183,7 +183,6 @@ const HomeScreen = () => {
   const [loadError, setLoadError] = useState(false);
   const [activeCategory, setActiveCategory] = useState('all');
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
-  const [showFilters, setShowFilters] = useState(false);
   const [searchZip, setSearchZip] = useState('');
   const [searchName, setSearchName] = useState('');
   const [nearbyLabel, setNearbyLabel] = useState('');
@@ -418,22 +417,6 @@ const HomeScreen = () => {
             ))}
           </ScrollView>
 
-          {/* Filters Button */}
-          <Pressable
-            onPress={() => setShowFilters(!showFilters)}
-            className="absolute right-4 top-2.5 border border-neutral-200 dark:border-neutral-700 rounded-xl px-3 py-2 flex-row items-center bg-white dark:bg-neutral-950/90 z-10 shadow-sm"
-            style={{
-              elevation: 2,
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 1 },
-              shadowOpacity: 0.05,
-              shadowRadius: 2,
-              gap: 8,
-            }}
-          >
-            <FontAwesome5 name="sliders-h" size={14} color="#737373" />
-            <Text className="text-xs font-semibold text-neutral-900 dark:text-neutral-50">Filters</Text>
-          </Pressable>
         </View>
 
         <View className="h-[1px] bg-neutral-200 dark:bg-neutral-800 -mx-4 mt-2" />
@@ -520,47 +503,7 @@ const HomeScreen = () => {
         </View>
       </ScrollView>
 
-      {/* Filter Modal */}
-      {showFilters && (
-        <View
-          className="absolute inset-0 z-[60] justify-end"
-          style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}
-        >
-          <Pressable className="flex-1" onPress={() => setShowFilters(false)} />
-          <View className="bg-white dark:bg-neutral-950 rounded-t-3xl w-full px-5 pt-4 pb-8">
-            <View className="w-10 h-1 bg-neutral-300 rounded-full mx-auto mb-5" />
-            <Text className="text-lg font-bold text-neutral-900 dark:text-neutral-50 mb-4">Filters</Text>
-            <View className="flex-col" style={{ gap: 16 }}>
-              {['Verified', 'Available This Week', 'Under $10,000', 'Top Rated (4.5+)', 'Has Portfolio'].map(f => (
-                <Pressable
-                  key={f}
-                  className="flex-row items-center"
-                  style={{ gap: 12, paddingVertical: 8 }}
-                >
-                  <View className="w-6 h-6 rounded-full border-2 border-neutral-900 items-center justify-center">
-                    <View className="w-3 h-3 rounded-full bg-neutral-900 dark:bg-neutral-50" />
-                  </View>
-                  <Text className="text-sm font-medium text-neutral-900 dark:text-neutral-50">{f}</Text>
-                </Pressable>
-              ))}
-            </View>
-            <View className="flex-row mt-6" style={{ gap: 12 }}>
-              <Pressable
-                onPress={() => setShowFilters(false)}
-                className="flex-1 py-3 border border-neutral-900 rounded-xl items-center"
-              >
-                <Text className="text-sm font-semibold text-neutral-900 dark:text-neutral-50">Clear all</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => setShowFilters(false)}
-                className="flex-1 py-3 bg-neutral-900 dark:bg-neutral-50 rounded-xl items-center"
-              >
-                <Text className="text-sm font-semibold text-white dark:text-neutral-900">Show results</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      )}
+
     </KeyboardAvoidingView>
   );
 };

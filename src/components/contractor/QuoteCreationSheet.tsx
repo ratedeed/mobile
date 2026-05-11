@@ -45,6 +45,7 @@ export default function QuoteCreationSheet({
   const [lineItems, setLineItems] = useState<LineItem[]>([
     { id: '1', description: '', amount: '' },
   ]);
+  const [startDate, setStartDate] = useState('');
   const [estCompletion, setEstCompletion] = useState('');
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -62,8 +63,10 @@ export default function QuoteCreationSheet({
     const hasValidItems = lineItems.some(
       (i) => i.description.trim() && parseFloat(i.amount) > 0
     );
-    return hasDescription && hasValidItems;
-  }, [description, lineItems]);
+    const hasStartDate = startDate.trim().length > 0;
+    const hasCompletionDate = estCompletion.trim().length > 0;
+    return hasDescription && hasValidItems && hasStartDate && hasCompletionDate;
+  }, [description, lineItems, startDate, estCompletion]);
 
   const updateLineItem = (id: string, field: 'description' | 'amount', value: string) => {
     setLineItems((prev) =>
@@ -107,7 +110,9 @@ export default function QuoteCreationSheet({
           description: item.description.trim(),
           amount: parseFloat(item.amount) || 0,
         })),
-        estimatedCompletionDate: estCompletion.trim() || '',
+        estimatedStartDate: startDate.trim(),
+        estimatedCompletionDate: estCompletion.trim(),
+        jobAddress: '',
         contractorNotes: notes.trim() || undefined,
       });
 
@@ -115,6 +120,7 @@ export default function QuoteCreationSheet({
       setServiceType('');
       setDescription('');
       setLineItems([{ id: '1', description: '', amount: '' }]);
+      setStartDate('');
       setEstCompletion('');
       setNotes('');
       setError('');
@@ -267,15 +273,28 @@ export default function QuoteCreationSheet({
             )}
           </View>
 
+          {/* Start Date */}
+          <View className="mb-4">
+            <Text className="text-xs font-semibold text-neutral-500 mb-1.5">
+              Project Start Date <Text className="text-red-400">*</Text>
+            </Text>
+            <TextInput
+              value={startDate}
+              onChangeText={setStartDate}
+              placeholder="e.g. March 15, 2025"
+              className="w-full border border-neutral-200 rounded-xl px-3 py-2.5 text-sm"
+            />
+          </View>
+
           {/* Estimated Completion */}
           <View className="mb-4">
             <Text className="text-xs font-semibold text-neutral-500 mb-1.5">
-              Estimated Completion
+              Estimated Completion Date <Text className="text-red-400">*</Text>
             </Text>
             <TextInput
               value={estCompletion}
               onChangeText={setEstCompletion}
-              placeholder="e.g. 2 weeks, March 15, 2025"
+              placeholder="e.g. March 30, 2025"
               className="w-full border border-neutral-200 rounded-xl px-3 py-2.5 text-sm"
             />
           </View>

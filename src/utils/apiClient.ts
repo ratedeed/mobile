@@ -807,12 +807,12 @@ export const getContractorLeads = async (): Promise<Lead[]> => {
 
 export const getContractorQuotes = async (): Promise<Quote[]> => {
   const authHeaders = await getAuthHeaders();
-  return get(`${API_BASE}/quotes/contractor`, authHeaders);
+  return get(`${API_BASE}/quotes`, authHeaders);
 };
 
 export const getUserQuotes = async (): Promise<Quote[]> => {
   const authHeaders = await getAuthHeaders();
-  return get(`${API_BASE}/quotes/client`, authHeaders);
+  return get(`${API_BASE}/quotes`, authHeaders);
 };
 
 export const createCheckoutSession = async (quoteId: string): Promise<{ url: string }> => { 
@@ -822,7 +822,7 @@ export const createCheckoutSession = async (quoteId: string): Promise<{ url: str
 
 export const getContractorJobs = async (): Promise<Job[]> => {
   const authHeaders = await getAuthHeaders();
-  return get(`${API_BASE}/jobs/contractor`, authHeaders);
+  return get(`${API_BASE}/jobs`, authHeaders);
 };
 
 export const releaseFunds = async (jobId: string): Promise<any> => {
@@ -867,7 +867,7 @@ export const declineChangeOrder = async (jobId: string, changeOrderId: string): 
 
 export const getUserJobs = async (): Promise<Job[]> => {
   const authHeaders = await getAuthHeaders();
-  return get(`${API_BASE}/jobs/client`, authHeaders);
+  return get(`${API_BASE}/jobs`, authHeaders);
 };
 
 

@@ -138,37 +138,25 @@ export default function QuoteReviewScreen() {
     );
   }
 
-  if (quote.status === 'accepted') {
     return (
-      <View className="flex-1 bg-white items-center justify-center px-6">
-        <View className="w-16 h-16 bg-emerald-50 rounded-full items-center justify-center mb-4">
-          <FontAwesome5 name="check-circle" size={24} color="#059669" />
-        </View>
-        <Text className="text-lg font-bold text-neutral-900 mb-2">Quote Accepted!</Text>
-        <Text className="text-sm text-neutral-500 text-center mb-6">Proceed to payment to get started.</Text>
-        <Pressable
-          onPress={() =>
-            (navigation as any).navigate('PaymentFlow', {
-              quoteId: quote._id || quoteId,
-              totalAmount: quote.totalAmount || 0,
-              contractorName,
-              description: quote.description || 'Home Project',
-            })
-          }
-          className="bg-indigo-600 px-8 py-3.5 rounded-xl w-full items-center"
-        >
-          <Text className="text-white font-bold text-sm">Continue to Payment</Text>
-        </Pressable>
-      </View>
-    );
-  }
-
-  return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       className="flex-1 bg-neutral-50"
     >
       <ScrollView className="flex-1" contentContainerStyle={{ paddingVertical: 24, paddingHorizontal: 16 }}>
+                {/* Accepted Banner */}
+        {quote.status === 'accepted' && (
+          <View className="bg-emerald-50 rounded-xl p-4 flex-row items-center border border-emerald-100 mb-4" style={{ gap: 12 }}>
+            <View className="w-10 h-10 bg-white rounded-full items-center justify-center shadow-sm">
+              <FontAwesome5 name="check-circle" size={20} color="#059669" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-sm font-bold text-emerald-900">Quote Accepted!</Text>
+              <Text className="text-xs text-emerald-700 mt-0.5">Proceed to payment to get started.</Text>
+            </View>
+          </View>
+        )}
+
         {/* Contractor Card */}
         <View className="bg-white rounded-xl p-4 flex-row items-center border border-neutral-100 mb-4" style={{ gap: 12 }}>
           {contractorImage ? (
@@ -238,19 +226,57 @@ export default function QuoteReviewScreen() {
           </View>
         ) : null}
 
-        {/* Estimated Completion */}
-        {quote.estimatedCompletionDate ? (
+        {/* Photos / Areas of Work */}
+        {quote.photos && quote.photos.length > 0 ? (
           <View className="bg-white rounded-xl p-4 border border-neutral-100 mb-4">
-            <View className="flex-row items-center" style={{ gap: 12 }}>
-              <View className="w-10 h-10 rounded-full bg-emerald-50 items-center justify-center">
-                <FontAwesome5 name="calendar-check" size={16} color="#059669" />
-              </View>
-              <View className="flex-1">
-                <Text className="text-sm font-semibold text-neutral-900">Estimated Completion</Text>
-                <Text className="text-xs text-neutral-500 mt-0.5">
-                  {new Date(quote.estimatedCompletionDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                </Text>
-              </View>
+            <Text className="text-sm font-semibold text-neutral-900 mb-3">Areas of Work</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} className="-mx-2">
+              {quote.photos.map((photo, i) => (
+                <View key={i} className="px-2">
+                  <Image 
+                    source={{ uri: photo }} 
+                    className="w-48 h-32 rounded-xl bg-neutral-100" 
+                    resizeMode="cover"
+                  />
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+        ) : null}
+
+        
+
+        {/* Timeline */}
+        {(quote.estimatedStartDate || quote.estimatedCompletionDate) ? (
+          <View className="bg-white rounded-xl p-4 border border-neutral-100 mb-4">
+            <Text className="text-sm font-semibold text-neutral-900 mb-3">Project Timeline</Text>
+            <View className="flex-row items-center" style={{ gap: 16 }}>
+              {quote.estimatedStartDate && (
+                <View className="flex-1 flex-row items-center" style={{ gap: 10 }}>
+                  <View className="w-9 h-9 rounded-full bg-indigo-50 items-center justify-center">
+                    <FontAwesome5 name="calendar-plus" size={14} color="#4F46E5" />
+                  </View>
+                  <View>
+                    <Text className="text-[11px] font-medium text-neutral-400 uppercase">Start Date</Text>
+                    <Text className="text-sm font-bold text-neutral-800">
+                      {new Date(quote.estimatedStartDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </Text>
+                  </View>
+                </View>
+              )}
+              {quote.estimatedCompletionDate && (
+                <View className="flex-1 flex-row items-center" style={{ gap: 10 }}>
+                  <View className="w-9 h-9 rounded-full bg-emerald-50 items-center justify-center">
+                    <FontAwesome5 name="calendar-check" size={14} color="#059669" />
+                  </View>
+                  <View>
+                    <Text className="text-[11px] font-medium text-neutral-400 uppercase">Completion</Text>
+                    <Text className="text-sm font-bold text-neutral-800">
+                      {new Date(quote.estimatedCompletionDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </Text>
+                  </View>
+                </View>
+              )}
             </View>
           </View>
         ) : null}
@@ -270,7 +296,7 @@ export default function QuoteReviewScreen() {
       </ScrollView>
 
       {/* Bottom CTA for pending quotes */}
-      {isPending && (
+      {(isPending || quote.status === 'accepted') && (
         <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-neutral-200 px-4 py-3">
           <Pressable
             onPress={handleAccept}
@@ -284,17 +310,11 @@ export default function QuoteReviewScreen() {
               <ActivityIndicator size="small" color="#fff" />
             ) : null}
             <Text className="text-white font-bold text-sm">
-              {actionLoading === 'accept' ? 'Accepting...' : `Accept & Pay $${Number(totalInDollars).toLocaleString()}`}
+              {quote.status === 'accepted' ? 'Continue to Payment' : actionLoading === 'accept' ? 'Accepting...' : `Accept & Pay ${Number(totalInDollars).toLocaleString()}`}
             </Text>
             {actionLoading !== 'accept' && <FontAwesome5 name="arrow-right" size={12} color="#fff" />}
           </Pressable>
-          <Pressable
-            onPress={() => setShowDeclineConfirm(true)}
-            disabled={actionLoading !== null}
-            className="py-2 items-center"
-          >
-            <Text className="text-sm text-neutral-500">Decline this quote</Text>
-          </Pressable>
+          {isPending && (<Pressable onPress={() => setShowDeclineConfirm(true)} disabled={actionLoading !== null} className="py-2 items-center"> <Text className="text-sm text-neutral-500">Decline this quote</Text> </Pressable>)}
         </View>
       )}
 
