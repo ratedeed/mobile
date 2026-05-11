@@ -959,6 +959,34 @@ export const verifyEmailChange = async (token: string): Promise<any> => {
 };
 
 // ==========================================
+// Block / Unblock Users
+// ==========================================
+
+export const blockUser = async (userId: string): Promise<any> => {
+  const authHeaders = await getAuthHeaders();
+  return post(`${API_BASE}/users/block/${userId}`, {}, authHeaders);
+};
+
+export const unblockUser = async (userId: string): Promise<any> => {
+  const authHeaders = await getAuthHeaders();
+  return post(`${API_BASE}/users/unblock/${userId}`, {}, authHeaders);
+};
+
+export const getBlockedUsers = async (): Promise<any[]> => {
+  const authHeaders = await getAuthHeaders();
+  return get(`${API_BASE}/users/blocked`, authHeaders);
+};
+
+// ==========================================
+// Apple Pay / Native Payment
+// ==========================================
+
+export const createPaymentIntent = async (quoteId: string): Promise<{ clientSecret: string }> => {
+  const authHeaders = await getAuthHeaders();
+  return post(`${API_BASE}/stripe/payment-intent`, { quoteId }, authHeaders);
+};
+
+// ==========================================
 // Quote Detail & Status
 // ==========================================
 

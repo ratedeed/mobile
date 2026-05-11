@@ -39,6 +39,7 @@ import {
   offUserOnlineStatus,
   emitTyping,
   emitMessageRead,
+  blockUser,
 } from "../api";
 import { useAuth } from "../context/AuthContext";
 import { useContractor } from "../context/ContractorContext";
@@ -646,6 +647,21 @@ const MessagesScreen = () => {
     }
   };
 
+  const handleBlockUser = async () => {
+    const targetId = resolveId(selectedConversation?.otherParticipant);
+    if (!targetId) {
+      Alert.alert("Error", "Unable to block user. Please try again.");
+      return;
+    }
+    try {
+      await blockUser(targetId);
+      Alert.alert("Blocked", `${chatName} has been blocked. You will no longer receive messages from them.`);
+      setSelectedConversation(null);
+    } catch (e) {
+      Alert.alert("Error", e?.message || "Failed to block user. Please try again.");
+    }
+  };
+
   const filteredConversations = useMemo(() => {
     return Object.values(conversations)
       .filter((c) => c.lastMessage)
@@ -659,10 +675,18 @@ const MessagesScreen = () => {
   const chatOnline = onlineUsers[resolveId(chatOther)] || false;
   const showChat = selectedConversation || route.name === "ChatScreen";
 
+  // If deep-linked to ChatScreen but no conversation loaded yet, redirect back
+  useEffect(() => {
+    if (route.name === "ChatScreen" && !selectedConversation && !loading && Object.values(conversations).length > 0) {
+      const target = conversations[Object.keys(conversations)[0]];
+      if (target) setSelectedConversation(target);
+    }
+  }, [route.name, selectedConversation, loading, conversations]);
+
   return (
     <KeyboardAvoidingView className="flex-1 bg-white" behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}>
       <View className="flex-1" style={{ paddingTop: insets.top }}>
-        
+
         {!showChat ? (
           <View className="flex-1">
             <View className="px-5 pt-3 pb-1"><Text className="text-[28px] font-bold text-neutral-900 tracking-tight">Messages</Text></View>
@@ -859,11 +883,8 @@ const MessagesScreen = () => {
       <ImageLightbox images={activeImage ? [activeImage] : []} visible={lightboxVisible} onClose={() => setLightboxVisible(false)} />
       
       <ActionSheet visible={actionSheetVisible} onClose={() => setActionSheetVisible(false)} title="Chat Options" options={[
-        // TODO: View Profile not yet implemented
-        // { id: "viewProfile", label: "View Profile", icon: "user", onPress: () => {} },
         { id: "report", label: "Report User", icon: "flag", isDestructive: true, onPress: () => { setActionSheetVisible(false); setTimeout(() => setReportModalVisible(true), 300); } },
-        // TODO: Block User not yet implemented
-        // { id: "block", label: "Block User", icon: "ban", isDestructive: true, onPress: () => Alert.alert("Block User", "Are you sure?", [{ text: "Cancel", style: "cancel" }, { text: "Block", style: "destructive", onPress: () => {} }]) }
+        { id: "block", label: "Block User", icon: "ban", isDestructive: true, onPress: () => Alert.alert("Block User", `Are you sure you want to block ${chatName}? You will no longer receive messages from them.`, [{ text: "Cancel", style: "cancel" }, { text: "Block", style: "destructive", onPress: handleBlockUser }]) }
       ]} />
       
       <ReportModal visible={reportModalVisible} onClose={() => setReportModalVisible(false)} userName={chatName} onReport={handleReport} />

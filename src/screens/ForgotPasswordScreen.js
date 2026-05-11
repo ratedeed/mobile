@@ -27,7 +27,7 @@ const ForgotPasswordScreen = () => {
   };
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? 50 : 0} className="flex-1 bg-white">
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? 50 : 0} className="flex-1 bg-white dark:bg-neutral-950">
       <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24 }} keyboardShouldPersistTaps="handled">
         {/* Logo */}
         <View className="items-center mb-8">
@@ -42,9 +42,9 @@ const ForgotPasswordScreen = () => {
               <FontAwesome5 name="envelope" size={24} color="#10b981" />
             </View>
             <Text className="text-lg font-bold text-neutral-900 text-center">Check your email</Text>
-            <Text className="text-sm text-neutral-500 text-center leading-5">
+            <Text className="text-sm text-neutral-500 dark:text-neutral-400 text-center leading-5">
               We sent a password reset link to{'\n'}
-              <Text className="font-semibold text-neutral-900">{email}</Text>
+              <Text className="font-semibold text-neutral-900 dark:text-neutral-50">{email}</Text>
             </Text>
             <Pressable
               onPress={() => navigation.navigate('Login')}
@@ -72,7 +72,7 @@ const ForgotPasswordScreen = () => {
               autoCorrect={false}
               autoComplete="email"
               editable={!loading}
-              className="w-full border border-neutral-300 rounded-xl px-4 py-3 text-sm bg-white"
+              className="w-full border border-neutral-300 dark:border-neutral-700 rounded-xl px-4 py-3 text-sm bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-50"
               placeholderTextColor="#a3a3a3"
             />
 
@@ -93,7 +93,7 @@ const ForgotPasswordScreen = () => {
             </Pressable>
 
             <Pressable onPress={() => navigation.navigate('Login')} className="items-center pt-2">
-              <Text className="text-sm text-neutral-500">
+              <Text className="text-sm text-neutral-500 dark:text-neutral-400">
                 <Text className="font-semibold text-neutral-900 underline">Back to Log In</Text>
               </Text>
             </Pressable>

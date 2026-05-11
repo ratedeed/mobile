@@ -109,9 +109,10 @@ const ListingCard = ({
             <VerifiedBadge size="sm" variant="glass" animate={false} />
           </View>
         )}
-        <View className="absolute top-2 right-2">
+        {/* Favorite heart - hidden until favorites feature is wired on search */}
+        {/* <View className="absolute top-2 right-2">
           <FontAwesome5 name="heart" size={24} color="rgba(0,0,0,0.5)" />
-        </View>
+        </View> */}
       </View>
       <View className="mt-2">
         <View className="flex-row items-start justify-between" style={{ gap: 4 }}>

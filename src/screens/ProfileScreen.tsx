@@ -32,6 +32,7 @@ import { IP_GEOLOCATION_URL } from '../config';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { SvgImage } from '../components/common/SvgImage';
 import { getProfileImageUrl, isSvgUrl } from '../utils/avatarUtils';
+import { useColorScheme } from 'nativewind';
 
 // @ts-ignore - firebaseConfig is a JS module
 const auth = authModule as unknown as import('firebase/auth').Auth;
@@ -60,6 +61,32 @@ function Toggle({ label, description, defaultOn = false, onValueChange }: { labe
       <Pressable onPress={handleToggle}>
         <View className={`w-12 h-7 rounded-full relative ${on ? 'bg-indigo-600' : 'bg-neutral-300'}`}>
           <View className={`w-5 h-5 bg-white dark:bg-neutral-950 rounded-full absolute top-1 ${on ? 'right-1' : 'left-1'}`} style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 1, elevation: 1 }} />
+        </View>
+      </Pressable>
+    </View>
+  );
+}
+
+// ---- Dark Mode Toggle ----
+function DarkModeToggle() {
+  const { colorScheme, setColorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
+
+  const handleToggle = async () => {
+    const next = isDark ? 'light' : 'dark';
+    setColorScheme(next);
+    await AsyncStorage.setItem('theme_preference', next);
+  };
+
+  return (
+    <View className="flex-row items-center justify-between py-3 border-b border-neutral-100 dark:border-neutral-800">
+      <View className="flex-1 mr-4">
+        <Text className="text-sm font-medium text-neutral-900 dark:text-neutral-50">Dark Mode</Text>
+        <Text className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">Switch between light and dark themes</Text>
+      </View>
+      <Pressable onPress={handleToggle}>
+        <View className={`w-12 h-7 rounded-full relative ${isDark ? 'bg-indigo-600' : 'bg-neutral-300'}`}>
+          <View className={`w-5 h-5 bg-white dark:bg-neutral-950 rounded-full absolute top-1 ${isDark ? 'right-1' : 'left-1'}`} style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 1, elevation: 1 }} />
         </View>
       </Pressable>
     </View>
@@ -600,6 +627,7 @@ const ProfileScreen: React.FC = () => {
           </View>
           <Text className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 mb-1">Default Service Area</Text>
           <TextInput defaultValue={user?.zipCode || ipZipCode} className="w-full border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm mb-3 text-neutral-900 dark:text-neutral-50" />
+          <DarkModeToggle />
           <Toggle 
             label="Haptic Feedback" 
             description="Vibrate on button taps and interactions" 

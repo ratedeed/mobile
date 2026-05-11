@@ -1,6 +1,8 @@
 import React, { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
+import { View } from 'react-native';
 import { useColorScheme } from 'nativewind';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import AnimatedSplashScreen from './src/components/AnimatedSplashScreen';
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -37,7 +39,7 @@ const linking = {
     const url = await Linking.getInitialURL();
     return url;
   },
-  subscribe(listener: (url: string) => void) {
+  subscribe(listener) {
     const subscription = Linking.addEventListener('url', ({ url }) => {
       listener(url);
     });
@@ -69,12 +71,20 @@ const linking = {
 
 function AppNavigator() {
   const { isAuthenticated } = useAuth();
-  const { colorScheme } = useColorScheme();
+  const { colorScheme, setColorScheme } = useColorScheme();
+
+  useEffect(() => {
+    AsyncStorage.getItem('theme_preference').then((pref) => {
+      if (pref === 'dark' || pref === 'light') {
+        setColorScheme(pref);
+      }
+    });
+  }, [setColorScheme]);
 
   usePushNotifications(); // Initialize push notification listeners inside NavigationContainer
 
   return (
-    <>
+    <View className="flex-1" style={{ backgroundColor: colorScheme === 'dark' ? '#0a0a0a' : '#ffffff' }}>
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
       {isAuthenticated ? (
         <>
@@ -84,7 +94,7 @@ function AppNavigator() {
       ) : (
         <AuthNavigator />
       )}
-    </>
+    </View>
   );
 }
 

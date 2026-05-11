@@ -3,9 +3,9 @@ import { View, Text, Pressable, ScrollView, ActivityIndicator, Alert, Platform, 
 import * as WebBrowser from 'expo-web-browser';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { createCheckoutSession } from '../api';
+import { createCheckoutSession, createPaymentIntent } from '../api';
 import { FontAwesome5 } from '@expo/vector-icons';
-import { useStripe, usePlatformPay } from '@stripe/stripe-react-native';
+import { useStripe, usePlatformPay, confirmPlatformPayPayment } from '@stripe/stripe-react-native';
 
 const STEP_LABELS = ['Review', 'Payment', 'Confirmed'];
 
@@ -36,17 +36,38 @@ export default function PaymentFlowScreen() {
   }, [isPlatformPaySupported]);
 
   const handleApplePay = async () => {
+    if (Platform.OS !== 'ios') {
+      Alert.alert('Apple Pay', 'Apple Pay is only available on iOS devices.');
+      return;
+    }
     try {
       setPaying(true);
-      // NOTE: Native Apple Pay requires a PaymentIntent client secret from the backend.
-      // If your backend only supports Stripe Checkout (URL), you may need to add a new endpoint.
-      // For now, we'll alert that it needs backend configuration.
-      Alert.alert(
-        'Apple Pay',
-        'Native Apple Pay requires a PaymentIntent client secret. Please ensure your backend is configured to return this for mobile requests.'
+      const { clientSecret } = await createPaymentIntent(quoteId);
+
+      const { paymentIntent, error } = await confirmPlatformPayPayment(
+        clientSecret,
+        {
+          applePay: {
+            cartItems: [
+              {
+                label: quoteDescription || 'Project Payment',
+                amount: String((quoteTotal / 100).toFixed(2)),
+                paymentType: 'Immediate',
+              },
+            ],
+            merchantCountryCode: 'US',
+            currencyCode: 'USD',
+          },
+        }
       );
-    } catch (err) {
-      Alert.alert('Error', 'Apple Pay failed to initialize.');
+
+      if (error) {
+        Alert.alert('Payment Failed', error.message || 'Apple Pay could not be completed.');
+      } else if (paymentIntent?.status === 'Succeeded') {
+        setCurrentStep(2);
+      }
+    } catch (err: any) {
+      Alert.alert('Error', err?.message || 'Apple Pay failed to initialize.');
     } finally {
       setPaying(false);
     }
@@ -142,8 +163,7 @@ export default function PaymentFlowScreen() {
               </View>
             </View>
 
-            {/* TODO: Apple Pay not yet implemented */}
-            {/* {applePayAvailable && (
+            {applePayAvailable && (
               <Pressable
                 onPress={handleApplePay}
                 style={styles.applePayBtn}
@@ -163,7 +183,7 @@ export default function PaymentFlowScreen() {
                   <View style={{ flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: '#e5e5e5' }} />
                 </View>
               )}
-            </View> */}
+            </View>
 
             <Pressable
               onPress={handlePayment}

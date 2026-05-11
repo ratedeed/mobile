@@ -176,9 +176,7 @@ export const EscrowTrustBanner = () => {
   });
 
   return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
-      <Pressable style={styles.overlay} onPress={dismiss} />
-
+    <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0 }} pointerEvents="box-none">
       <Animated.View
         style={[
           styles.banner,

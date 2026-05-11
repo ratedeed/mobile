@@ -127,7 +127,7 @@ const LoginScreen = () => {
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 50 : 0}
-      className="flex-1 bg-white"
+      className="flex-1 bg-white dark:bg-neutral-950"
     >
       <ScrollView
         contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24 }}
@@ -151,7 +151,7 @@ const LoginScreen = () => {
             autoCorrect={false}
             autoComplete="email"
             editable={!loading}
-            className="w-full border border-neutral-300 rounded-xl px-4 py-3 text-sm bg-white"
+            className="w-full border border-neutral-300 dark:border-neutral-700 rounded-xl px-4 py-3 text-sm bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-50"
             placeholderTextColor="#a3a3a3"
             accessibilityLabel="Email address"
             accessibilityRole="text"
@@ -166,9 +166,9 @@ const LoginScreen = () => {
               secureTextEntry={!showPassword}
               autoComplete="password"
               editable={!loading}
-              className="w-full border border-neutral-300 rounded-xl px-4 py-3 text-sm bg-white pr-20"
-              placeholderTextColor="#a3a3a3"
-            />
+            className="w-full border border-neutral-300 dark:border-neutral-700 rounded-xl px-4 py-3 text-sm bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-50 pr-20"
+            placeholderTextColor="#a3a3a3"
+          />
             <Pressable
               onPress={() => setShowPassword(!showPassword)}
               className="absolute right-4 top-3 flex-row items-center h-8 px-2"
@@ -181,7 +181,7 @@ const LoginScreen = () => {
                 size={12}
                 color="#171717"
               />
-              <Text className="text-xs font-semibold text-neutral-900">
+              <Text className="text-xs font-semibold text-neutral-900 dark:text-neutral-50">
                 {showPassword ? 'Hide' : 'Show'}
               </Text>
             </Pressable>
@@ -246,7 +246,7 @@ const LoginScreen = () => {
 
           {/* Sign Up Link */}
           <View className="items-center pt-4 flex-row justify-center" style={{ gap: 4 }}>
-            <Text className="text-sm text-neutral-500">Don't have an account?</Text>
+            <Text className="text-sm text-neutral-500 dark:text-neutral-400">Don't have an account?</Text>
             <Pressable onPress={() => navigation.navigate('Register')} accessibilityLabel="Sign up" accessibilityRole="link">
               <Text className="text-sm font-semibold text-neutral-900 underline">Sign Up</Text>
             </Pressable>
@@ -254,7 +254,7 @@ const LoginScreen = () => {
 
           {/* Contractor Link */}
           <View className="items-center pt-2 flex-row justify-center" style={{ gap: 4 }}>
-            <Text className="text-sm text-neutral-500">Are you a contractor?</Text>
+            <Text className="text-sm text-neutral-500 dark:text-neutral-400">Are you a contractor?</Text>
             <Pressable onPress={() => navigation.navigate('ContractorSignup')} accessibilityLabel="Sign up as a contractor" accessibilityRole="link">
               <Text className="text-sm font-semibold text-neutral-900 underline">Sign Up as a Contractor</Text>
             </Pressable>

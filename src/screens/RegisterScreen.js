@@ -83,7 +83,7 @@ const RegisterScreen = () => {
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 50 : 0}
-      className="flex-1 bg-white"
+      className="flex-1 bg-white dark:bg-neutral-950"
     >
       <ScrollView
         contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 40 }}
@@ -127,7 +127,7 @@ const RegisterScreen = () => {
               autoCapitalize="words"
               autoComplete="given-name"
               editable={!loading}
-              className="flex-1 border border-neutral-300 rounded-xl px-4 py-3 text-sm bg-white"
+              className="flex-1 border border-neutral-300 dark:border-neutral-700 rounded-xl px-4 py-3 text-sm bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-50"
               placeholderTextColor="#a3a3a3"
             />
             <TextInput
@@ -137,7 +137,7 @@ const RegisterScreen = () => {
               autoCapitalize="words"
               autoComplete="family-name"
               editable={!loading}
-              className="flex-1 border border-neutral-300 rounded-xl px-4 py-3 text-sm bg-white"
+              className="flex-1 border border-neutral-300 dark:border-neutral-700 rounded-xl px-4 py-3 text-sm bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-50"
               placeholderTextColor="#a3a3a3"
             />
           </View>
@@ -152,7 +152,7 @@ const RegisterScreen = () => {
             autoCorrect={false}
             autoComplete="email"
             editable={!loading}
-            className="w-full border border-neutral-300 rounded-xl px-4 py-3 text-sm bg-white"
+            className="w-full border border-neutral-300 dark:border-neutral-700 rounded-xl px-4 py-3 text-sm bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-50"
             placeholderTextColor="#a3a3a3"
           />
 
@@ -174,7 +174,7 @@ const RegisterScreen = () => {
               style={{ gap: 4 }}
             >
               <FontAwesome5 name={showPassword ? 'eye-slash' : 'eye'} size={12} color="#171717" />
-              <Text className="text-xs font-semibold text-neutral-900">
+              <Text className="text-xs font-semibold text-neutral-900 dark:text-neutral-50">
                 {showPassword ? 'Hide' : 'Show'}
               </Text>
             </Pressable>
@@ -189,7 +189,7 @@ const RegisterScreen = () => {
             autoComplete="postal-code"
             maxLength={10}
             editable={!loading}
-            className="w-full border border-neutral-300 rounded-xl px-4 py-3 text-sm bg-white"
+            className="w-full border border-neutral-300 dark:border-neutral-700 rounded-xl px-4 py-3 text-sm bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-50"
             placeholderTextColor="#a3a3a3"
           />
 

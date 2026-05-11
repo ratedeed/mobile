@@ -492,6 +492,12 @@ const HomeScreen = () => {
                   </View>
                 );
               })}
+              {allContractors.length === 0 && (
+                <View className="items-center justify-center py-20">
+                  <Text className="text-lg font-medium text-neutral-500 dark:text-neutral-400">No contractors found</Text>
+                  <Text className="text-sm text-neutral-400 dark:text-neutral-500 mt-2 text-center">Try adjusting your location or check back later.</Text>
+                </View>
+              )}
             </View>
           ) : filtered.length > 0 ? (
             /* Specific Category Grid View */
