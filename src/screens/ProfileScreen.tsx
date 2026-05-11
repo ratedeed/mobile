@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { auth as authModule } from '../firebaseConfig';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, verifyBeforeUpdateEmail } from 'firebase/auth';
 import { changePassword as apiChangePassword, deleteAccount } from '../utils/apiClient';
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   ScrollView,
@@ -536,10 +536,17 @@ const ProfileScreen: React.FC = () => {
           </Pressable>
           <View className="pt-2 border-t border-neutral-100 dark:border-neutral-800 mt-2">
             <Text className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-2">Data &amp; Privacy</Text>
-            <Pressable onPress={() => { closeSheet(); setTimeout(() => setActiveSheet('privacy'), 300); }} className="flex-row items-center justify-between py-2">
+            <Pressable onPress={() => { closeSheet(); Linking.openURL('https://ratedeed.com/legal/privacy'); }} className="flex-row items-center justify-between py-2">
               <View>
                 <Text className="text-sm font-medium text-neutral-900 dark:text-neutral-50">Privacy Policy</Text>
                 <Text className="text-xs text-neutral-500 dark:text-neutral-400">View our privacy policy</Text>
+              </View>
+              <FontAwesome5 name="chevron-right" size={12} color="#a3a3a3" />
+            </Pressable>
+            <Pressable onPress={() => { closeSheet(); Linking.openURL('https://ratedeed.com/legal/terms'); }} className="flex-row items-center justify-between py-2">
+              <View>
+                <Text className="text-sm font-medium text-neutral-900 dark:text-neutral-50">Terms of Service</Text>
+                <Text className="text-xs text-neutral-500 dark:text-neutral-400">View our terms of service</Text>
               </View>
               <FontAwesome5 name="chevron-right" size={12} color="#a3a3a3" />
             </Pressable>

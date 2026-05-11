@@ -8,14 +8,16 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Linking,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
-import { backendLoginFirebase, syncEmailVerificationStatus } from '../api';
+import { backendLoginFirebase, syncEmailVerificationStatus, appleSignIn } from '../api';
 import { auth } from '../firebaseConfig';
 import { sendEmailVerification, signInWithEmailAndPassword } from 'firebase/auth';
 import Toast from 'react-native-toast-message';
 import { useAuth } from '../context/AuthContext';
+import * as AppleAuthentication from 'expo-apple-authentication';
 
 const LoginScreen = () => {
   const [email, setEmail] = useState('');
@@ -120,6 +122,40 @@ const LoginScreen = () => {
       }
     } catch (error) {
       Toast.show({ type: 'error', text1: 'Error', text2: error.message });
+    }
+  };
+
+  const handleAppleSignIn = async () => {
+    try {
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+
+      setLoading(true);
+      const backendResponse = await appleSignIn({
+        identityToken: credential.identityToken,
+        appleUserIdentifier: credential.user,
+        fullName: credential.fullName,
+        email: credential.email,
+      });
+
+      if (backendResponse?.token) {
+        await updateBackendToken(backendResponse.token, backendResponse.emailVerified, backendResponse);
+        Toast.show({ type: 'success', text1: 'Success', text2: 'Signed in with Apple!' });
+      } else {
+        setApiError('Apple Sign-In failed. Please try again.');
+      }
+    } catch (error) {
+      if (error.code === 'ERR_CANCELED') {
+        // User cancelled the sign-in flow
+        return;
+      }
+      setApiError(error.message || 'Apple Sign-In failed.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -244,6 +280,19 @@ const LoginScreen = () => {
             )}
           </Pressable>
 
+          {/* Apple Sign In */}
+          {Platform.OS === 'ios' && (
+            <View className="w-full mt-4">
+              <AppleAuthentication.AppleAuthenticationButton
+                buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+                buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                cornerRadius={12}
+                style={{ width: '100%', height: 48 }}
+                onPress={handleAppleSignIn}
+              />
+            </View>
+          )}
+
           {/* Sign Up Link */}
           <View className="items-center pt-4 flex-row justify-center" style={{ gap: 4 }}>
             <Text className="text-sm text-neutral-500 dark:text-neutral-400">Don't have an account?</Text>
@@ -257,6 +306,17 @@ const LoginScreen = () => {
             <Text className="text-sm text-neutral-500 dark:text-neutral-400">Are you a contractor?</Text>
             <Pressable onPress={() => navigation.navigate('ContractorSignup')} accessibilityLabel="Sign up as a contractor" accessibilityRole="link">
               <Text className="text-sm font-semibold text-neutral-900 underline">Sign Up as a Contractor</Text>
+            </Pressable>
+          </View>
+
+          {/* Legal Links */}
+          <View className="items-center pt-4 flex-row justify-center" style={{ gap: 8 }}>
+            <Pressable onPress={() => Linking.openURL('https://ratedeed.com/legal/terms')}>
+              <Text className="text-xs text-neutral-400 underline">Terms of Service</Text>
+            </Pressable>
+            <Text className="text-xs text-neutral-400">•</Text>
+            <Pressable onPress={() => Linking.openURL('https://ratedeed.com/legal/privacy')}>
+              <Text className="text-xs text-neutral-400 underline">Privacy Policy</Text>
             </Pressable>
           </View>
         </View>

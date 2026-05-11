@@ -8,14 +8,17 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Linking,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { register } from '../api';
+import { register, appleSignIn } from '../api';
 import { auth } from '../firebaseConfig';
 import { createUserWithEmailAndPassword, sendEmailVerification, deleteUser } from 'firebase/auth';
 import Toast from 'react-native-toast-message';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import { useAuth } from '../context/AuthContext';
 
 const RegisterScreen = () => {
   const [firstName, setFirstName] = useState('');
@@ -27,6 +30,40 @@ const RegisterScreen = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [apiError, setApiError] = useState(null);
   const navigation = useNavigation();
+  const { updateBackendToken } = useAuth();
+
+  const handleAppleSignIn = async () => {
+    try {
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+
+      setLoading(true);
+      const backendResponse = await appleSignIn({
+        identityToken: credential.identityToken,
+        appleUserIdentifier: credential.user,
+        fullName: credential.fullName,
+        email: credential.email,
+      });
+
+      if (backendResponse?.token) {
+        await updateBackendToken(backendResponse.token, backendResponse.emailVerified, backendResponse);
+        Toast.show({ type: 'success', text1: 'Success', text2: 'Signed in with Apple!' });
+      } else {
+        setApiError('Apple Sign-In failed. Please try again.');
+      }
+    } catch (error) {
+      if (error.code === 'ERR_CANCELED') {
+        return;
+      }
+      setApiError(error.message || 'Apple Sign-In failed.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleRegister = async () => {
     if (!firstName || !lastName || !email || !password) {
@@ -224,10 +261,34 @@ const RegisterScreen = () => {
             )}
           </Pressable>
 
+          {/* Apple Sign In */}
+          {Platform.OS === 'ios' && (
+            <View className="w-full mt-4">
+              <AppleAuthentication.AppleAuthenticationButton
+                buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+                buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                cornerRadius={12}
+                style={{ width: '100%', height: 48 }}
+                onPress={handleAppleSignIn}
+              />
+            </View>
+          )}
+
           <View className="items-center pt-4 flex-row justify-center" style={{ gap: 4 }}>
             <Text className="text-sm text-neutral-500">Already have an account?</Text>
             <Pressable onPress={() => navigation.navigate('Login')}>
               <Text className="text-sm font-semibold text-neutral-900 underline">Log In</Text>
+            </Pressable>
+          </View>
+
+          {/* Legal Links */}
+          <View className="items-center pt-4 flex-row justify-center" style={{ gap: 8 }}>
+            <Pressable onPress={() => Linking.openURL('https://ratedeed.com/legal/terms')}>
+              <Text className="text-xs text-neutral-400 underline">Terms of Service</Text>
+            </Pressable>
+            <Text className="text-xs text-neutral-400">•</Text>
+            <Pressable onPress={() => Linking.openURL('https://ratedeed.com/legal/privacy')}>
+              <Text className="text-xs text-neutral-400 underline">Privacy Policy</Text>
             </Pressable>
           </View>
         </View>

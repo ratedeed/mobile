@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { View } from 'react-native';
+import { View, Platform } from 'react-native';
 import { useColorScheme } from 'nativewind';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import AnimatedSplashScreen from './src/components/AnimatedSplashScreen';
@@ -21,6 +21,7 @@ import { useNetworkStatus } from './src/hooks/useNetworkStatus';
 import OfflineBanner from './src/components/common/OfflineBanner';
 import * as Sentry from '@sentry/react-native';
 import Constants from 'expo-constants';
+import { requestTrackingPermissionsAsync } from 'expo-tracking-transparency';
 
 // CRITICAL: Replace with your actual Stripe Publishable Key before launch
 // Get from: https://dashboard.stripe.com/apikeys
@@ -80,6 +81,17 @@ function AppNavigator() {
       }
     });
   }, [setColorScheme]);
+
+  useEffect(() => {
+    (async () => {
+      if (Platform.OS === 'ios') {
+        const { status } = await requestTrackingPermissionsAsync();
+        if (status === 'granted') {
+          // Tracking enabled - analytics can use IDFA
+        }
+      }
+    })();
+  }, []);
 
   usePushNotifications(); // Initialize push notification listeners inside NavigationContainer
 

@@ -11,6 +11,7 @@ import {
   Platform,
   Dimensions,
   StyleSheet,
+  Linking,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
@@ -633,9 +634,18 @@ const ContractorSignupScreen = () => {
               </Pressable>
             </View>
 
-            <Text className="text-[10px] text-neutral-400 text-center leading-4 px-4 mt-2">
-              By creating an account, you agree to Ratedeed's Terms of Service and Privacy Policy.
-            </Text>
+            <View className="flex-row justify-center items-center flex-wrap px-4 mt-2" style={{ gap: 4 }}>
+              <Text className="text-[10px] text-neutral-400 text-center leading-4">
+                By creating an account, you agree to Ratedeed's
+              </Text>
+              <Pressable onPress={() => Linking.openURL('https://ratedeed.com/legal/terms')}>
+                <Text className="text-[10px] text-neutral-400 underline">Terms of Service</Text>
+              </Pressable>
+              <Text className="text-[10px] text-neutral-400">and</Text>
+              <Pressable onPress={() => Linking.openURL('https://ratedeed.com/legal/privacy')}>
+                <Text className="text-[10px] text-neutral-400 underline">Privacy Policy</Text>
+              </Pressable>
+            </View>
           </View>
         )}
       </ScrollView>

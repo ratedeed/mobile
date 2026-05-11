@@ -227,6 +227,13 @@ const ContractorDashboardScreen: React.FC = () => {
   const [profileSaving, setProfileSaving] = useState(false);
   const [addressSuggestions, setAddressSuggestions] = useState<any[]>([]);
   const [isSearchingAddress, setIsSearchingAddress] = useState(false);
+
+  const isMounted = useRef(true);
+  useEffect(() => {
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
   const addressSearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [hours, setHours] = useState<Record<string, { open: string; close: string; isOpen: boolean }>>({});
   const [bannerUrl, setBannerUrl] = useState('');

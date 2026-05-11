@@ -5,7 +5,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { createCheckoutSession, createPaymentIntent } from '../api';
 import { FontAwesome5 } from '@expo/vector-icons';
-import { useStripe, usePlatformPay, confirmPlatformPayPayment } from '@stripe/stripe-react-native';
+import { useStripe, usePlatformPay, confirmPlatformPayPayment, PlatformPay } from '@stripe/stripe-react-native';
 
 const STEP_LABELS = ['Review', 'Payment', 'Confirmed'];
 
@@ -52,7 +52,7 @@ export default function PaymentFlowScreen() {
               {
                 label: quoteDescription || 'Project Payment',
                 amount: String((quoteTotal / 100).toFixed(2)),
-                paymentType: 'Immediate',
+                paymentType: PlatformPay.PaymentType.Immediate,
               },
             ],
             merchantCountryCode: 'US',

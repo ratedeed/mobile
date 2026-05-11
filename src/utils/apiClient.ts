@@ -986,6 +986,19 @@ export const createPaymentIntent = async (quoteId: string): Promise<{ clientSecr
   return post(`${API_BASE}/stripe/payment-intent`, { quoteId }, authHeaders);
 };
 
+export const appleSignIn = async (data: { identityToken: string; appleUserIdentifier: string; fullName?: { givenName?: string; familyName?: string }; email?: string }): Promise<any> => {
+  const result = await post(`${API_BASE}/users/apple-signin`, data);
+  if (result && result.token) {
+    await SecureStore.setItemAsync('auth_token', result.token);
+    if (result.refreshToken) await SecureStore.setItemAsync('refresh_token', result.refreshToken);
+    const userData = { ...result.user };
+    delete userData.token;
+    delete userData.refreshToken;
+    await AsyncStorage.setItem(USER_DATA_KEY, JSON.stringify(userData));
+  }
+  return result;
+};
+
 // ==========================================
 // Quote Detail & Status
 // ==========================================
