@@ -968,3 +968,12 @@ export const submitClaim = async (contractorId: string, businessDocumentFile: st
   const authHeaders = await getAuthHeaders();
   return post(`${API_BASE}/contractors/${contractorId}/claim`, { businessDocumentFile }, authHeaders);
 };
+
+// ==========================================
+// Reports
+// ==========================================
+
+export const reportConversation = async (reportedUserId: string, conversationId: string, category: string, reason: string): Promise<any> => {
+  const authHeaders = await getAuthHeaders();
+  return post(`${API_BASE}/reports/conversation`, { reportedUserId, conversationId, category, reason }, authHeaders);
+};

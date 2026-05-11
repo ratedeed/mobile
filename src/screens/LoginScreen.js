@@ -153,6 +153,8 @@ const LoginScreen = () => {
             editable={!loading}
             className="w-full border border-neutral-300 rounded-xl px-4 py-3 text-sm bg-white"
             placeholderTextColor="#a3a3a3"
+            accessibilityLabel="Email address"
+            accessibilityRole="text"
           />
 
           {/* Password */}
@@ -169,8 +171,10 @@ const LoginScreen = () => {
             />
             <Pressable
               onPress={() => setShowPassword(!showPassword)}
-              className="absolute right-4 top-3 flex-row items-center"
+              className="absolute right-4 top-3 flex-row items-center h-8 px-2"
               style={{ gap: 4 }}
+              accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+              accessibilityRole="button"
             >
               <FontAwesome5
                 name={showPassword ? 'eye-slash' : 'eye'}
@@ -210,7 +214,7 @@ const LoginScreen = () => {
           )}
 
           {/* Forgot Password */}
-          <Pressable onPress={() => navigation.navigate('ForgotPassword')}>
+          <Pressable onPress={() => navigation.navigate('ForgotPassword')} accessibilityLabel="Forgot password" accessibilityRole="link">
             <Text className="text-xs font-semibold text-neutral-500">Forgot password?</Text>
           </Pressable>
 
@@ -227,6 +231,8 @@ const LoginScreen = () => {
               shadowRadius: 8,
               elevation: 4,
             }}
+            accessibilityLabel="Log in"
+            accessibilityRole="button"
           >
             {loading ? (
               <View className="flex-row items-center" style={{ gap: 8 }}>
@@ -241,7 +247,7 @@ const LoginScreen = () => {
           {/* Sign Up Link */}
           <View className="items-center pt-4 flex-row justify-center" style={{ gap: 4 }}>
             <Text className="text-sm text-neutral-500">Don't have an account?</Text>
-            <Pressable onPress={() => navigation.navigate('Register')}>
+            <Pressable onPress={() => navigation.navigate('Register')} accessibilityLabel="Sign up" accessibilityRole="link">
               <Text className="text-sm font-semibold text-neutral-900 underline">Sign Up</Text>
             </Pressable>
           </View>
@@ -249,7 +255,7 @@ const LoginScreen = () => {
           {/* Contractor Link */}
           <View className="items-center pt-2 flex-row justify-center" style={{ gap: 4 }}>
             <Text className="text-sm text-neutral-500">Are you a contractor?</Text>
-            <Pressable onPress={() => navigation.navigate('ContractorSignup')}>
+            <Pressable onPress={() => navigation.navigate('ContractorSignup')} accessibilityLabel="Sign up as a contractor" accessibilityRole="link">
               <Text className="text-sm font-semibold text-neutral-900 underline">Sign Up as a Contractor</Text>
             </Pressable>
           </View>

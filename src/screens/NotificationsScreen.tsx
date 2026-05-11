@@ -75,6 +75,11 @@ const NotificationsScreen: React.FC = () => {
       navigation.navigate('Jobs');
     } else if (item.link.startsWith('/jobs/')) {
       navigation.navigate('Jobs');
+    } else if (item.link.startsWith('/quote-review')) {
+      const quoteId = item.link.match(/[?&]quoteId=([^&]+)/)?.[1];
+      if (quoteId) {
+        navigation.navigate('QuoteReview', { quoteId });
+      }
     }
   };
 

@@ -48,6 +48,7 @@ import { getProfileImageUrl, isSvgUrl } from "../utils/avatarUtils";
 import { uploadToCloudinary, CLOUDINARY_FOLDERS } from "../utils/cloudinary";
 import ActionSheet from "../components/common/ActionSheet";
 import QuoteCreationSheet from "../components/contractor/QuoteCreationSheet";
+import HapticFeedback from "../utils/haptics";
 import { VerifiedBadge } from "../components/common/VerifiedBadge";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -308,6 +309,7 @@ const MessagesScreen = () => {
 
   const recipientId = route.params?.recipientId;
   const recipientName = route.params?.recipientName;
+  const conversationId = route.params?.conversationId;
 
   const [conversations, setConversations] = useState({});
   const [selectedConversation, setSelectedConversation] = useState(null);
@@ -476,11 +478,26 @@ const MessagesScreen = () => {
           if (existing) setSelectedConversation(existing);
           else setSelectedConversation({ conversationId: `temp-${Date.now()}`, otherParticipant: { _id: recipientId, firstName: recipientName || "User", role: route.params?.recipientRole || "User", profilePicture: route.params?.recipientImage || "" }, messages: [], lastMessage: null });
         }
+        if (conversationId && !selectedConversation) {
+          const existing = Object.values(map).find((c) => c.conversationId === conversationId || c._id === conversationId);
+          if (existing) setSelectedConversation(existing);
+        }
       }
     } catch {} finally { setLoading(false); setRefreshing(false); }
-  }, [currentUserId, recipientId, recipientName, myContractorId]);
+  }, [currentUserId, recipientId, recipientName, myContractorId, conversationId]);
 
   useEffect(() => { if (currentUserId) loadConversations(); }, [currentUserId]);
+
+  // Auto-select conversation when conversationId is provided (e.g. from notification tap)
+  useEffect(() => {
+    if (!conversationId || selectedConversation) return;
+    const existing = Object.values(conversations).find(
+      (c) => c.conversationId === conversationId || c._id === conversationId
+    );
+    if (existing) {
+      setSelectedConversation(existing);
+    }
+  }, [conversationId, conversations, selectedConversation]);
 
   // ─── Load messages ─────────────────────────────────────────────────────────
   const loadMessages = useCallback(async (conversationId) => {
@@ -545,6 +562,7 @@ const MessagesScreen = () => {
   // ─── Send message ──────────────────────────────────────────────────────────
   const handleSendMessage = async () => {
     if ((!newMessage.trim() && !pendingAttachment) || !selectedConversation || !currentUserId) return;
+    HapticFeedback.medium();
     try {
       let cId = selectedConversation.conversationId || selectedConversation._id;
       let targetId = resolveId(selectedConversation.otherParticipant);
@@ -601,11 +619,26 @@ const MessagesScreen = () => {
   }, [selectedConversation, currentUserId]);
 
   const pickImage = async () => {
+    HapticFeedback.selection();
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.7, base64: true });
     if (!result.canceled) setPendingAttachment(result.assets[0]);
   };
 
-  const handleReport = async (category, details) => Alert.alert("Report Submitted", "Thank you. We'll review your report and take appropriate action.");
+  const handleReport = async (category, details) => {
+    const targetId = resolveId(selectedConversation?.otherParticipant);
+    const convId = selectedConversation?.conversationId;
+    if (!targetId || !convId) {
+      Alert.alert("Error", "Unable to submit report. Please try again.");
+      return;
+    }
+    try {
+      const { reportConversation } = await import("../api");
+      await reportConversation(targetId, convId, category, details || "");
+      Alert.alert("Report Submitted", "Thank you. We'll review your report and take appropriate action.");
+    } catch (e) {
+      Alert.alert("Error", e?.message || "Failed to submit report. Please try again.");
+    }
+  };
 
   const filteredConversations = useMemo(() => {
     return Object.values(conversations)
@@ -639,13 +672,13 @@ const MessagesScreen = () => {
             ) : filteredConversations.length === 0 ? (
               <EmptyInbox />
             ) : (
-              <FlatList data={filteredConversations} keyExtractor={(c) => c.conversationId || c._id} renderItem={({ item }) => <ConversationItem conv={item} currentUserId={currentUserId} onlineUsers={onlineUsers} onPress={() => setSelectedConversation(item)} />} ItemSeparatorComponent={() => <View className="ml-[82px] border-b border-neutral-100" />} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadConversations(true)} tintColor="#818CF8" />} contentContainerStyle={{ paddingBottom: 20 }} />
+              <FlatList data={filteredConversations} keyExtractor={(c) => c.conversationId || c._id} renderItem={({ item }) => <ConversationItem conv={item} currentUserId={currentUserId} onlineUsers={onlineUsers} onPress={() => { HapticFeedback.selection(); setSelectedConversation(item); }} />} ItemSeparatorComponent={() => <View className="ml-[82px] border-b border-neutral-100" />} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadConversations(true)} tintColor="#818CF8" />} contentContainerStyle={{ paddingBottom: 20 }} />
             )}
           </View>
         ) : (
           <View className="flex-1">
             <View className="px-4 py-3 flex-row items-center bg-white border-b border-neutral-100/80" style={{ gap: 12 }}>
-              <Pressable onPress={() => { if (route.name === "ChatScreen") navigation.goBack(); else setSelectedConversation(null); }} className="w-9 h-9 items-center justify-center rounded-full -ml-1">
+              <Pressable onPress={() => { if (route.name === "ChatScreen") navigation.goBack(); else setSelectedConversation(null); }} className="w-11 h-11 items-center justify-center rounded-full -ml-1" accessibilityLabel="Go back" accessibilityRole="button">
                 <FontAwesome5 name="chevron-left" size={16} color="#171717" />
               </Pressable>
               <View className="relative">
@@ -657,7 +690,7 @@ const MessagesScreen = () => {
                   {chatOther?.role === "contractor" && (chatOther?.isVerified || chatOther?.isTopRated) && <VerifiedBadge size={14} animate={false} />}
                 </View>
               </View>
-              <Pressable onPress={() => setActionSheetVisible(true)} className="w-9 h-9 items-center justify-center rounded-full"><FontAwesome5 name="ellipsis-h" size={16} color="#525252" /></Pressable>
+              <Pressable onPress={() => setActionSheetVisible(true)} className="w-11 h-11 items-center justify-center rounded-full" accessibilityLabel="Chat options" accessibilityRole="button"><FontAwesome5 name="ellipsis-h" size={16} color="#525252" /></Pressable>
             </View>
 
             <ScrollView ref={messagesRef} className="flex-1 bg-neutral-50/60" contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 }} onContentSizeChange={() => messagesRef.current?.scrollToEnd({ animated: false })} onScroll={(e) => { const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent; setShowScrollBtn(contentSize.height - layoutMeasurement.height - contentOffset.y > 300); }} scrollEventThrottle={64}>
@@ -672,25 +705,126 @@ const MessagesScreen = () => {
                       {msg.showDate && <View className="items-center my-5"><View className="bg-white/80 px-4 py-1.5 rounded-full shadow-sm border border-neutral-100/50"><Text className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">{formatChatDate(msg.createdAt)}</Text></View></View>}
                       <View className={`flex-row ${isMe ? "justify-end" : "justify-start"} ${msg.isFirstInGroup ? "mt-4" : "mt-1"}`}>
                         {!isMe && msg.isFirstInGroup ? <View className="w-8 mr-2 mt-1 items-center">{isSvgUrl(chatAvatar) ? <View className="w-7 h-7 rounded-full overflow-hidden"><SvgImage uri={chatAvatar} width="100%" height="100%" /></View> : <Image source={{ uri: chatAvatar }} className="w-7 h-7 rounded-full bg-neutral-100" />}</View> : !isMe ? <View className="w-8 mr-2" /> : null}
-                        <View className={`max-w-[78%] ${isMe ? "items-end" : "items-start"}`}>
-                          <View className={`px-[14px] py-[10px] ${isMe ? `bg-indigo-600 ${msg.isFirstInGroup ? "rounded-2xl rounded-tr-md" : "rounded-2xl"}` : `bg-white ${msg.isFirstInGroup ? "rounded-2xl rounded-tl-md" : "rounded-2xl"}`}`} style={!isMe ? { shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 8, shadowOffset: { height: 1 }, elevation: 1 } : undefined}>
-                            {(msg.type === "quote" || msg.quoteId) && msg.quote && <View className={`rounded-2xl p-4 mb-2 border w-full min-w-[240px] ${isMe ? "bg-indigo-600 border-indigo-500" : "bg-white border-neutral-200"}`} style={!isMe ? { shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 10, shadowOffset: { height: 2 }, elevation: 2 } : { shadowColor: "#4F46E5", shadowOpacity: 0.2, shadowRadius: 10, shadowOffset: { height: 2 }, elevation: 2 }}>
-  <View className="flex-row items-center mb-2" style={{ gap: 6 }}>
-    <FontAwesome5 name="file-invoice-dollar" size={12} color={isMe ? "#A5B4FC" : "#6366F1"} />
-    <Text className={`text-[10px] font-black tracking-[0.15em] uppercase ${isMe ? "text-indigo-200" : "text-indigo-600"}`}>Project Quote</Text>
-  </View>
-  <Text className={`text-[15px] font-bold mb-1 ${isMe ? "text-white" : "text-neutral-900"}`} numberOfLines={2}>{(msg.quote.description || msg.quote.projectName || 'Project Quote')}</Text>
-  <Text className={`text-[22px] font-black tracking-tight mb-4 ${isMe ? "text-white" : "text-neutral-900"}`}>${(((msg.quote.totalAmount / 100) || msg.quote.total || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}</Text>
-  <Pressable onPress={() => navigation.navigate('QuoteReview', { quoteId: msg.quoteId || msg.quote.id || msg.quote._id })} className={`py-2.5 rounded-xl items-center flex-row justify-center ${isMe ? "bg-white" : "bg-indigo-600"}`} style={{ gap: 6 }}>
-    <Text className={`text-[13px] font-bold ${isMe ? "text-indigo-600" : "text-white"}`}>Review Details</Text>
-    <FontAwesome5 name="arrow-right" size={10} color={isMe ? "#4F46E5" : "#FFFFFF"} />
-  </Pressable>
-</View>}
-                            {msg.attachmentUrl && /\.(jpg|jpeg|png|gif|webp)$/i.test(msg.attachmentUrl) && <Pressable onPress={() => { setActiveImage(msg.attachmentUrl); setLightboxVisible(true); }} className="mb-1.5 -mx-[2px] -mt-[2px] overflow-hidden" style={{ borderRadius: msg.isFirstInGroup ? 14 : 16 }}><Image source={{ uri: msg.attachmentUrl }} style={{ width: 240, height: 180 }} resizeMode="cover" /></Pressable>}
-                            {msg.attachmentUrl && !/\.(jpg|jpeg|png|gif|webp)$/i.test(msg.attachmentUrl) && <Pressable className={`flex-row items-center p-2.5 rounded-xl mb-1.5 border ${isMe ? "bg-white/10 border-white/20" : "bg-neutral-50 border-neutral-200"}`}><FontAwesome5 name="file-alt" size={14} color={isMe ? "white" : "#737373"} /><Text className={`text-[12px] ml-2 font-semibold ${isMe ? "text-white" : "text-neutral-600"}`}>View Attachment</Text></Pressable>}
-                            {msg.messageText ? <Text className={`text-[15px] leading-[22px] ${isMe ? "text-white" : "text-neutral-800"}`}>{msg.messageText}</Text> : null}
-                          </View>
-                          {msg.isLastInGroup && <View className={`flex-row items-center mt-1 px-1 ${isMe ? "justify-end" : "justify-start"}`} style={{ gap: 4 }}><Text className="text-[10px] text-neutral-400 font-medium">{msg.timeStr}</Text>{isMe && <FontAwesome5 name={msg.read ? "check-double" : "check"} size={9} color={msg.read ? "#10b981" : "#c4b5fd"} solid={msg.read} />}</View>}
+                        <View className={`${(msg.type === "quote" || msg.quoteId) && msg.quote ? "w-[92%]" : "max-w-[78%]"} ${isMe ? "items-end" : "items-start"}`}>
+                          {(msg.type === "quote" || msg.quoteId) && msg.quote ? (
+                            <>
+                              <View className="w-full bg-white rounded-2xl border border-neutral-200 overflow-hidden" style={{ shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { height: 2 }, elevation: 2 }}>
+                                {/* Status banner */}
+                                {msg.quote.status && msg.quote.status !== 'pending' && msg.quote.status !== 'pending_user_approval' && (
+                                  <View className={`px-4 py-2 flex-row items-center border-b ${msg.quote.status === 'accepted' || msg.quote.status === 'funded_in_progress' ? 'bg-emerald-50 border-emerald-100' : msg.quote.status === 'rejected' || msg.quote.status === 'declined' ? 'bg-red-50 border-red-100' : 'bg-amber-50 border-amber-100'}`}>
+                                    <FontAwesome5 name={msg.quote.status === 'accepted' || msg.quote.status === 'funded_in_progress' ? 'check-circle' : msg.quote.status === 'rejected' || msg.quote.status === 'declined' ? 'times-circle' : 'clock'} size={12} color={msg.quote.status === 'accepted' || msg.quote.status === 'funded_in_progress' ? '#059669' : msg.quote.status === 'rejected' || msg.quote.status === 'declined' ? '#dc2626' : '#d97706'} />
+                                    <Text className={`text-[12px] font-semibold ml-2 ${msg.quote.status === 'accepted' || msg.quote.status === 'funded_in_progress' ? 'text-emerald-700' : msg.quote.status === 'rejected' || msg.quote.status === 'declined' ? 'text-red-700' : 'text-amber-700'}`}>
+                                      {msg.quote.status === 'accepted' || msg.quote.status === 'funded_in_progress' ? 'Quote Accepted' : msg.quote.status === 'rejected' || msg.quote.status === 'declined' ? 'Quote Declined' : 'Pending Review'}
+                                    </Text>
+                                  </View>
+                                )}
+                                
+                                {/* Contractor row */}
+                                <View className="flex-row p-4 pb-3" style={{ gap: 12 }}>
+                                  {isSvgUrl(chatAvatar) ? (
+                                    <View className="w-10 h-10 rounded-full overflow-hidden bg-neutral-100"><SvgImage uri={chatAvatar} width="100%" height="100%" /></View>
+                                  ) : (
+                                    <Image source={{ uri: chatAvatar }} className="w-10 h-10 rounded-full bg-neutral-100" />
+                                  )}
+                                  <View className="flex-1 min-w-0">
+                                    <Text className="text-[14px] font-semibold text-neutral-900" numberOfLines={1}>{chatName}</Text>
+                                    <View className="flex-row items-center mt-0.5" style={{ gap: 4 }}>
+                                      <FontAwesome5 name="star" size={10} color="#eab308" solid />
+                                      <Text className="text-[12px] text-neutral-500">{msg.quote.contractor?.averageRating || '5.0'}</Text>
+                                    </View>
+                                  </View>
+                                </View>
+                                
+                                {/* Category + Description */}
+                                <View className="px-4 pb-3">
+                                  <View className="flex-row mb-1.5" style={{ gap: 6 }}>
+                                    <View className="px-2 py-0.5 bg-blue-50 rounded-md"><Text className="text-[11px] font-semibold text-blue-700">{msg.quote.serviceType || msg.quote.category || 'Service'}</Text></View>
+                                    {msg.quote.revisions > 0 && <View className="px-2 py-0.5 bg-purple-50 rounded-md"><Text className="text-[11px] font-medium text-purple-700">Revision #{msg.quote.revisions}</Text></View>}
+                                  </View>
+                                  <Text className="text-[15px] font-semibold text-neutral-900">{msg.quote.description || msg.quote.projectName || 'Project Quote'}</Text>
+                                  {msg.quote.description && msg.quote.projectName && msg.quote.description !== msg.quote.projectName && (
+                                    <Text className="text-[13px] text-neutral-600 mt-1 leading-[18px]">{msg.quote.description}</Text>
+                                  )}
+                                </View>
+                                
+                                {/* Dates */}
+                                {(msg.quote.estimatedStartDate || msg.quote.estimatedCompletionDate) && (
+                                  <View className="px-4 pb-3 flex-row" style={{ gap: 16 }}>
+                                    {msg.quote.estimatedStartDate && (
+                                      <View className="flex-row items-center" style={{ gap: 6 }}>
+                                        <FontAwesome5 name="calendar" size={12} color="#737373" />
+                                        <Text className="text-[12px] font-medium text-neutral-700">
+                                          {(() => { try { return new Date(msg.quote.estimatedStartDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); } catch { return 'TBD'; } })()}
+                                        </Text>
+                                      </View>
+                                    )}
+                                    {msg.quote.estimatedCompletionDate && (
+                                      <View className="flex-row items-center" style={{ gap: 6 }}>
+                                        <FontAwesome5 name="clock" size={12} color="#737373" />
+                                        <Text className="text-[12px] text-neutral-500">
+                                          {(() => { try { return new Date(msg.quote.estimatedCompletionDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); } catch { return 'TBD'; } })()}
+                                        </Text>
+                                      </View>
+                                    )}
+                                  </View>
+                                )}
+                                
+                                {/* Divider */}
+                                <View className="mx-4 h-px bg-neutral-100" />
+                                
+                                {/* Line items */}
+                                <View className="p-4 py-3" style={{ gap: 10 }}>
+                                  {(msg.quote.lineItems || []).length > 0 ? (
+                                    msg.quote.lineItems.map((item, idx) => (
+                                      <View key={idx} className="flex-row justify-between">
+                                        <Text className="text-[13px] text-neutral-600 flex-1 mr-3" numberOfLines={1}>{item.description || item.label || `Item ${idx + 1}`}</Text>
+                                        <Text className="text-[13px] font-medium text-neutral-900">${((item.amount || 0) / 100).toLocaleString()}</Text>
+                                      </View>
+                                    ))
+                                  ) : (
+                                    <View className="flex-row justify-between">
+                                      <Text className="text-[13px] text-neutral-600">Project Cost</Text>
+                                      <Text className="text-[13px] font-medium text-neutral-900">${(() => { const a = (msg.quote.subtotal || msg.quote.totalAmount || 0) / 100; return Number.isFinite(a) ? a.toLocaleString() : '0'; })()}</Text>
+                                    </View>
+                                  )}
+                                  
+                                  <View className="h-px bg-neutral-100 my-1" />
+                                  
+                                  <View className="flex-row justify-between items-center">
+                                    <Text className="text-[13px] font-semibold text-neutral-900">Total</Text>
+                                    <Text className="text-[18px] font-bold text-neutral-900">${(() => {
+                                      const amount = msg.quote.totalAmount != null ? msg.quote.totalAmount / 100 : msg.quote.total != null ? msg.quote.total : 0;
+                                      return Number.isFinite(amount) ? amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00';
+                                    })()}</Text>
+                                  </View>
+                                </View>
+                                
+                                {/* Escrow notice */}
+                                <View className="mx-4 mb-4 p-3 bg-blue-50 rounded-xl flex-row items-start" style={{ gap: 8 }}>
+                                  <FontAwesome5 name="shield-alt" size={14} color="#2563EB" style={{ marginTop: 1 }} />
+                                  <Text className="text-[11px] text-blue-700 flex-1 leading-[16px]">Secure escrow — funds held until you approve the completed work.</Text>
+                                </View>
+                                
+                                {/* Action button */}
+                                <View className="px-4 pb-4">
+                                  <Pressable onPress={() => navigation.navigate('QuoteReview', { quoteId: msg.quoteId || msg.quote.id || msg.quote._id })} className="py-3 bg-indigo-600 rounded-xl items-center flex-row justify-center" style={{ gap: 6 }} accessibilityLabel="Review quote details" accessibilityRole="button">
+                                    <Text className="text-[14px] font-semibold text-white">Review Details</Text>
+                                    <FontAwesome5 name="arrow-right" size={12} color="#FFFFFF" />
+                                  </Pressable>
+                                </View>
+                              </View>
+                              {msg.isLastInGroup && <View className={`flex-row items-center mt-1.5 px-1 ${isMe ? "justify-end" : "justify-start"}`} style={{ gap: 4 }}><Text className="text-[10px] text-neutral-400 font-medium">{msg.timeStr}</Text>{isMe && <FontAwesome5 name={msg.read ? "check-double" : "check"} size={9} color={msg.read ? "#10b981" : "#c4b5fd"} solid={msg.read} />}</View>}
+                            </>
+                          ) : (
+                            <>
+                              <View className={`px-[14px] py-[10px] ${isMe ? `bg-indigo-600 ${msg.isFirstInGroup ? "rounded-2xl rounded-tr-md" : "rounded-2xl"}` : `bg-white ${msg.isFirstInGroup ? "rounded-2xl rounded-tl-md" : "rounded-2xl"}`}`} style={!isMe ? { shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 8, shadowOffset: { height: 1 }, elevation: 1 } : undefined}>
+                                {msg.attachmentUrl && /\.(jpg|jpeg|png|gif|webp)$/i.test(msg.attachmentUrl) && <Pressable onPress={() => { setActiveImage(msg.attachmentUrl); setLightboxVisible(true); }} className="mb-1.5 -mx-[2px] -mt-[2px] overflow-hidden" style={{ borderRadius: msg.isFirstInGroup ? 14 : 16 }}><Image source={{ uri: msg.attachmentUrl }} style={{ width: 240, height: 180 }} resizeMode="cover" /></Pressable>}
+                                {msg.attachmentUrl && !/\.(jpg|jpeg|png|gif|webp)$/i.test(msg.attachmentUrl) && <Pressable className={`flex-row items-center p-2.5 rounded-xl mb-1.5 border ${isMe ? "bg-white/10 border-white/20" : "bg-neutral-50 border-neutral-200"}`}><FontAwesome5 name="file-alt" size={14} color={isMe ? "white" : "#737373"} /><Text className={`text-[12px] ml-2 font-semibold ${isMe ? "text-white" : "text-neutral-600"}`}>View Attachment</Text></Pressable>}
+                                {msg.messageText ? <Text className={`text-[15px] leading-[22px] ${isMe ? "text-white" : "text-neutral-800"}`}>{msg.messageText}</Text> : null}
+                              </View>
+                              {msg.isLastInGroup && <View className={`flex-row items-center mt-1 px-1 ${isMe ? "justify-end" : "justify-start"}`} style={{ gap: 4 }}><Text className="text-[10px] text-neutral-400 font-medium">{msg.timeStr}</Text>{isMe && <FontAwesome5 name={msg.read ? "check-double" : "check"} size={9} color={msg.read ? "#10b981" : "#c4b5fd"} solid={msg.read} />}</View>}
+                            </>
+                          )}
                         </View>
                       </View>
                     </View>
@@ -700,15 +834,15 @@ const MessagesScreen = () => {
               {isOtherTyping && <TypingIndicator name={chatName?.split(" ")[0]} />}
             </ScrollView>
 
-            {showScrollBtn && <Pressable onPress={() => messagesRef.current?.scrollToEnd({ animated: true })} className="absolute bottom-24 right-4 w-9 h-9 bg-white rounded-full items-center justify-center shadow-lg" style={{ shadowColor: "#000", shadowOpacity: 0.12, shadowRadius: 8, shadowOffset: { height: 2 }, elevation: 5 }}><FontAwesome5 name="chevron-down" size={12} color="#525252" /></Pressable>}
+            {showScrollBtn && <Pressable onPress={() => { HapticFeedback.selection(); messagesRef.current?.scrollToEnd({ animated: true }); }} className="absolute bottom-24 right-4 w-11 h-11 bg-white rounded-full items-center justify-center shadow-lg" style={{ shadowColor: "#000", shadowOpacity: 0.12, shadowRadius: 8, shadowOffset: { height: 2 }, elevation: 5 }} accessibilityLabel="Scroll to bottom" accessibilityRole="button"><FontAwesome5 name="chevron-down" size={12} color="#525252" /></Pressable>}
 
             {pendingAttachment && <View className="px-4 py-2.5 bg-white border-t border-neutral-100 flex-row items-center justify-between"><View className="flex-row items-center" style={{ gap: 10 }}><Image source={{ uri: pendingAttachment.uri }} className="w-12 h-12 rounded-xl" /><View><Text className="text-[12px] font-semibold text-neutral-700">Image ready to send</Text><Text className="text-[10px] text-neutral-400">Tap send to share</Text></View></View><Pressable onPress={() => setPendingAttachment(null)} className="w-7 h-7 bg-neutral-100 rounded-full items-center justify-center"><FontAwesome5 name="times" size={10} color="#525252" /></Pressable></View>}
 
             <View className="px-4 py-3 bg-white border-t border-neutral-100 flex-row items-end" style={{ gap: 8, paddingBottom: insets.bottom + 12 || 12 }}>
-              <Pressable onPress={pickImage} className="w-9 h-9 items-center justify-center rounded-full bg-neutral-50"><FontAwesome5 name="image" size={15} color="#737373" /></Pressable>
-              {contractorProfile && selectedConversation?.conversationId && <Pressable onPress={() => setShowQuoteSheet(true)} className="w-9 h-9 items-center justify-center rounded-full bg-indigo-50"><FontAwesome5 name="tag" size={13} color="#4F46E5" /></Pressable>}
-              <View className="flex-1 bg-neutral-100 rounded-2xl px-4 py-2.5 max-h-[120px]"><TextInput className="text-[15px] text-neutral-800 leading-5" placeholder="Type a message..." placeholderTextColor="#a3a3a3" value={newMessage} onChangeText={handleTextChange} multiline style={{ maxHeight: 100 }} /></View>
-              <Pressable onPress={handleSendMessage} disabled={(!newMessage.trim() && !pendingAttachment) || isUploading} className={`w-10 h-10 rounded-full items-center justify-center mb-0.5 ${newMessage.trim() || pendingAttachment ? "bg-indigo-600" : "bg-neutral-200"}`} style={newMessage.trim() || pendingAttachment ? { shadowColor: "#4F46E5", shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { height: 2 }, elevation: 3 } : undefined}>
+              <Pressable onPress={pickImage} className="w-11 h-11 items-center justify-center rounded-full bg-neutral-50" accessibilityLabel="Attach image" accessibilityRole="button"><FontAwesome5 name="image" size={15} color="#737373" /></Pressable>
+              {contractorProfile && selectedConversation?.conversationId && <Pressable onPress={() => setShowQuoteSheet(true)} className="w-11 h-11 items-center justify-center rounded-full bg-indigo-50" accessibilityLabel="Send quote" accessibilityRole="button"><FontAwesome5 name="tag" size={13} color="#4F46E5" /></Pressable>}
+              <View className="flex-1 bg-neutral-100 rounded-2xl px-4 py-2.5 max-h-[120px]"><TextInput className="text-[15px] text-neutral-800 leading-5" placeholder="Type a message..." placeholderTextColor="#a3a3a3" value={newMessage} onChangeText={handleTextChange} multiline style={{ maxHeight: 100 }} accessibilityLabel="Message input" accessibilityRole="text" /></View>
+              <Pressable onPress={handleSendMessage} disabled={(!newMessage.trim() && !pendingAttachment) || isUploading} className={`w-11 h-11 rounded-full items-center justify-center mb-0.5 ${newMessage.trim() || pendingAttachment ? "bg-indigo-600" : "bg-neutral-200"}`} style={newMessage.trim() || pendingAttachment ? { shadowColor: "#4F46E5", shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { height: 2 }, elevation: 3 } : undefined} accessibilityLabel="Send message" accessibilityRole="button">
                 {isUploading ? <ActivityIndicator size="small" color="white" /> : <FontAwesome5 name="paper-plane" size={14} color={newMessage.trim() || pendingAttachment ? "white" : "#a3a3a3"} />}
               </Pressable>
             </View>

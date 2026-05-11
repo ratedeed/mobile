@@ -87,7 +87,7 @@ const ListingCard = ({
   const distance = listing.distance;
 
   return (
-    <Pressable className="mb-4" onPress={onPress}>
+    <Pressable className="mb-4" onPress={onPress} accessibilityLabel={`View ${listing.companyName || listing.businessName || 'contractor'} details`} accessibilityRole="button">
       {/* Image Container */}
       <View className="relative rounded-xl overflow-hidden bg-neutral-100 dark:bg-neutral-900 aspect-square">
         {isSvgUrl(coverImage) ? (
@@ -110,7 +110,10 @@ const ListingCard = ({
         {/* Favorite Heart */}
         <Pressable
           onPress={() => onToggleFavorite()}
-          className="absolute top-2 right-2"
+          className="absolute top-2 right-2 w-11 h-11 items-center justify-center"
+          accessibilityLabel={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+          accessibilityRole="button"
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <FontAwesome5
             name="heart"
@@ -283,7 +286,7 @@ const HomeScreen = () => {
   }, [fetchLocationAndData]);
 
   const toggleFav = async (id: string) => {
-    HapticFeedback.selection();
+    HapticFeedback.medium();
     const isFav = favorites.has(id);
     if (isFav) {
       await removeFavorite(id);
@@ -303,6 +306,7 @@ const HomeScreen = () => {
   };
 
   const handleContractorPress = (contractor: Contractor) => {
+    HapticFeedback.selection();
     if (contractor.slug) {
       navigation.navigate('BusinessDetail', { id: contractor._id, slug: contractor.slug });
     } else {
@@ -353,7 +357,7 @@ const HomeScreen = () => {
                 maxLength={10}
               />
               {searchZip ? (
-                <Pressable onPress={() => setSearchZip('')} className="mr-3">
+                <Pressable onPress={() => setSearchZip('')} className="mr-3 w-11 h-11 items-center justify-center" accessibilityLabel="Clear zip code" accessibilityRole="button">
                   <FontAwesome5 name="times-circle" size={14} color="#a3a3a3" />
                 </Pressable>
               ) : null}
@@ -372,7 +376,7 @@ const HomeScreen = () => {
                 onSubmitEditing={() => loadContractors(searchZip || null)}
               />
               {searchName ? (
-                <Pressable onPress={() => setSearchName('')} className="mr-3">
+                <Pressable onPress={() => setSearchName('')} className="mr-3 w-11 h-11 items-center justify-center" accessibilityLabel="Clear search" accessibilityRole="button">
                   <FontAwesome5 name="times-circle" size={14} color="#a3a3a3" />
                 </Pressable>
               ) : null}
@@ -384,6 +388,8 @@ const HomeScreen = () => {
                 loadContractors(searchZip || null);
               }}
               className="bg-indigo-600 rounded-full p-2.5 mr-1.5 shrink-0"
+              accessibilityLabel="Search contractors"
+              accessibilityRole="button"
             >
               <FontAwesome5 name="search" size={14} color="#ffffff" />
             </Pressable>
@@ -412,7 +418,7 @@ const HomeScreen = () => {
                 size={48} 
                 label={cat.label}
                 index={i}
-                onClick={() => setActiveCategory(cat.id)}
+                onClick={() => { HapticFeedback.selection(); setActiveCategory(cat.id); }}
               />
             ))}
           </ScrollView>

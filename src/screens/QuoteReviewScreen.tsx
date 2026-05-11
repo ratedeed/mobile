@@ -44,31 +44,19 @@ export default function QuoteReviewScreen() {
     })();
   }, [quoteId]);
 
+  // Acceptance requires payment — go straight to payment flow
   const handleAccept = async () => {
     if (!quoteId) return;
     setActionLoading('accept');
     try {
-      await updateQuoteStatus(quoteId, 'accepted');
-      const checkoutData = await createCheckoutSession(quoteId);
-      if (checkoutData?.url) {
-        // On mobile we can't open Stripe Checkout directly in-app the same way
-        // Navigate to PaymentFlow which handles native Stripe
-        (navigation as any).navigate('PaymentFlow', {
-          quoteId,
-          totalAmount: quote?.totalAmount || 0,
-          contractorName: quote?.contractor?.companyName || quote?.contractor?.businessName || 'Contractor',
-          description: quote?.description || 'Home Project',
-        });
-      } else {
-        (navigation as any).navigate('PaymentFlow', {
-          quoteId,
-          totalAmount: quote?.totalAmount || 0,
-          contractorName: quote?.contractor?.companyName || quote?.contractor?.businessName || 'Contractor',
-          description: quote?.description || 'Home Project',
-        });
-      }
+      (navigation as any).navigate('PaymentFlow', {
+        quoteId,
+        totalAmount: quote?.totalAmount || 0,
+        contractorName: quote?.contractor?.companyName || quote?.contractor?.businessName || 'Contractor',
+        description: quote?.description || 'Home Project',
+      });
     } catch (err: any) {
-      Alert.alert('Error', err?.message || 'Failed to accept quote.');
+      Alert.alert('Error', err?.message || 'Failed to initiate payment.');
     } finally {
       setActionLoading(null);
     }
@@ -231,7 +219,7 @@ export default function QuoteReviewScreen() {
           <View className="bg-white rounded-xl p-4 border border-neutral-100 mb-4">
             <Text className="text-sm font-semibold text-neutral-900 mb-3">Areas of Work</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} className="-mx-2">
-              {quote.photos.map((photo, i) => (
+              {quote.photos.map((photo: string, i: number) => (
                 <View key={i} className="px-2">
                   <Image 
                     source={{ uri: photo }} 

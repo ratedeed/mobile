@@ -90,9 +90,13 @@ export const usePushNotifications = () => {
   useEffect(() => {
     const responseListener = Notifications.addNotificationResponseReceivedListener(response => {
       const data = response.notification.request.content.data;
-      if (data?.type === 'new_message' && data?.conversationId) {
+      if ((data?.type === 'new_message' || data?.type === 'quote_request') && data?.conversationId) {
         // @ts-ignore
-        navigation.navigate('Messages', { conversationId: data.conversationId });
+        navigation.navigate('ChatScreen', {
+          conversationId: data.conversationId,
+          recipientId: data.senderId,
+          recipientName: data.senderName,
+        });
       } else if (data?.type === 'new_review') {
         // @ts-ignore
         navigation.navigate('Profile');
