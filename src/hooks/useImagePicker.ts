@@ -31,6 +31,9 @@ export const useImagePicker = (options: UseImagePickerOptions = {}) => {
       }
 
       const asset = result.assets[0];
+      if (asset.fileSize && asset.fileSize > 5 * 1024 * 1024) {
+        throw new Error('Image size must be less than 5MB');
+      }
       if (!asset.base64) {
         throw new Error('No base64 data returned');
       }
@@ -63,6 +66,9 @@ export const useImagePicker = (options: UseImagePickerOptions = {}) => {
       }
 
       const asset = result.assets[0];
+      if (asset.fileSize && asset.fileSize > 5 * 1024 * 1024) {
+        throw new Error('Image size must be less than 5MB');
+      }
       if (!asset.base64) {
         throw new Error('No base64 data returned');
       }
@@ -96,6 +102,9 @@ export const useImagePicker = (options: UseImagePickerOptions = {}) => {
 
       const urls: string[] = [];
       for (const asset of result.assets) {
+        if (asset.fileSize && asset.fileSize > 5 * 1024 * 1024) {
+          throw new Error('One or more images exceed the 5MB size limit');
+        }
         if (asset.base64) {
           urls.push(`data:${asset.type || 'image/jpeg'};base64,${asset.base64}`);
         }

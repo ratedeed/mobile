@@ -288,18 +288,25 @@ const HomeScreen = () => {
   const toggleFav = async (id: string) => {
     HapticFeedback.medium();
     const isFav = favorites.has(id);
-    if (isFav) {
-      await removeFavorite(id);
+    
+    setFavorites(prev => {
+      const n = new Set(prev);
+      if (isFav) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+
+    try {
+      if (isFav) {
+        await removeFavorite(id);
+      } else {
+        await addFavorite(id);
+      }
+    } catch {
       setFavorites(prev => {
         const n = new Set(prev);
-        n.delete(id);
-        return n;
-      });
-    } else {
-      await addFavorite(id);
-      setFavorites(prev => {
-        const n = new Set(prev);
-        n.add(id);
+        if (isFav) n.add(id);
+        else n.delete(id);
         return n;
       });
     }

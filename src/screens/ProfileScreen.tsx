@@ -156,6 +156,7 @@ const ProfileScreen: React.FC = () => {
   const loadProfile = useCallback(async () => {
     try {
       const userData = await getUserProfile();
+      if (!isMounted.current) return;
       setUser(userData);
       setEditData({
         firstName: userData.firstName || '',
@@ -166,9 +167,18 @@ const ProfileScreen: React.FC = () => {
     } catch (err) {
       // console.error('Failed to load profile:', err);
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (isMounted.current) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
+  }, []);
+
+  const isMounted = React.useRef(true);
+  useEffect(() => {
+    return () => {
+      isMounted.current = false;
+    };
   }, []);
 
   useFocusEffect(useCallback(() => { loadProfile(); }, [loadProfile]));

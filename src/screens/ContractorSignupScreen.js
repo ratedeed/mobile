@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
   ScrollView,
@@ -83,6 +83,12 @@ const ContractorSignupScreen = () => {
       [day]: { ...DEFAULT_HOURS, isOpen: day !== 'Saturday' && day !== 'Sunday' }
     }), {})
   );
+
+  useEffect(() => {
+    return () => {
+      if (searchTimer.current) clearTimeout(searchTimer.current);
+    };
+  }, []);
 
   // ---- Logic ----
 

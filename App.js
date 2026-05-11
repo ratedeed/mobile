@@ -15,25 +15,41 @@ import { registerSocket } from './src/utils/apiClient';
 import ErrorBoundary from './src/components/ErrorBoundary';
 import { usePushNotifications } from './src/hooks/usePushNotifications';
 import { EscrowTrustBanner } from './src/components/EscrowTrustBanner';
+import { useNetworkStatus } from './src/hooks/useNetworkStatus';
+import OfflineBanner from './src/components/common/OfflineBanner';
 import * as Sentry from '@sentry/react-native';
 import Constants from 'expo-constants';
 
-// TODO: Replace with your actual Stripe Publishable Key
-const STRIPE_PUBLISHABLE_KEY = 'pk_test_your_key_here';
+// CRITICAL: Replace with your actual Stripe Publishable Key before launch
+// Get from: https://dashboard.stripe.com/apikeys
+const STRIPE_PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || 'pk_test_REPLACE_BEFORE_LAUNCH';
 
 Sentry.init({
   dsn: Constants.expoConfig?.extra?.sentryDsn || '',
   debug: false,
 });
 
+import * as Linking from 'expo-linking';
+
 const linking = {
   prefixes: ['ratedeed://', 'https://ratedeed.com'],
+  async getInitialURL() {
+    const url = await Linking.getInitialURL();
+    return url;
+  },
+  subscribe(listener: (url: string) => void) {
+    const subscription = Linking.addEventListener('url', ({ url }) => {
+      listener(url);
+    });
+    return () => {
+      subscription.remove();
+    };
+  },
   config: {
     screens: {
       Main: {
         screens: {
           Explore: '',
-          Search: 'search',
           Saved: 'saved',
           Jobs: 'jobs',
           Messages: 'messages',
@@ -99,6 +115,7 @@ function AppContent() {
 
 function App() {
   const [splashComplete, setSplashComplete] = React.useState(false);
+  const { isConnected } = useNetworkStatus();
 
   return (
     <SafeAreaProvider>
@@ -111,6 +128,7 @@ function App() {
             <NotificationsProvider>
               <ContractorProvider>
                 <AppContent />
+                <OfflineBanner isVisible={!isConnected} />
                 {!splashComplete && <AnimatedSplashScreen onComplete={() => setSplashComplete(true)} minDuration={2800} />}
               </ContractorProvider>
             </NotificationsProvider>

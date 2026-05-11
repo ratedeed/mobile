@@ -274,9 +274,13 @@ const ContractorDashboardScreen: React.FC = () => {
         quality: 0.7,
         base64: true,
       });
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        setLicenseDocUri(`data:image/jpeg;base64,${result.assets[0].base64}`);
+      if (result.canceled || !result.assets?.length) return;
+      const asset = result.assets[0];
+      if (asset.fileSize && asset.fileSize > 5 * 1024 * 1024) {
+        Alert.alert('File too large', 'Please choose an image under 5MB.');
+        return;
       }
+      setLicenseDocUri(`data:image/jpeg;base64,${asset.base64}`);
     } catch {
       /* non-critical */
     }
@@ -353,6 +357,7 @@ const ContractorDashboardScreen: React.FC = () => {
         return;
       }
 
+      if (!isMounted.current) return;
       const cid = profile._id;
       if (cid) setRealContractorId(cid);
       setOnboardingComplete(profile.onboardingComplete === true);
@@ -459,6 +464,12 @@ const ContractorDashboardScreen: React.FC = () => {
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  useEffect(() => {
+    return () => {
+      if (addressSearchTimer.current) clearTimeout(addressSearchTimer.current);
+    };
+  }, []);
 
   const onRefresh = useCallback(() => { setRefreshing(true); loadData(); }, [loadData]);
 
@@ -1080,7 +1091,7 @@ const ContractorDashboardScreen: React.FC = () => {
                             try { 
                               const { url } = await getStripeConnectUrl(); 
                               const result = await WebBrowser.openAuthSessionAsync(url, 'ratedeed://contractor-dashboard');
-                              if (result.type === 'success' && result.url.includes('stripe_return=true')) {
+                              if (result.type === 'success' && result.url?.includes('stripe_return=true')) {
                                 Alert.alert('Success', 'Stripe account connected successfully!');
                                 // Force a refresh of the profile/status
                                 setTimeout(() => navigation.replace('ContractorDashboard'), 500);

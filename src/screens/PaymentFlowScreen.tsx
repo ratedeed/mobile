@@ -59,10 +59,14 @@ export default function PaymentFlowScreen() {
       
       const result = await WebBrowser.openAuthSessionAsync(url, 'ratedeed://profile');
       
-      if (result.type === 'success' && result.url.includes('job_funded=true')) {
+      if (result.type === 'success' && result.url?.includes('job_funded=true')) {
         setCurrentStep(2);
-      } else if (result.type === 'success' && result.url.includes('job_canceled=true')) {
+      } else if (result.type === 'success' && result.url?.includes('job_canceled=true')) {
         Alert.alert('Canceled', 'The payment process was canceled.');
+      } else if (result.type === 'cancel' || result.type === 'dismiss') {
+        Alert.alert('Payment Incomplete', 'The payment window was closed before completing the transaction.');
+      } else if (result.type === 'locked') {
+        Alert.alert('Browser Locked', 'Please unlock your browser or try again.');
       }
     } catch (err) {
       Alert.alert('Error', 'Failed to initiate secure payment. Please try again.');
@@ -138,7 +142,8 @@ export default function PaymentFlowScreen() {
               </View>
             </View>
 
-            {applePayAvailable && (
+            {/* TODO: Apple Pay not yet implemented */}
+            {/* {applePayAvailable && (
               <Pressable
                 onPress={handleApplePay}
                 style={styles.applePayBtn}
@@ -158,7 +163,7 @@ export default function PaymentFlowScreen() {
                   <View style={{ flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: '#e5e5e5' }} />
                 </View>
               )}
-            </View>
+            </View> */}
 
             <Pressable
               onPress={handlePayment}

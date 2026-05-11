@@ -442,7 +442,8 @@ export default function AnalyticsTab({ jobs, quotes, reviews, profile, loading }
 
         {/* Quick Actions */}
         <View className="bg-white rounded-xl p-4 border border-neutral-100">
-          <Text className="text-sm font-bold text-neutral-900 mb-3">Quick Actions</Text>
+          {/* TODO: Quick Actions not yet implemented */}
+          {/* <Text className="text-sm font-bold text-neutral-900 mb-3">Quick Actions</Text>
           <View style={{ gap: 8 }}>
             <TouchableOpacity className="w-full flex-row items-center justify-between bg-neutral-900 rounded-xl px-4 py-3">
               <View className="flex-row items-center" style={{ gap: 8 }}>
@@ -461,7 +462,7 @@ export default function AnalyticsTab({ jobs, quotes, reviews, profile, loading }
                 <Text className="text-xs font-semibold text-neutral-700">View All Jobs</Text>
               </TouchableOpacity>
             </View>
-          </View>
+          </View> */}
         </View>
 
       </View>

@@ -109,9 +109,13 @@ const BusinessDetailScreen: React.FC = () => {
         base64: true,
       });
       if (result.canceled || !result.assets?.length) return;
-      
-      const uri = result.assets[0].uri;
-      setClaimDocumentFile(uri);
+
+      const asset = result.assets[0];
+      if (asset.fileSize && asset.fileSize > 5 * 1024 * 1024) {
+        Alert.alert('File too large', 'Please choose an image under 5MB.');
+        return;
+      }
+      setClaimDocumentFile(asset.uri);
     } catch (err: any) {
       Alert.alert('Error', err?.message || 'Failed to select document');
     } finally {
@@ -141,9 +145,10 @@ const BusinessDetailScreen: React.FC = () => {
 
   const loadContractorDetails = async () => {
     try {
-      setLoading(true);
+      if (isMounted.current) setLoading(true);
       const data = await fetchContractorDetails(id);
       
+      if (!isMounted.current) return;
       setContractor(data);
 
       const contractorId = data?._id || (data as any).id || id;
@@ -154,6 +159,7 @@ const BusinessDetailScreen: React.FC = () => {
         isFavorite(contractorId)
       ]);
       
+      if (!isMounted.current) return;
       setIsSaved(favStatus);
       setContractorPosts(postsData?.posts || []);
       
@@ -194,7 +200,7 @@ const BusinessDetailScreen: React.FC = () => {
           const filtered = list
             .filter((sc: any) => (sc._id || sc.id) !== contractorId)
             .slice(0, 6);
-          setSimilarContractors(filtered);
+          if (isMounted.current) setSimilarContractors(filtered);
         } catch (e) {
       // console.error('Failed to load similar contractors:', e);
         }
@@ -203,9 +209,16 @@ const BusinessDetailScreen: React.FC = () => {
       // console.error('Error loading contractor:', error);
       Alert.alert('Error', 'Failed to load contractor details');
     } finally {
-      setLoading(false);
+      if (isMounted.current) setLoading(false);
     }
   };
+
+  const isMounted = React.useRef(true);
+  useEffect(() => {
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
 
   useEffect(() => { if (id) loadContractorDetails(); }, [id]);
 
@@ -256,12 +269,18 @@ const BusinessDetailScreen: React.FC = () => {
   const toggleFavorite = async () => {
     HapticFeedback.selection();
     const contractorId = contractor?._id || id;
-    if (isSaved) {
-      await removeFavorite(contractorId);
-      setIsSaved(false);
-    } else {
-      await addFavorite(contractorId);
-      setIsSaved(true);
+    const previousState = isSaved;
+    setIsSaved(!previousState);
+    
+    try {
+      if (previousState) {
+        await removeFavorite(contractorId);
+      } else {
+        await addFavorite(contractorId);
+      }
+    } catch {
+      setIsSaved(previousState);
+      Alert.alert('Error', 'Failed to update favorites.');
     }
   };
 

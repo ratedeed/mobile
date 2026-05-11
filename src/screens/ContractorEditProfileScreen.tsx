@@ -111,12 +111,15 @@ export default function ContractorEditProfileScreen() {
     setAddressSuggestions([]);
   };
 
+  const isMounted = useRef(true);
+
   const loadProfile = useCallback(async () => {
     try {
       setLoading(true);
       const data = await getContractorProfile();
+      if (!isMounted.current) return;
+
       setProfileData(data);
-      
       setDescription(data.description || '');
       setServiceArea(data.zipCodesCovered?.join(', ') || (data as any).serviceZipCodes?.join(', ') || '');
       setLicenseNumber(data.licenseNumber || '');
@@ -125,7 +128,7 @@ export default function ContractorEditProfileScreen() {
       setLocation((data as any).businessAddress || (data as any).address || '');
       setProfilePicture(data.profilePicture || (data as any).imageUrl || '');
       setCoverImage(data.bannerImage || (data as any).bannerUrl || '');
-      
+
       if (Array.isArray(data.servicesOffered)) {
         setServices(data.servicesOffered.map((s: any) => ({
           name: s.name || '',
@@ -133,7 +136,7 @@ export default function ContractorEditProfileScreen() {
           priceRange: s.priceEstimate || s.priceRange || '',
         })));
       }
-      
+
       if (Array.isArray(data.portfolio)) {
         setPortfolio(data.portfolio.map((p: any) => ({
           id: p._id || p.id || `portfolio-${Date.now()}`,
@@ -142,20 +145,24 @@ export default function ContractorEditProfileScreen() {
           category: p.category || '',
         })));
       }
-      
+
       if (Array.isArray(data.posts)) {
         setPosts(data.posts);
       }
     } catch (err) {
-      // console.error('Failed to load contractor profile:', err);
+      if (!isMounted.current) return;
       Alert.alert('Error', 'Failed to load profile data.');
     } finally {
-      setLoading(false);
+      if (isMounted.current) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     loadProfile();
+    return () => {
+      isMounted.current = false;
+      if (addressSearchTimer.current) clearTimeout(addressSearchTimer.current);
+    };
   }, [loadProfile]);
 
   const licenseStatus = profileData?.licenseStatus || 'not_submitted';

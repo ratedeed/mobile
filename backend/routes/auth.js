@@ -44,11 +44,11 @@ router.post(
     const user = await User.findOne({ email });
 
     if (user) {
-      // In a real application, send a password reset email here
-      res.status(200).json({ message: 'Password reset link sent to your email (simulated)' });
+      // TODO: Implement real password reset email sending via SendGrid/AWS SES
+      return res.status(503).json({ message: 'Password reset is temporarily unavailable. Please contact support.' });
     } else {
-      res.status(404);
-      throw new Error('User not found');
+      // Return same message to prevent user enumeration
+      return res.status(200).json({ message: 'If an account exists, a reset link will be sent.' });
     }
   })
 );

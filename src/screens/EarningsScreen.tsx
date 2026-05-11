@@ -79,15 +79,24 @@ export default function EarningsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  const isMounted = useRef(true);
+  useEffect(() => {
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+
   const loadData = useCallback(async () => {
     try {
       const data = await getContractorEarnings();
-      setEarnings(data as any);
+      if (isMounted.current) setEarnings(data as any);
     } catch {
-      setEarnings(null);
+      if (isMounted.current) setEarnings(null);
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (isMounted.current) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   }, []);
 

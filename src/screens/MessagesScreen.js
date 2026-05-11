@@ -621,7 +621,13 @@ const MessagesScreen = () => {
   const pickImage = async () => {
     HapticFeedback.selection();
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.7, base64: true });
-    if (!result.canceled) setPendingAttachment(result.assets[0]);
+    if (result.canceled) return;
+    const asset = result.assets[0];
+    if (asset.fileSize && asset.fileSize > 5 * 1024 * 1024) {
+      Alert.alert("File too large", "Please choose an image under 5MB.");
+      return;
+    }
+    setPendingAttachment(asset);
   };
 
   const handleReport = async (category, details) => {
@@ -852,7 +858,13 @@ const MessagesScreen = () => {
 
       <ImageLightbox images={activeImage ? [activeImage] : []} visible={lightboxVisible} onClose={() => setLightboxVisible(false)} />
       
-      <ActionSheet visible={actionSheetVisible} onClose={() => setActionSheetVisible(false)} title="Chat Options" options={[{ id: "viewProfile", label: "View Profile", icon: "user", onPress: () => {} }, { id: "report", label: "Report User", icon: "flag", isDestructive: true, onPress: () => { setActionSheetVisible(false); setTimeout(() => setReportModalVisible(true), 300); } }, { id: "block", label: "Block User", icon: "ban", isDestructive: true, onPress: () => Alert.alert("Block User", "Are you sure?", [{ text: "Cancel", style: "cancel" }, { text: "Block", style: "destructive", onPress: () => {} }]) }]} />
+      <ActionSheet visible={actionSheetVisible} onClose={() => setActionSheetVisible(false)} title="Chat Options" options={[
+        // TODO: View Profile not yet implemented
+        // { id: "viewProfile", label: "View Profile", icon: "user", onPress: () => {} },
+        { id: "report", label: "Report User", icon: "flag", isDestructive: true, onPress: () => { setActionSheetVisible(false); setTimeout(() => setReportModalVisible(true), 300); } },
+        // TODO: Block User not yet implemented
+        // { id: "block", label: "Block User", icon: "ban", isDestructive: true, onPress: () => Alert.alert("Block User", "Are you sure?", [{ text: "Cancel", style: "cancel" }, { text: "Block", style: "destructive", onPress: () => {} }]) }
+      ]} />
       
       <ReportModal visible={reportModalVisible} onClose={() => setReportModalVisible(false)} userName={chatName} onReport={handleReport} />
 

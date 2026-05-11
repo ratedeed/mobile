@@ -93,10 +93,11 @@ const refreshTokenIfNeeded = async (): Promise<void> => {
   await refreshPromise;
 };
 
-export const handleResponse = async (response: Response, retryFn?: () => Promise<any>): Promise<any> => {
+export const handleResponse = async (response: Response, retryFn?: () => Promise<Response>): Promise<any> => {
   if (response.status === 401 && retryFn) {
     await refreshTokenIfNeeded();
-    return retryFn();
+    const retryResponse = await retryFn();
+    return handleResponse(retryResponse, undefined);
   }
   if (!response.ok) {
     const errorText = await response.text();
@@ -423,17 +424,30 @@ let currentSocketUserId: string | null = null;
 let pendingListeners: Array<{ event: string; callback: Function }> = [];
 
 // Handle AppState changes
-AppState.addEventListener('change', (nextAppState) => {
-  if (nextAppState === 'background') {
-    if (socket?.connected) {
-      socket.disconnect();
+let appStateSubscription: any = null;
+
+export const startAppStateListener = () => {
+  if (appStateSubscription) return;
+  appStateSubscription = AppState.addEventListener('change', (nextAppState) => {
+    if (nextAppState === 'background') {
+      if (socket?.connected) {
+        socket.disconnect();
+      }
+    } else if (nextAppState === 'active') {
+      if (socket?.disconnected && currentSocketUserId) {
+        socket.connect();
+        socket.emit('register', currentSocketUserId);
+      }
     }
-  } else if (nextAppState === 'active') {
-    if (socket?.disconnected && currentSocketUserId) {
-      socket.connect();
-    }
+  });
+};
+
+export const stopAppStateListener = () => {
+  if (appStateSubscription) {
+    appStateSubscription.remove();
+    appStateSubscription = null;
   }
-});
+};
 
 export const initializeSocket = async () => {
   if (socket?.connected || isInitializingSocket) return;
@@ -469,6 +483,13 @@ export const initializeSocket = async () => {
         socket?.connect();
       }
     });
+
+    // Safety: reset init flag if connection hangs without any event
+    setTimeout(() => {
+      if (isInitializingSocket) {
+        isInitializingSocket = false;
+      }
+    }, 25000);
   } catch {
     isInitializingSocket = false;
   }

@@ -69,8 +69,21 @@ connectDB();
 // JSON + CORS middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',')
+  : ['http://localhost:19006', 'http://localhost:3000', 'capacitor://localhost', 'ionic://localhost'];
+
 app.use(cors({
-  origin: function (origin, callback) { callback(null, true); },
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`CORS blocked origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 }));
 
@@ -122,7 +135,15 @@ server.listen(PORT, '0.0.0.0', () => {
 // Initialize Socket.IO
 const io = new Server(server, {
   cors: {
-    origin: function (origin, callback) { callback(null, true); },
+    origin: function (origin, callback) {
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        console.warn(`Socket.IO CORS blocked origin: ${origin}`);
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     methods: ['GET', 'POST'],
     credentials: true
   }
@@ -131,18 +152,51 @@ const io = new Server(server, {
 // Store active users and their socket IDs
 const activeUsers = new Map();
 
+// Socket.IO authentication middleware
+io.use((socket, next) => {
+  const token = socket.handshake.auth?.token || socket.handshake.query?.token;
+  if (!token) {
+    return next(new Error('Authentication error: No token provided'));
+  }
+  try {
+    const jwt = require('jsonwebtoken');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    socket.userId = decoded.id;
+    next();
+  } catch (err) {
+    console.error('Socket auth error:', err.message);
+    next(new Error('Authentication error: Invalid token'));
+  }
+});
+
 io.on('connection', (socket) => {
-  console.log('Backend: A user connected via socket:', socket.id);
+  console.log('Backend: A user connected via socket:', socket.id, 'User:', socket.userId);
 
   socket.on('register', (userId) => {
+    // Verify the user can only register as themselves
+    if (socket.userId && socket.userId !== userId) {
+      console.warn(`Backend: Socket register rejected - user ${socket.userId} tried to register as ${userId}`);
+      return;
+    }
     console.log(`Backend: User ${userId} registered with socket ID ${socket.id}`);
     activeUsers.set(userId, { socketId: socket.id, lastSeen: new Date() });
     socket.join(userId);
     io.emit('userOnlineStatus', { userId, isOnline: true });
   });
 
-  socket.on('joinConversation', (conversationId) => {
-    socket.join(conversationId);
+  socket.on('joinConversation', async (conversationId) => {
+    // Verify user is a participant before joining
+    try {
+      const Conversation = require('./models/Conversation');
+      const conversation = await Conversation.findById(conversationId);
+      if (!conversation || !conversation.participants.some(p => p.toString() === socket.userId)) {
+        console.warn(`Backend: User ${socket.userId} blocked from joining conversation ${conversationId}`);
+        return;
+      }
+      socket.join(conversationId);
+    } catch (err) {
+      console.error('Backend: Error verifying conversation participation:', err.message);
+    }
   });
 
   socket.on('leaveConversation', (conversationId) => {

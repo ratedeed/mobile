@@ -216,58 +216,44 @@ exports.loginUser = async (req, res) => {
 
 // @desc    Update backend email verification status (for Firebase sync)
 // @route   POST /api/users/verify-email
-// @access  Private (or protected by a shared secret/Firebase Admin SDK token)
+// @access  Private
 exports.updateEmailVerificationStatus = async (req, res) => {
-  const { email, firebaseUid, isVerified } = req.body; // Added isVerified to destructuring
-  console.log('UpdateEmailVerificationStatus: Request body:', JSON.stringify(req.body, null, 2));
-  console.log(`UpdateEmailVerificationStatus: Received isVerified: ${isVerified}`);
-  console.log('UpdateEmailVerificationStatus: Request headers:', req.headers);
-  console.log('UpdateEmailVerificationStatus: Is user authenticated?', req.user ? `Yes, user ID: ${req.user._id}` : 'No');
+  const { idToken } = req.body;
+
+  if (!idToken) {
+    return res.status(400).json({ message: 'Firebase ID token is required.' });
+  }
 
   try {
-    let user;
-    if (firebaseUid) {
-      console.log(`UpdateEmailVerificationStatus: Searching for user by firebaseUid: ${firebaseUid}`);
-      user = await User.findOne({ firebaseUid });
-    } else if (email) {
-      console.log(`UpdateEmailVerificationStatus: Searching for user by email: ${email}`);
-      user = await User.findOne({ email });
-    } else {
-      console.log('UpdateEmailVerificationStatus: Missing user identifier in request.');
-      return res.status(400).json({ message: 'Missing user identifier (email or firebaseUid).' });
-    }
-    console.log(`UpdateEmailVerificationStatus: User found: ${user ? `ID=${user._id}, Email=${user.email}` : 'None'}`);
+    // Verify the Firebase ID token server-side to prevent client spoofing
+    const admin = require('firebase-admin');
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    const firebaseUid = decodedToken.uid;
+    const isVerified = decodedToken.email_verified === true;
 
+    if (!isVerified) {
+      return res.status(400).json({ message: 'Email is not verified with Firebase.' });
+    }
+
+    const user = await User.findOne({ firebaseUid });
     if (!user) {
-      console.log('UpdateEmailVerificationStatus: User not found in database for provided identifier.');
       return res.status(404).json({ message: 'User not found in backend database.' });
     }
 
-    console.log(`UpdateEmailVerificationStatus: User ${user.email} isVerified status BEFORE update: ${user.isVerified}`);
-
-    // Only update if the status is changing to true
-    if (isVerified && !user.isVerified) {
+    if (!user.isVerified) {
       user.isVerified = true;
-      // Clear any custom verification tokens if they exist, as Firebase is the source of truth here
       user.verificationToken = undefined;
       user.verificationTokenExpires = undefined;
       await user.save();
-      console.log(`UpdateEmailVerificationStatus: User ${user.email} email verification status updated to true.`);
-      console.log(`UpdateEmailVerificationStatus: User ${user.email} isVerified status AFTER update: ${user.isVerified}`);
-      return res.status(200).json({ message: 'Backend email verification status updated successfully.' });
-    } else if (!isVerified && user.isVerified) {
-      // If frontend sends isVerified: false, and backend is true, this might indicate a discrepancy
-      console.warn(`UpdateEmailVerificationStatus: Frontend sent isVerified: false for ${user.email}, but backend is already verified. No change made.`);
-      return res.status(200).json({ message: 'Email already verified in backend, no change needed.' });
-    } else if (user.isVerified) {
-      console.log(`UpdateEmailVerificationStatus: User ${user.email} is already verified.`);
-      return res.status(200).json({ message: 'Email already verified in backend.' });
-    } else {
-      console.log(`UpdateEmailVerificationStatus: No change needed for user ${user.email}. isVerified: ${isVerified}, user.isVerified: ${user.isVerified}`);
-      return res.status(200).json({ message: 'No change needed for email verification status.' });
+      return res.status(200).json({ message: 'Email verification status updated successfully.' });
     }
+
+    return res.status(200).json({ message: 'Email already verified in backend.' });
   } catch (error) {
-    console.error('Backend: Error updating backend email verification status:', error);
+    console.error('Backend: Error updating email verification status:', error);
+    if (error.code === 'auth/id-token-expired' || error.code === 'auth/id-token-revoked') {
+      return res.status(401).json({ message: 'Invalid or expired Firebase token.' });
+    }
     res.status(500).json({ message: 'Server error updating verification status.', details: error.message });
   }
 };

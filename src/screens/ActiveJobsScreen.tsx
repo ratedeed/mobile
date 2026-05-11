@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { View, Text, Pressable, ScrollView, Image, ActivityIndicator, SafeAreaView, RefreshControl, Alert } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -40,17 +40,29 @@ export default function ActiveJobsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const isMounted = useRef(true);
+
   const loadJobs = useCallback(async () => {
     try {
       setError(null);
       const data = await getUserQuotes();
+      if (!isMounted.current) return;
       setQuotes(data || []);
     } catch {
+      if (!isMounted.current) return;
       setError('Failed to load jobs. Pull down to retry.');
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (isMounted.current) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      isMounted.current = false;
+    };
   }, []);
 
   useFocusEffect(

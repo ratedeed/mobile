@@ -89,6 +89,7 @@ export const usePushNotifications = () => {
   // Effect 4: Notification response (tap) listener
   useEffect(() => {
     const responseListener = Notifications.addNotificationResponseReceivedListener(response => {
+      if (!isAuthenticated) return;
       const data = response.notification.request.content.data;
       if ((data?.type === 'new_message' || data?.type === 'quote_request') && data?.conversationId) {
         // @ts-ignore
@@ -106,7 +107,7 @@ export const usePushNotifications = () => {
       }
     });
     return () => { responseListener.remove(); };
-  }, [navigation]);
+  }, [navigation, isAuthenticated]);
 
   return { expoPushToken, notification };
 };
