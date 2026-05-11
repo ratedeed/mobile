@@ -141,7 +141,7 @@ const NotificationsScreen: React.FC = () => {
       <Pressable
         onPress={() => handleNotificationPress(item)}
         onLongPress={() => {
-          Alert.alert('Notification Actions', undefined, [
+          Alert.alert('Notification Actions', '', [
             {
               text: item.read ? 'Mark as unread' : 'Mark as read',
               onPress: () => toggleRead(item._id),

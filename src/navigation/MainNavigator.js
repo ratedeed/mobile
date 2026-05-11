@@ -16,7 +16,7 @@ import {
 
 import HomeScreen from '../screens/HomeScreen';
 import BusinessSearchScreen from '../screens/BusinessSearchScreen';
-import BusinessDetailScreen from '../screens/BusinessDetailScreen.tsx';
+import BusinessDetailScreen from '../screens/BusinessDetailScreen';
 import MessagesScreen from '../screens/MessagesScreen';
 import ContractorDashboardScreen from '../screens/ContractorDashboardScreen';
 import ContractorEditProfileScreen from '../screens/ContractorEditProfileScreen';
@@ -150,7 +150,7 @@ function MainTabNavigator() {
           headerLeft: () => (
             <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 16 }}>
               <Image
-                source={require('../../assets/faviiocon.png')}
+                source={require('../../assets/favicon.png')}
                 style={{ width: 28, height: 28, marginRight: 8, borderRadius: 6 }}
               />
               <Typography variant="h4" style={{ color: '#09090B' }}>Ratedeed</Typography>

@@ -5,7 +5,7 @@ const cloudinary = require('cloudinary').v2;
 
 // @desc    Generate Cloudinary signature for secure uploads
 // @route   POST /api/cloudinary/sign
-// @access  Private (but accessible to any authenticated user for profile uploads)
+// @access  Private
 router.post('/sign', protect, (req, res) => {
   try {
     const { folder } = req.body;
@@ -27,8 +27,6 @@ router.post('/sign', protect, (req, res) => {
     res.json({
       signature,
       timestamp,
-      cloud_name: cloudinary.config().cloud_name,
-      api_key: cloudinary.config().api_key,
     });
   } catch (error) {
     console.error('Cloudinary signature error:', error);

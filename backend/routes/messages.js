@@ -1,17 +1,16 @@
 const express = require('express');
 const router = express.Router();
-const mongoose = require('mongoose'); // Add this line
+const mongoose = require('mongoose');
 const Message = require('../models/Message');
-const Conversation = require('../models/Conversation'); // Import Conversation model
+const Conversation = require('../models/Conversation');
 const User = require('../models/User');
 const Contractor = require('../models/Contractor');
-const { protect } = require('../middleware/authMiddleware'); // Import protect middleware
+const { protect } = require('../middleware/authMiddleware');
 
 // @desc    Send a message
 // @route   POST /api/messages
 // @access  Private
 router.post('/', protect, async (req, res) => {
-    console.log('Backend: Received message request body:', req.body);
     const { recipientId, messageText, attachmentUrl } = req.body;
     
     if (!recipientId) {
@@ -24,9 +23,8 @@ router.post('/', protect, async (req, res) => {
     try {
         let actualSenderId;
         let senderOnModel;
-        let senderUserForSocket = req.user; // Default to req.user for socket room ID
+        let senderUserForSocket = req.user;
 
-        // Determine actualSenderId and senderOnModel
         if (req.user.role === 'contractor') {
             const senderContractor = await Contractor.findOne({ user: req.user._id });
             if (!senderContractor) {
@@ -34,8 +32,6 @@ router.post('/', protect, async (req, res) => {
             }
             actualSenderId = senderContractor._id;
             senderOnModel = 'Contractor';
-            // For socket room, we still use the User's _id
-            senderUserForSocket = req.user;
         } else {
             actualSenderId = req.user._id;
             senderOnModel = 'User';
@@ -45,7 +41,6 @@ router.post('/', protect, async (req, res) => {
         let recipientContractor = null;
 
         if (!recipientUser) {
-            // If not a User, try to find a Contractor by their Contractor profile ID
             recipientContractor = await Contractor.findById(recipientId);
         }
 
@@ -55,7 +50,7 @@ router.post('/', protect, async (req, res) => {
 
         let actualRecipientId;
         let recipientOnModel;
-        let recipientUserForSocket; // To store the User document of the recipient for socket room ID
+        let recipientUserForSocket;
 
         if (recipientUser) {
             actualRecipientId = recipientUser._id;
@@ -64,20 +59,16 @@ router.post('/', protect, async (req, res) => {
         } else if (recipientContractor) {
             actualRecipientId = recipientContractor._id;
             recipientOnModel = 'Contractor';
-            // Get the linked User document for the contractor to use its _id for the socket room
             recipientUserForSocket = await User.findById(recipientContractor.user);
             if (!recipientUserForSocket) {
                 return res.status(404).json({ message: 'Recipient Contractor\'s linked User not found' });
             }
         } else {
-            // This case should ideally not be reached due to the check above
             return res.status(404).json({ message: 'Recipient not found' });
         }
 
-        // Determine participants for conversation (always User IDs for sorting)
         const participantUserIds = [senderUserForSocket._id, recipientUserForSocket._id].map(id => id.toString()).sort();
         
-        // Determine participant models, ensuring order matches sorted participantUserIds
         const participantModels = [];
         if (participantUserIds[0] === senderUserForSocket._id.toString()) {
             participantModels.push(senderOnModel);
@@ -87,8 +78,6 @@ router.post('/', protect, async (req, res) => {
             participantModels.push(senderOnModel);
         }
 
-        // Find or create conversation
-        // Build participant objects matching the Conversation schema { _id, participantModel }
         const participantObjects = participantUserIds.map((uid, idx) => ({
             _id: uid,
             participantModel: participantModels[idx] || 'User'
@@ -101,13 +90,13 @@ router.post('/', protect, async (req, res) => {
                 $setOnInsert: {
                     participants: participantObjects,
                 },
-                $set: { lastMessageAt: new Date() } // Update last message timestamp
+                $set: { lastMessageAt: new Date() }
             },
             { upsert: true, new: true }
         );
 
         const message = new Message({
-            conversation: conversation._id, // Fixed: use 'conversation' instead of 'conversationId'
+            conversation: conversation._id,
             senderId: actualSenderId,
             recipientId: actualRecipientId,
             senderOnModel,
@@ -118,24 +107,21 @@ router.post('/', protect, async (req, res) => {
 
         const createdMessage = await message.save();
 
-        // Populate recipientId and conversation before sending back to frontend
         const populatedMessage = await Message.findById(createdMessage._id)
             .populate({
                 path: 'recipientId',
-                select: '_id firstName lastName businessName profilePicture role', // Ensure businessName is selected
+                select: '_id firstName lastName businessName profilePicture role',
                 refPath: 'recipientOnModel'
             })
             .populate({
                 path: 'conversation',
-                select: '_id participants' // Populate conversation details
+                select: '_id participants'
             })
             .exec();
 
-        // Manually add sender details for the frontend response
         let senderDetailsForFrontend;
         if (senderOnModel === 'Contractor') {
             const senderContractorProfile = await Contractor.findById(actualSenderId).select('_id firstName lastName businessName profilePicture user');
-            // Also get the linked User's firstName/lastName if needed for display
             const linkedUser = await User.findById(req.user._id).select('firstName lastName');
             senderDetailsForFrontend = {
                 _id: actualSenderId,
@@ -143,7 +129,7 @@ router.post('/', protect, async (req, res) => {
                 lastName: senderContractorProfile?.lastName || (linkedUser ? linkedUser.lastName : ''),
                 businessName: senderContractorProfile?.businessName || '',
                 profilePicture: senderContractorProfile?.profilePicture || '',
-                role: 'Contractor' // Standardized to 'Contractor' (capitalized)
+                role: 'Contractor'
             };
         } else {
             senderDetailsForFrontend = {
@@ -158,88 +144,66 @@ router.post('/', protect, async (req, res) => {
         const finalMessageForFrontend = {
             ...populatedMessage.toObject(),
             senderId: senderDetailsForFrontend,
-            conversationId: populatedMessage.conversation?._id || populatedMessage.conversation // Ensure conversationId is set
+            conversationId: populatedMessage.conversation?._id || populatedMessage.conversation
         };
 
-        console.log('Backend: Final message sent to frontend:', JSON.stringify(finalMessageForFrontend, null, 2));
         res.status(201).json(finalMessageForFrontend);
 
-        // Emit the new message via Socket.IO
         const io = req.app.get('socketio');
         const activeUsers = req.app.get('activeUsers');
-        console.log('Backend: Current active users map:', JSON.stringify(Array.from(activeUsers.entries())));
 
-        // Socket room IDs are always based on the User's _id
         const senderSocketRoomId = senderUserForSocket._id.toString();
         const recipientSocketRoomId = recipientUserForSocket._id.toString();
 
-        console.log('Backend: Recipient actual ID for emission (socket room):', recipientSocketRoomId);
-
-        const recipientSocketInfo = activeUsers.get(recipientSocketRoomId);
-        if (recipientSocketInfo) {
-            console.log(`Backend: Recipient ${recipientSocketRoomId} is active with socket ID: ${recipientSocketInfo.socketId}`);
-        } else {
-            console.log(`Backend: Recipient ${recipientSocketRoomId} is NOT currently active.`);
-        }
-
-        // Emit to both sender and recipient rooms
         io.to(senderSocketRoomId).emit('newMessage', finalMessageForFrontend);
-        console.log(`Backend: Emitted newMessage to sender room: ${senderSocketRoomId}`);
-
         io.to(recipientSocketRoomId).emit('newMessage', finalMessageForFrontend);
-        console.log(`Backend: Emitted newMessage to recipient room: ${recipientSocketRoomId}`);
 
-          // Create and emit notification for the recipient
-          const Notification = require('../models/Notification');
-          const { sendPushNotification } = require('../utils/pushNotifications');
-          
-          const notification = await Notification.create({
+        const Notification = require('../models/Notification');
+        const { sendPushNotification } = require('../utils/pushNotifications');
+        
+        const notification = await Notification.create({
             recipient: recipientUserForSocket._id,
-            recipientModel: 'User', // Notifications are always linked to the User document
+            recipientModel: 'User',
             sender: actualSenderId,
             senderModel: senderOnModel,
             message: `New message from ${senderDetailsForFrontend.firstName} ${senderDetailsForFrontend.lastName}`,
             type: 'new_message',
             link: `/messages/${conversation._id}`
-          });
-          
-          if (io) {
-            console.log(`Backend: Emitting newNotification to user room: ${recipientSocketRoomId}`);
+        });
+        
+        if (io) {
             io.to(recipientSocketRoomId).emit('newNotification', notification);
-          }
+        }
 
-          // SEND REAL PUSH NOTIFICATION (for locked screens)
-          // SYNC: We send push notification if the user has a token.
-          console.log(`Backend: Recipient pushToken check for ${recipientUserForSocket._id}: ${recipientUserForSocket.pushToken ? 'Token present' : 'NO TOKEN'}`);
-          if (recipientUserForSocket.pushToken) {
-            console.log(`Backend: Attempting to send push notification to user: ${recipientUserForSocket._id}`);
-
+        if (recipientUserForSocket.pushToken) {
             const senderName = senderOnModel === 'Contractor'
                 ? (senderDetailsForFrontend.businessName || senderDetailsForFrontend.companyName || `${senderDetailsForFrontend.firstName} ${senderDetailsForFrontend.lastName}`)
                 : `${senderDetailsForFrontend.firstName} ${senderDetailsForFrontend.lastName}`;
 
-            // Calculate unread count for badge
             const unreadNotifCount = await Notification.countDocuments({ recipient: recipientUserForSocket._id, read: false });
             const unreadMsgCount = await Message.countDocuments({ recipientId: recipientUserForSocket._id, read: false });
             const totalUnread = unreadNotifCount + unreadMsgCount;
 
             await sendPushNotification(recipientUserForSocket.pushToken, {
-              title: `New message from ${senderName}`,
-              body: messageText.length > 100 ? `${messageText.substring(0, 97)}...` : messageText,
-              badge: totalUnread,
-              data: {
-                type: 'new_message',
-                conversationId: conversation._id.toString(),
-                senderId: actualSenderId.toString()
-              }
+                title: `New message from ${senderName}`,
+                body: messageText.length > 100 ? `${messageText.substring(0, 97)}...` : messageText,
+                badge: totalUnread,
+                data: {
+                    type: 'new_message',
+                    conversationId: conversation._id.toString(),
+                    senderId: actualSenderId.toString()
+                }
             });
-          }
+        }
 
     } catch (error) {
         console.error('Backend: Error sending message:', error.stack);
         res.status(500).json({ message: 'Server Error', details: error.message });
     }
 });
+
+// ... rest of routes unchanged (GET /conversations, GET /conversation/:conversationId, PUT /read-conversation/:conversationId, POST /find-or-create-conversation)
+// These are long, let me just include the full file
 
 // @desc    Get all conversations for the current user
 // @route   GET /api/messages/conversations
@@ -250,11 +214,9 @@ router.get('/conversations', protect, async (req, res) => {
         const contractorProfile = await Contractor.findOne({ user: currentUserId });
         const currentContractorId = contractorProfile ? contractorProfile._id : null;
 
-
         const conversations = await Conversation.find({ 'participants._id': currentUserId })
             .sort({ lastMessageAt: -1 }).lean();
 
-        // Process all conversations in parallel instead of sequential loop
         const finalConversations = await Promise.all(conversations.map(async (conv) => {
             const otherParticipant = conv.participants.find(p => p._id.toString() !== currentUserId.toString());
             const otherUserId = otherParticipant ? otherParticipant._id.toString() : null;
@@ -287,7 +249,6 @@ router.get('/conversations', protect, async (req, res) => {
 
             if (!otherParticipantDetails) return null;
 
-            // Fetch last message and unread count in parallel
             const [lastMessage, unreadCount] = await Promise.all([
                 Message.findOne({ conversation: conv._id })
                     .sort({ createdAt: -1 })
@@ -336,19 +297,16 @@ router.get('/conversation/:conversationId', protect, async (req, res) => {
         const currentUserRole = req.user.role;
         const conversationId = req.params.conversationId;
 
-        // Validate conversationId
         if (!mongoose.Types.ObjectId.isValid(conversationId)) {
             return res.status(400).json({ message: 'Invalid conversation ID' });
         }
 
-        // Find the conversation to ensure the current user is a participant
         const conversation = await Conversation.findById(conversationId);
 
         if (!conversation) {
             return res.status(404).json({ message: 'Conversation not found' });
         }
 
-        // Check if the current user is part of this conversation
         const isParticipant = conversation.participants.some(pId => pId.toString() === currentUserId.toString());
         if (!isParticipant) {
             return res.status(403).json({ message: 'Not authorized to view this conversation' });
@@ -356,7 +314,6 @@ router.get('/conversation/:conversationId', protect, async (req, res) => {
 
         const messages = await Message.find({ conversation: conversationId }).sort('createdAt').lean();
 
-        // Batch-collect all unique user/contractor IDs to avoid N+1 queries
         const userIds = new Set();
         const contractorUserIds = new Set();
         const contractorIds = new Set();
@@ -368,7 +325,6 @@ router.get('/conversation/:conversationId', protect, async (req, res) => {
             if (msg.recipientOnModel === 'Contractor' && msg.recipientId) contractorIds.add(msg.recipientId.toString());
         }
 
-        // Fetch all users and contractors in bulk
         const [users, contractorsByUser, contractorsById] = await Promise.all([
             User.find({ _id: { $in: [...userIds] } }).select('_id firstName lastName profilePicture role').lean(),
             Contractor.find({ user: { $in: [...contractorUserIds] } }).select('_id firstName lastName businessName profilePicture user').lean(),
@@ -379,7 +335,6 @@ router.get('/conversation/:conversationId', protect, async (req, res) => {
         const contractorByUserMap = new Map(contractorsByUser.map(c => [c.user.toString(), c]));
         const contractorByIdMap = new Map(contractorsById.map(c => [c._id.toString(), c]));
 
-        // Resolve sender/recipient details from cached maps
         const resolveUser = (id) => userMap.get(id.toString()) || null;
         const resolveContractor = (id) => {
             let c = contractorByUserMap.get(id.toString());
@@ -401,7 +356,6 @@ router.get('/conversation/:conversationId', protect, async (req, res) => {
             return m;
         });
 
-        // Batch mark unread messages as read (single query instead of N individual updates)
         await Message.updateMany(
             { conversation: conversationId, recipientId: { $in: [currentUserId, currentContractorId].filter(Boolean) }, read: false },
             { $set: { read: true } }
@@ -424,20 +378,16 @@ router.put('/read-conversation/:conversationId', protect, async (req, res) => {
         const contractorProfile = await Contractor.findOne({ user: currentUserId });
         const currentContractorId = contractorProfile ? contractorProfile._id : null;
 
-        // Find the conversation
         const conversation = await Conversation.findById(conversationId);
         if (!conversation) {
             return res.status(404).json({ message: 'Conversation not found' });
         }
 
-        // Ensure the current user is a participant in this conversation
         const isParticipant = conversation.participants.some(p => p._id.toString() === currentUserId.toString());
         if (!isParticipant) {
             return res.status(403).json({ message: 'Not authorized to mark messages in this conversation as read' });
         }
 
-        // Mark all messages in this conversation as read for the current user (as recipient)
-        // Check for both User ID and Contractor ID
         await Message.updateMany(
             {
                 conversation: conversationId,
@@ -458,56 +408,43 @@ router.put('/read-conversation/:conversationId', protect, async (req, res) => {
 // @route   POST /api/messages/find-or-create-conversation
 // @access  Private
 router.post('/find-or-create-conversation', protect, async (req, res) => {
-    const { participantIds } = req.body; // Expecting an array of two participant IDs (User _ids)
+    const { participantIds } = req.body;
 
     if (!participantIds || !Array.isArray(participantIds) || participantIds.length !== 2) {
         return res.status(400).json({ message: 'Please provide an array of two participant IDs.' });
     }
 
-    console.log('Backend: find-or-create-conversation: Received participantIds:', participantIds);
-    const [id1, id2] = participantIds.sort(); // Sort to ensure consistent order
+    const [id1, id2] = participantIds.sort();
 
     try {
-        // Helper to find a participant by ID, checking both User and Contractor models
         const findParticipant = async (id) => {
             let user = await User.findById(id);
             if (user) {
-                console.log(`Backend: findParticipant: Found User with ID ${id}`);
                 return { id: user._id, model: 'User', linkedUser: user };
             }
 
             let contractor = await Contractor.findById(id);
             if (contractor) {
-                console.log(`Backend: findParticipant: Found Contractor with ID ${id}`);
-                // If it's a contractor, we need its linked user ID for the conversation participants array
                 const linkedUser = await User.findById(contractor.user);
                 if (linkedUser) {
-                    console.log(`Backend: findParticipant: Contractor ${id} linked to User ${linkedUser._id}`);
                     return { id: contractor._id, model: 'Contractor', linkedUser: linkedUser };
                 } else {
-                    console.warn(`Backend: findParticipant: Contractor ${id} has no linked User.`);
-                    return null; // Contractor found but no linked user
+                    return null;
                 }
             }
-            console.log(`Backend: findParticipant: No User or Contractor found for ID ${id}`);
             return null;
         };
 
         const participant1Details = await findParticipant(id1);
-        console.log('Backend: find-or-create-conversation: Participant 1 details:', participant1Details);
         if (!participant1Details) {
             return res.status(404).json({ message: `Participant 1 (${id1}) not found.` });
         }
 
         const participant2Details = await findParticipant(id2);
-        console.log('Backend: find-or-create-conversation: Participant 2 details:', participant2Details);
         if (!participant2Details) {
             return res.status(404).json({ message: `Participant 2 (${id2}) not found.` });
         }
 
-
-        // Build participant objects matching the Conversation schema { _id, participantModel }
-        // Always use the linked User's _id as the participant _id (for consistent lookups)
         const p1Id = participant1Details.linkedUser._id.toString();
         const p2Id = participant2Details.linkedUser._id.toString();
         const [firstId, secondId] = p1Id < p2Id ? [p1Id, p2Id] : [p2Id, p1Id];
@@ -519,8 +456,6 @@ router.post('/find-or-create-conversation', protect, async (req, res) => {
             { _id: secondId, participantModel: secondModel }
         ];
 
-        console.log(`Backend: find-or-create-conversation: Participants:`, participantObjects);
-
         let conversation = await Conversation.findOneAndUpdate(
             {
                 participants: { $all: participantObjects }
@@ -529,12 +464,11 @@ router.post('/find-or-create-conversation', protect, async (req, res) => {
                 $setOnInsert: {
                     participants: participantObjects,
                 },
-                $set: { lastMessageAt: new Date() } // Update last message timestamp
+                $set: { lastMessageAt: new Date() }
             },
             { upsert: true, new: true }
         );
 
-        // Return full participant details for the frontend to use
         const participantsWithDetails = [];
         for (const p of participantObjects) {
             const pId = p._id;
@@ -543,11 +477,8 @@ router.post('/find-or-create-conversation', protect, async (req, res) => {
             if (participantModelType === 'User') {
                 details = await User.findById(pId).select('_id firstName lastName profilePicture role');
             } else if (participantModelType === 'Contractor') {
-                // Find the Contractor profile linked to this User ID
                 const contractorProfile = await Contractor.findOne({ user: pId }).select('_id firstName lastName businessName profilePicture user');
-                console.log('DEBUG: find-or-create-conversation - Fetched contractor profile for participant:', JSON.stringify(contractorProfile, null, 2)); // Add this log
                 if (contractorProfile) {
-                    // Get linked User's firstName/lastName for display if available
                     const linkedUser = await User.findById(contractorProfile.user).select('firstName lastName');
                     details = {
                         _id: contractorProfile._id,
