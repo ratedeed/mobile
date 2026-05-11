@@ -78,18 +78,18 @@ const JobsTabBarButton = ({ onPress }) => (
 
 const screenOptions = {
   headerStyle: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: isDark ? '#09090B' : '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#E4E4E7', // shadcn border
+    borderBottomColor: isDark ? '#27272A' : '#E4E4E7',
     shadowOpacity: 0,
     elevation: 0,
   },
   headerTitleStyle: {
     fontWeight: '600',
     fontSize: 18,
-    color: '#09090B', // shadcn foreground
+    color: isDark ? '#FAFAFA' : '#09090B',
   },
-  headerTintColor: '#2563EB', // shadcn primary
+  headerTintColor: '#2563EB',
   headerBackTitleVisible: false,
   cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
   gestureEnabled: true,
@@ -144,9 +144,9 @@ function MainTabNavigator() {
           title: 'Explore',
           headerShown: true,
           headerStyle: {
-            backgroundColor: '#FFFFFF',
+            backgroundColor: isDark ? '#09090B' : '#FFFFFF',
             borderBottomWidth: 1,
-            borderBottomColor: '#E4E4E7',
+            borderBottomColor: isDark ? '#27272A' : '#E4E4E7',
             shadowOpacity: 0,
             elevation: 0,
           },
@@ -233,9 +233,9 @@ function MainTabNavigator() {
 export default function MainNavigator() {
   const dynamicScreenOptions = {
     headerStyle: {
-      backgroundColor: '#FFFFFF',
+      backgroundColor: isDark ? '#09090B' : '#FFFFFF',
       borderBottomWidth: 1,
-      borderBottomColor: '#E4E4E7',
+      borderBottomColor: isDark ? '#27272A' : '#E4E4E7',
       shadowOpacity: 0,
       elevation: 0,
     },

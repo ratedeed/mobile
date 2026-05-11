@@ -134,14 +134,14 @@ const RegisterScreen = () => {
 
         {/* Role Toggle */}
         <View className="flex-row bg-neutral-100 rounded-xl p-1 w-full max-w-sm mx-auto mb-6">
-          <Pressable
+          <View
             className="flex-1 py-2.5 rounded-lg items-center bg-white shadow-sm"
             style={{ elevation: 2 }}
           >
             <Text className="text-sm font-semibold text-neutral-900">
               I'm a Homeowner
             </Text>
-          </Pressable>
+          </View>
           <Pressable
             onPress={() => navigation.navigate('ContractorSignup')}
             className="flex-1 py-2.5 rounded-lg items-center"
