@@ -1240,7 +1240,7 @@ const ContractorDashboardScreen: React.FC = () => {
               </Text>
               <View className="flex-row items-center bg-neutral-100 rounded-lg px-3 mb-4">
                 <Text className="flex-1 text-sm text-neutral-500 py-3" numberOfLines={1}>https://ratedeed.com/contractor/my-profile</Text>
-                <Pressable className="p-2">
+                <Pressable onPress={() => Alert.alert('Coming Soon', 'Profile link sharing will be available in the next update.')} className="p-2">
                   <FontAwesome5 name="copy" size={14} color="#737373" />
                 </Pressable>
               </View>
@@ -1251,7 +1251,7 @@ const ContractorDashboardScreen: React.FC = () => {
                   { name: 'linkedin-in', color: '#0A66C2' },
                   { name: 'whatsapp', color: '#25D366' },
                 ].map(social => (
-                  <Pressable key={social.name} className="w-11 h-11 rounded-full items-center justify-center" style={{ backgroundColor: social.color }}>
+                  <Pressable key={social.name} onPress={() => Alert.alert('Coming Soon', 'Social sharing will be available in the next update.')} className="w-11 h-11 rounded-full items-center justify-center" style={{ backgroundColor: social.color }}>
                     <FontAwesome5 name={social.name} size={16} color="#fff" />
                   </Pressable>
                 ))}

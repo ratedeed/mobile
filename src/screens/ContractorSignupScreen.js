@@ -252,7 +252,7 @@ const ContractorSignupScreen = () => {
       if (userCreated) {
         try { await deleteUser(userCreated); } catch {}
       }
-      Alert.alert('Registration Failed', error.message);
+      Alert.alert('Registration Failed', error?.message || 'An error occurred during registration.');
     } finally {
       setLoading(false);
     }

@@ -1,7 +1,10 @@
 import React from 'react';
-import { TouchableOpacity } from 'react-native';
+import { TouchableOpacity, Appearance } from 'react-native';
 import { createStackNavigator, CardStyleInterpolators } from '@react-navigation/stack';
 import { CaretLeft } from 'phosphor-react-native';
+
+const colorScheme = Appearance.getColorScheme();
+const isDark = colorScheme === 'dark';
 
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
@@ -13,18 +16,18 @@ const Stack = createStackNavigator();
 
 const screenOptions = {
   headerStyle: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: isDark ? '#09090B' : '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#E4E4E7', // shadcn border
+    borderBottomColor: isDark ? '#27272A' : '#E4E4E7',
     shadowOpacity: 0,
     elevation: 0,
   },
   headerTitleStyle: {
     fontWeight: '600',
     fontSize: 18,
-    color: '#09090B', // shadcn foreground
+    color: isDark ? '#FAFAFA' : '#09090B',
   },
-  headerTintColor: '#09090B',
+  headerTintColor: isDark ? '#FAFAFA' : '#09090B',
   headerBackTitleVisible: false,
   headerLeft: ({ canGoBack, onPress }) => 
     canGoBack ? (
@@ -35,12 +38,12 @@ const screenOptions = {
           width: 36,
           height: 36,
           borderRadius: 18,
-          backgroundColor: '#F4F4F5',
+          backgroundColor: isDark ? '#27272A' : '#F4F4F5',
           alignItems: 'center',
           justifyContent: 'center',
         }}
       >
-        <CaretLeft size={20} color="#09090B" weight="bold" />
+        <CaretLeft size={20} color={isDark ? '#FAFAFA' : '#09090B'} weight="bold" />
       </TouchableOpacity>
     ) : null,
   cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,

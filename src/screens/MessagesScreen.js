@@ -14,6 +14,7 @@ import {
   Animated,
   RefreshControl,
   Modal,
+  Linking,
 } from "react-native";
 import { FontAwesome5 } from "@expo/vector-icons";
 import { useRoute, useNavigation } from "@react-navigation/native";
@@ -607,7 +608,7 @@ const MessagesScreen = () => {
         if (prev.some((m) => m._id === sent._id)) return prev;
         return [...prev, sent].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
       });
-    } catch (e) { Alert.alert("Error", e.message); }
+    } catch (e) { Alert.alert("Error", e?.message || 'Failed to send message.'); }
   };
 
   const handleTextChange = useCallback((text) => {
@@ -849,7 +850,7 @@ const MessagesScreen = () => {
                             <>
                               <View className={`px-[14px] py-[10px] ${isMe ? `bg-indigo-600 ${msg.isFirstInGroup ? "rounded-2xl rounded-tr-md" : "rounded-2xl"}` : `bg-white ${msg.isFirstInGroup ? "rounded-2xl rounded-tl-md" : "rounded-2xl"}`}`} style={!isMe ? { shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 8, shadowOffset: { height: 1 }, elevation: 1 } : undefined}>
                                 {msg.attachmentUrl && /\.(jpg|jpeg|png|gif|webp)$/i.test(msg.attachmentUrl) && <Pressable onPress={() => { setActiveImage(msg.attachmentUrl); setLightboxVisible(true); }} className="mb-1.5 -mx-[2px] -mt-[2px] overflow-hidden" style={{ borderRadius: msg.isFirstInGroup ? 14 : 16 }}><Image source={{ uri: msg.attachmentUrl }} style={{ width: 240, height: 180 }} resizeMode="cover" /></Pressable>}
-                                {msg.attachmentUrl && !/\.(jpg|jpeg|png|gif|webp)$/i.test(msg.attachmentUrl) && <Pressable className={`flex-row items-center p-2.5 rounded-xl mb-1.5 border ${isMe ? "bg-white/10 border-white/20" : "bg-neutral-50 border-neutral-200"}`}><FontAwesome5 name="file-alt" size={14} color={isMe ? "white" : "#737373"} /><Text className={`text-[12px] ml-2 font-semibold ${isMe ? "text-white" : "text-neutral-600"}`}>View Attachment</Text></Pressable>}
+                                {msg.attachmentUrl && !/\.(jpg|jpeg|png|gif|webp)$/i.test(msg.attachmentUrl) && <Pressable onPress={() => Linking.openURL(msg.attachmentUrl)} className={`flex-row items-center p-2.5 rounded-xl mb-1.5 border ${isMe ? "bg-white/10 border-white/20" : "bg-neutral-50 border-neutral-200"}`}><FontAwesome5 name="file-alt" size={14} color={isMe ? "white" : "#737373"} /><Text className={`text-[12px] ml-2 font-semibold ${isMe ? "text-white" : "text-neutral-600"}`}>View Attachment</Text></Pressable>}
                                 {msg.messageText ? <Text className={`text-[15px] leading-[22px] ${isMe ? "text-white" : "text-neutral-800"}`}>{msg.messageText}</Text> : null}
                               </View>
                               {msg.isLastInGroup && <View className={`flex-row items-center mt-1 px-1 ${isMe ? "justify-end" : "justify-start"}`} style={{ gap: 4 }}><Text className="text-[10px] text-neutral-400 font-medium">{msg.timeStr}</Text>{isMe && <FontAwesome5 name={msg.read ? "check-double" : "check"} size={9} color={msg.read ? "#10b981" : "#c4b5fd"} solid={msg.read} />}</View>}

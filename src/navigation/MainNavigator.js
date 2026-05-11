@@ -2,7 +2,10 @@ import React from 'react';
 import { createStackNavigator, CardStyleInterpolators } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { FontAwesome5 } from '@expo/vector-icons';
-import { Image, View, TouchableOpacity, Text as RNText } from 'react-native';
+import { Image, View, TouchableOpacity, Text as RNText, Appearance } from 'react-native';
+
+const colorScheme = Appearance.getColorScheme();
+const isDark = colorScheme === 'dark';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { 
   MagnifyingGlass, 
@@ -114,12 +117,12 @@ function MainTabNavigator() {
           }
           return null;
         },
-        tabBarActiveTintColor: '#171717',
-        tabBarInactiveTintColor: '#737373',
+        tabBarActiveTintColor: isDark ? '#FAFAFA' : '#171717',
+        tabBarInactiveTintColor: isDark ? '#A1A1AA' : '#737373',
         tabBarStyle: {
-          backgroundColor: '#FFFFFF',
+          backgroundColor: isDark ? '#09090B' : '#FFFFFF',
           borderTopWidth: 1,
-          borderTopColor: '#F0F0F0',
+          borderTopColor: isDark ? '#27272A' : '#F0F0F0',
           height: 64 + insets.bottom,
           paddingBottom: insets.bottom + 4,
           paddingTop: 10,

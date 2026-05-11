@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Pressable, ScrollView, ActivityIndicator, Alert, Platform, StyleSheet } from 'react-native';
+import { View, Text, Pressable, ScrollView, ActivityIndicator, Alert, Platform, StyleSheet, Appearance } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+const isDark = Appearance.getColorScheme() === 'dark';
 import { createCheckoutSession, createPaymentIntent } from '../api';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useStripe, usePlatformPay, confirmPlatformPayPayment, PlatformPay } from '@stripe/stripe-react-native';
@@ -97,7 +99,7 @@ export default function PaymentFlowScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: 'white' }}>
+    <View style={{ flex: 1, backgroundColor: isDark ? '#09090B' : '#ffffff' }}>
       {/* Header */}
       <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: Math.max(insets.top, 12), paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#e5e5e5' }}>
         {currentStep === 0 && (
