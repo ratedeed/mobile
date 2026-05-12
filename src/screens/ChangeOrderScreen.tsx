@@ -9,12 +9,14 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  useColorScheme,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { createChangeOrder } from '../api';
 
 export default function ChangeOrderScreen() {
+  const isDark = useColorScheme() === 'dark';
   const navigation = useNavigation();
   const route = useRoute();
   const { jobId, mode, changeOrderId } = (route.params || {}) as {
@@ -82,17 +84,17 @@ return (
   <KeyboardAvoidingView
     behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
-    className="flex-1 bg-white"
+    className="flex-1 bg-white dark:bg-neutral-950"
   >
     {/* Header */}
-    <View className="border-b border-neutral-200 px-4 py-3 flex-row items-center">
+    <View className="border-b border-neutral-200 dark:border-neutral-700 px-4 py-3 flex-row items-center">
       <Pressable
         onPress={() => navigation.goBack()}
         className="w-8 h-8 items-center justify-center"
       >
-        <FontAwesome5 name="chevron-left" size={18} color="#171717" />
+        <FontAwesome5 name="chevron-left" size={18} color={isDark ? '#ffffff' : '#171717'} />
       </Pressable>
-      <Text className="flex-1 text-sm font-bold text-neutral-900 text-center">
+      <Text className="flex-1 text-sm font-bold text-neutral-900 dark:text-white text-center">
         {isCreate ? 'New Change Order' : 'Change Order Details'}
       </Text>
       <View className="w-8" />
@@ -104,21 +106,21 @@ return (
         keyboardShouldPersistTaps="handled"
       >
         {/* Header Info */}
-        <Text className="text-2xl font-bold text-neutral-900 mb-1">
+        <Text className="text-2xl font-bold text-neutral-900 dark:text-white mb-1">
           {isCreate ? 'Create Change Order' : 'Review Change Order'}
         </Text>
-        <Text className="text-sm text-neutral-500 mb-6">
+        <Text className="text-sm text-neutral-500 dark:text-neutral-400 mb-6">
           {isCreate
             ? 'Request a modification to the original job scope or cost'
             : 'Review the proposed changes to this job'}
         </Text>
 
         {/* Info Banner */}
-        <View className="bg-indigo-50 border border-indigo-100 rounded-xl p-4 flex-row mb-6" style={{ gap: 12 }}>
+        <View className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 rounded-xl p-4 flex-row mb-6" style={{ gap: 12 }}>
           <FontAwesome5 name="file-contract" size={18} color="#4F46E5" />
           <View className="flex-1">
-            <Text className="text-sm font-semibold text-indigo-900">What is a Change Order?</Text>
-            <Text className="text-xs text-indigo-700 mt-1 leading-4">
+            <Text className="text-sm font-semibold text-indigo-900 dark:text-indigo-300">What is a Change Order?</Text>
+            <Text className="text-xs text-indigo-700 dark:text-indigo-400 mt-1 leading-4">
               A change order documents any modification to the original job agreement, including scope changes, additional work, or cost adjustments.
             </Text>
           </View>
@@ -127,18 +129,18 @@ return (
         {isCreate ? (
           <>
             {/* Title Input */}
-            <Text className="text-sm font-semibold text-neutral-700 mb-1.5">Title *</Text>
+            <Text className="text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-1.5">Title *</Text>
             <TextInput
               placeholder="e.g., Additional bathroom tile work"
               value={title}
               onChangeText={setTitle}
               maxLength={150}
-              className="border border-neutral-200 rounded-xl px-4 py-3 text-sm bg-neutral-50 mb-5"
-              placeholderTextColor="#a3a3a3"
+              className="border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-3 text-sm bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-white mb-5"
+              placeholderTextColor={isDark ? "#666" : "#a3a3a3"}
             />
 
             {/* Description Input */}
-            <Text className="text-sm font-semibold text-neutral-700 mb-1.5">Description *</Text>
+            <Text className="text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-1.5">Description *</Text>
             <TextInput
               placeholder="Describe the change in detail, including scope and materials..."
               value={description}
@@ -146,27 +148,27 @@ return (
               multiline
               numberOfLines={5}
               maxLength={2000}
-              className="border border-neutral-200 rounded-xl px-4 py-3 text-sm bg-neutral-50 mb-2 min-h-[120px]"
-              placeholderTextColor="#a3a3a3"
+              className="border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-3 text-sm bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-white mb-2 min-h-[120px]"
+              placeholderTextColor={isDark ? "#666" : "#a3a3a3"}
               style={{ textAlignVertical: 'top' }}
             />
             <View className="flex-row justify-end mb-5">
-              <Text className="text-xs text-neutral-400">
+              <Text className="text-xs text-neutral-400 dark:text-neutral-500">
                 {description.length}/2000
               </Text>
             </View>
 
             {/* Amount Input */}
-            <Text className="text-sm font-semibold text-neutral-700 mb-1.5">Amount *</Text>
-            <View className="flex-row items-center border border-neutral-200 rounded-xl bg-neutral-50 mb-8 px-4">
-              <Text className="text-base font-bold text-neutral-500 mr-2">$</Text>
+            <Text className="text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-1.5">Amount *</Text>
+            <View className="flex-row items-center border border-neutral-200 dark:border-neutral-700 rounded-xl bg-neutral-50 dark:bg-neutral-900 mb-8 px-4">
+              <Text className="text-base font-bold text-neutral-500 dark:text-neutral-400 mr-2">$</Text>
               <TextInput
                 placeholder="0.00"
                 value={amount}
                 onChangeText={setAmount}
                 keyboardType="decimal-pad"
-                className="flex-1 py-3 text-sm text-neutral-900"
-                placeholderTextColor="#a3a3a3"
+                className="flex-1 py-3 text-sm text-neutral-900 dark:text-white"
+                placeholderTextColor={isDark ? "#666" : "#a3a3a3"}
               />
             </View>
 
@@ -195,7 +197,7 @@ return (
               disabled={submitting || !isValid}
               className={`py-4 rounded-xl items-center shadow-lg ${
                 submitting || !isValid
-                  ? 'bg-neutral-300 shadow-none'
+                  ? 'bg-neutral-300 dark:bg-neutral-700 shadow-none'
                   : 'bg-indigo-600 shadow-indigo-500/20'
               }`}
             >
@@ -209,18 +211,18 @@ return (
               )}
             </Pressable>
 
-            <Text className="text-[10px] text-neutral-400 text-center mt-4 leading-4 px-4">
+            <Text className="text-[10px] text-neutral-400 dark:text-neutral-500 text-center mt-4 leading-4 px-4">
               The other party will be notified and can accept or respond to this change order.
             </Text>
           </>
         ) : (
           /* Review Mode Placeholder */
-          <View className="bg-white rounded-xl border border-neutral-200 p-8 items-center">
-            <View className="w-16 h-16 rounded-full bg-indigo-50 items-center justify-center mb-4">
+          <View className="bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-700 p-8 items-center">
+            <View className="w-16 h-16 rounded-full bg-indigo-50 dark:bg-indigo-900/20 items-center justify-center mb-4">
               <FontAwesome5 name="file-contract" size={24} color="#4F46E5" />
             </View>
-            <Text className="text-base font-semibold text-neutral-900 mb-2">Change Order Review</Text>
-            <Text className="text-sm text-neutral-500 text-center leading-5">
+            <Text className="text-base font-semibold text-neutral-900 dark:text-white mb-2">Change Order Review</Text>
+            <Text className="text-sm text-neutral-500 dark:text-neutral-400 text-center leading-5">
               {changeOrderId
                 ? `Reviewing change order #${changeOrderId}. The details and response options will appear here.`
                 : 'Change order details will appear here once loaded.'}

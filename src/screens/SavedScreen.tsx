@@ -10,6 +10,7 @@ import {
   Image,
   ActivityIndicator,
   RefreshControl,
+  useColorScheme,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -41,6 +42,7 @@ const CATEGORIES = [
 ];
 
 const SavedScreen = () => {
+  const isDark = useColorScheme() === 'dark';
   const navigation = useNavigation<NavigationProp>();
   const insets = useSafeAreaInsets();
   const [allContractors, setAllContractors] = useState<Contractor[]>([]);
@@ -127,7 +129,7 @@ const SavedScreen = () => {
   if (loading && !refreshing) {
     return (
       <View className="flex-1 bg-white dark:bg-neutral-950 items-center justify-center">
-        <ActivityIndicator size="large" color="#171717" />
+        <ActivityIndicator size="large" color={isDark ? '#ffffff' : '#171717'} />
       </View>
     );
   }
@@ -153,7 +155,7 @@ const SavedScreen = () => {
       ) : savedContractors.length === 0 ? (
         <View className="flex-1 items-center justify-center px-8">
           <View className="w-16 h-16 bg-neutral-100 dark:bg-neutral-900 rounded-full items-center justify-center mb-4">
-            <Heart size={32} color="#d4d4d4" weight="bold" />
+            <Heart size={32} color={isDark ? '#525252' : '#d4d4d4'} weight="bold" />
           </View>
           <EmptyState title="No saved contractors" message="Start exploring and save contractors you like." icon="❤️" />
           <Text className="text-sm text-neutral-500 dark:text-neutral-400 mt-1 text-center">
@@ -192,7 +194,7 @@ const SavedScreen = () => {
 
           <ScrollView 
             className="flex-1 px-4"
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#171717" />}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={isDark ? '#ffffff' : '#171717'} />}
             showsVerticalScrollIndicator={false}
           >
             <View className="flex-row flex-wrap justify-between pt-2">

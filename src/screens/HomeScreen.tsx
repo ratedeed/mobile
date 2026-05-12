@@ -9,6 +9,8 @@ import {
   RefreshControl,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
+  useColorScheme,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -178,9 +180,11 @@ function matchesCategory(contractor: Contractor, catId: string, catLabel: string
 // ---- HOME SCREEN ----
 const HomeScreen = () => {
   const navigation = useNavigation<NavigationProp>();
+  const isDark = useColorScheme() === 'dark';
   const [ipZipCode, setIpZipCode] = useState<string | null>(null);
   const [allContractors, setAllContractors] = useState<Contractor[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [activeCategory, setActiveCategory] = useState('all');
@@ -188,6 +192,8 @@ const HomeScreen = () => {
   const [searchZip, setSearchZip] = useState('');
   const [searchName, setSearchName] = useState('');
   const [nearbyLabel, setNearbyLabel] = useState('');
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
   const mountedRef = useRef(true);
 
   // Sync searchZip when IP zip is detected
@@ -226,15 +232,26 @@ const HomeScreen = () => {
   // Tier 1: exact zip match
   // Tier 2: 3-digit prefix (same local area) — checks serviceZipCodes
   // Tier 3: 2-digit prefix (wider region/state) — checks serviceZipCodes
-  const loadContractors = useCallback(async (zip?: string | null) => {
-    setLoading(true);
+  const loadContractors = useCallback(async (zip?: string | null, pageNum = 1, append = false) => {
+    if (pageNum === 1) {
+      setLoading(true);
+    } else {
+      setLoadingMore(true);
+    }
     setLoadError(false);
     try {
-      const result: any = await browseContractors({ zip: zip || undefined, limit: 50 });
+      const result: any = await browseContractors({ zip: zip || undefined, page: pageNum, limit: 20 });
       const list = extractList(result);
 
       if (mountedRef.current) {
-        setAllContractors(list);
+        if (append) {
+          setAllContractors(prev => [...prev, ...list]);
+        } else {
+          setAllContractors(list);
+        }
+        
+        setPage(pageNum);
+        setHasMore(pageNum < (result?.pages || 1));
         
         // Handle nearby label based on backend expansion flags
         if (zip && result.isExpanded) {
@@ -249,13 +266,17 @@ const HomeScreen = () => {
       }
     } catch (err) {
       if (mountedRef.current) {
-        setAllContractors([]);
-        setNearbyLabel('');
-        setLoadError(true);
+        if (!append) {
+          setAllContractors([]);
+          setNearbyLabel('');
+          setLoadError(true);
+        }
+        setHasMore(false);
       }
     } finally {
       if (mountedRef.current) {
         setLoading(false);
+        setLoadingMore(false);
       }
     }
   }, []);
@@ -320,6 +341,20 @@ const HomeScreen = () => {
     }
   };
 
+  const handleLoadMore = useCallback(() => {
+    if (!loadingMore && hasMore && !loading) {
+      loadContractors(searchZip || null, page + 1, true);
+    }
+  }, [loadingMore, hasMore, loading, page, searchZip, loadContractors]);
+
+  const handleScroll = useCallback(({ nativeEvent }: any) => {
+    const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+    const paddingToBottom = 200;
+    if (layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom) {
+      handleLoadMore();
+    }
+  }, [handleLoadMore]);
+
   const filtered = useMemo(() => {
     let list = allContractors;
     // Filter by name search
@@ -345,6 +380,8 @@ const HomeScreen = () => {
         className="flex-1"
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         showsVerticalScrollIndicator={false}
+        onScroll={handleScroll}
+        scrollEventThrottle={400}
       >
         {/* Search Bar */}
         <View className="px-4 pt-1 pb-1 w-full max-w-7xl mx-auto">
@@ -471,8 +508,8 @@ const HomeScreen = () => {
                   <View key={cat.id} className="flex-col" style={{ gap: 16 }}>
                     <View className="flex-row items-center justify-between">
                       <Text className="text-xl font-bold text-neutral-900 dark:text-neutral-50">{cat.label}</Text>
-                      <Pressable onPress={() => setActiveCategory(cat.id)}>
-                        <Text className="text-sm font-semibold text-indigo-500">Show all</Text>
+                      <Pressable onPress={() => setActiveCategory(cat.id)} className="w-8 h-8 items-center justify-center rounded-full bg-neutral-100 dark:bg-neutral-800">
+                        <FontAwesome5 name="arrow-right" size={12} color={isDark ? '#a3a3a3' : '#6b7280'} />
                       </Pressable>
                     </View>
                     <View className="flex-row flex-wrap justify-between">
@@ -516,6 +553,29 @@ const HomeScreen = () => {
           ) : (
             <View className="items-center justify-center py-20">
               <Text className="text-lg font-medium text-neutral-500 dark:text-neutral-400">No contractors found</Text>
+            </View>
+          )}
+
+          {/* Load More */}
+          {allContractors.length > 0 && (
+            <View className="items-center py-6">
+              {loadingMore ? (
+                <View className="flex-row items-center" style={{ gap: 8 }}>
+                  <ActivityIndicator size="small" color={isDark ? '#a3a3a3' : '#737373'} />
+                  <Text className="text-sm text-neutral-500 dark:text-neutral-400">Loading more...</Text>
+                </View>
+              ) : hasMore ? (
+                <Pressable
+                  onPress={handleLoadMore}
+                  className="flex-row items-center px-6 py-3 border border-neutral-200 dark:border-neutral-700 rounded-xl"
+                  style={{ gap: 8 }}
+                >
+                  <FontAwesome5 name="chevron-down" size={14} color={isDark ? '#d4d4d4' : '#171717'} />
+                  <Text className="text-sm font-semibold text-neutral-900 dark:text-neutral-50">Load More</Text>
+                </Pressable>
+              ) : (
+                <Text className="text-xs text-neutral-400 dark:text-neutral-500">No more contractors</Text>
+              )}
             </View>
           )}
         </View>

@@ -9,6 +9,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  useColorScheme,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
@@ -17,6 +18,7 @@ import { submitReview } from '../api';
 const STARS = [1, 2, 3, 4, 5];
 
 export default function ReviewScreen() {
+  const isDark = useColorScheme() === 'dark';
   const navigation = useNavigation();
   const route = useRoute();
   const { quoteId, contractorId, contractorName } = (route.params || {}) as {
@@ -67,20 +69,20 @@ export default function ReviewScreen() {
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
-      className="flex-1 bg-white"
+      className="flex-1 bg-white dark:bg-neutral-950"
     >
       <ScrollView
         className="flex-1 px-6"
         contentContainerStyle={{ paddingVertical: 24 }}
         keyboardShouldPersistTaps="handled"
       >
-        <Text className="text-2xl font-bold text-neutral-900 mb-1">Leave a Review</Text>
-        <Text className="text-sm text-neutral-500 mb-8">
+        <Text className="text-2xl font-bold text-neutral-900 dark:text-white mb-1">Leave a Review</Text>
+        <Text className="text-sm text-neutral-500 dark:text-neutral-400 mb-8">
           {contractorName ? `for ${contractorName}` : 'Share your experience'}
         </Text>
 
         {/* Star Rating */}
-        <Text className="text-sm font-semibold text-neutral-700 mb-3">Rating *</Text>
+        <Text className="text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-3">Rating *</Text>
         <View className="flex-row mb-6" style={{ gap: 8 }}>
           {STARS.map((star) => (
             <Pressable
@@ -93,13 +95,13 @@ export default function ReviewScreen() {
                 name="star"
                 size={36}
                 solid={star <= (hoverRating || rating)}
-                color={star <= (hoverRating || rating) ? '#F59E0B' : '#D4D4D4'}
+                color={star <= (hoverRating || rating) ? '#F59E0B' : (isDark ? '#525252' : '#D4D4D4')}
               />
             </Pressable>
           ))}
         </View>
         {rating > 0 && (
-          <Text className="text-xs text-neutral-400 mb-4">
+          <Text className="text-xs text-neutral-400 dark:text-neutral-500 mb-4">
             {rating === 1 && 'Poor'}
             {rating === 2 && 'Fair'}
             {rating === 3 && 'Good'}
@@ -109,18 +111,18 @@ export default function ReviewScreen() {
         )}
 
         {/* Title */}
-        <Text className="text-sm font-semibold text-neutral-700 mb-1.5">Title</Text>
+        <Text className="text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-1.5">Title</Text>
         <TextInput
           placeholder="Summarize your experience"
           value={title}
           onChangeText={setTitle}
           maxLength={100}
-          className="border border-neutral-200 rounded-xl px-4 py-3 text-sm bg-neutral-50 mb-5"
-          placeholderTextColor="#a3a3a3"
+          className="border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-3 text-sm bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-white mb-5"
+          placeholderTextColor={isDark ? "#666" : "#a3a3a3"}
         />
 
         {/* Comment */}
-        <Text className="text-sm font-semibold text-neutral-700 mb-1.5">Your Review *</Text>
+        <Text className="text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-1.5">Your Review *</Text>
         <TextInput
           placeholder="What was it like working with this contractor?"
           value={comment}
@@ -128,8 +130,8 @@ export default function ReviewScreen() {
           multiline
           numberOfLines={5}
           maxLength={1000}
-          className="border border-neutral-200 rounded-xl px-4 py-3 text-sm bg-neutral-50 mb-8 min-h-[120px]"
-          placeholderTextColor="#a3a3a3"
+          className="border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-3 text-sm bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-white mb-8 min-h-[120px]"
+          placeholderTextColor={isDark ? "#666" : "#a3a3a3"}
           style={{ textAlignVertical: 'top' }}
         />
 
@@ -149,7 +151,7 @@ export default function ReviewScreen() {
           )}
         </Pressable>
 
-        <Text className="text-[10px] text-neutral-400 text-center mt-4 leading-4 px-4">
+        <Text className="text-[10px] text-neutral-400 dark:text-neutral-500 text-center mt-4 leading-4 px-4">
           Your review will be public and tied to this job. Honest feedback helps the community.
         </Text>
       </ScrollView>

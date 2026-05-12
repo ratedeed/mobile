@@ -12,6 +12,7 @@ import {
   SafeAreaView,
   KeyboardAvoidingView,
   Platform,
+  useColorScheme,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -148,6 +149,7 @@ const ListingCard = ({
 
 // ---- SEARCH SCREEN ----
 const BusinessSearchScreen: React.FC = () => {
+  const isDark = useColorScheme() === 'dark';
   const navigation = useNavigation<BusinessSearchScreenNavigationProp>();
   const route = useRoute<BusinessSearchScreenRouteProp>();
   const { query, searchType, name: routeName } = route.params || {};
@@ -266,12 +268,12 @@ const BusinessSearchScreen: React.FC = () => {
         <View className="flex-row items-center" style={{ gap: 8 }}>
           {/* Back Button */}
           <Pressable onPress={() => navigation.goBack()} className="w-8 h-8 items-center justify-center">
-            <FontAwesome5 name="chevron-left" size={18} color="#171717" />
+            <FontAwesome5 name="chevron-left" size={18} color={isDark ? '#ffffff' : '#171717'} />
           </Pressable>
 
           {/* Zip Code Input */}
           <View className="flex-1 relative">
-            <FontAwesome5 name="map-marker-alt" size={14} color="#a3a3a3" style={{ position: 'absolute', left: 12, top: 13, zIndex: 1 }} />
+            <FontAwesome5 name="map-marker-alt" size={14} color={isDark ? '#737373' : '#a3a3a3'} style={{ position: 'absolute', left: 12, top: 13, zIndex: 1 }} />
             <TextInput
               value={searchZip}
               onChangeText={text => { setSearchZip(text); setActiveCategory('all'); }}
@@ -285,7 +287,7 @@ const BusinessSearchScreen: React.FC = () => {
 
             {searchZip ? (
               <Pressable onPress={() => setSearchZip('')} className="absolute right-3 top-3">
-                <FontAwesome5 name="times" size={14} color="#a3a3a3" />
+                <FontAwesome5 name="times" size={14} color={isDark ? '#737373' : '#a3a3a3'} />
               </Pressable>
             ) : null}
           </View>
@@ -295,7 +297,7 @@ const BusinessSearchScreen: React.FC = () => {
 
           {/* Name Input */}
           <View className="flex-1 relative">
-            <FontAwesome5 name="building" size={14} color="#a3a3a3" style={{ position: 'absolute', left: 12, top: 13, zIndex: 1 }} />
+            <FontAwesome5 name="building" size={14} color={isDark ? '#737373' : '#a3a3a3'} style={{ position: 'absolute', left: 12, top: 13, zIndex: 1 }} />
             <TextInput
               value={searchName}
               onChangeText={text => { setSearchName(text); setActiveCategory('all'); }}
@@ -307,7 +309,7 @@ const BusinessSearchScreen: React.FC = () => {
 
             {searchName ? (
               <Pressable onPress={() => setSearchName('')} className="absolute right-3 top-3">
-                <FontAwesome5 name="times" size={14} color="#a3a3a3" />
+                <FontAwesome5 name="times" size={14} color={isDark ? '#737373' : '#a3a3a3'} />
               </Pressable>
             ) : null}
           </View>
@@ -368,7 +370,7 @@ const BusinessSearchScreen: React.FC = () => {
       {/* Loading State */}
       {loading && contractors.length === 0 ? (
         <View className="flex-1 items-center justify-center py-20">
-          <ActivityIndicator size="large" color="#a3a3a3" />
+          <ActivityIndicator size="large" color={isDark ? '#a3a3a3' : '#737373'} />
           <Text className="text-sm text-neutral-500 dark:text-neutral-400 mt-3">Searching contractors...</Text>
         </View>
       ) : contractors.length > 0 ? (
@@ -389,9 +391,9 @@ const BusinessSearchScreen: React.FC = () => {
                   style={{ gap: 8 }}
                 >
                   {loadingMore ? (
-                    <ActivityIndicator size="small" color="#171717" />
+                    <ActivityIndicator size="small" color={isDark ? '#ffffff' : '#171717'} />
                   ) : (
-                    <FontAwesome5 name="chevron-down" size={14} color="#171717" />
+                    <FontAwesome5 name="chevron-down" size={14} color={isDark ? '#d4d4d4' : '#171717'} />
                   )}
                   <Text className="text-sm font-semibold text-neutral-900 dark:text-neutral-50">
                     {loadingMore ? 'Loading...' : 'Load More'}
@@ -406,13 +408,13 @@ const BusinessSearchScreen: React.FC = () => {
         />
       ) : hasSearch ? (
         <View className="flex-1 items-center justify-center py-20">
-          <FontAwesome5 name="search" size={48} color="#d4d4d4" />
+          <FontAwesome5 name="search" size={48} color={isDark ? '#525252' : '#d4d4d4'} />
           <Text className="font-semibold text-neutral-900 dark:text-neutral-50 mt-3">No results found</Text>
           <Text className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">Try a different zip code, name, or category</Text>
         </View>
       ) : (
         <View className="flex-1 items-center justify-center py-20">
-          <FontAwesome5 name="map-marker-alt" size={48} color="#d4d4d4" />
+          <FontAwesome5 name="map-marker-alt" size={48} color={isDark ? '#525252' : '#d4d4d4'} />
           <Text className="text-neutral-500 dark:text-neutral-400 text-sm mt-3">Enter a zip code or contractor name to search</Text>
         </View>
       )}

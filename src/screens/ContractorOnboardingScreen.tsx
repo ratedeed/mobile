@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Alert,
   Dimensions,
+  useColorScheme,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
@@ -33,6 +34,7 @@ const STEPS = [
 
 export default function ContractorOnboardingScreen() {
   const navigation = useNavigation();
+  const isDark = useColorScheme() === 'dark';
   const [currentStep, setCurrentStep] = useState(0);
   const [saving, setSaving] = useState(false);
 
@@ -181,21 +183,21 @@ export default function ContractorOnboardingScreen() {
   };
 
   return (
-    <View className="flex-1 bg-white">
+    <View className="flex-1 bg-white dark:bg-neutral-950">
       {/* Progress bar */}
       <View className="pt-12 pb-3 px-6">
         <View className="flex-row items-center justify-between mb-3">
           <Pressable onPress={goBack} className="py-1">
-            <FontAwesome5 name="arrow-left" size={16} color="#737373" />
+            <FontAwesome5 name="arrow-left" size={16} color={isDark ? "#a3a3a3" : "#737373"} />
           </Pressable>
-          <Text className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">
+          <Text className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">
             Step {currentStep + 1} of {STEPS.length}
           </Text>
           <View className="w-6" />
         </View>
-        <View className="h-1 bg-neutral-100 rounded-full overflow-hidden">
+        <View className="h-1 bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
           <View
-            className="h-full bg-neutral-900 rounded-full"
+            className="h-full bg-neutral-900 dark:bg-white rounded-full"
             style={{ width: `${progress}%` }}
           />
         </View>
@@ -211,22 +213,22 @@ export default function ContractorOnboardingScreen() {
           {/* Step 0: Welcome */}
           {currentStep === 0 && (
             <View className="items-center pt-8 pb-32">
-              <View className="w-20 h-20 bg-neutral-900 rounded-3xl items-center justify-center mb-6">
-                <FontAwesome5 name="briefcase" size={28} color="white" />
+              <View className="w-20 h-20 bg-neutral-900 dark:bg-white rounded-3xl items-center justify-center mb-6">
+                <FontAwesome5 name="briefcase" size={28} color={isDark ? "#171717" : "white"} />
               </View>
-              <Text className="text-2xl font-bold text-neutral-900 mb-3 text-center">
+              <Text className="text-2xl font-bold text-neutral-900 dark:text-white mb-3 text-center">
                 Welcome to Ratedeed
               </Text>
-              <Text className="text-neutral-500 text-sm leading-relaxed mb-8 text-center px-4">
+              <Text className="text-neutral-500 dark:text-neutral-400 text-sm leading-relaxed mb-8 text-center px-4">
                 Set up your contractor profile to start receiving leads and getting hired by homeowners in your area. It takes about 5 minutes.
               </Text>
               <View className="w-full space-y-3">
                 {STEPS.slice(1).map((step) => (
-                  <View key={step.key} className="flex-row items-center bg-neutral-50 rounded-2xl px-4 py-3" style={{ gap: 12 }}>
-                    <View className="w-8 h-8 bg-white rounded-xl items-center justify-center">
-                      <FontAwesome5 name={step.icon} size={12} color="#525252" />
+                  <View key={step.key} className="flex-row items-center bg-neutral-50 dark:bg-neutral-900 rounded-2xl px-4 py-3" style={{ gap: 12 }}>
+                    <View className="w-8 h-8 bg-white dark:bg-neutral-800 rounded-xl items-center justify-center">
+                      <FontAwesome5 name={step.icon} size={12} color={isDark ? "#d4d4d4" : "#525252"} />
                     </View>
-                    <Text className="text-sm font-semibold text-neutral-700">{step.label}</Text>
+                    <Text className="text-sm font-semibold text-neutral-700 dark:text-neutral-300">{step.label}</Text>
                   </View>
                 ))}
               </View>
@@ -236,14 +238,14 @@ export default function ContractorOnboardingScreen() {
           {/* Step 1: Profile */}
           {currentStep === 1 && (
             <View className="pt-2 pb-32">
-              <Text className="text-xl font-bold text-neutral-900 mb-1">Your Profile</Text>
-              <Text className="text-sm text-neutral-500 mb-6">Add a photo and tell homeowners about your business.</Text>
+              <Text className="text-xl font-bold text-neutral-900 dark:text-white mb-1">Your Profile</Text>
+              <Text className="text-sm text-neutral-500 dark:text-neutral-400 mb-6">Add a photo and tell homeowners about your business.</Text>
 
               {/* Banner */}
-              <Text className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-2">Cover Photo</Text>
+              <Text className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest mb-2">Cover Photo</Text>
               <Pressable
                 onPress={() => pickImage('banner')}
-                className="bg-neutral-100 rounded-2xl overflow-hidden mb-3"
+                className="bg-neutral-100 dark:bg-neutral-800 rounded-2xl overflow-hidden mb-3"
                 style={{ aspectRatio: 16 / 7 }}
               >
                 {bannerImageUri || bannerImageUrl ? (
@@ -254,8 +256,8 @@ export default function ContractorOnboardingScreen() {
                   />
                 ) : (
                   <View className="flex-1 items-center justify-center" style={{ gap: 4 }}>
-                    <FontAwesome5 name="cloud-upload-alt" size={18} color="#a3a3a3" />
-                    <Text className="text-xs text-neutral-400">Upload cover photo</Text>
+                    <FontAwesome5 name="cloud-upload-alt" size={18} color={isDark ? "#737373" : "#a3a3a3"} />
+                    <Text className="text-xs text-neutral-400 dark:text-neutral-500">Upload cover photo</Text>
                   </View>
                 )}
               </Pressable>
@@ -263,7 +265,7 @@ export default function ContractorOnboardingScreen() {
               {/* Profile picture */}
               <Pressable
                 onPress={() => pickImage('profile')}
-                className="-mt-7 ml-4 mb-4 w-16 h-16 rounded-2xl overflow-hidden border-4 border-white bg-neutral-100 items-center justify-center"
+                className="-mt-7 ml-4 mb-4 w-16 h-16 rounded-2xl overflow-hidden border-4 border-white dark:border-neutral-950 bg-neutral-100 dark:bg-neutral-800 items-center justify-center"
                 style={{ elevation: 4 }}
               >
                 {profilePictureUri || profilePictureUrl ? (
@@ -273,40 +275,40 @@ export default function ContractorOnboardingScreen() {
                     resizeMode="cover"
                   />
                 ) : (
-                  <FontAwesome5 name="camera" size={18} color="#a3a3a3" />
+                  <FontAwesome5 name="camera" size={18} color={isDark ? "#737373" : "#a3a3a3"} />
                 )}
               </Pressable>
 
               {/* Description */}
-              <Text className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-2">About Your Business</Text>
+              <Text className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest mb-2">About Your Business</Text>
               <TextInput
                 value={description}
                 onChangeText={setDescription}
                 placeholder="Tell homeowners what makes your business special..."
-                placeholderTextColor="#a3a3a3"
+                placeholderTextColor={isDark ? "#666" : "#a3a3a3"}
                 multiline
                 maxLength={1000}
-                className="bg-neutral-50 rounded-2xl px-4 py-3 text-sm text-neutral-900 min-h-[100px] text-top"
+                className="bg-neutral-50 dark:bg-neutral-900 rounded-2xl px-4 py-3 text-sm text-neutral-900 dark:text-white min-h-[100px] text-top"
                 style={{ textAlignVertical: 'top' }}
               />
-              <Text className="text-[10px] text-neutral-400 mt-1 text-right">{description.length}/1000</Text>
+              <Text className="text-[10px] text-neutral-400 dark:text-neutral-500 mt-1 text-right">{description.length}/1000</Text>
             </View>
           )}
 
           {/* Step 2: Services */}
           {currentStep === 2 && (
             <View className="pt-2 pb-32">
-              <Text className="text-xl font-bold text-neutral-900 mb-1">Services You Offer</Text>
-              <Text className="text-sm text-neutral-500 mb-6">Add the services homeowners can hire you for.</Text>
+              <Text className="text-xl font-bold text-neutral-900 dark:text-white mb-1">Services You Offer</Text>
+              <Text className="text-sm text-neutral-500 dark:text-neutral-400 mb-6">Add the services homeowners can hire you for.</Text>
 
               <View style={{ gap: 12 }}>
                 {services.map((service, i) => (
-                  <View key={i} className="bg-neutral-50 rounded-2xl p-4">
+                  <View key={i} className="bg-neutral-50 dark:bg-neutral-900 rounded-2xl p-4">
                     <View className="flex-row items-center justify-between mb-3">
-                      <Text className="text-xs font-bold text-neutral-400">Service {i + 1}</Text>
+                      <Text className="text-xs font-bold text-neutral-400 dark:text-neutral-500">Service {i + 1}</Text>
                       {services.length > 1 && (
                         <Pressable onPress={() => setServices(s => s.filter((_, idx) => idx !== i))}>
-                          <FontAwesome5 name="times" size={12} color="#a3a3a3" />
+                          <FontAwesome5 name="times" size={12} color={isDark ? "#737373" : "#a3a3a3"} />
                         </Pressable>
                       )}
                     </View>
@@ -314,22 +316,22 @@ export default function ContractorOnboardingScreen() {
                       value={service.name}
                       onChangeText={t => setServices(s => s.map((sv, idx) => idx === i ? { ...sv, name: t } : sv))}
                       placeholder="Service name (e.g., Kitchen Remodeling)"
-                      placeholderTextColor="#a3a3a3"
-                      className="bg-white rounded-xl px-3 py-2.5 text-sm text-neutral-900 mb-2"
+                      placeholderTextColor={isDark ? "#666" : "#a3a3a3"}
+                      className="bg-white dark:bg-neutral-800 rounded-xl px-3 py-2.5 text-sm text-neutral-900 dark:text-white mb-2"
                     />
                     <TextInput
                       value={service.description}
                       onChangeText={t => setServices(s => s.map((sv, idx) => idx === i ? { ...sv, description: t } : sv))}
                       placeholder="Brief description"
-                      placeholderTextColor="#a3a3a3"
-                      className="bg-white rounded-xl px-3 py-2.5 text-sm text-neutral-900 mb-2"
+                      placeholderTextColor={isDark ? "#666" : "#a3a3a3"}
+                      className="bg-white dark:bg-neutral-800 rounded-xl px-3 py-2.5 text-sm text-neutral-900 dark:text-white mb-2"
                     />
                     <TextInput
                       value={service.priceEstimate}
                       onChangeText={t => setServices(s => s.map((sv, idx) => idx === i ? { ...sv, priceEstimate: t } : sv))}
                       placeholder="Price range (e.g., $500 - $2,000)"
-                      placeholderTextColor="#a3a3a3"
-                      className="bg-white rounded-xl px-3 py-2.5 text-sm text-neutral-900"
+                      placeholderTextColor={isDark ? "#666" : "#a3a3a3"}
+                      className="bg-white dark:bg-neutral-800 rounded-xl px-3 py-2.5 text-sm text-neutral-900 dark:text-white"
                     />
                   </View>
                 ))}
@@ -349,15 +351,15 @@ export default function ContractorOnboardingScreen() {
           {/* Step 3: Portfolio */}
           {currentStep === 3 && (
             <View className="pt-2 pb-32">
-              <Text className="text-xl font-bold text-neutral-900 mb-1">Portfolio</Text>
-              <Text className="text-sm text-neutral-500 mb-6">Show off your best work. You can add more later.</Text>
+              <Text className="text-xl font-bold text-neutral-900 dark:text-white mb-1">Portfolio</Text>
+              <Text className="text-sm text-neutral-500 dark:text-neutral-400 mb-6">Show off your best work. You can add more later.</Text>
 
               <View className="flex-row flex-wrap" style={{ gap: 12 }}>
                 {portfolioItems.map((item, i) => (
                   <View key={i} className="relative" style={{ width: (SCREEN_WIDTH - 48 - 12) / 2 }}>
                     <Pressable
                       onPress={() => pickPortfolioImage(i)}
-                      className="aspect-square bg-neutral-100 rounded-2xl overflow-hidden items-center justify-center"
+                      className="aspect-square bg-neutral-100 dark:bg-neutral-800 rounded-2xl overflow-hidden items-center justify-center"
                     >
                       {item.localUri || item.imageUrl ? (
                         <Image
@@ -367,8 +369,8 @@ export default function ContractorOnboardingScreen() {
                         />
                       ) : (
                         <View className="items-center" style={{ gap: 4 }}>
-                          <FontAwesome5 name="image" size={20} color="#d4d4d4" />
-                          <Text className="text-[10px] text-neutral-400">Upload</Text>
+                          <FontAwesome5 name="image" size={20} color={isDark ? "#525252" : "#d4d4d4"} />
+                          <Text className="text-[10px] text-neutral-400 dark:text-neutral-500">Upload</Text>
                         </View>
                       )}
                     </Pressable>
@@ -376,24 +378,24 @@ export default function ContractorOnboardingScreen() {
                       value={item.name}
                       onChangeText={t => setPortfolioItems(p => p.map((it, idx) => idx === i ? { ...it, name: t } : it))}
                       placeholder="Project name"
-                      placeholderTextColor="#a3a3a3"
-                      className="mt-1.5 text-xs text-neutral-700"
+                      placeholderTextColor={isDark ? "#666" : "#a3a3a3"}
+                      className="mt-1.5 text-xs text-neutral-700 dark:text-neutral-300"
                     />
                   </View>
                 ))}
                 {portfolioItems.length < 6 && (
                   <Pressable
                     onPress={() => setPortfolioItems(p => [...p, { name: '', localUri: '', imageUrl: '' }])}
-                    className="aspect-square border-2 border-dashed border-neutral-200 rounded-2xl items-center justify-center"
+                    className="aspect-square border-2 border-dashed border-neutral-200 dark:border-neutral-700 rounded-2xl items-center justify-center"
                     style={{ width: (SCREEN_WIDTH - 48 - 12) / 2, gap: 4 }}
                   >
-                    <FontAwesome5 name="plus" size={18} color="#d4d4d4" />
-                    <Text className="text-[10px] text-neutral-400">Add Photo</Text>
+                    <FontAwesome5 name="plus" size={18} color={isDark ? "#525252" : "#d4d4d4"} />
+                    <Text className="text-[10px] text-neutral-400 dark:text-neutral-500">Add Photo</Text>
                   </Pressable>
                 )}
               </View>
 
-              <Text className="text-[10px] text-neutral-400 mt-4 text-center">
+              <Text className="text-[10px] text-neutral-400 dark:text-neutral-500 mt-4 text-center">
                 Optional — you can skip this and add photos later.
               </Text>
             </View>
@@ -402,28 +404,28 @@ export default function ContractorOnboardingScreen() {
           {/* Step 4: Location */}
           {currentStep === 4 && (
             <View className="pt-2 pb-32">
-              <Text className="text-xl font-bold text-neutral-900 mb-1">Service Area</Text>
-              <Text className="text-sm text-neutral-500 mb-6">Where do you offer your services?</Text>
+              <Text className="text-xl font-bold text-neutral-900 dark:text-white mb-1">Service Area</Text>
+              <Text className="text-sm text-neutral-500 dark:text-neutral-400 mb-6">Where do you offer your services?</Text>
 
-              <Text className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-2">ZIP Codes You Cover</Text>
+              <Text className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest mb-2">ZIP Codes You Cover</Text>
               <TextInput
                 value={zipCodes}
                 onChangeText={setZipCodes}
                 placeholder="Enter ZIP codes separated by commas (e.g., 10001, 10002, 10003)"
-                placeholderTextColor="#a3a3a3"
+                placeholderTextColor={isDark ? "#666" : "#a3a3a3"}
                 multiline
-                className="bg-neutral-50 rounded-2xl px-4 py-3 text-sm text-neutral-900 min-h-[80px]"
+                className="bg-neutral-50 dark:bg-neutral-900 rounded-2xl px-4 py-3 text-sm text-neutral-900 dark:text-white min-h-[80px]"
                 style={{ textAlignVertical: 'top' }}
               />
-              <Text className="text-[10px] text-neutral-400 mt-1">Homeowners in these areas will see your profile.</Text>
+              <Text className="text-[10px] text-neutral-400 dark:text-neutral-500 mt-1">Homeowners in these areas will see your profile.</Text>
             </View>
           )}
 
           {/* Step 5: License */}
           {currentStep === 5 && (
             <View className="pt-2 pb-32">
-              <Text className="text-xl font-bold text-neutral-900 mb-1">License Verification</Text>
-              <Text className="text-sm text-neutral-500 mb-6">Get a verified badge on your profile. Optional but recommended.</Text>
+              <Text className="text-xl font-bold text-neutral-900 dark:text-white mb-1">License Verification</Text>
+              <Text className="text-sm text-neutral-500 dark:text-neutral-400 mb-6">Get a verified badge on your profile. Optional but recommended.</Text>
 
               <View className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 flex-row mb-6" style={{ gap: 12 }}>
                 <FontAwesome5 name="shield-alt" size={24} color="#059669" />
@@ -435,39 +437,39 @@ export default function ContractorOnboardingScreen() {
                 </View>
               </View>
 
-              <Text className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-2">License Number</Text>
+              <Text className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest mb-2">License Number</Text>
               <TextInput
                 value={licenseNumber}
                 onChangeText={setLicenseNumber}
                 placeholder="e.g., #ABC-12345"
-                placeholderTextColor="#a3a3a3"
-                className="bg-neutral-50 rounded-2xl px-4 py-3 text-sm text-neutral-900"
+                placeholderTextColor={isDark ? "#666" : "#a3a3a3"}
+                className="bg-neutral-50 dark:bg-neutral-900 rounded-2xl px-4 py-3 text-sm text-neutral-900 dark:text-white"
               />
-              <Text className="text-[10px] text-neutral-400 mt-2">Verification typically takes 1-2 business days.</Text>
+              <Text className="text-[10px] text-neutral-400 dark:text-neutral-500 mt-2">Verification typically takes 1-2 business days.</Text>
             </View>
           )}
 
           {/* Step 6: Payments */}
           {currentStep === 6 && (
             <View className="pt-2 pb-32">
-              <Text className="text-xl font-bold text-neutral-900 mb-1">Get Paid</Text>
-              <Text className="text-sm text-neutral-500 mb-6">Connect Stripe to receive payments directly to your bank account.</Text>
+              <Text className="text-xl font-bold text-neutral-900 dark:text-white mb-1">Get Paid</Text>
+              <Text className="text-sm text-neutral-500 dark:text-neutral-400 mb-6">Connect Stripe to receive payments directly to your bank account.</Text>
 
-              <View className="bg-neutral-900 rounded-3xl p-6 items-center mb-6">
+              <View className="bg-neutral-900 dark:bg-neutral-800 rounded-3xl p-6 items-center mb-6">
                 <FontAwesome5 name="credit-card" size={32} color="white" />
                 <Text className="text-white font-bold mt-3 mb-1 text-base">Stripe Connect</Text>
-                <Text className="text-neutral-400 text-xs leading-4 text-center mb-4 px-2">
+                <Text className="text-neutral-400 dark:text-neutral-500 text-xs leading-4 text-center mb-4 px-2">
                   Secure payment processing. Funds are deposited directly to your bank after job completion.
                 </Text>
                 <Pressable
                   onPress={handleStripeConnect}
-                  className="bg-white rounded-xl px-6 py-3"
+                  className="bg-white dark:bg-neutral-950 rounded-xl px-6 py-3"
                 >
-                  <Text className="text-neutral-900 font-bold text-sm">Set Up Payments</Text>
+                  <Text className="text-neutral-900 dark:text-white font-bold text-sm">Set Up Payments</Text>
                 </Pressable>
               </View>
 
-              <Text className="text-[10px] text-neutral-400 text-center">
+              <Text className="text-[10px] text-neutral-400 dark:text-neutral-500 text-center">
                 You can complete Stripe setup later from your dashboard.
               </Text>
             </View>
@@ -476,29 +478,29 @@ export default function ContractorOnboardingScreen() {
       </KeyboardAvoidingView>
 
       {/* Bottom Actions */}
-      <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-neutral-100 px-6 py-4 pb-8">
+      <View className="absolute bottom-0 left-0 right-0 bg-white dark:bg-neutral-950 border-t border-neutral-100 dark:border-neutral-800 px-6 py-4 pb-8">
         <View className="flex-row items-center" style={{ gap: 12 }}>
           {currentStep > 0 && (
             <Pressable
               onPress={goBack}
-              className="px-4 py-3 rounded-xl bg-neutral-100"
+              className="px-4 py-3 rounded-xl bg-neutral-100 dark:bg-neutral-800"
             >
-              <Text className="text-sm font-semibold text-neutral-500">Back</Text>
+              <Text className="text-sm font-semibold text-neutral-500 dark:text-neutral-400">Back</Text>
             </Pressable>
           )}
           {currentStep < STEPS.length - 1 ? (
             <Pressable
               onPress={saveAndNext}
               disabled={saving}
-              className="flex-1 py-3 bg-neutral-900 rounded-xl flex-row items-center justify-center"
+              className="flex-1 py-3 bg-neutral-900 dark:bg-white rounded-xl flex-row items-center justify-center"
               style={{ gap: 8, opacity: saving ? 0.5 : 1 }}
             >
               {saving ? (
-                <ActivityIndicator color="white" size="small" />
+                <ActivityIndicator color={isDark ? "#171717" : "white"} size="small" />
               ) : (
                 <>
-                  <Text className="text-white font-bold text-sm">Continue</Text>
-                  <FontAwesome5 name="chevron-right" size={12} color="white" />
+                  <Text className="text-white dark:text-neutral-900 font-bold text-sm">Continue</Text>
+                  <FontAwesome5 name="chevron-right" size={12} color={isDark ? "#171717" : "white"} />
                 </>
               )}
             </Pressable>
@@ -525,7 +527,7 @@ export default function ContractorOnboardingScreen() {
               disabled={saving}
               className="py-3"
             >
-              <Text className="text-xs font-semibold text-neutral-400">Skip</Text>
+              <Text className="text-xs font-semibold text-neutral-400 dark:text-neutral-500">Skip</Text>
             </Pressable>
           )}
         </View>

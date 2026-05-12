@@ -1,10 +1,11 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, Image, Animated, Easing, StyleSheet } from 'react-native';
+import { View, Text, Image, Animated, Easing, StyleSheet, useColorScheme } from 'react-native';
 
-const SPLASH_COLOR = '#ffffff'; 
 const LOGO_COLOR = '#4F46E5'; // Indigo-600
 
 const LoadingScreen = () => {
+  const isDark = useColorScheme() === 'dark';
+  const splashColor = isDark ? '#09090B' : '#ffffff';
   const logoScale = useRef(new Animated.Value(0.3)).current;
   const logoOpacity = useRef(new Animated.Value(0)).current;
   const wordmarkOpacity = useRef(new Animated.Value(0)).current;
@@ -128,7 +129,7 @@ const LoadingScreen = () => {
   });
 
   return (
-    <View style={[styles.container, { backgroundColor: SPLASH_COLOR }]}>
+    <View style={[styles.container, { backgroundColor: splashColor }]}>
       <View style={styles.logoContainer}>
         {/* Pulse 2 */}
         <Animated.View style={[styles.pulseRing, {
