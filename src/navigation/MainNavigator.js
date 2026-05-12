@@ -110,8 +110,6 @@ function MainTabNavigator() {
           } else if (route.name === 'Saved') {
             return <Heart size={24} color={color} weight={weight} />;
           } else if (route.name === 'Messages') {
-            return <ChatCircle size={24} color={color} weight={weight} />;
-          } else if (route.name === 'Profile') {
             return <UserIcon size={24} color={color} weight={weight} />;
           }
           return null;
@@ -155,7 +153,7 @@ function MainTabNavigator() {
                 source={require('../../assets/favicon.png')}
                 style={{ width: 28, height: 28, marginRight: 8, borderRadius: 6 }}
               />
-              <Typography variant="h4" style={{ color: '#09090B' }}>Ratedeed</Typography>
+              <Typography variant="h4" style={{ color: isDark ? '#FAFAFA' : '#09090B' }}>Ratedeed</Typography>
             </View>
           ),
           headerTitle: '',
@@ -165,7 +163,7 @@ function MainTabNavigator() {
               onPress={() => navigation.navigate('Notifications')}
             >
               <View>
-                <Bell size={22} color={'#09090B'} />
+                <Bell size={22} color={isDark ? '#FAFAFA' : '#09090B'} />
                 {unreadCount > 0 && (
                   <View 
                     style={{ 
@@ -179,7 +177,7 @@ function MainTabNavigator() {
                       justifyContent: 'center', 
                       alignItems: 'center',
                       borderWidth: 2,
-                      borderColor: '#FFFFFF',
+                      borderColor: isDark ? '#09090B' : '#FFFFFF',
                       paddingHorizontal: 2
                     }}
                   >
@@ -202,7 +200,8 @@ function MainTabNavigator() {
         name="Jobs"
         component={ActiveJobsScreen}
         options={{
-          title: 'Jobs',
+          title: '', // Hide label for the center button as it's built-in
+          tabBarButton: (props) => <JobsTabBarButton {...props} />
         }}
       />
       <Tab.Screen
