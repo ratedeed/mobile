@@ -202,8 +202,7 @@ function MainTabNavigator() {
         name="Jobs"
         component={ActiveJobsScreen}
         options={{
-          title: '', // Hide label for the center button as it's built-in
-          tabBarButton: (props) => <JobsTabBarButton {...props} />
+          title: 'Jobs',
         }}
       />
       <Tab.Screen

@@ -7,6 +7,7 @@ import {
   RefreshControl,
   Alert,
   StyleSheet,
+  useColorScheme,
 } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useNotifications } from '../context/NotificationsContext';
@@ -30,7 +31,140 @@ type NotificationSection = {
   data: NotificationItem[];
 };
 
+const createStyles = (isDark: boolean) => StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: isDark ? '#09090B' : Colors.neutral50,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.sm,
+    backgroundColor: isDark ? '#09090B' : '#fff',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: isDark ? '#27272a' : Colors.neutral200,
+  },
+  headerTitle: {
+    fontSize: FontSizes.xxl,
+    fontWeight: FontWeights.bold as any,
+    color: isDark ? '#ffffff' : Colors.neutral900,
+  },
+  headerSubtitle: {
+    fontSize: FontSizes.xs,
+    color: isDark ? '#a3a3a3' : Colors.neutral500,
+    fontWeight: FontWeights.medium as any,
+    marginTop: 2,
+  },
+  markAllHeaderBtn: {
+    backgroundColor: isDark ? '#1e1b4b' : Colors.primary50,
+    paddingHorizontal: Spacing.sm + 2,
+    paddingVertical: Spacing.xs + 2,
+    borderRadius: Radii.round,
+  },
+  markAllHeaderText: {
+    fontSize: FontSizes.xs,
+    fontWeight: FontWeights.bold as any,
+    color: isDark ? '#818cf8' : Colors.primary600,
+  },
+  skeletonList: {
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.sm,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.xs,
+    backgroundColor: isDark ? '#09090B' : Colors.neutral50,
+  },
+  sectionTitle: {
+    fontSize: FontSizes.xs,
+    fontWeight: FontWeights.bold as any,
+    color: isDark ? '#a3a3a3' : Colors.neutral500,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  markAllBtn: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xxs,
+  },
+  markAllText: {
+    fontSize: FontSizes.xs,
+    fontWeight: FontWeights.semibold as any,
+    color: isDark ? '#818cf8' : Colors.primary600,
+  },
+  card: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: isDark ? '#171717' : '#fff',
+    marginHorizontal: Spacing.md,
+    marginBottom: Spacing.xs,
+    padding: Spacing.md,
+    borderRadius: Radii.md,
+    ...Shadows.xs,
+  },
+  cardUnread: {
+    backgroundColor: isDark ? '#1e1b4b' : Colors.primary50,
+    borderLeftWidth: 3,
+    borderLeftColor: Colors.primary500,
+  },
+  iconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: Spacing.sm + 2,
+    marginTop: 1,
+  },
+  cardBody: {
+    flex: 1,
+  },
+  cardMessage: {
+    fontSize: FontSizes.sm,
+    lineHeight: 20,
+    color: isDark ? '#d4d4d4' : Colors.neutral700,
+    fontWeight: FontWeights.medium as any,
+  },
+  cardMessageUnread: {
+    color: isDark ? '#ffffff' : Colors.neutral900,
+    fontWeight: FontWeights.bold as any,
+  },
+  cardMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: Spacing.xs,
+  },
+  cardTime: {
+    fontSize: FontSizes.xs,
+    color: isDark ? '#6b7280' : Colors.neutral400,
+    fontWeight: FontWeights.medium as any,
+  },
+  toggleReadBtn: {
+    padding: Spacing.xxs + 1,
+  },
+  unreadDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.primary500,
+    marginTop: 6,
+    marginLeft: Spacing.xs,
+  },
+  listContent: {
+    paddingBottom: Spacing.xl,
+  },
+});
+
 const NotificationsScreen: React.FC = () => {
+  const isDark = useColorScheme() === 'dark';
+  const styles = createStyles(isDark);
   const navigation = useNavigation<any>();
   const {
     notifications,
@@ -126,13 +260,13 @@ const NotificationsScreen: React.FC = () => {
 
   const getNotificationIcon = (type?: string, message?: string) => {
     const m = (message || '').toLowerCase();
-    if (type === 'new_review' || m.includes('review')) return { name: 'star', color: '#f59e0b', bg: '#fef3c7' };
-    if (type === 'new_message' || m.includes('message')) return { name: 'comment', color: '#3b82f6', bg: '#dbeafe' };
-    if (m.includes('quote') || m.includes('payment') || type === 'job_funded') return { name: 'dollar-sign', color: '#10b981', bg: '#d1fae5' };
-    if (type === 'new_lead' || m.includes('lead') || m.includes('project')) return { name: 'briefcase', color: '#8b5cf6', bg: '#ede9fe' };
-    if (type === 'job_update') return { name: 'wrench', color: '#f97316', bg: '#ffedd5' };
-    if (type === 'admin_alert' || type === 'system_update') return { name: 'info-circle', color: '#6366f1', bg: '#eef2ff' };
-    return { name: 'bell', color: '#4F46E5', bg: '#eef2ff' };
+    if (type === 'new_review' || m.includes('review')) return { name: 'star', color: '#f59e0b', bg: isDark ? '#451a03' : '#fef3c7' };
+    if (type === 'new_message' || m.includes('message')) return { name: 'comment', color: '#3b82f6', bg: isDark ? '#1e3a8a' : '#dbeafe' };
+    if (m.includes('quote') || m.includes('payment') || type === 'job_funded') return { name: 'dollar-sign', color: '#10b981', bg: isDark ? '#064e3b' : '#d1fae5' };
+    if (type === 'new_lead' || m.includes('lead') || m.includes('project')) return { name: 'briefcase', color: '#8b5cf6', bg: isDark ? '#3b0764' : '#ede9fe' };
+    if (type === 'job_update') return { name: 'wrench', color: '#f97316', bg: isDark ? '#431407' : '#ffedd5' };
+    if (type === 'admin_alert' || type === 'system_update') return { name: 'info-circle', color: '#6366f1', bg: isDark ? '#1e1b4b' : '#eef2ff' };
+    return { name: 'bell', color: '#4F46E5', bg: isDark ? '#1e1b4b' : '#eef2ff' };
   };
 
   const renderNotification = ({ item }: { item: NotificationItem }) => {
@@ -173,7 +307,7 @@ const NotificationsScreen: React.FC = () => {
               <FontAwesome5
                 name={item.read ? 'envelope' : 'envelope-open'}
                 size={11}
-                color={Colors.neutral400}
+                color={isDark ? '#6b7280' : Colors.neutral400}
               />
             </Pressable>
           </View>
@@ -263,136 +397,5 @@ const NotificationsScreen: React.FC = () => {
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: Colors.neutral50,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.lg,
-    paddingBottom: Spacing.sm,
-    backgroundColor: '#fff',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: Colors.neutral200,
-  },
-  headerTitle: {
-    fontSize: FontSizes.xxl,
-    fontWeight: FontWeights.bold as any,
-    color: Colors.neutral900,
-  },
-  headerSubtitle: {
-    fontSize: FontSizes.xs,
-    color: Colors.neutral500,
-    fontWeight: FontWeights.medium as any,
-    marginTop: 2,
-  },
-  markAllHeaderBtn: {
-    backgroundColor: Colors.primary50,
-    paddingHorizontal: Spacing.sm + 2,
-    paddingVertical: Spacing.xs + 2,
-    borderRadius: Radii.round,
-  },
-  markAllHeaderText: {
-    fontSize: FontSizes.xs,
-    fontWeight: FontWeights.bold as any,
-    color: Colors.primary600,
-  },
-  skeletonList: {
-    paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.sm,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.md,
-    paddingBottom: Spacing.xs,
-    backgroundColor: Colors.neutral50,
-  },
-  sectionTitle: {
-    fontSize: FontSizes.xs,
-    fontWeight: FontWeights.bold as any,
-    color: Colors.neutral500,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  markAllBtn: {
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xxs,
-  },
-  markAllText: {
-    fontSize: FontSizes.xs,
-    fontWeight: FontWeights.semibold as any,
-    color: Colors.primary600,
-  },
-  card: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: '#fff',
-    marginHorizontal: Spacing.md,
-    marginBottom: Spacing.xs,
-    padding: Spacing.md,
-    borderRadius: Radii.md,
-    ...Shadows.xs,
-  },
-  cardUnread: {
-    backgroundColor: Colors.primary50,
-    borderLeftWidth: 3,
-    borderLeftColor: Colors.primary500,
-  },
-  iconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: Spacing.sm + 2,
-    marginTop: 1,
-  },
-  cardBody: {
-    flex: 1,
-  },
-  cardMessage: {
-    fontSize: FontSizes.sm,
-    lineHeight: 20,
-    color: Colors.neutral700,
-    fontWeight: FontWeights.medium as any,
-  },
-  cardMessageUnread: {
-    color: Colors.neutral900,
-    fontWeight: FontWeights.bold as any,
-  },
-  cardMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: Spacing.xs,
-  },
-  cardTime: {
-    fontSize: FontSizes.xs,
-    color: Colors.neutral400,
-    fontWeight: FontWeights.medium as any,
-  },
-  toggleReadBtn: {
-    padding: Spacing.xxs + 1,
-  },
-  unreadDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.primary500,
-    marginTop: 6,
-    marginLeft: Spacing.xs,
-  },
-  listContent: {
-    paddingBottom: Spacing.xl,
-  },
-});
 
 export default NotificationsScreen;

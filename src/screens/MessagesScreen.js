@@ -19,6 +19,7 @@ import {
 import { FontAwesome5 } from "@expo/vector-icons";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useColorScheme } from "nativewind";
 import ImageLightbox from "../components/ImageLightbox";
 import * as ImagePicker from "expo-image-picker";
 import {
@@ -168,7 +169,7 @@ const TypingIndicator = ({ name }) => {
 
   return (
     <View className="flex-row items-end px-4 mb-3">
-      <View className="bg-white px-4 py-3 rounded-2xl rounded-bl-sm flex-row items-center" style={{ shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 8, shadowOffset: { height: 2 }, elevation: 2 }}>
+      <View className="bg-white dark:bg-neutral-800 px-4 py-3 rounded-2xl rounded-bl-sm flex-row items-center" style={{ shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 8, shadowOffset: { height: 2 }, elevation: 2 }}>
         {[dot1, dot2, dot3].map((d, i) => (
           <Animated.View key={i} className="w-[7px] h-[7px] bg-neutral-400 rounded-full mx-[2px]" style={{ transform: [{ translateY: interp(d) }] }} />
         ))}
@@ -204,8 +205,8 @@ const EmptyInbox = () => (
     <View className="w-20 h-20 rounded-full bg-indigo-50 items-center justify-center mb-5">
       <FontAwesome5 name="comments" size={32} color="#818CF8" />
     </View>
-    <Text className="text-xl font-bold text-neutral-800 text-center mb-2">No messages yet</Text>
-    <Text className="text-sm text-neutral-400 text-center leading-5">When you connect with contractors, your conversations will appear here.</Text>
+    <Text className="text-xl font-bold text-neutral-800 dark:text-white text-center mb-2">No messages yet</Text>
+    <Text className="text-sm text-neutral-400 dark:text-neutral-500 text-center leading-5">When you connect with contractors, your conversations will appear here.</Text>
   </View>
 );
 
@@ -214,6 +215,8 @@ const ReportModal = ({ visible, onClose, userName, onReport }) => {
   const [selected, setSelected] = useState(null);
   const [details, setDetails] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
 
   const handleSubmit = async () => {
     if (!selected) return;
@@ -223,31 +226,31 @@ const ReportModal = ({ visible, onClose, userName, onReport }) => {
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      <View className="flex-1 bg-white">
-        <View className="px-5 pt-14 pb-4 border-b border-neutral-100 flex-row items-center justify-between">
-          <Text className="text-lg font-bold text-neutral-900">Report</Text>
-          <Pressable onPress={onClose} className="p-1"><FontAwesome5 name="times" size={18} color="#737373" /></Pressable>
+      <View className="flex-1 bg-white dark:bg-neutral-950">
+        <View className="px-5 pt-14 pb-4 border-b border-neutral-100 dark:border-neutral-800 flex-row items-center justify-between">
+          <Text className="text-lg font-bold text-neutral-900 dark:text-white">Report</Text>
+          <Pressable onPress={onClose} className="p-1"><FontAwesome5 name="times" size={18} color={isDark ? "#a3a3a3" : "#737373"} /></Pressable>
         </View>
-        <Text className="px-5 pt-5 pb-2 text-sm text-neutral-500">Why are you reporting {userName}?</Text>
+        <Text className="px-5 pt-5 pb-2 text-sm text-neutral-500 dark:text-neutral-400">Why are you reporting {userName}?</Text>
         <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 40 }}>
           {REPORT_CATEGORIES.map((cat) => (
-            <Pressable key={cat} onPress={() => setSelected(cat)} className="flex-row items-center px-5 py-4 border-b border-neutral-50" style={{ gap: 12 }}>
-              <View className={`w-5 h-5 rounded-full border-2 items-center justify-center ${selected === cat ? "border-red-500 bg-red-500" : "border-neutral-300"}`}>
+            <Pressable key={cat} onPress={() => setSelected(cat)} className="flex-row items-center px-5 py-4 border-b border-neutral-100 dark:border-neutral-800" style={{ gap: 12 }}>
+              <View className={`w-5 h-5 rounded-full border-2 items-center justify-center ${selected === cat ? "border-red-500 bg-red-500" : "border-neutral-300 dark:border-neutral-600"}`}>
                 {selected === cat && <FontAwesome5 name="check" size={9} color="white" />}
               </View>
-              <Text className={`text-[15px] ${selected === cat ? "text-neutral-900 font-semibold" : "text-neutral-700"}`}>{cat}</Text>
+              <Text className={`text-[15px] ${selected === cat ? "text-neutral-900 dark:text-white font-semibold" : "text-neutral-700 dark:text-neutral-300"}`}>{cat}</Text>
             </Pressable>
           ))}
           {selected && (
             <View className="px-5 pt-5">
-              <Text className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-2">Additional details (optional)</Text>
-              <TextInput className="bg-neutral-50 rounded-xl px-4 py-3 text-sm min-h-[80px]" placeholder="Tell us more..." placeholderTextColor="#a3a3a3" value={details} onChangeText={setDetails} multiline textAlignVertical="top" />
+              <Text className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-2">Additional details (optional)</Text>
+              <TextInput className="bg-neutral-50 dark:bg-neutral-800 rounded-xl px-4 py-3 text-sm min-h-[80px] text-neutral-900 dark:text-white" placeholder="Tell us more..." placeholderTextColor={isDark ? "#666" : "#a3a3a3"} value={details} onChangeText={setDetails} multiline textAlignVertical="top" />
             </View>
           )}
         </ScrollView>
         {selected && (
-          <View className="px-5 pb-10 pt-3 border-t border-neutral-100">
-            <Pressable onPress={handleSubmit} disabled={submitting} className={`py-4 rounded-xl items-center ${submitting ? "bg-red-300" : "bg-red-500"}`}>
+          <View className="px-5 pb-10 pt-3 border-t border-neutral-100 dark:border-neutral-800">
+            <Pressable onPress={handleSubmit} disabled={submitting} className={`py-4 rounded-xl items-center ${submitting ? "bg-red-300 dark:bg-red-900/40" : "bg-red-500"}`}>
               {submitting ? <ActivityIndicator size="small" color="white" /> : <Text className="text-white font-bold text-[15px]">Submit Report</Text>}
             </Pressable>
           </View>
@@ -269,25 +272,25 @@ const ConversationItem = React.memo(function ConversationItem({ conv, currentUse
   const lastMsgTime = conv.lastMessage?.createdAt || "";
 
   return (
-    <Pressable onPress={onPress} className="flex-row items-center px-5 py-3.5 active:bg-neutral-50" style={{ gap: 14 }}>
+    <Pressable onPress={onPress} className="flex-row items-center px-5 py-3.5 active:bg-neutral-50 dark:active:bg-neutral-800" style={{ gap: 14 }}>
       <View className="relative shrink-0">
         {isSvgUrl(avatarUrl) ? (
           <View className="w-[54px] h-[54px] rounded-full overflow-hidden"><SvgImage uri={avatarUrl} width="100%" height="100%" /></View>
         ) : (
-          <Image source={{ uri: avatarUrl }} className="w-[54px] h-[54px] rounded-full bg-neutral-100" />
+          <Image source={{ uri: avatarUrl }} className="w-[54px] h-[54px] rounded-full bg-neutral-100 dark:bg-neutral-700" />
         )}
-        {isOnline && <View className="absolute bottom-0.5 right-0.5 w-4 h-4 bg-emerald-500 rounded-full border-[2.5px] border-white" />}
+        {isOnline && <View className="absolute bottom-0.5 right-0.5 w-4 h-4 bg-emerald-500 rounded-full border-[2.5px] border-white dark:border-neutral-900" />}
       </View>
       <View className="flex-1 min-w-0">
         <View className="flex-row items-center justify-between">
           <View className="flex-row items-center flex-1" style={{ gap: 5 }}>
-            <Text className={`text-[15px] truncate ${conv.unreadCount > 0 ? "font-bold text-neutral-900" : "font-semibold text-neutral-800"}`} numberOfLines={1}>{displayName}</Text>
+            <Text className={`text-[15px] truncate ${conv.unreadCount > 0 ? "font-bold text-neutral-900 dark:text-white" : "font-semibold text-neutral-800 dark:text-neutral-300"}`} numberOfLines={1}>{displayName}</Text>
             {other?.role === "contractor" && (other?.isVerified || other?.isTopRated) && <VerifiedBadge size={13} animate={false} />}
           </View>
-          <Text className={`text-[11px] shrink-0 ml-3 ${conv.unreadCount > 0 ? "text-indigo-600 font-semibold" : "text-neutral-400"}`}>{lastMsgTime ? formatRelativeTime(lastMsgTime) : ""}</Text>
+          <Text className={`text-[11px] shrink-0 ml-3 ${conv.unreadCount > 0 ? "text-indigo-600 font-semibold" : "text-neutral-400 dark:text-neutral-500"}`}>{lastMsgTime ? formatRelativeTime(lastMsgTime) : ""}</Text>
         </View>
         <View className="flex-row items-center mt-1" style={{ gap: 6 }}>
-          <Text className={`text-[13px] flex-1 truncate ${conv.unreadCount > 0 ? "text-neutral-700 font-medium" : "text-neutral-400"}`} numberOfLines={1}>{lastMsgText}</Text>
+          <Text className={`text-[13px] flex-1 truncate ${conv.unreadCount > 0 ? "text-neutral-700 dark:text-neutral-300 font-medium" : "text-neutral-400 dark:text-neutral-500"}`} numberOfLines={1}>{lastMsgText}</Text>
           {conv.unreadCount > 0 && (
             <View className="bg-indigo-600 min-w-[20px] h-[20px] rounded-full items-center justify-center px-1.5">
               <Text className="text-white text-[10px] font-bold">{conv.unreadCount}</Text>
@@ -301,6 +304,8 @@ const ConversationItem = React.memo(function ConversationItem({ conv, currentUse
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 const MessagesScreen = () => {
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === "dark";
   const route = useRoute();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -685,16 +690,16 @@ const MessagesScreen = () => {
   }, [route.name, selectedConversation, loading, conversations]);
 
   return (
-    <KeyboardAvoidingView className="flex-1 bg-white" behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}>
+    <KeyboardAvoidingView className="flex-1 bg-neutral-950" behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}>
       <View className="flex-1" style={{ paddingTop: insets.top }}>
 
         {!showChat ? (
           <View className="flex-1">
-            <View className="px-5 pt-3 pb-1"><Text className="text-[28px] font-bold text-neutral-900 tracking-tight">Messages</Text></View>
+            <View className="px-5 pt-3 pb-1"><Text className="text-[28px] font-bold text-neutral-900 dark:text-white tracking-tight">Messages</Text></View>
             <View className="px-5 pb-2 pt-1">
-              <View className="bg-neutral-100 rounded-2xl px-4 py-3 flex-row items-center">
+              <View className="bg-neutral-100 dark:bg-neutral-800 rounded-2xl px-4 py-3 flex-row items-center">
                 <FontAwesome5 name="search" size={13} color="#a3a3a3" />
-                <TextInput className="flex-1 ml-3 text-[14px] text-neutral-800" placeholder="Search conversations..." placeholderTextColor="#a3a3a3" value={searchQuery} onChangeText={setSearchQuery} />
+                <TextInput className="flex-1 ml-3 text-[14px] text-neutral-800" placeholder="Search conversations..." placeholderTextColor={isDark ? "#666" : "#a3a3a3"} value={searchQuery} onChangeText={setSearchQuery} />
                 {searchQuery ? <Pressable onPress={() => setSearchQuery("")}><FontAwesome5 name="times-circle" size={14} color="#a3a3a3" /></Pressable> : null}
               </View>
             </View>
@@ -703,48 +708,48 @@ const MessagesScreen = () => {
             ) : filteredConversations.length === 0 ? (
               <EmptyInbox />
             ) : (
-              <FlatList data={filteredConversations} keyExtractor={(c) => c.conversationId || c._id} renderItem={({ item }) => <ConversationItem conv={item} currentUserId={currentUserId} onlineUsers={onlineUsers} onPress={() => { HapticFeedback.selection(); setSelectedConversation(item); }} />} ItemSeparatorComponent={() => <View className="ml-[82px] border-b border-neutral-100" />} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadConversations(true)} tintColor="#818CF8" />} contentContainerStyle={{ paddingBottom: 20 }} />
+              <FlatList data={filteredConversations} keyExtractor={(c) => c.conversationId || c._id} renderItem={({ item }) => <ConversationItem conv={item} currentUserId={currentUserId} onlineUsers={onlineUsers} onPress={() => { HapticFeedback.selection(); setSelectedConversation(item); }} />} ItemSeparatorComponent={() => <View className="ml-[82px] border-b border-neutral-100 dark:border-neutral-800" />} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadConversations(true)} tintColor="#818CF8" />} contentContainerStyle={{ paddingBottom: 20 }} />
             )}
           </View>
         ) : (
           <View className="flex-1">
-            <View className="px-4 py-3 flex-row items-center bg-white border-b border-neutral-100/80" style={{ gap: 12 }}>
+            <View className="px-4 py-3 flex-row items-center bg-white dark:bg-neutral-900 border-b border-neutral-100 dark:border-neutral-800/80" style={{ gap: 12 }}>
               <Pressable onPress={() => { if (route.name === "ChatScreen") navigation.goBack(); else setSelectedConversation(null); }} className="w-11 h-11 items-center justify-center rounded-full -ml-1" accessibilityLabel="Go back" accessibilityRole="button">
-                <FontAwesome5 name="chevron-left" size={16} color="#171717" />
+                <FontAwesome5 name="chevron-left" size={16} color={isDark ? "#e5e5e5" : "#171717"} />
               </Pressable>
               <View className="relative">
                 {isSvgUrl(chatAvatar) ? <View className="w-10 h-10 rounded-full overflow-hidden"><SvgImage uri={chatAvatar} width="100%" height="100%" /></View> : <Image source={{ uri: chatAvatar }} className="w-10 h-10 rounded-full bg-neutral-100" />}
               </View>
               <View className="flex-1 min-w-0">
                 <View className="flex-row items-center" style={{ gap: 4 }}>
-                  <Text className="text-[15px] font-bold text-neutral-900 truncate" numberOfLines={1}>{chatName}</Text>
+                  <Text className="text-[15px] font-bold text-neutral-900 dark:text-white truncate" numberOfLines={1}>{chatName}</Text>
                   {chatOther?.role === "contractor" && (chatOther?.isVerified || chatOther?.isTopRated) && <VerifiedBadge size={14} animate={false} />}
                 </View>
               </View>
-              <Pressable onPress={() => setActionSheetVisible(true)} className="w-11 h-11 items-center justify-center rounded-full" accessibilityLabel="Chat options" accessibilityRole="button"><FontAwesome5 name="ellipsis-h" size={16} color="#525252" /></Pressable>
+              <Pressable onPress={() => setActionSheetVisible(true)} className="w-11 h-11 items-center justify-center rounded-full" accessibilityLabel="Chat options" accessibilityRole="button"><FontAwesome5 name="ellipsis-h" size={16} color={isDark ? "#a3a3a3" : "#525252"} /></Pressable>
             </View>
 
-            <ScrollView ref={messagesRef} className="flex-1 bg-neutral-50/60" contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 }} onContentSizeChange={() => messagesRef.current?.scrollToEnd({ animated: false })} onScroll={(e) => { const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent; setShowScrollBtn(contentSize.height - layoutMeasurement.height - contentOffset.y > 300); }} scrollEventThrottle={64}>
+            <ScrollView ref={messagesRef} className="flex-1 bg-neutral-50/60 dark:bg-neutral-950/60" contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 }} onContentSizeChange={() => messagesRef.current?.scrollToEnd({ animated: false })} onScroll={(e) => { const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent; setShowScrollBtn(contentSize.height - layoutMeasurement.height - contentOffset.y > 300); }} scrollEventThrottle={64}>
               {loading ? (
                 <View className="items-center py-10"><ActivityIndicator size="small" color="#818CF8" /></View>
               ) : (
                 processedMessages.map((msg, idx) => {
-                  if (msg.type === "system" || resolveId(msg.senderId || msg.sender) === "system") return <View key={msg._id || `s-${idx}`} className="items-center my-4"><View className="bg-neutral-200/60 px-4 py-1.5 rounded-full"><Text className="text-[11px] text-neutral-500 font-medium">{msg.messageText}</Text></View></View>;
+                  if (msg.type === "system" || resolveId(msg.senderId || msg.sender) === "system") return <View key={msg._id || `s-${idx}`} className="items-center my-4"><View className="bg-neutral-200/60 dark:bg-neutral-700/60 px-4 py-1.5 rounded-full"><Text className="text-[11px] text-neutral-500 dark:text-neutral-400 font-medium">{msg.messageText}</Text></View></View>;
                   const isMe = msg.isMe;
                   return (
                     <View key={msg._id || `m-${idx}`}>
-                      {msg.showDate && <View className="items-center my-5"><View className="bg-white/80 px-4 py-1.5 rounded-full shadow-sm border border-neutral-100/50"><Text className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">{formatChatDate(msg.createdAt)}</Text></View></View>}
+                      {msg.showDate && <View className="items-center my-5"><View className="bg-white/80 dark:bg-neutral-800/80 px-4 py-1.5 rounded-full shadow-sm border border-neutral-100/50 dark:border-neutral-700/50"><Text className="text-[11px] font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">{formatChatDate(msg.createdAt)}</Text></View></View>}
                       <View className={`flex-row ${isMe ? "justify-end" : "justify-start"} ${msg.isFirstInGroup ? "mt-4" : "mt-1"}`}>
                         {!isMe && msg.isFirstInGroup ? <View className="w-8 mr-2 mt-1 items-center">{isSvgUrl(chatAvatar) ? <View className="w-7 h-7 rounded-full overflow-hidden"><SvgImage uri={chatAvatar} width="100%" height="100%" /></View> : <Image source={{ uri: chatAvatar }} className="w-7 h-7 rounded-full bg-neutral-100" />}</View> : !isMe ? <View className="w-8 mr-2" /> : null}
                         <View className={`${(msg.type === "quote" || msg.quoteId) && msg.quote ? "w-[92%]" : "max-w-[78%]"} ${isMe ? "items-end" : "items-start"}`}>
                           {(msg.type === "quote" || msg.quoteId) && msg.quote ? (
                             <>
-                              <View className="w-full bg-white rounded-2xl border border-neutral-200 overflow-hidden" style={{ shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { height: 2 }, elevation: 2 }}>
+                              <View className="w-full bg-white dark:bg-neutral-800 rounded-2xl border border-neutral-200 dark:border-neutral-700 overflow-hidden" style={{ shadowColor: "#000", shadowOpacity: isDark ? 0 : 0.06, shadowRadius: 8, shadowOffset: { height: 2 }, elevation: isDark ? 0 : 2 }}>
                                 {/* Status banner */}
                                 {msg.quote.status && msg.quote.status !== 'pending' && msg.quote.status !== 'pending_user_approval' && (
-                                  <View className={`px-4 py-2 flex-row items-center border-b ${msg.quote.status === 'accepted' || msg.quote.status === 'funded_in_progress' ? 'bg-emerald-50 border-emerald-100' : msg.quote.status === 'rejected' || msg.quote.status === 'declined' ? 'bg-red-50 border-red-100' : 'bg-amber-50 border-amber-100'}`}>
-                                    <FontAwesome5 name={msg.quote.status === 'accepted' || msg.quote.status === 'funded_in_progress' ? 'check-circle' : msg.quote.status === 'rejected' || msg.quote.status === 'declined' ? 'times-circle' : 'clock'} size={12} color={msg.quote.status === 'accepted' || msg.quote.status === 'funded_in_progress' ? '#059669' : msg.quote.status === 'rejected' || msg.quote.status === 'declined' ? '#dc2626' : '#d97706'} />
-                                    <Text className={`text-[12px] font-semibold ml-2 ${msg.quote.status === 'accepted' || msg.quote.status === 'funded_in_progress' ? 'text-emerald-700' : msg.quote.status === 'rejected' || msg.quote.status === 'declined' ? 'text-red-700' : 'text-amber-700'}`}>
+                                  <View className={`px-4 py-2 flex-row items-center border-b ${msg.quote.status === 'accepted' || msg.quote.status === 'funded_in_progress' ? (isDark ? 'bg-emerald-900/40 border-emerald-800' : 'bg-emerald-50 border-emerald-100') : msg.quote.status === 'rejected' || msg.quote.status === 'declined' ? (isDark ? 'bg-red-900/40 border-red-800' : 'bg-red-50 border-red-100') : (isDark ? 'bg-amber-900/40 border-amber-800' : 'bg-amber-50 border-amber-100')}`}>
+                                    <FontAwesome5 name={msg.quote.status === 'accepted' || msg.quote.status === 'funded_in_progress' ? 'check-circle' : msg.quote.status === 'rejected' || msg.quote.status === 'declined' ? 'times-circle' : 'clock'} size={12} color={msg.quote.status === 'accepted' || msg.quote.status === 'funded_in_progress' ? (isDark ? '#6ee7b7' : '#059669') : msg.quote.status === 'rejected' || msg.quote.status === 'declined' ? (isDark ? '#fca5a5' : '#dc2626') : (isDark ? '#fcd34d' : '#d97706')} />
+                                    <Text className={`text-[12px] font-semibold ml-2 ${msg.quote.status === 'accepted' || msg.quote.status === 'funded_in_progress' ? (isDark ? 'text-emerald-300' : 'text-emerald-700') : msg.quote.status === 'rejected' || msg.quote.status === 'declined' ? (isDark ? 'text-red-300' : 'text-red-700') : (isDark ? 'text-amber-300' : 'text-amber-700')}`}>
                                       {msg.quote.status === 'accepted' || msg.quote.status === 'funded_in_progress' ? 'Quote Accepted' : msg.quote.status === 'rejected' || msg.quote.status === 'declined' ? 'Quote Declined' : 'Pending Review'}
                                     </Text>
                                   </View>
@@ -753,15 +758,15 @@ const MessagesScreen = () => {
                                 {/* Contractor row */}
                                 <View className="flex-row p-4 pb-3" style={{ gap: 12 }}>
                                   {isSvgUrl(chatAvatar) ? (
-                                    <View className="w-10 h-10 rounded-full overflow-hidden bg-neutral-100"><SvgImage uri={chatAvatar} width="100%" height="100%" /></View>
+                                    <View className="w-10 h-10 rounded-full overflow-hidden bg-neutral-100 dark:bg-neutral-700"><SvgImage uri={chatAvatar} width="100%" height="100%" /></View>
                                   ) : (
-                                    <Image source={{ uri: chatAvatar }} className="w-10 h-10 rounded-full bg-neutral-100" />
+<Image source={{ uri: chatAvatar }} className="w-10 h-10 rounded-full bg-neutral-100 dark:bg-neutral-700" />
                                   )}
                                   <View className="flex-1 min-w-0">
-                                    <Text className="text-[14px] font-semibold text-neutral-900" numberOfLines={1}>{chatName}</Text>
+                                    <Text className="text-[14px] font-semibold text-neutral-900 dark:text-white" numberOfLines={1}>{chatName}</Text>
                                     <View className="flex-row items-center mt-0.5" style={{ gap: 4 }}>
                                       <FontAwesome5 name="star" size={10} color="#eab308" solid />
-                                      <Text className="text-[12px] text-neutral-500">{msg.quote.contractor?.averageRating || '5.0'}</Text>
+                                      <Text className="text-[12px]" style={{ color: isDark ? '#d4d4d4' : '#737373' }}>{msg.quote.contractor?.averageRating || '5.0'}</Text>
                                     </View>
                                   </View>
                                 </View>
@@ -769,12 +774,12 @@ const MessagesScreen = () => {
                                 {/* Category + Description */}
                                 <View className="px-4 pb-3">
                                   <View className="flex-row mb-1.5" style={{ gap: 6 }}>
-                                    <View className="px-2 py-0.5 bg-blue-50 rounded-md"><Text className="text-[11px] font-semibold text-blue-700">{msg.quote.serviceType || msg.quote.category || 'Service'}</Text></View>
-                                    {msg.quote.revisions > 0 && <View className="px-2 py-0.5 bg-purple-50 rounded-md"><Text className="text-[11px] font-medium text-purple-700">Revision #{msg.quote.revisions}</Text></View>}
+                                    <View className="px-2 py-0.5 rounded-md" style={{ backgroundColor: isDark ? '#1e3a8a' : '#eff6ff' }}><Text className="text-[11px] font-semibold" style={{ color: isDark ? '#93c5fd' : '#1d4ed8' }}>{msg.quote.serviceType || msg.quote.category || 'Service'}</Text></View>
+                                    {msg.quote.revisions > 0 && <View className="px-2 py-0.5 rounded-md" style={{ backgroundColor: isDark ? '#581c87' : '#faf5ff' }}><Text className="text-[11px] font-medium" style={{ color: isDark ? '#d8b4fe' : '#7e22ce' }}>Revision #{msg.quote.revisions}</Text></View>}
                                   </View>
-                                  <Text className="text-[15px] font-semibold text-neutral-900">{msg.quote.description || msg.quote.projectName || 'Project Quote'}</Text>
+                                  <Text className="text-[15px] font-semibold" style={{ color: isDark ? '#ffffff' : '#171717' }}>{msg.quote.description || msg.quote.projectName || 'Project Quote'}</Text>
                                   {msg.quote.description && msg.quote.projectName && msg.quote.description !== msg.quote.projectName && (
-                                    <Text className="text-[13px] text-neutral-600 mt-1 leading-[18px]">{msg.quote.description}</Text>
+                                    <Text className="text-[13px] mt-1 leading-[18px]" style={{ color: isDark ? '#d4d4d4' : '#525252' }}>{msg.quote.description}</Text>
                                   )}
                                 </View>
                                 
@@ -783,16 +788,16 @@ const MessagesScreen = () => {
                                   <View className="px-4 pb-3 flex-row" style={{ gap: 16 }}>
                                     {msg.quote.estimatedStartDate && (
                                       <View className="flex-row items-center" style={{ gap: 6 }}>
-                                        <FontAwesome5 name="calendar" size={12} color="#737373" />
-                                        <Text className="text-[12px] font-medium text-neutral-700">
+                                        <FontAwesome5 name="calendar" size={12} color={isDark ? "#a3a3a3" : "#737373"} />
+                                        <Text className="text-[12px] font-medium" style={{ color: isDark ? '#d4d4d4' : '#404040' }}>
                                           {(() => { try { return new Date(msg.quote.estimatedStartDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); } catch { return 'TBD'; } })()}
                                         </Text>
                                       </View>
                                     )}
                                     {msg.quote.estimatedCompletionDate && (
                                       <View className="flex-row items-center" style={{ gap: 6 }}>
-                                        <FontAwesome5 name="clock" size={12} color="#737373" />
-                                        <Text className="text-[12px] text-neutral-500">
+                                        <FontAwesome5 name="clock" size={12} color={isDark ? "#a3a3a3" : "#737373"} />
+                                        <Text className="text-[12px]" style={{ color: isDark ? '#d4d4d4' : '#737373' }}>
                                           {(() => { try { return new Date(msg.quote.estimatedCompletionDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); } catch { return 'TBD'; } })()}
                                         </Text>
                                       </View>
@@ -801,29 +806,29 @@ const MessagesScreen = () => {
                                 )}
                                 
                                 {/* Divider */}
-                                <View className="mx-4 h-px bg-neutral-100" />
+                                <View className="mx-4 h-px bg-neutral-100 dark:bg-neutral-700" />
                                 
                                 {/* Line items */}
                                 <View className="p-4 py-3" style={{ gap: 10 }}>
                                   {(msg.quote.lineItems || []).length > 0 ? (
                                     msg.quote.lineItems.map((item, idx) => (
                                       <View key={idx} className="flex-row justify-between">
-                                        <Text className="text-[13px] text-neutral-600 flex-1 mr-3" numberOfLines={1}>{item.description || item.label || `Item ${idx + 1}`}</Text>
-                                        <Text className="text-[13px] font-medium text-neutral-900">${((item.amount || 0) / 100).toLocaleString()}</Text>
+                                        <Text className="text-[13px] flex-1 mr-3" numberOfLines={1} style={{ color: isDark ? '#d4d4d4' : '#525252' }}>{item.description || item.label || `Item ${idx + 1}`}</Text>
+                                        <Text className="text-[13px] font-medium" style={{ color: isDark ? '#ffffff' : '#171717' }}>${((item.amount || 0) / 100).toLocaleString()}</Text>
                                       </View>
                                     ))
                                   ) : (
                                     <View className="flex-row justify-between">
-                                      <Text className="text-[13px] text-neutral-600">Project Cost</Text>
-                                      <Text className="text-[13px] font-medium text-neutral-900">${(() => { const a = (msg.quote.subtotal || msg.quote.totalAmount || 0) / 100; return Number.isFinite(a) ? a.toLocaleString() : '0'; })()}</Text>
+                                      <Text className="text-[13px]" style={{ color: isDark ? '#d4d4d4' : '#525252' }}>Project Cost</Text>
+                                      <Text className="text-[13px] font-medium" style={{ color: isDark ? '#ffffff' : '#171717' }}>${(() => { const a = (msg.quote.subtotal || msg.quote.totalAmount || 0) / 100; return Number.isFinite(a) ? a.toLocaleString() : '0'; })()}</Text>
                                     </View>
                                   )}
                                   
-                                  <View className="h-px bg-neutral-100 my-1" />
+                                  <View className="h-px bg-neutral-100 dark:bg-neutral-700 my-1" />
                                   
                                   <View className="flex-row justify-between items-center">
-                                    <Text className="text-[13px] font-semibold text-neutral-900">Total</Text>
-                                    <Text className="text-[18px] font-bold text-neutral-900">${(() => {
+                                    <Text className="text-[13px] font-semibold" style={{ color: isDark ? '#ffffff' : '#171717' }}>Total</Text>
+                                    <Text className="text-[18px] font-bold" style={{ color: isDark ? '#ffffff' : '#171717' }}>${(() => {
                                       const amount = msg.quote.totalAmount != null ? msg.quote.totalAmount / 100 : msg.quote.total != null ? msg.quote.total : 0;
                                       return Number.isFinite(amount) ? amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00';
                                     })()}</Text>
@@ -831,9 +836,9 @@ const MessagesScreen = () => {
                                 </View>
                                 
                                 {/* Escrow notice */}
-                                <View className="mx-4 mb-4 p-3 bg-blue-50 rounded-xl flex-row items-start" style={{ gap: 8 }}>
-                                  <FontAwesome5 name="shield-alt" size={14} color="#2563EB" style={{ marginTop: 1 }} />
-                                  <Text className="text-[11px] text-blue-700 flex-1 leading-[16px]">Secure escrow — funds held until you approve the completed work.</Text>
+                                <View className="mx-4 mb-4 p-3 rounded-xl flex-row items-start" style={{ gap: 8, backgroundColor: isDark ? '#1e3a8a' : '#eff6ff' }}>
+                                  <FontAwesome5 name="shield-alt" size={14} color={isDark ? "#60a5fa" : "#2563EB"} style={{ marginTop: 1 }} />
+                                  <Text className="text-[11px] flex-1 leading-[16px]" style={{ color: isDark ? '#bfdbfe' : '#1d4ed8' }}>Secure escrow — funds held until you approve the completed work.</Text>
                                 </View>
                                 
                                 {/* Action button */}
@@ -848,10 +853,10 @@ const MessagesScreen = () => {
                             </>
                           ) : (
                             <>
-                              <View className={`px-[14px] py-[10px] ${isMe ? `bg-indigo-600 ${msg.isFirstInGroup ? "rounded-2xl rounded-tr-md" : "rounded-2xl"}` : `bg-white ${msg.isFirstInGroup ? "rounded-2xl rounded-tl-md" : "rounded-2xl"}`}`} style={!isMe ? { shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 8, shadowOffset: { height: 1 }, elevation: 1 } : undefined}>
+                              <View className={`px-[14px] py-[10px] ${isMe ? `bg-indigo-600 ${msg.isFirstInGroup ? "rounded-2xl rounded-tr-md" : "rounded-2xl"}` : `bg-white dark:bg-neutral-800 ${msg.isFirstInGroup ? "rounded-2xl rounded-tl-md" : "rounded-2xl"}`}`} style={!isMe ? { shadowColor: isDark ? "transparent" : "#000", shadowOpacity: isDark ? 0 : 0.04, shadowRadius: 8, shadowOffset: { height: 1 }, elevation: isDark ? 0 : 1 } : undefined}>
                                 {msg.attachmentUrl && /\.(jpg|jpeg|png|gif|webp)$/i.test(msg.attachmentUrl) && <Pressable onPress={() => { setActiveImage(msg.attachmentUrl); setLightboxVisible(true); }} className="mb-1.5 -mx-[2px] -mt-[2px] overflow-hidden" style={{ borderRadius: msg.isFirstInGroup ? 14 : 16 }}><Image source={{ uri: msg.attachmentUrl }} style={{ width: 240, height: 180 }} resizeMode="cover" /></Pressable>}
-                                {msg.attachmentUrl && !/\.(jpg|jpeg|png|gif|webp)$/i.test(msg.attachmentUrl) && <Pressable onPress={() => Linking.openURL(msg.attachmentUrl)} className={`flex-row items-center p-2.5 rounded-xl mb-1.5 border ${isMe ? "bg-white/10 border-white/20" : "bg-neutral-50 border-neutral-200"}`}><FontAwesome5 name="file-alt" size={14} color={isMe ? "white" : "#737373"} /><Text className={`text-[12px] ml-2 font-semibold ${isMe ? "text-white" : "text-neutral-600"}`}>View Attachment</Text></Pressable>}
-                                {msg.messageText ? <Text className={`text-[15px] leading-[22px] ${isMe ? "text-white" : "text-neutral-800"}`}>{msg.messageText}</Text> : null}
+                                {msg.attachmentUrl && !/\.(jpg|jpeg|png|gif|webp)$/i.test(msg.attachmentUrl) && <Pressable onPress={() => Linking.openURL(msg.attachmentUrl)} className={`flex-row items-center p-2.5 rounded-xl mb-1.5 border ${isMe ? "bg-white/10 border-white/20" : "bg-neutral-50 dark:bg-neutral-700 border-neutral-200 dark:border-neutral-600"}`}><FontAwesome5 name="file-alt" size={14} color={isMe ? "white" : (isDark ? "#a3a3a3" : "#737373")} /><Text className={`text-[12px] ml-2 font-semibold ${isMe ? "text-white" : "text-neutral-600 dark:text-neutral-300"}`}>View Attachment</Text></Pressable>}
+                                {msg.messageText ? <Text className={`text-[15px] leading-[22px] ${isMe ? "text-white" : "text-neutral-800 dark:text-neutral-100"}`}>{msg.messageText}</Text> : null}
                               </View>
                               {msg.isLastInGroup && <View className={`flex-row items-center mt-1 px-1 ${isMe ? "justify-end" : "justify-start"}`} style={{ gap: 4 }}><Text className="text-[10px] text-neutral-400 font-medium">{msg.timeStr}</Text>{isMe && <FontAwesome5 name={msg.read ? "check-double" : "check"} size={9} color={msg.read ? "#10b981" : "#c4b5fd"} solid={msg.read} />}</View>}
                             </>
@@ -865,14 +870,14 @@ const MessagesScreen = () => {
               {isOtherTyping && <TypingIndicator name={chatName?.split(" ")[0]} />}
             </ScrollView>
 
-            {showScrollBtn && <Pressable onPress={() => { HapticFeedback.selection(); messagesRef.current?.scrollToEnd({ animated: true }); }} className="absolute bottom-24 right-4 w-11 h-11 bg-white rounded-full items-center justify-center shadow-lg" style={{ shadowColor: "#000", shadowOpacity: 0.12, shadowRadius: 8, shadowOffset: { height: 2 }, elevation: 5 }} accessibilityLabel="Scroll to bottom" accessibilityRole="button"><FontAwesome5 name="chevron-down" size={12} color="#525252" /></Pressable>}
+            {showScrollBtn && <Pressable onPress={() => { HapticFeedback.selection(); messagesRef.current?.scrollToEnd({ animated: true }); }} className="absolute bottom-24 right-4 w-11 h-11 bg-white dark:bg-neutral-800 rounded-full items-center justify-center shadow-lg" style={{ shadowColor: "#000", shadowOpacity: 0.12, shadowRadius: 8, shadowOffset: { height: 2 }, elevation: 5 }} accessibilityLabel="Scroll to bottom" accessibilityRole="button"><FontAwesome5 name="chevron-down" size={12} color={isDark ? "#a3a3a3" : "#525252"} /></Pressable>}
 
-            {pendingAttachment && <View className="px-4 py-2.5 bg-white border-t border-neutral-100 flex-row items-center justify-between"><View className="flex-row items-center" style={{ gap: 10 }}><Image source={{ uri: pendingAttachment.uri }} className="w-12 h-12 rounded-xl" /><View><Text className="text-[12px] font-semibold text-neutral-700">Image ready to send</Text><Text className="text-[10px] text-neutral-400">Tap send to share</Text></View></View><Pressable onPress={() => setPendingAttachment(null)} className="w-7 h-7 bg-neutral-100 rounded-full items-center justify-center"><FontAwesome5 name="times" size={10} color="#525252" /></Pressable></View>}
+            {pendingAttachment && <View className="px-4 py-2.5 bg-white dark:bg-neutral-900 border-t border-neutral-100 dark:border-neutral-800 flex-row items-center justify-between"><View className="flex-row items-center" style={{ gap: 10 }}><Image source={{ uri: pendingAttachment.uri }} className="w-12 h-12 rounded-xl" /><View><Text className="text-[12px] font-semibold text-neutral-700 dark:text-neutral-300">Image ready to send</Text><Text className="text-[10px] text-neutral-400 dark:text-neutral-500">Tap send to share</Text></View></View><Pressable onPress={() => setPendingAttachment(null)} className="w-7 h-7 bg-neutral-100 dark:bg-neutral-700 rounded-full items-center justify-center"><FontAwesome5 name="times" size={10} color={isDark ? "#a3a3a3" : "#525252"} /></Pressable></View>}
 
-            <View className="px-4 py-3 bg-white border-t border-neutral-100 flex-row items-end" style={{ gap: 8, paddingBottom: insets.bottom + 12 || 12 }}>
-              <Pressable onPress={pickImage} className="w-11 h-11 items-center justify-center rounded-full bg-neutral-50" accessibilityLabel="Attach image" accessibilityRole="button"><FontAwesome5 name="image" size={15} color="#737373" /></Pressable>
+            <View className="px-4 py-3 bg-white dark:bg-neutral-900 border-t border-neutral-100 dark:border-neutral-800 flex-row items-end" style={{ gap: 8, paddingBottom: insets.bottom + 12 || 12 }}>
+              <Pressable onPress={pickImage} className="w-11 h-11 items-center justify-center rounded-full bg-neutral-50 dark:bg-neutral-800" accessibilityLabel="Attach image" accessibilityRole="button"><FontAwesome5 name="image" size={15} color="#737373" /></Pressable>
               {contractorProfile && selectedConversation?.conversationId && <Pressable onPress={() => setShowQuoteSheet(true)} className="w-11 h-11 items-center justify-center rounded-full bg-indigo-50" accessibilityLabel="Send quote" accessibilityRole="button"><FontAwesome5 name="tag" size={13} color="#4F46E5" /></Pressable>}
-              <View className="flex-1 bg-neutral-100 rounded-2xl px-4 py-2.5 max-h-[120px]"><TextInput className="text-[15px] text-neutral-800 leading-5" placeholder="Type a message..." placeholderTextColor="#a3a3a3" value={newMessage} onChangeText={handleTextChange} multiline style={{ maxHeight: 100 }} accessibilityLabel="Message input" accessibilityRole="text" /></View>
+              <View className="flex-1 bg-neutral-100 dark:bg-neutral-800 rounded-2xl px-4 py-2.5 max-h-[120px]"><TextInput className="text-[15px] text-neutral-800 dark:text-neutral-200 leading-5" placeholder="Type a message..." placeholderTextColor={isDark ? "#666" : "#a3a3a3"} value={newMessage} onChangeText={handleTextChange} multiline style={{ maxHeight: 100 }} accessibilityLabel="Message input" accessibilityRole="text" /></View>
               <Pressable onPress={handleSendMessage} disabled={(!newMessage.trim() && !pendingAttachment) || isUploading} className={`w-11 h-11 rounded-full items-center justify-center mb-0.5 ${newMessage.trim() || pendingAttachment ? "bg-indigo-600" : "bg-neutral-200"}`} style={newMessage.trim() || pendingAttachment ? { shadowColor: "#4F46E5", shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { height: 2 }, elevation: 3 } : undefined} accessibilityLabel="Send message" accessibilityRole="button">
                 {isUploading ? <ActivityIndicator size="small" color="white" /> : <FontAwesome5 name="paper-plane" size={14} color={newMessage.trim() || pendingAttachment ? "white" : "#a3a3a3"} />}
               </Pressable>

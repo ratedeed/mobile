@@ -13,6 +13,7 @@ import {
   Dimensions,
   FlatList,
   Linking,
+  useColorScheme,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -69,6 +70,7 @@ function formatRelativeTime(dateStr: string): string {
 const BusinessDetailScreen: React.FC = () => {
   const route = useRoute();
   const navigation = useNavigation<NavigationProp>();
+  const isDark = useColorScheme() === 'dark';
   const { id } = route.params as { id: string };
   
   const [contractor, setContractor] = useState<Contractor | null>(null);
@@ -1010,12 +1012,13 @@ const BusinessDetailScreen: React.FC = () => {
         <View className="absolute inset-0 z-[100] justify-end" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <Pressable className="flex-1" onPress={() => setShowReportDialog(false)} />
           <View className="bg-white dark:bg-neutral-950 rounded-t-3xl p-6">
-            <Text className="text-xl font-bold mb-4">Report Profile</Text>
+            <Text className="text-xl font-bold mb-4 text-neutral-900 dark:text-white">Report Profile</Text>
             <TextInput
               placeholder="Why are you reporting this profile?"
               multiline
-              className="bg-neutral-50 dark:bg-neutral-900 p-4 rounded-xl mb-4 text-sm"
+              className="bg-neutral-50 dark:bg-neutral-900 p-4 rounded-xl mb-4 text-sm text-neutral-900 dark:text-white"
               style={{ height: 100, textAlignVertical: 'top' }}
+              placeholderTextColor={isDark ? "#666" : "#a3a3a3"}
               value={reportReason}
               onChangeText={setReportReason}
             />
@@ -1030,11 +1033,11 @@ const BusinessDetailScreen: React.FC = () => {
       {showClaimModal && (
         <View className="absolute inset-0 z-[100] justify-end" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <Pressable className="flex-1" onPress={() => { setShowClaimModal(false); setClaimDocumentFile(null); setClaimError(null); }} />
-          <View className="bg-white rounded-t-3xl p-6">
+            <View className="bg-white dark:bg-neutral-950 rounded-t-3xl p-6">
             <View className="flex-row justify-between items-center mb-4">
-              <Text className="text-xl font-bold text-neutral-900">Claim This Profile</Text>
+              <Text className="text-xl font-bold text-neutral-900 dark:text-white">Claim This Profile</Text>
               <Pressable onPress={() => { setShowClaimModal(false); setClaimDocumentFile(null); setClaimError(null); }} className="w-8 h-8 items-center justify-center rounded-full">
-                <FontAwesome5 name="times" size={14} color="#737373" />
+                <FontAwesome5 name="times" size={14} color={isDark ? "#a3a3a3" : "#737373"} />
               </Pressable>
             </View>
 

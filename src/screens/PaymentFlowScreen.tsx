@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Pressable, ScrollView, ActivityIndicator, Alert, Platform, StyleSheet, Appearance } from 'react-native';
+import { View, Text, Pressable, ScrollView, ActivityIndicator, Alert, Platform, StyleSheet, useColorScheme } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const isDark = Appearance.getColorScheme() === 'dark';
 import { createCheckoutSession, createPaymentIntent } from '../api';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useStripe, usePlatformPay, confirmPlatformPayPayment, PlatformPay } from '@stripe/stripe-react-native';
@@ -12,6 +11,7 @@ import { useStripe, usePlatformPay, confirmPlatformPayPayment, PlatformPay } fro
 const STEP_LABELS = ['Review', 'Payment', 'Confirmed'];
 
 export default function PaymentFlowScreen() {
+  const isDark = useColorScheme() === 'dark';
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
@@ -107,7 +107,7 @@ export default function PaymentFlowScreen() {
             <FontAwesome5 name="chevron-left" size={18} color="#171717" />
           </Pressable>
         )}
-        <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#171717', flex: 1, textAlign: 'center' }}>
+        <Text style={{ fontSize: 14, fontWeight: 'bold', color: isDark ? '#ffffff' : '#171717', flex: 1, textAlign: 'center' }}>
           {currentStep === 2 ? 'Payment Complete' : 'Secure Payment'}
         </Text>
         <View style={{ width: 40 }} />
@@ -143,10 +143,10 @@ export default function PaymentFlowScreen() {
             <View style={{ backgroundColor: 'white', borderRadius: 16, borderWidth: 1, borderColor: '#e5e5e5', padding: 16 }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                 <View>
-                  <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#171717' }}>{contractorName}</Text>
-                  <Text style={{ fontSize: 12, color: '#737373' }}>Service Fee Included</Text>
+                  <Text style={{ fontSize: 14, fontWeight: 'bold', color: isDark ? '#ffffff' : '#171717' }}>{contractorName}</Text>
+                  <Text style={{ fontSize: 12, color: isDark ? '#a3a3a3' : '#737373' }}>Service Fee Included</Text>
                 </View>
-                <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#171717' }}>${(quoteTotal / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
+                <Text style={{ fontSize: 18, fontWeight: 'bold', color: isDark ? '#ffffff' : '#171717' }}>${(quoteTotal / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
               </View>
             </View>
 
@@ -220,9 +220,9 @@ export default function PaymentFlowScreen() {
             <View style={{ width: 80, height: 80, backgroundColor: '#ecfdf5', borderRadius: 40, alignItems: 'center', justifyContent: 'center', marginBottom: 24 }}>
               <FontAwesome5 name="check" size={32} color="#10b981" />
             </View>
-            <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#171717' }}>Payment Confirmed!</Text>
-            <Text style={{ fontSize: 30, fontWeight: 'bold', color: '#171717', marginTop: 8 }}>${(quoteTotal / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
-            <Text style={{ fontSize: 14, color: '#737373' }}>paid to {contractorName}</Text>
+            <Text style={{ fontSize: 20, fontWeight: 'bold', color: isDark ? '#ffffff' : '#171717' }}>Payment Confirmed!</Text>
+            <Text style={{ fontSize: 30, fontWeight: 'bold', color: isDark ? '#ffffff' : '#171717', marginTop: 8 }}>${(quoteTotal / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
+            <Text style={{ fontSize: 14, color: isDark ? '#a3a3a3' : '#737373' }}>paid to {contractorName}</Text>
 
             <View style={{ backgroundColor: '#ecfdf5', borderWidth: 1, borderColor: '#a7f3d0', borderRadius: 16, padding: 16, flexDirection: 'row', gap: 12, marginTop: 32, width: '100%' }}>
               <FontAwesome5 name="shield-alt" size={18} color="#059669" />
@@ -243,7 +243,7 @@ export default function PaymentFlowScreen() {
             </Pressable>
 
             <Pressable onPress={() => navigation.navigate('Explore')} style={{ marginTop: 12, paddingVertical: 8 }}>
-              <Text style={{ fontSize: 14, fontWeight: '500', color: '#737373' }}>Back to Home</Text>
+              <Text style={{ fontSize: 14, fontWeight: '500', color: isDark ? '#a3a3a3' : '#737373' }}>Back to Home</Text>
             </Pressable>
           </View>
         )}

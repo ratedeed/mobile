@@ -11,6 +11,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { useColorScheme } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -30,6 +31,7 @@ const MIN_DESCRIPTION_LENGTH = 30;
 const MAX_PHOTOS = 3;
 
 export default function DisputeScreen() {
+  const isDark = useColorScheme() === 'dark';
   const navigation = useNavigation();
   const route = useRoute();
   const { jobId, contractorName } = (route.params || {}) as {
@@ -117,7 +119,7 @@ export default function DisputeScreen() {
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
-      className="flex-1 bg-white"
+      className="flex-1 bg-white dark:bg-neutral-900"
     >
       <ScrollView
         className="flex-1 px-6"
@@ -125,24 +127,24 @@ export default function DisputeScreen() {
         keyboardShouldPersistTaps="handled"
       >
         {/* Header */}
-        <Text className="text-2xl font-bold text-neutral-900 mb-1">File a Dispute</Text>
-        <Text className="text-sm text-neutral-500 mb-8">
+        <Text className="text-2xl font-bold text-neutral-900 dark:text-white mb-1">File a Dispute</Text>
+        <Text className="text-sm text-neutral-500 dark:text-neutral-400 dark:text-neutral-500 mb-8">
           {contractorName ? `for work by ${contractorName}` : 'Report an issue with a completed job'}
         </Text>
 
         {/* Info Banner */}
-        <View className="bg-indigo-50 border border-indigo-100 rounded-xl p-4 flex-row mb-6" style={{ gap: 12 }}>
+        <View className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 rounded-xl p-4 flex-row mb-6" style={{ gap: 12 }}>
           <FontAwesome5 name="info-circle" size={18} color="#4F46E5" />
           <View className="flex-1">
             <Text className="text-sm font-semibold text-indigo-900">Fair Resolution</Text>
-            <Text className="text-xs text-indigo-700 mt-1 leading-4">
+            <Text className="text-xs text-indigo-700 dark:text-indigo-300 mt-1 leading-4">
               Disputes are reviewed by our team. Funds in escrow will be held until the issue is resolved.
             </Text>
           </View>
         </View>
 
         {/* Category Picker */}
-        <Text className="text-sm font-semibold text-neutral-700 mb-3">Category *</Text>
+        <Text className="text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-3">Category *</Text>
         <View className="flex-row flex-wrap mb-6" style={{ gap: 8 }}>
           {CATEGORIES.map((cat) => {
             const selected = category === cat.key;
@@ -153,7 +155,7 @@ export default function DisputeScreen() {
                 className={`flex-row items-center px-4 py-2.5 rounded-xl border ${
                   selected
                     ? 'bg-indigo-600 border-indigo-600'
-                    : 'bg-white border-neutral-200'
+                    : 'bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-700'
                 }`}
                 style={{ gap: 6 }}
               >
@@ -164,7 +166,7 @@ export default function DisputeScreen() {
                 />
                 <Text
                   className={`text-xs font-semibold ${
-                    selected ? 'text-white' : 'text-neutral-600'
+                    selected ? 'text-white' : 'text-neutral-600 dark:text-neutral-300'
                   }`}
                 >
                   {cat.label}
@@ -175,7 +177,7 @@ export default function DisputeScreen() {
         </View>
 
         {/* Description */}
-        <Text className="text-sm font-semibold text-neutral-700 mb-1.5">Description *</Text>
+        <Text className="text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-1.5">Description *</Text>
         <TextInput
           placeholder={`Describe the issue in detail (min ${MIN_DESCRIPTION_LENGTH} characters)`}
           value={description}
@@ -183,7 +185,7 @@ export default function DisputeScreen() {
           multiline
           numberOfLines={6}
           maxLength={2000}
-          className="border border-neutral-200 rounded-xl px-4 py-3 text-sm bg-neutral-50 mb-2 min-h-[140px]"
+          className="border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-3 text-sm bg-neutral-50 dark:bg-neutral-800 mb-2 min-h-[140px]"
           placeholderTextColor="#a3a3a3"
           style={{ textAlignVertical: 'top' }}
         />
@@ -191,21 +193,21 @@ export default function DisputeScreen() {
           <Text
             className={`text-xs ${
               description.trim().length >= MIN_DESCRIPTION_LENGTH
-                ? 'text-emerald-600'
-                : 'text-neutral-400'
+                ? 'text-emerald-600 dark:text-emerald-300'
+                : 'text-neutral-400 dark:text-neutral-500'
             }`}
           >
             {description.trim().length >= MIN_DESCRIPTION_LENGTH
               ? 'Description meets minimum length'
               : `${description.trim().length}/${MIN_DESCRIPTION_LENGTH} characters minimum`}
           </Text>
-          <Text className="text-xs text-neutral-400">
+          <Text className="text-xs text-neutral-400 dark:text-neutral-500">
             {description.length}/2000
           </Text>
         </View>
 
         {/* Photo Upload */}
-        <Text className="text-sm font-semibold text-neutral-700 mb-3">
+        <Text className="text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-3">
           Evidence Photos ({photos.length}/{MAX_PHOTOS})
         </Text>
         <View className="flex-row flex-wrap mb-6" style={{ gap: 10 }}>
@@ -225,14 +227,14 @@ export default function DisputeScreen() {
             <Pressable
               onPress={handlePickPhoto}
               disabled={uploading}
-              className="w-24 h-24 rounded-xl border-2 border-dashed border-neutral-300 items-center justify-center bg-neutral-50"
+              className="w-24 h-24 rounded-xl border-2 border-dashed border-neutral-300 dark:border-neutral-600 items-center justify-center bg-neutral-50 dark:bg-neutral-800"
             >
               {uploading ? (
                 <ActivityIndicator size="small" color="#4F46E5" />
               ) : (
                 <View className="items-center" style={{ gap: 4 }}>
                   <FontAwesome5 name="camera" size={18} color="#a3a3a3" />
-                  <Text className="text-[10px] text-neutral-400 font-medium">Add Photo</Text>
+                  <Text className="text-[10px] text-neutral-400 dark:text-neutral-500 font-medium">Add Photo</Text>
                 </View>
               )}
             </Pressable>
@@ -259,7 +261,7 @@ export default function DisputeScreen() {
           )}
         </Pressable>
 
-        <Text className="text-[10px] text-neutral-400 text-center mt-4 leading-4 px-4">
+        <Text className="text-[10px] text-neutral-400 dark:text-neutral-500 text-center mt-4 leading-4 px-4">
           By filing a dispute, you confirm that the information provided is accurate. False claims may result in account action.
         </Text>
       </ScrollView>

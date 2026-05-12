@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, Text, StyleSheet, useColorScheme } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -29,6 +29,7 @@ export function AppHeader({
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { unreadCount } = useNotifications();
+  const isDark = useColorScheme() === 'dark';
 
   const handleGoBack = () => {
     navigation.goBack();
@@ -54,7 +55,7 @@ export function AppHeader({
       style={[
         styles.container,
         { paddingTop: insets.top > 0 ? insets.top : 8 },
-        transparent ? styles.transparent : styles.solid,
+        transparent ? styles.transparent : [styles.solid, isDark && styles.solidDark],
       ]}
     >
       {/* Left */}
@@ -65,17 +66,17 @@ export function AppHeader({
             style={styles.iconButton}
             accessibilityLabel="Go back"
           >
-            <FontAwesome5 name="chevron-left" size={20} color="#374151" />
+            <FontAwesome5 name="chevron-left" size={20} color={isDark ? '#ffffff' : '#374151'} />
           </TouchableOpacity>
         )}
         {showLogo && !showBack && (
           <TouchableOpacity onPress={handleNavigateHome} style={styles.logoContainer}>
             <FontAwesome5 name="hammer" size={22} color="#4F46E5" />
-            <Text style={styles.logoText}>ratedeed</Text>
+            <Text style={[styles.logoText, isDark && { color: '#818cf8' }]}>ratedeed</Text>
           </TouchableOpacity>
         )}
         {title && (
-          <Text style={styles.title}>{title}</Text>
+          <Text style={[styles.title, isDark && { color: '#ffffff' }]}>{title}</Text>
         )}
       </View>
 
@@ -86,7 +87,7 @@ export function AppHeader({
             onPress={handleNavigateSearch}
             style={styles.searchButton}
           >
-            <FontAwesome5 name="search" size={16} color="#6B7280" />
+            <FontAwesome5 name="search" size={16} color={isDark ? '#ffffff' : '#6B7280'} />
           </TouchableOpacity>
         )}
         {showBell && (
@@ -95,7 +96,7 @@ export function AppHeader({
             style={styles.bellButton}
             accessibilityLabel="Notifications"
           >
-            <FontAwesome5 name="bell" size={16} color="#374151" />
+            <FontAwesome5 name="bell" size={16} color={isDark ? '#ffffff' : '#374151'} />
             {unreadCount > 0 && (
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>{displayCount}</Text>
@@ -125,6 +126,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#F3F4F6',
+  },
+  solidDark: {
+    backgroundColor: '#09090B',
+    borderBottomColor: '#27272a',
   },
   transparent: {
     backgroundColor: 'transparent',

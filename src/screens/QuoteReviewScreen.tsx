@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useColorScheme } from 'react-native';
 import {
   View,
   Text,
@@ -15,6 +16,8 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import { getQuote, updateQuoteStatus, createCheckoutSession } from '../api';
 
 export default function QuoteReviewScreen() {
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
   const navigation = useNavigation();
   const route = useRoute();
   const { quoteId } = (route.params || {}) as { quoteId?: string };
@@ -79,21 +82,21 @@ export default function QuoteReviewScreen() {
 
   if (loading) {
     return (
-      <View className="flex-1 bg-white items-center justify-center">
+      <View className="flex-1 bg-white dark:bg-neutral-900 items-center justify-center">
         <ActivityIndicator size="large" color="#4F46E5" />
-        <Text className="text-sm text-neutral-500 mt-3">Loading quote...</Text>
+        <Text className="text-sm text-neutral-500 dark:text-neutral-400 dark:text-neutral-500 mt-3">Loading quote...</Text>
       </View>
     );
   }
 
   if (error || !quote) {
     return (
-      <View className="flex-1 bg-white items-center justify-center px-6">
-        <View className="w-16 h-16 bg-red-50 rounded-full items-center justify-center mb-4">
+      <View className="flex-1 bg-white dark:bg-neutral-900 items-center justify-center px-6">
+        <View className="w-16 h-16 bg-red-50 dark:bg-red-900/40 rounded-full items-center justify-center mb-4">
           <FontAwesome5 name="exclamation-triangle" size={24} color="#dc2626" />
         </View>
-        <Text className="text-lg font-bold text-neutral-900 mb-2">Quote Not Found</Text>
-        <Text className="text-sm text-neutral-500 text-center mb-6">{error || 'We couldn\'t find this quote.'}</Text>
+        <Text className="text-lg font-bold text-neutral-900 dark:text-white mb-2">Quote Not Found</Text>
+        <Text className="text-sm text-neutral-500 dark:text-neutral-400 dark:text-neutral-500 text-center mb-6">{error || 'We couldn\'t find this quote.'}</Text>
         <Pressable onPress={() => navigation.goBack()} className="bg-indigo-600 px-8 py-3.5 rounded-xl">
           <Text className="text-white font-bold text-sm">Go Back</Text>
         </Pressable>
@@ -111,12 +114,12 @@ export default function QuoteReviewScreen() {
 
   if (quote.status === 'rejected') {
     return (
-      <View className="flex-1 bg-white items-center justify-center px-6">
-        <View className="w-16 h-16 bg-neutral-100 rounded-full items-center justify-center mb-4">
-          <FontAwesome5 name="times" size={24} color="#737373" />
+      <View className="flex-1 bg-white dark:bg-neutral-900 items-center justify-center px-6">
+        <View className="w-16 h-16 bg-neutral-100 dark:bg-neutral-800 rounded-full items-center justify-center mb-4">
+          <FontAwesome5 name="times" size={24} color={isDark ? "#a3a3a3" : "#737373"} />
         </View>
-        <Text className="text-lg font-bold text-neutral-900 mb-2">Quote Declined</Text>
-        <Text className="text-sm text-neutral-500 text-center max-w-xs mb-6">
+        <Text className="text-lg font-bold text-neutral-900 dark:text-white mb-2">Quote Declined</Text>
+        <Text className="text-sm text-neutral-500 dark:text-neutral-400 dark:text-neutral-500 text-center max-w-xs mb-6">
           You declined this quote from {contractorName}. You can always request a new one.
         </Text>
         <Pressable onPress={() => navigation.goBack()} className="bg-neutral-900 px-8 py-3.5 rounded-xl w-full items-center">
@@ -129,40 +132,40 @@ export default function QuoteReviewScreen() {
     return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      className="flex-1 bg-neutral-50"
+      className="flex-1 bg-neutral-50 dark:bg-neutral-800 dark:bg-neutral-950"
     >
       <ScrollView className="flex-1" contentContainerStyle={{ paddingVertical: 24, paddingHorizontal: 16 }}>
                 {/* Accepted Banner */}
         {quote.status === 'accepted' && (
-          <View className="bg-emerald-50 rounded-xl p-4 flex-row items-center border border-emerald-100 mb-4" style={{ gap: 12 }}>
-            <View className="w-10 h-10 bg-white rounded-full items-center justify-center shadow-sm">
+          <View className="bg-emerald-50 dark:bg-emerald-900/40 rounded-xl p-4 flex-row items-center border border-emerald-100 dark:border-emerald-800 mb-4" style={{ gap: 12 }}>
+            <View className="w-10 h-10 bg-white dark:bg-neutral-900 rounded-full items-center justify-center shadow-sm">
               <FontAwesome5 name="check-circle" size={20} color="#059669" />
             </View>
             <View className="flex-1">
-              <Text className="text-sm font-bold text-emerald-900">Quote Accepted!</Text>
-              <Text className="text-xs text-emerald-700 mt-0.5">Proceed to payment to get started.</Text>
+              <Text className="text-sm font-bold text-emerald-900 dark:text-emerald-200">Quote Accepted!</Text>
+              <Text className="text-xs text-emerald-700 dark:text-emerald-300 mt-0.5">Proceed to payment to get started.</Text>
             </View>
           </View>
         )}
 
         {/* Contractor Card */}
-        <View className="bg-white rounded-xl p-4 flex-row items-center border border-neutral-100 mb-4" style={{ gap: 12 }}>
+        <View className="bg-white dark:bg-neutral-900 rounded-xl p-4 flex-row items-center border border-neutral-100 dark:border-neutral-800 mb-4" style={{ gap: 12 }}>
           {contractorImage ? (
             <Image source={{ uri: contractorImage }} className="w-14 h-14 rounded-lg" resizeMode="cover" />
           ) : (
             <View className="w-14 h-14 rounded-lg bg-neutral-200 items-center justify-center">
-              <FontAwesome5 name="star" size={18} color="#a3a3a3" />
+              <FontAwesome5 name="star" size={18} color={isDark ? "#737373" : "#a3a3a3"} />
             </View>
           )}
           <View className="flex-1 min-w-0">
-            <Text className="text-sm font-bold text-neutral-900" numberOfLines={1}>{contractorName}</Text>
+            <Text className="text-sm font-bold text-neutral-900 dark:text-white" numberOfLines={1}>{contractorName}</Text>
             {contractorCategory ? (
-              <Text className="text-xs text-neutral-500">{contractorCategory}</Text>
+              <Text className="text-xs text-neutral-500 dark:text-neutral-400 dark:text-neutral-500">{contractorCategory}</Text>
             ) : null}
           </View>
-          <View className={`flex-row items-center px-2.5 py-1 rounded-full ${isPending ? 'bg-amber-50' : 'bg-emerald-50'}`}>
-            <FontAwesome5 name={isPending ? 'clock' : 'check-circle'} size={10} color={isPending ? '#b45309' : '#059669'} />
-            <Text className={`text-xs font-bold ml-1 ${isPending ? 'text-amber-700' : 'text-emerald-700'}`}>
+          <View className={`flex-row items-center px-2.5 py-1 rounded-full ${isPending ? (isDark ? 'bg-amber-900/40' : 'bg-amber-50') : (isDark ? 'bg-emerald-900/40' : 'bg-emerald-50')}`}>
+            <FontAwesome5 name={isPending ? 'clock' : 'check-circle'} size={10} color={isPending ? (isDark ? '#fcd34d' : '#b45309') : (isDark ? '#6ee7b7' : '#059669')} />
+            <Text className={`text-xs font-bold ml-1 ${isPending ? (isDark ? 'text-amber-300' : 'text-amber-700') : (isDark ? 'text-emerald-300' : 'text-emerald-700 dark:text-emerald-300')}`}>
               {isPending ? 'Pending' : 'Accepted'}
             </Text>
           </View>
@@ -170,25 +173,25 @@ export default function QuoteReviewScreen() {
 
         {/* Contractor Notes */}
         {quote.contractorNotes ? (
-          <View className="bg-white rounded-xl p-4 border border-neutral-100 mb-4">
-            <Text className="text-sm font-semibold text-neutral-900 mb-2">Message from {contractorName.split(' ')[0]}</Text>
-            <Text className="text-sm text-neutral-600 leading-5">{quote.contractorNotes}</Text>
+          <View className="bg-white dark:bg-neutral-900 rounded-xl p-4 border border-neutral-100 dark:border-neutral-800 mb-4">
+            <Text className="text-sm font-semibold text-neutral-900 dark:text-white mb-2">Message from {contractorName.split(' ')[0]}</Text>
+            <Text className="text-sm text-neutral-600 dark:text-neutral-300 leading-5">{quote.contractorNotes}</Text>
           </View>
         ) : null}
 
         {/* Line Items */}
         {lineItems.length > 0 ? (
-          <View className="bg-white rounded-xl p-4 border border-neutral-100 mb-4">
-            <Text className="text-sm font-semibold text-neutral-900 mb-3">Quote Breakdown</Text>
+          <View className="bg-white dark:bg-neutral-900 rounded-xl p-4 border border-neutral-100 dark:border-neutral-800 mb-4">
+            <Text className="text-sm font-semibold text-neutral-900 dark:text-white mb-3">Quote Breakdown</Text>
             {lineItems.map((item: any, i: number) => (
               <View key={i} className="flex-row justify-between items-start mb-3">
                 <View className="flex-1 min-w-0 mr-3">
-                  <Text className="text-sm font-medium text-neutral-900">{item.description || item.label || `Item ${i + 1}`}</Text>
+                  <Text className="text-sm font-medium text-neutral-900 dark:text-white">{item.description || item.label || `Item ${i + 1}`}</Text>
                   {item.description && item.label ? (
-                    <Text className="text-xs text-neutral-500 mt-0.5">{item.description}</Text>
+                    <Text className="text-xs text-neutral-500 dark:text-neutral-400 dark:text-neutral-500 mt-0.5">{item.description}</Text>
                   ) : null}
                 </View>
-                <Text className="text-sm font-semibold text-neutral-900">
+                <Text className="text-sm font-semibold text-neutral-900 dark:text-white">
                   ${(item.amount > 1000 ? (item.amount / 100).toFixed(2) : item.amount).toLocaleString()}
                 </Text>
               </View>
@@ -196,10 +199,10 @@ export default function QuoteReviewScreen() {
 
             {total > 0 && (
               <>
-                <View className="border-t border-neutral-200 my-3" />
+                <View className="border-t border-neutral-200 dark:border-neutral-700 my-3" />
                 <View className="flex-row justify-between items-center">
-                  <Text className="text-base font-bold text-neutral-900">Total</Text>
-                  <Text className="text-xl font-bold text-neutral-900">${Number(totalInDollars).toLocaleString()}</Text>
+                  <Text className="text-base font-bold text-neutral-900 dark:text-white">Total</Text>
+                  <Text className="text-xl font-bold text-neutral-900 dark:text-white">${Number(totalInDollars).toLocaleString()}</Text>
                 </View>
               </>
             )}
@@ -208,22 +211,22 @@ export default function QuoteReviewScreen() {
 
         {/* Description */}
         {quote.description ? (
-          <View className="bg-white rounded-xl p-4 border border-neutral-100 mb-4">
-            <Text className="text-sm font-semibold text-neutral-900 mb-2">Project Description</Text>
-            <Text className="text-sm text-neutral-600 leading-5">{quote.description}</Text>
+          <View className="bg-white dark:bg-neutral-900 rounded-xl p-4 border border-neutral-100 dark:border-neutral-800 mb-4">
+            <Text className="text-sm font-semibold text-neutral-900 dark:text-white mb-2">Project Description</Text>
+            <Text className="text-sm text-neutral-600 dark:text-neutral-300 leading-5">{quote.description}</Text>
           </View>
         ) : null}
 
         {/* Photos / Areas of Work */}
         {quote.photos && quote.photos.length > 0 ? (
-          <View className="bg-white rounded-xl p-4 border border-neutral-100 mb-4">
-            <Text className="text-sm font-semibold text-neutral-900 mb-3">Areas of Work</Text>
+          <View className="bg-white dark:bg-neutral-900 rounded-xl p-4 border border-neutral-100 dark:border-neutral-800 mb-4">
+            <Text className="text-sm font-semibold text-neutral-900 dark:text-white mb-3">Areas of Work</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} className="-mx-2">
               {quote.photos.map((photo: string, i: number) => (
                 <View key={i} className="px-2">
                   <Image 
                     source={{ uri: photo }} 
-                    className="w-48 h-32 rounded-xl bg-neutral-100" 
+                    className="w-48 h-32 rounded-xl bg-neutral-100 dark:bg-neutral-800" 
                     resizeMode="cover"
                   />
                 </View>
@@ -236,17 +239,17 @@ export default function QuoteReviewScreen() {
 
         {/* Timeline */}
         {(quote.estimatedStartDate || quote.estimatedCompletionDate) ? (
-          <View className="bg-white rounded-xl p-4 border border-neutral-100 mb-4">
-            <Text className="text-sm font-semibold text-neutral-900 mb-3">Project Timeline</Text>
+          <View className="bg-white dark:bg-neutral-900 rounded-xl p-4 border border-neutral-100 dark:border-neutral-800 mb-4">
+            <Text className="text-sm font-semibold text-neutral-900 dark:text-white mb-3">Project Timeline</Text>
             <View className="flex-row items-center" style={{ gap: 16 }}>
               {quote.estimatedStartDate && (
                 <View className="flex-1 flex-row items-center" style={{ gap: 10 }}>
-                  <View className="w-9 h-9 rounded-full bg-indigo-50 items-center justify-center">
+                  <View className="w-9 h-9 rounded-full bg-indigo-50 dark:bg-indigo-900/40 items-center justify-center">
                     <FontAwesome5 name="calendar-plus" size={14} color="#4F46E5" />
                   </View>
                   <View>
-                    <Text className="text-[11px] font-medium text-neutral-400 uppercase">Start Date</Text>
-                    <Text className="text-sm font-bold text-neutral-800">
+                    <Text className="text-[11px] font-medium text-neutral-400 dark:text-neutral-500 uppercase">Start Date</Text>
+                    <Text className="text-sm font-bold text-neutral-800 dark:text-neutral-100">
                       {new Date(quote.estimatedStartDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                     </Text>
                   </View>
@@ -258,8 +261,8 @@ export default function QuoteReviewScreen() {
                     <FontAwesome5 name="calendar-check" size={14} color="#059669" />
                   </View>
                   <View>
-                    <Text className="text-[11px] font-medium text-neutral-400 uppercase">Completion</Text>
-                    <Text className="text-sm font-bold text-neutral-800">
+                    <Text className="text-[11px] font-medium text-neutral-400 dark:text-neutral-500 uppercase">Completion</Text>
+                    <Text className="text-sm font-bold text-neutral-800 dark:text-neutral-100">
                       {new Date(quote.estimatedCompletionDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                     </Text>
                   </View>
@@ -270,11 +273,11 @@ export default function QuoteReviewScreen() {
         ) : null}
 
         {/* Escrow Notice */}
-        <View className="bg-emerald-50 rounded-xl p-4 flex-row items-start border border-emerald-100 mb-4" style={{ gap: 12 }}>
+        <View className="bg-emerald-50 dark:bg-emerald-900/40 rounded-xl p-4 flex-row items-start border border-emerald-100 dark:border-emerald-800 mb-4" style={{ gap: 12 }}>
           <FontAwesome5 name="shield-alt" size={18} color="#059669" />
           <View className="flex-1">
-            <Text className="text-sm font-semibold text-emerald-800">Escrow Protection</Text>
-            <Text className="text-xs text-emerald-700 mt-0.5 leading-4">
+            <Text className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">Escrow Protection</Text>
+            <Text className="text-xs text-emerald-700 dark:text-emerald-300 mt-0.5 leading-4">
               Your payment will be held in escrow until the job is complete. You have full control over when to release funds.
             </Text>
           </View>
@@ -285,7 +288,7 @@ export default function QuoteReviewScreen() {
 
       {/* Bottom CTA for pending quotes */}
       {(isPending || quote.status === 'accepted') && (
-        <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-neutral-200 px-4 py-3">
+        <View className="absolute bottom-0 left-0 right-0 bg-white dark:bg-neutral-900 border-t border-neutral-200 dark:border-neutral-700 px-4 py-3">
           <Pressable
             onPress={handleAccept}
             disabled={actionLoading !== null}
@@ -302,7 +305,7 @@ export default function QuoteReviewScreen() {
             </Text>
             {actionLoading !== 'accept' && <FontAwesome5 name="arrow-right" size={12} color="#fff" />}
           </Pressable>
-          {isPending && (<Pressable onPress={() => setShowDeclineConfirm(true)} disabled={actionLoading !== null} className="py-2 items-center"> <Text className="text-sm text-neutral-500">Decline this quote</Text> </Pressable>)}
+          {isPending && (<Pressable onPress={() => setShowDeclineConfirm(true)} disabled={actionLoading !== null} className="py-2 items-center"> <Text className="text-sm text-neutral-500 dark:text-neutral-400 dark:text-neutral-500">Decline this quote</Text> </Pressable>)}
         </View>
       )}
 
@@ -310,22 +313,22 @@ export default function QuoteReviewScreen() {
       {showDeclineConfirm && (
         <View className="absolute inset-0 z-50 flex items-end justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
           <Pressable className="absolute inset-0" onPress={() => setShowDeclineConfirm(false)} />
-          <View className="bg-white rounded-t-2xl p-6 w-full">
+          <View className="bg-white dark:bg-neutral-800 rounded-t-2xl p-6 w-full">
             <View className="flex-row justify-between items-center mb-3">
-              <Text className="text-lg font-bold text-neutral-900">Decline Quote?</Text>
+              <Text className="text-lg font-bold text-neutral-900 dark:text-white">Decline Quote?</Text>
               <Pressable onPress={() => setShowDeclineConfirm(false)} className="w-8 h-8 items-center justify-center rounded-full">
-                <FontAwesome5 name="times" size={14} color="#737373" />
+                <FontAwesome5 name="times" size={14} color={isDark ? "#a3a3a3" : "#737373"} />
               </Pressable>
             </View>
-            <Text className="text-sm text-neutral-500 mb-4">
+            <Text className="text-sm text-neutral-500 dark:text-neutral-400 dark:text-neutral-500 mb-4">
               Are you sure you want to decline this quote from {contractorName}? You can always request a new one later.
             </Text>
             <View className="flex-row" style={{ gap: 12 }}>
               <Pressable
                 onPress={() => setShowDeclineConfirm(false)}
-                className="flex-1 py-3 rounded-xl items-center border border-neutral-200"
+                className="flex-1 py-3 rounded-xl items-center border border-neutral-200 dark:border-neutral-700"
               >
-                <Text className="text-sm font-semibold text-neutral-900">Keep Quote</Text>
+                <Text className="text-sm font-semibold text-neutral-900 dark:text-white">Keep Quote</Text>
               </Pressable>
               <Pressable
                 onPress={handleReject}

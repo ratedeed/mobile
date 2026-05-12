@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { View, Text, Pressable, ScrollView, Image, ActivityIndicator, SafeAreaView, RefreshControl, Alert } from 'react-native';
+import { View, Text, Pressable, ScrollView, Image, ActivityIndicator, SafeAreaView, RefreshControl, Alert, useColorScheme } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
@@ -34,6 +34,7 @@ const formatDate = (dateStr: string) => {
 export default function ActiveJobsScreen() {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
+  const isDark = useColorScheme() === 'dark';
   const [quotes, setQuotes] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<TabFilter>('all');
   const [loading, setLoading] = useState(true);
@@ -241,7 +242,7 @@ export default function ActiveJobsScreen() {
                         <View className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: badge.color }} />
                         <Text className="text-[11px] font-bold" style={{ color: badge.color }}>{badge.label}</Text>
                       </View>
-                      <Text className="text-[11px] text-neutral-400 font-medium">{formatDate(quote.createdAt)}</Text>
+                      <Text className="text-[11px] text-neutral-400 dark:text-neutral-500 font-medium">{formatDate(quote.createdAt)}</Text>
                     </View>
 
                     {quote.status.toLowerCase() === 'completed' && !quote.hasReview && (
@@ -279,11 +280,11 @@ export default function ActiveJobsScreen() {
                               { text: 'Decline', style: 'destructive', onPress: () => handleRejectQuote(quote._id) },
                             ]
                           )}
-                          className="flex-1 py-2 rounded-lg bg-white border border-neutral-300 flex-row items-center justify-center"
+                          className="flex-1 py-2 rounded-lg bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 flex-row items-center justify-center"
                           style={{ gap: 4 }}
                         >
-                          <FontAwesome5 name="times" size={10} color="#737373" />
-                          <Text className="text-xs font-bold text-neutral-600">Decline</Text>
+                          <FontAwesome5 name="times" size={10} color={isDark ? "#a3a3a3" : "#737373"} />
+                          <Text className="text-xs font-bold text-neutral-600 dark:text-neutral-300">Decline</Text>
                         </Pressable>
                       </View>
                     )}
@@ -302,9 +303,9 @@ export default function ActiveJobsScreen() {
                                 { text: 'Resume', onPress: () => handleResolveDispute(quote._id, 'resume_job') },
                               ]
                             )}
-                            className="flex-1 py-2 rounded-lg bg-white border border-red-200 items-center"
+                            className="flex-1 py-2 rounded-lg bg-white dark:bg-red-900/20 border border-red-200 dark:border-red-800 items-center"
                           >
-                            <Text className="text-xs font-semibold text-red-700">Resume Job</Text>
+                            <Text className="text-xs font-semibold text-red-700 dark:text-red-300">Resume Job</Text>
                           </Pressable>
                           <Pressable
                             onPress={() => Alert.alert(
