@@ -18,14 +18,16 @@ import ErrorBoundary from './src/components/ErrorBoundary';
 import { usePushNotifications } from './src/hooks/usePushNotifications';
 import { EscrowTrustBanner } from './src/components/EscrowTrustBanner';
 import { useNetworkStatus } from './src/hooks/useNetworkStatus';
-import OfflineBanner from './src/components/common/OfflineBanner';
+import { OfflineBanner } from './src/components/common/OfflineBanner';
 import * as Sentry from '@sentry/react-native';
 import Constants from 'expo-constants';
 import { requestTrackingPermissionsAsync } from 'expo-tracking-transparency';
 
-// CRITICAL: Replace with your actual Stripe Publishable Key before launch
-// Get from: https://dashboard.stripe.com/apikeys
-const STRIPE_PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || 'pk_test_REPLACE_BEFORE_LAUNCH';
+const STRIPE_PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+
+if (__DEV__ && !STRIPE_PUBLISHABLE_KEY) {
+  console.warn('STRIPE_PUBLISHABLE_KEY is not set. Payments will not work.');
+}
 
 Sentry.init({
   dsn: Constants.expoConfig?.extra?.sentryDsn || '',
@@ -147,7 +149,7 @@ function App() {
     <SafeAreaProvider>
       <ErrorBoundary>
         <StripeProvider
-          publishableKey={STRIPE_PUBLISHABLE_KEY}
+          publishableKey={STRIPE_PUBLISHABLE_KEY || ''}
           merchantIdentifier="merchant.com.ratedeed.app"
         >
           <AuthProvider>
@@ -155,7 +157,7 @@ function App() {
               <ContractorProvider>
                 <AppContent />
                 <OfflineBanner isVisible={!isConnected} />
-                {!splashComplete && <AnimatedSplashScreen onComplete={() => setSplashComplete(true)} minDuration={2800} />}
+                {!splashComplete && <AnimatedSplashScreen onComplete={() => setSplashComplete(true)} minDuration={1500} />}
               </ContractorProvider>
             </NotificationsProvider>
           </AuthProvider>

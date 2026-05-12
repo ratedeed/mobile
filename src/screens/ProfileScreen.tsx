@@ -28,7 +28,7 @@ import { uploadToCloudinary, CLOUDINARY_FOLDERS } from "../utils/cloudinary";
 import { getUserProfile, updateUserProfile, updateProfilePicture } from '../api';
 import { useAuth } from '../context/AuthContext';
 import { User } from '../types';
-import { IP_GEOLOCATION_URL } from '../config';
+import { API_BASE_URL } from '../config';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { SvgImage } from '../components/common/SvgImage';
 import { getProfileImageUrl, isSvgUrl } from '../utils/avatarUtils';
@@ -130,7 +130,7 @@ const ProfileScreen: React.FC = () => {
 
   const fetchIpZipCode = useCallback(async () => {
     try {
-      const response = await fetch(IP_GEOLOCATION_URL);
+      const response = await fetch(`https://free.freeipapi.com/api/json`);
       const data = await response.json();
       if (data.zipCode) {
         setIpZipCode(data.zipCode);

@@ -10,6 +10,7 @@ interface ContractorContextType {
   quotes: Quote[];
   earnings: Earnings | null;
   isLoading: boolean;
+  error: string | null;
   refreshContractorData: () => Promise<void>;
 }
 
@@ -23,26 +24,35 @@ export const ContractorProvider: React.FC<{ children: ReactNode }> = ({ children
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [earnings, setEarnings] = useState<Earnings | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const refreshContractorData = async () => {
     if (!isAuthenticated || userRole !== 'contractor') return;
     
     setIsLoading(true);
+    setError(null);
     try {
-      const [profileData, leadsData, quotesData, jobsData, earningsData] = await Promise.all([
+      const results = await Promise.allSettled([
         apiClient.getContractorProfile(),
         apiClient.getContractorLeads(),
         apiClient.getContractorQuotes(),
         apiClient.getContractorJobs(),
         apiClient.getContractorEarnings()
       ]);
-      setContractorProfile(profileData);
-      setLeads(leadsData);
-      setQuotes(quotesData);
-      setJobs(jobsData);
-      setEarnings(earningsData);
-    } catch (error) {
-      // console.error('Error fetching contractor data:', error);
+
+      const [profileResult, leadsResult, quotesResult, jobsResult, earningsResult] = results;
+
+      if (profileResult.status === 'fulfilled') {
+        setContractorProfile(profileResult.value);
+      } else {
+        setError(profileResult.reason?.message || 'Failed to load profile');
+      }
+      if (leadsResult.status === 'fulfilled') setLeads(leadsResult.value);
+      if (quotesResult.status === 'fulfilled') setQuotes(quotesResult.value);
+      if (jobsResult.status === 'fulfilled') setJobs(jobsResult.value);
+      if (earningsResult.status === 'fulfilled') setEarnings(earningsResult.value);
+    } catch {
+      setError('Failed to load contractor data');
     } finally {
       setIsLoading(false);
     }
@@ -63,6 +73,7 @@ export const ContractorProvider: React.FC<{ children: ReactNode }> = ({ children
         quotes,
         earnings,
         isLoading,
+        error,
         refreshContractorData,
       }}
     >

@@ -1,10 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import { AuthInfo, UserRole } from '../types';
 import { syncFavoritesWithServer } from '../utils/favoritesStore';
-
+import { disconnectSocket } from '../utils/apiClient';
 import { jwtDecode } from 'jwt-decode';
+
+const USER_DATA_KEY = 'ratedeed-user-data';
 
 interface AuthContextType {
   firebaseUser: any;
@@ -15,22 +16,36 @@ interface AuthContextType {
   isAuthenticated: boolean;
   userRole: UserRole | null;
   login: (email: string, password: string) => Promise<any>;
-  logout: () => void;
+  logout: () => Promise<void>;
   updateUser: (userData: Partial<AuthInfo>) => void;
   updateBackendToken: (token: string, emailVerifiedStatus: boolean, userData?: any) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const USER_DATA_KEY = 'ratedeed-user-data';
-
 const saveUserData = async (data: Record<string, any>) => {
-  await AsyncStorage.setItem(USER_DATA_KEY, JSON.stringify(data));
+  await SecureStore.setItemAsync(USER_DATA_KEY, JSON.stringify(data));
 };
 
 const loadUserData = async (): Promise<Record<string, any> | null> => {
-  const raw = await AsyncStorage.getItem(USER_DATA_KEY);
-  return raw ? JSON.parse(raw) : null;
+  try {
+    const raw = await SecureStore.getItemAsync(USER_DATA_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
+
+const isTokenExpired = (token: string): boolean => {
+  try {
+    const decoded: any = jwtDecode(token);
+    if (decoded.exp) {
+      return Date.now() >= decoded.exp * 1000;
+    }
+    return false;
+  } catch {
+    return true;
+  }
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -49,28 +64,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const token = await SecureStore.getItemAsync('auth_token');
       if (token) {
-        setBackendToken(token);
+        if (isTokenExpired(token)) {
+          await SecureStore.deleteItemAsync('auth_token');
+          await SecureStore.deleteItemAsync('refresh_token');
+          await SecureStore.deleteItemAsync(USER_DATA_KEY);
+        } else {
+          setBackendToken(token);
 
-        let decodedId = null;
-        try {
-          const decodedToken: any = jwtDecode(token);
-          decodedId = decodedToken.id || decodedToken._id;
-        } catch {
-          /* token decode failure is non-critical */
+          let decodedId = null;
+          try {
+            const decodedToken: any = jwtDecode(token);
+            decodedId = decodedToken.id || decodedToken._id;
+          } catch {}
+
+          const userData = await loadUserData();
+          setUserId(userData?._id || userData?.id || decodedId || null);
+          setIsEmailVerified(userData?.emailVerified || false);
+          setUserRole(userData?.role || null);
+          if (userData?.firstName) {
+            setFirebaseUser({ email: userData.email });
+          }
+
+          syncFavoritesWithServer();
         }
-
-        const userData = await loadUserData();
-        setUserId(userData?._id || userData?.id || decodedId || null);
-        setIsEmailVerified(userData?.emailVerified || false);
-        setUserRole(userData?.role || null);
-        if (userData?.firstName) {
-          setFirebaseUser({ email: userData.email });
-        }
-
-        syncFavoritesWithServer();
       }
     } catch {
-      /* non-critical */
     } finally {
       setIsLoading(false);
     }
@@ -81,10 +99,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const logout = useCallback(async () => {
-    await SecureStore.deleteItemAsync('auth_token');
-    await SecureStore.deleteItemAsync('refresh_token');
-    await AsyncStorage.removeItem(USER_DATA_KEY);
-    await AsyncStorage.removeItem('ratedeed-current-user');
+    try {
+      disconnectSocket();
+    } catch {}
+
+    try {
+      await SecureStore.deleteItemAsync('auth_token');
+    } catch {}
+    try {
+      await SecureStore.deleteItemAsync('refresh_token');
+    } catch {}
+    try {
+      await SecureStore.deleteItemAsync(USER_DATA_KEY);
+    } catch {}
+
     setBackendToken(null);
     setUserId(null);
     setFirebaseUser(null);
@@ -104,9 +132,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (updated._id || updated.id) {
         setUserId(updated._id || updated.id || null);
       }
-    } catch {
-      /* non-critical */
-    }
+    } catch {}
   }, []);
 
   const updateBackendToken = useCallback(async (token: string, emailVerifiedStatus: boolean, userData?: any) => {
@@ -130,9 +156,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         const decodedToken: any = jwtDecode(token);
         decodedId = decodedToken.id || decodedToken._id;
-      } catch {
-        /* token decode failure is non-critical */
-      }
+      } catch {}
     }
 
     setBackendToken(token);

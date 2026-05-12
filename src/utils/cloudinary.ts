@@ -38,8 +38,7 @@ export async function uploadToCloudinary(
   const signData = await getCloudinarySignature(folder);
 
   if (!signData || !signData.signature) {
-    console.error("Cloudinary Sign Error:", signData);
-    throw new Error(`Failed to get upload signature from server: ${JSON.stringify(signData)}`);
+    throw new Error('Failed to get upload signature from server. Please try again.');
   }
 
   // Step 2: Upload directly to Cloudinary
@@ -77,8 +76,7 @@ export async function uploadToCloudinary(
   );
 
   if (!cloudinaryRes.ok) {
-    const errorText = await cloudinaryRes.text();
-    throw new Error(`Cloudinary upload failed: ${errorText}`);
+    throw new Error('Image upload failed. Please try again.');
   }
 
   const data = (await cloudinaryRes.json()) as CloudinaryUploadResult;

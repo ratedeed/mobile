@@ -28,7 +28,8 @@
               "ratedeed"
             ]
           }
-        ]
+        ],
+        "FirebaseAppDelegateProxyEnabled": false
       },
       "usesAppleSignIn": true,
       "googleServicesFile": "./GoogleService-Info.plist",
@@ -106,7 +107,9 @@
           "merchantIdentifier": "merchant.com.ratedeed.app",
           "enableApplePay": true
         }
-      ]
+      ],
+      "expo-tracking-transparency",
+      "@sentry/react-native"
     ],
     "scheme": "ratedeed",
     "extra": {

@@ -11,6 +11,7 @@ interface NotificationsContextType {
   unreadCount: number;
   unreadMessagesCount: number;
   isLoading: boolean;
+  error: string | null;
   refreshNotifications: () => Promise<void>;
   refreshUnreadMessagesCount: () => Promise<void>;
   markAsRead: (id: string) => Promise<void>;
@@ -26,13 +27,15 @@ export const NotificationsProvider: React.FC<{ children: ReactNode }> = ({ child
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
-  const refreshRef = useRef<() => Promise<void>>(null as any);
+  const [error, setError] = useState<string | null>(null);
+  const refreshRef = useRef<(() => Promise<void>) | null>(null);
 
   // Keep refreshRef updated so socket callbacks always call the latest version
   useEffect(() => {
     refreshRef.current = async () => {
       if (!isAuthenticated) return;
       setIsLoading(true);
+      setError(null);
       try {
         const data = await apiClient.getNotifications();
         let notifs = Array.isArray(data) ? data : [];
@@ -56,12 +59,13 @@ export const NotificationsProvider: React.FC<{ children: ReactNode }> = ({ child
           });
           notifs = notifs.filter(n => !(n.type === 'new_message' && n.link && syntheticNotifs.some(sn => sn.link === n.link)));
           notifs = [...syntheticNotifs, ...notifs].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-} catch {
+        } catch {
           }
         setNotifications(notifs);
         const unread = notifs.filter((n: Notification) => !n.read).length;
         await AsyncStorage.setItem('unreadNotifications', unread.toString());
-      } catch {
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load notifications');
       } finally {
         setIsLoading(false);
       }
@@ -227,6 +231,7 @@ export const NotificationsProvider: React.FC<{ children: ReactNode }> = ({ child
         unreadCount,
         unreadMessagesCount,
         isLoading,
+        error,
         refreshNotifications,
         refreshUnreadMessagesCount,
         markAsRead,

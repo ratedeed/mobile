@@ -93,11 +93,11 @@ const refreshTokenIfNeeded = async (): Promise<void> => {
   await refreshPromise;
 };
 
-export const handleResponse = async (response: Response, retryFn?: () => Promise<Response>): Promise<any> => {
-  if (response.status === 401 && retryFn) {
+export const handleResponse = async (response: Response, retryFn?: () => Promise<Response>, retried = false): Promise<any> => {
+  if (response.status === 401 && retryFn && !retried) {
     await refreshTokenIfNeeded();
     const retryResponse = await retryFn();
-    return handleResponse(retryResponse, undefined);
+    return handleResponse(retryResponse, undefined, true);
   }
   if (!response.ok) {
     const errorText = await response.text();
@@ -423,7 +423,6 @@ let isInitializingSocket = false;
 let currentSocketUserId: string | null = null;
 let pendingListeners: Array<{ event: string; callback: Function }> = [];
 
-// Handle AppState changes
 let appStateSubscription: any = null;
 
 export const startAppStateListener = () => {
@@ -467,11 +466,12 @@ export const initializeSocket = async () => {
 
     socket.on('connect', () => {
       isInitializingSocket = false;
-      pendingListeners.forEach(({ event, callback }) => {
+      const listeners = [...pendingListeners];
+      pendingListeners = [];
+      listeners.forEach(({ event, callback }) => {
         socket?.off(event, callback as any);
         socket?.on(event, callback as any);
       });
-      pendingListeners = [];
     });
 
     socket.on('connect_error', () => {
@@ -627,6 +627,15 @@ export const emitTyping = (conversationId: string, userId: string, isTyping: boo
   if (socket?.connected) {
     socket.emit('typing', { conversationId, userId, isTyping });
   }
+};
+
+export const disconnectSocket = () => {
+  if (socket) {
+    socket.disconnect();
+    socket = null;
+  }
+  currentSocketUserId = null;
+  pendingListeners = [];
 };
 
 export const emitMessageRead = (messageId: string, readerId: string, conversationId: string) => {

@@ -4,10 +4,17 @@ import {
   getMessaging,
   getToken,
   onMessage,
+  onTokenRefresh,
   requestPermission,
   AuthorizationStatus
 } from '@react-native-firebase/messaging';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, NavigationProp } from '@react-navigation/native';
+
+type RootStackParamList = {
+  ChatScreen: { conversationId: string; recipientId?: string; recipientName?: string };
+  Profile: undefined;
+  ContractorDashboard: undefined;
+};
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationsContext';
 import { savePushToken } from '../utils/apiClient';
@@ -24,11 +31,10 @@ Notifications.setNotificationHandler({
 export const usePushNotifications = () => {
   const { isAuthenticated } = useAuth();
   const { refreshNotifications } = useNotifications();
-  const navigation = useNavigation();
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const [expoPushToken, setExpoPushToken] = useState<string | undefined>();
   const [notification, setNotification] = useState<Notifications.Notification | undefined>();
 
-  // Effect 1: Request permission and get FCM token (runs once)
   useEffect(() => {
     const messaging = getMessaging();
     const requestUserPermission = async () => {
@@ -40,36 +46,34 @@ export const usePushNotifications = () => {
         if (enabled) {
           const fcmToken = await getToken(messaging);
           setExpoPushToken(fcmToken);
-
-          try {
-            const { getAPNSToken } = require('@react-native-firebase/messaging');
-            const apnsToken = await getAPNSToken(messaging);
-            void apnsToken;
-          } catch {
-          }
         }
-      } catch {
-      }
+      } catch {}
     };
     requestUserPermission();
   }, []);
 
-  // Effect 2: Save token to backend whenever we have both token and auth
   useEffect(() => {
     if (isAuthenticated && expoPushToken) {
       savePushToken(expoPushToken).catch(() => {});
     }
   }, [isAuthenticated, expoPushToken]);
 
-  // Effect 3: Foreground FCM message listener
+  useEffect(() => {
+    const messaging = getMessaging();
+    const unsubscribe = onTokenRefresh(messaging, token => {
+      setExpoPushToken(token);
+    });
+    return unsubscribe;
+  }, []);
+
   useEffect(() => {
     const messaging = getMessaging();
     const unsubscribe = onMessage(messaging, async remoteMessage => {
       await Notifications.scheduleNotificationAsync({
         content: {
-          title: remoteMessage.notification?.title || 'New Notification',
-          body: remoteMessage.notification?.body || 'You have a new message.',
-          data: remoteMessage.data,
+          title: String(remoteMessage.notification?.title || remoteMessage.data?.title || 'New Notification'),
+          body: String(remoteMessage.notification?.body || remoteMessage.data?.body || 'You have a new message.'),
+          data: remoteMessage.data as Record<string, string>,
         },
         trigger: null,
       });
@@ -86,23 +90,19 @@ export const usePushNotifications = () => {
     };
   }, [refreshNotifications]);
 
-  // Effect 4: Notification response (tap) listener
   useEffect(() => {
     const responseListener = Notifications.addNotificationResponseReceivedListener(response => {
       if (!isAuthenticated) return;
       const data = response.notification.request.content.data;
       if ((data?.type === 'new_message' || data?.type === 'quote_request') && data?.conversationId) {
-        // @ts-ignore
         navigation.navigate('ChatScreen', {
           conversationId: data.conversationId,
           recipientId: data.senderId,
           recipientName: data.senderName,
         });
       } else if (data?.type === 'new_review') {
-        // @ts-ignore
         navigation.navigate('Profile');
       } else if (data?.type === 'new_lead') {
-        // @ts-ignore
         navigation.navigate('ContractorDashboard');
       }
     });

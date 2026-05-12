@@ -23,7 +23,6 @@ export const useImagePicker = (options: UseImagePickerOptions = {}) => {
         maxWidth,
         maxHeight,
         quality,
-        includeBase64: true,
       });
 
       if (result.didCancel || !result.assets || result.assets.length === 0) {
@@ -34,11 +33,11 @@ export const useImagePicker = (options: UseImagePickerOptions = {}) => {
       if (asset.fileSize && asset.fileSize > 5 * 1024 * 1024) {
         throw new Error('Image size must be less than 5MB');
       }
-      if (!asset.base64) {
-        throw new Error('No base64 data returned');
+      if (!asset.uri) {
+        throw new Error('No image data returned');
       }
 
-      return `data:${asset.type || 'image/jpeg'};base64,${asset.base64}`;
+      return asset.uri;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to pick image');
       return null;
@@ -57,7 +56,6 @@ export const useImagePicker = (options: UseImagePickerOptions = {}) => {
         maxWidth,
         maxHeight,
         quality,
-        includeBase64: true,
         cameraType: 'back',
       });
 
@@ -69,11 +67,11 @@ export const useImagePicker = (options: UseImagePickerOptions = {}) => {
       if (asset.fileSize && asset.fileSize > 5 * 1024 * 1024) {
         throw new Error('Image size must be less than 5MB');
       }
-      if (!asset.base64) {
-        throw new Error('No base64 data returned');
+      if (!asset.uri) {
+        throw new Error('No image data returned');
       }
 
-      return `data:${asset.type || 'image/jpeg'};base64,${asset.base64}`;
+      return asset.uri;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to take photo');
       return null;
@@ -92,7 +90,6 @@ export const useImagePicker = (options: UseImagePickerOptions = {}) => {
         maxWidth,
         maxHeight,
         quality,
-        includeBase64: true,
         selectionLimit: 10,
       });
 
@@ -105,8 +102,8 @@ export const useImagePicker = (options: UseImagePickerOptions = {}) => {
         if (asset.fileSize && asset.fileSize > 5 * 1024 * 1024) {
           throw new Error('One or more images exceed the 5MB size limit');
         }
-        if (asset.base64) {
-          urls.push(`data:${asset.type || 'image/jpeg'};base64,${asset.base64}`);
+        if (asset.uri) {
+          urls.push(asset.uri);
         }
       }
 

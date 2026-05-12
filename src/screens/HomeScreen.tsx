@@ -21,7 +21,6 @@ import { browseContractors } from '../utils/apiClient';
 import { Contractor, RootStackParamList } from '../types';
 import { getCoverImageUrl, isSvgUrl } from '../utils/avatarUtils';
 import { getFavorites, addFavorite, removeFavorite } from '../utils/favoritesStore';
-import { IP_GEOLOCATION_URL } from '../config';
 
 // ---- Categories matching web version (constants.ts) ----
 const CATEGORIES = [
@@ -264,7 +263,7 @@ const HomeScreen = () => {
   const fetchLocationAndData = useCallback(async () => {
     let zip: string | null = null;
     try {
-      const response = await fetch(IP_GEOLOCATION_URL);
+      const response = await fetch('https://free.freeipapi.com/api/json');
       const data = await response.json();
       zip = data.zipCode || null;
       if (mountedRef.current) setIpZipCode(zip);

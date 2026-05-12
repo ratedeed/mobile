@@ -2,10 +2,8 @@ import React from 'react';
 import { createStackNavigator, CardStyleInterpolators } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { FontAwesome5 } from '@expo/vector-icons';
-import { Image, View, TouchableOpacity, Text as RNText, Appearance } from 'react-native';
-
-const colorScheme = Appearance.getColorScheme();
-const isDark = colorScheme === 'dark';
+import { Image, View, TouchableOpacity, Text as RNText } from 'react-native';
+import { useColorScheme } from 'nativewind';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { 
   MagnifyingGlass, 
@@ -35,6 +33,7 @@ import ChangeOrderScreen from '../screens/ChangeOrderScreen';
 import ContractorOnboardingScreen from '../screens/ContractorOnboardingScreen';
 import QuoteReviewScreen from '../screens/QuoteReviewScreen';
 import VerifyEmailChangeScreen from '../screens/VerifyEmailChangeScreen';
+import ResetPasswordScreen from '../screens/ResetPasswordScreen';
 
 import Typography from '../components/common/Typography';
 import { useAuth } from '../context/AuthContext';
@@ -78,16 +77,14 @@ const JobsTabBarButton = ({ onPress }) => (
 
 const screenOptions = {
   headerStyle: {
-    backgroundColor: isDark ? '#09090B' : '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: isDark ? '#27272A' : '#E4E4E7',
+    borderBottomColor: '#E4E4E7',
     shadowOpacity: 0,
     elevation: 0,
   },
   headerTitleStyle: {
     fontWeight: '600',
     fontSize: 18,
-    color: isDark ? '#FAFAFA' : '#09090B',
   },
   headerTintColor: '#2563EB',
   headerBackTitleVisible: false,
@@ -98,6 +95,8 @@ const screenOptions = {
 
 function MainTabNavigator() {
   const insets = useSafeAreaInsets();
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
   const { userRole } = useAuth();
   const { unreadCount, unreadMessagesCount } = useNotifications();
 
@@ -231,6 +230,9 @@ function MainTabNavigator() {
 }
 
 export default function MainNavigator() {
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
+
   const dynamicScreenOptions = {
     headerStyle: {
       backgroundColor: isDark ? '#09090B' : '#FFFFFF',
@@ -242,9 +244,9 @@ export default function MainNavigator() {
     headerTitleStyle: {
       fontWeight: '600',
       fontSize: 18,
-      color: '#09090B',
+      color: isDark ? '#FAFAFA' : '#09090B',
     },
-    headerTintColor: '#09090B',
+    headerTintColor: isDark ? '#FAFAFA' : '#09090B',
     headerBackTitleVisible: false,
     headerLeft: ({ canGoBack, onPress }) => 
       canGoBack ? (
@@ -284,6 +286,7 @@ export default function MainNavigator() {
       <Stack.Screen name="BusinessSearch" component={BusinessSearchScreen} options={{ title: '', headerShown: false }} />
       <Stack.Screen name="QuoteReview" component={QuoteReviewScreen} options={{ title: 'Review Quote' }} />
       <Stack.Screen name="VerifyEmailChange" component={VerifyEmailChangeScreen} options={{ title: 'Verify Email', headerShown: false }} />
+      <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} options={{ title: 'Set New Password', headerShown: false }} />
     </Stack.Navigator>
   );
 }

@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { initializeAuth, getReactNativePersistence } from 'firebase/auth';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
@@ -17,10 +17,16 @@ let auth;
 try {
   app = getApps().length ? getApp() : initializeApp(firebaseConfig);
   auth = initializeAuth(app, {
-    persistence: getReactNativePersistence(AsyncStorage),
+    persistence: getReactNativePersistence({
+      getItem: SecureStore.getItemAsync,
+      setItem: SecureStore.setItemAsync,
+      removeItem: SecureStore.deleteItemAsync,
+    }),
   });
 } catch (error) {
-  console.error("Firebase initialization error. Are your EXPO_PUBLIC_ variables set in EAS secrets?", error);
+  if (__DEV__) {
+    console.warn("Firebase initialization error. Check EXPO_PUBLIC_ env variables.");
+  }
   app = {};
   auth = {};
 }

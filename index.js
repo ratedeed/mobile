@@ -4,24 +4,24 @@ import { registerRootComponent } from 'expo';
 import { getMessaging, setBackgroundMessageHandler } from '@react-native-firebase/messaging';
 import * as Notifications from 'expo-notifications';
 
-// SYNC: Set background handler BEFORE importing App
 setBackgroundMessageHandler(getMessaging(), async remoteMessage => {
-  if (!remoteMessage.notification) {
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title: remoteMessage.data?.title || 'New Message',
-        body: remoteMessage.data?.body || 'You have a new message.',
-        data: remoteMessage.data,
-        sound: 'default',
-      },
-      trigger: null,
-    });
-  } else {
-    await Promise.resolve();
-  }
+  const data = remoteMessage.data || {};
+  const title = remoteMessage.notification?.title || data.title || 'New Message';
+  const body = remoteMessage.notification?.body || data.body || 'You have a new message.';
+
+  await Notifications.scheduleNotificationAsync({
+    content: {
+      title,
+      body,
+      data,
+      sound: 'default',
+    },
+    trigger: null,
+  });
 
   return Promise.resolve();
 });
+
 import App from './App';
 
 registerRootComponent(App);
