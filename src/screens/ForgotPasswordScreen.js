@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { View, ScrollView, Pressable, Text, TextInput, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, ScrollView, Pressable, Text, TextInput, Alert, KeyboardAvoidingView, Platform, useColorScheme } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { forgotPassword } from '../api';
 
 const ForgotPasswordScreen = () => {
+  const isDark = useColorScheme() === 'dark';
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
@@ -73,7 +74,7 @@ const ForgotPasswordScreen = () => {
               autoComplete="email"
               editable={!loading}
               className="w-full border border-neutral-300 dark:border-neutral-700 rounded-xl px-4 py-3 text-sm bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-50"
-              placeholderTextColor="#a3a3a3"
+              placeholderTextColor={isDark ? "#666" : "#a3a3a3"}
             />
 
             <Pressable

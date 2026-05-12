@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  useColorScheme,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
@@ -19,6 +20,7 @@ import { auth } from '../firebaseConfig';
 const firebaseAuth: Auth = auth as unknown as Auth;
 
 export default function ResetPasswordScreen() {
+  const isDark = useColorScheme() === 'dark';
   const navigation = useNavigation();
   const route = useRoute();
   const { oobCode } = (route.params || {}) as { oobCode?: string };
@@ -76,17 +78,17 @@ export default function ResetPasswordScreen() {
 
   if (status === 'success') {
     return (
-      <View className="flex-1 bg-white items-center justify-center px-6">
-        <View className="w-16 h-16 bg-emerald-50 rounded-full items-center justify-center mb-4">
+      <View className="flex-1 bg-white dark:bg-neutral-950 items-center justify-center px-6">
+        <View className="w-16 h-16 bg-emerald-50 dark:bg-emerald-900/20 rounded-full items-center justify-center mb-4">
           <FontAwesome5 name="check-circle" size={28} color="#059669" />
         </View>
-        <Text className="text-xl font-bold text-neutral-900 mb-2">Password Reset!</Text>
-        <Text className="text-sm text-neutral-500 text-center mb-6">{message}</Text>
+        <Text className="text-xl font-bold text-neutral-900 dark:text-white mb-2">Password Reset!</Text>
+        <Text className="text-sm text-neutral-500 dark:text-neutral-400 text-center mb-6">{message}</Text>
         <Pressable
           onPress={() => navigation.navigate('Login' as never)}
-          className="bg-neutral-900 px-8 py-3.5 rounded-xl"
+          className="bg-neutral-900 dark:bg-white px-8 py-3.5 rounded-xl"
         >
-          <Text className="text-white font-bold text-sm">Back to Login</Text>
+          <Text className="text-white dark:text-neutral-900 font-bold text-sm">Back to Login</Text>
         </Pressable>
       </View>
     );
@@ -95,48 +97,48 @@ export default function ResetPasswordScreen() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      className="flex-1 bg-white"
+      className="flex-1 bg-white dark:bg-neutral-950"
     >
       <View className="flex-1 px-6 pt-12">
         <View className="items-center mb-8">
-          <View className="w-14 h-14 bg-indigo-50 rounded-2xl items-center justify-center mb-3">
+          <View className="w-14 h-14 bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl items-center justify-center mb-3">
             <FontAwesome5 name="lock" size={24} color="#4F46E5" />
           </View>
-          <Text className="text-2xl font-bold text-neutral-900 mb-1">Set New Password</Text>
-          <Text className="text-sm text-neutral-500 text-center">
+          <Text className="text-2xl font-bold text-neutral-900 dark:text-white mb-1">Set New Password</Text>
+          <Text className="text-sm text-neutral-500 dark:text-neutral-400 text-center">
             Enter your new password below.
           </Text>
         </View>
 
         {status === 'error' && message && (
-          <View className="bg-red-50 border border-red-100 rounded-xl p-4 flex-row items-center mb-6" style={{ gap: 10 }}>
+          <View className="bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800 rounded-xl p-4 flex-row items-center mb-6" style={{ gap: 10 }}>
             <FontAwesome5 name="exclamation-circle" size={16} color="#dc2626" />
-            <Text className="text-sm text-red-700 flex-1">{message}</Text>
+            <Text className="text-sm text-red-700 dark:text-red-300 flex-1">{message}</Text>
           </View>
         )}
 
         <View className="mb-4">
-          <Text className="text-sm font-semibold text-neutral-700 mb-1.5">New Password</Text>
+          <Text className="text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-1.5">New Password</Text>
           <TextInput
             placeholder="Enter new password"
             value={newPassword}
             onChangeText={(text) => { setNewPassword(text); setStatus('idle'); setMessage(null); }}
             secureTextEntry
-            className="border border-neutral-200 rounded-xl px-4 py-3.5 text-sm bg-neutral-50"
-            placeholderTextColor="#a3a3a3"
+            className="border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-3.5 text-sm bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-white"
+            placeholderTextColor={isDark ? "#666" : "#a3a3a3"}
             editable={status !== 'loading'}
           />
         </View>
 
         <View className="mb-6">
-          <Text className="text-sm font-semibold text-neutral-700 mb-1.5">Confirm Password</Text>
+          <Text className="text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-1.5">Confirm Password</Text>
           <TextInput
             placeholder="Confirm new password"
             value={confirmPassword}
             onChangeText={(text) => { setConfirmPassword(text); setStatus('idle'); setMessage(null); }}
             secureTextEntry
-            className="border border-neutral-200 rounded-xl px-4 py-3.5 text-sm bg-neutral-50"
-            placeholderTextColor="#a3a3a3"
+            className="border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-3.5 text-sm bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-white"
+            placeholderTextColor={isDark ? "#666" : "#a3a3a3"}
             editable={status !== 'loading'}
           />
         </View>
@@ -146,7 +148,7 @@ export default function ResetPasswordScreen() {
           disabled={status === 'loading' || !newPassword || !confirmPassword}
           className={`py-4 rounded-xl items-center ${
             status === 'loading' || !newPassword || !confirmPassword
-              ? 'bg-neutral-300'
+              ? 'bg-neutral-300 dark:bg-neutral-700'
               : 'bg-indigo-600'
           }`}
         >

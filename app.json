@@ -44,7 +44,6 @@
         "foregroundImage": "./icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true,
       "package": "com.ratedeed.app",
       "googleServicesFile": "./google-services.json",
       "splash": {
@@ -109,7 +108,15 @@
         }
       ],
       "expo-tracking-transparency",
-      "@sentry/react-native"
+      "@sentry/react-native",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useModularHeaders": true
+          }
+        }
+      ]
     ],
     "scheme": "ratedeed",
     "extra": {

@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Linking,
+  useColorScheme,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
@@ -20,6 +21,7 @@ import { useAuth } from '../context/AuthContext';
 import * as AppleAuthentication from 'expo-apple-authentication';
 
 const LoginScreen = () => {
+  const isDark = useColorScheme() === 'dark';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -188,7 +190,7 @@ const LoginScreen = () => {
             autoComplete="email"
             editable={!loading}
             className="w-full border border-neutral-300 dark:border-neutral-700 rounded-xl px-4 py-3 text-sm bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-50"
-            placeholderTextColor="#a3a3a3"
+            placeholderTextColor={isDark ? "#666" : "#a3a3a3"}
             accessibilityLabel="Email address"
             accessibilityRole="text"
           />
@@ -203,7 +205,7 @@ const LoginScreen = () => {
               autoComplete="password"
               editable={!loading}
             className="w-full border border-neutral-300 dark:border-neutral-700 rounded-xl px-4 py-3 text-sm bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-50 pr-20"
-            placeholderTextColor="#a3a3a3"
+            placeholderTextColor={isDark ? "#666" : "#a3a3a3"}
           />
             <Pressable
               onPress={() => setShowPassword(!showPassword)}
@@ -215,7 +217,7 @@ const LoginScreen = () => {
               <FontAwesome5
                 name={showPassword ? 'eye-slash' : 'eye'}
                 size={12}
-                color="#171717"
+                color={isDark ? "#ffffff" : "#171717"}
               />
               <Text className="text-xs font-semibold text-neutral-900 dark:text-neutral-50">
                 {showPassword ? 'Hide' : 'Show'}
