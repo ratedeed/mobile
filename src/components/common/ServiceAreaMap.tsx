@@ -195,7 +195,7 @@ export default function ServiceAreaMap({
         pitchEnabled={false}
         showsUserLocation={false}
         showsTraffic={false}
-        showsPointsOfInterest={false}
+        showsPointsOfInterests={false}
         showsBuildings={false}
         showsIndoors={false}
         toolbarEnabled={false}

@@ -1,10 +1,10 @@
-internal import Expo
+import Expo
 import FirebaseCore
 import React
 import ReactAppDependencyProvider
 
-@main
-class AppDelegate: ExpoAppDelegate {
+@UIApplicationMain
+public class AppDelegate: ExpoAppDelegate {
   var window: UIWindow?
 
   var reactNativeDelegate: ExpoReactNativeFactoryDelegate?
@@ -20,6 +20,7 @@ class AppDelegate: ExpoAppDelegate {
 
     reactNativeDelegate = delegate
     reactNativeFactory = factory
+    bindReactNativeFactory(factory)
 
 #if os(iOS) || os(tvOS)
     window = UIWindow(frame: UIScreen.main.bounds)

@@ -96,9 +96,9 @@ export const usePushNotifications = () => {
       const data = response.notification.request.content.data;
       if ((data?.type === 'new_message' || data?.type === 'quote_request') && data?.conversationId) {
         navigation.navigate('ChatScreen', {
-          conversationId: data.conversationId,
-          recipientId: data.senderId,
-          recipientName: data.senderName,
+          conversationId: String(data.conversationId),
+          recipientId: data.senderId != null ? String(data.senderId) : undefined,
+          recipientName: data.senderName != null ? String(data.senderName) : undefined,
         });
       } else if (data?.type === 'new_review') {
         navigation.navigate('Profile');
