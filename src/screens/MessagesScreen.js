@@ -244,7 +244,7 @@ const ReportModal = ({ visible, onClose, userName, onReport }) => {
           {selected && (
             <View className="px-5 pt-5">
               <Text className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-2">Additional details (optional)</Text>
-              <TextInput className="bg-neutral-50 dark:bg-neutral-800 rounded-xl px-4 py-3 text-sm min-h-[80px] text-neutral-900 dark:text-white" placeholder="Tell us more..." placeholderTextColor={isDark ? "#666" : "#a3a3a3"} value={details} onChangeText={setDetails} multiline textAlignVertical="top" />
+              <TextInput className="bg-neutral-50 dark:bg-neutral-800 rounded-xl px-4 py-3 text-sm min-h-[80px] text-neutral-900 dark:text-white" placeholder="Tell us more..." placeholderTextColor={isDark ? "#9ca3af" : "#a3a3a3"} value={details} onChangeText={setDetails} multiline textAlignVertical="top" />
             </View>
           )}
         </ScrollView>
@@ -699,7 +699,7 @@ const MessagesScreen = () => {
             <View className="px-5 pb-2 pt-1">
               <View className="bg-neutral-100 dark:bg-neutral-800 rounded-2xl px-4 py-3 flex-row items-center">
                 <FontAwesome5 name="search" size={13} color="#a3a3a3" />
-                <TextInput className="flex-1 ml-3 text-[14px] text-neutral-800" placeholder="Search conversations..." placeholderTextColor={isDark ? "#666" : "#a3a3a3"} value={searchQuery} onChangeText={setSearchQuery} />
+                <TextInput className="flex-1 ml-3 text-[14px] text-neutral-800" placeholder="Search conversations..." placeholderTextColor={isDark ? "#9ca3af" : "#a3a3a3"} value={searchQuery} onChangeText={setSearchQuery} />
                 {searchQuery ? <Pressable onPress={() => setSearchQuery("")}><FontAwesome5 name="times-circle" size={14} color="#a3a3a3" /></Pressable> : null}
               </View>
             </View>
@@ -877,7 +877,7 @@ const MessagesScreen = () => {
             <View className="px-4 py-3 bg-white dark:bg-neutral-900 border-t border-neutral-100 dark:border-neutral-800 flex-row items-end" style={{ gap: 8, paddingBottom: insets.bottom + 12 || 12 }}>
               <Pressable onPress={pickImage} className="w-11 h-11 items-center justify-center rounded-full bg-neutral-50 dark:bg-neutral-800" accessibilityLabel="Attach image" accessibilityRole="button"><FontAwesome5 name="image" size={15} color="#737373" /></Pressable>
               {contractorProfile && selectedConversation?.conversationId && <Pressable onPress={() => setShowQuoteSheet(true)} className="w-11 h-11 items-center justify-center rounded-full bg-indigo-50" accessibilityLabel="Send quote" accessibilityRole="button"><FontAwesome5 name="tag" size={13} color="#4F46E5" /></Pressable>}
-              <View className="flex-1 bg-neutral-100 dark:bg-neutral-800 rounded-2xl px-4 py-2.5 max-h-[120px]"><TextInput className="text-[15px] text-neutral-800 dark:text-neutral-200 leading-5" placeholder="Type a message..." placeholderTextColor={isDark ? "#666" : "#a3a3a3"} value={newMessage} onChangeText={handleTextChange} multiline style={{ maxHeight: 100 }} accessibilityLabel="Message input" accessibilityRole="text" /></View>
+              <View className="flex-1 bg-neutral-100 dark:bg-neutral-800 rounded-2xl px-4 py-2.5 max-h-[120px]"><TextInput className="text-[15px] text-neutral-800 dark:text-neutral-200 leading-5" placeholder="Type a message..." placeholderTextColor={isDark ? "#9ca3af" : "#a3a3a3"} value={newMessage} onChangeText={handleTextChange} multiline style={{ maxHeight: 100 }} accessibilityLabel="Message input" accessibilityRole="text" /></View>
               <Pressable onPress={handleSendMessage} disabled={(!newMessage.trim() && !pendingAttachment) || isUploading} className={`w-11 h-11 rounded-full items-center justify-center mb-0.5 ${newMessage.trim() || pendingAttachment ? "bg-indigo-600" : "bg-neutral-200"}`} style={newMessage.trim() || pendingAttachment ? { shadowColor: "#4F46E5", shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { height: 2 }, elevation: 3 } : undefined} accessibilityLabel="Send message" accessibilityRole="button">
                 {isUploading ? <ActivityIndicator size="small" color="white" /> : <FontAwesome5 name="paper-plane" size={14} color={newMessage.trim() || pendingAttachment ? "white" : "#a3a3a3"} />}
               </Pressable>

@@ -345,7 +345,7 @@ const ContractorSignupScreen = () => {
                   value={firstName}
                   onChangeText={setFirstName}
                   className="border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-neutral-50"
-                  placeholderTextColor={isDark ? "#666" : "#a3a3a3"}
+                  placeholderTextColor={isDark ? "#9ca3af" : "#a3a3a3"}
                 />
               </View>
               <View className="flex-1">
@@ -355,7 +355,7 @@ const ContractorSignupScreen = () => {
                   value={lastName}
                   onChangeText={setLastName}
                   className="border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-neutral-50"
-                  placeholderTextColor={isDark ? "#666" : "#a3a3a3"}
+                  placeholderTextColor={isDark ? "#9ca3af" : "#a3a3a3"}
                 />
               </View>
             </View>
@@ -369,7 +369,7 @@ const ContractorSignupScreen = () => {
                 keyboardType="email-address"
                 autoCapitalize="none"
                 className="border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-neutral-50"
-                placeholderTextColor={isDark ? "#666" : "#a3a3a3"}
+                placeholderTextColor={isDark ? "#9ca3af" : "#a3a3a3"}
               />
             </View>
 
@@ -382,7 +382,7 @@ const ContractorSignupScreen = () => {
                 keyboardType="phone-pad"
                 maxLength={12}
                 className="border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-neutral-50"
-                placeholderTextColor={isDark ? "#666" : "#a3a3a3"}
+                placeholderTextColor={isDark ? "#9ca3af" : "#a3a3a3"}
               />
             </View>
 
@@ -395,7 +395,7 @@ const ContractorSignupScreen = () => {
                   onChangeText={setPassword}
                   secureTextEntry={!showPassword}
                   className="border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-neutral-50 pr-12"
-                  placeholderTextColor={isDark ? "#666" : "#a3a3a3"}
+                  placeholderTextColor={isDark ? "#9ca3af" : "#a3a3a3"}
                 />
                 <Pressable 
                   onPress={() => setShowPassword(!showPassword)}
@@ -414,7 +414,7 @@ const ContractorSignupScreen = () => {
                 onChangeText={setConfirmPassword}
                 secureTextEntry
                 className="border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-neutral-50"
-                placeholderTextColor={isDark ? "#666" : "#a3a3a3"}
+                placeholderTextColor={isDark ? "#9ca3af" : "#a3a3a3"}
               />
             </View>
 
@@ -444,7 +444,7 @@ const ContractorSignupScreen = () => {
                 value={companyName}
                 onChangeText={setCompanyName}
                 className="border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-neutral-50"
-                placeholderTextColor={isDark ? "#666" : "#a3a3a3"}
+                placeholderTextColor={isDark ? "#9ca3af" : "#a3a3a3"}
               />
             </View>
 
@@ -476,7 +476,7 @@ const ContractorSignupScreen = () => {
                 value={businessAddress}
                 onChangeText={searchAddress}
                 className="border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-neutral-50"
-                placeholderTextColor={isDark ? "#666" : "#a3a3a3"}
+                placeholderTextColor={isDark ? "#9ca3af" : "#a3a3a3"}
               />
               {isSearchingAddress && (
                 <View className="absolute right-4 top-10">
@@ -512,7 +512,7 @@ const ContractorSignupScreen = () => {
                   keyboardType="numeric"
                   maxLength={5}
                   className="flex-1 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-neutral-50"
-                  placeholderTextColor={isDark ? "#666" : "#a3a3a3"}
+                  placeholderTextColor={isDark ? "#9ca3af" : "#a3a3a3"}
                 />
                 <Pressable 
                   onPress={addZip}

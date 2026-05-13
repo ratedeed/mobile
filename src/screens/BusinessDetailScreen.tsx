@@ -1018,7 +1018,7 @@ const BusinessDetailScreen: React.FC = () => {
               multiline
               className="bg-neutral-50 dark:bg-neutral-900 p-4 rounded-xl mb-4 text-sm text-neutral-900 dark:text-white"
               style={{ height: 100, textAlignVertical: 'top' }}
-              placeholderTextColor={isDark ? "#666" : "#a3a3a3"}
+              placeholderTextColor={isDark ? "#9ca3af" : "#a3a3a3"}
               value={reportReason}
               onChangeText={setReportReason}
             />

@@ -118,7 +118,7 @@ export default function ReviewScreen() {
           onChangeText={setTitle}
           maxLength={100}
           className="border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-3 text-sm bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-white mb-5"
-          placeholderTextColor={isDark ? "#666" : "#a3a3a3"}
+          placeholderTextColor={isDark ? "#9ca3af" : "#a3a3a3"}
         />
 
         {/* Comment */}
@@ -131,7 +131,7 @@ export default function ReviewScreen() {
           numberOfLines={5}
           maxLength={1000}
           className="border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-3 text-sm bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-white mb-8 min-h-[120px]"
-          placeholderTextColor={isDark ? "#666" : "#a3a3a3"}
+          placeholderTextColor={isDark ? "#9ca3af" : "#a3a3a3"}
           style={{ textAlignVertical: 'top' }}
         />
 

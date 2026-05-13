@@ -190,7 +190,7 @@ const LoginScreen = () => {
             autoComplete="email"
             editable={!loading}
             className="w-full border border-neutral-300 dark:border-neutral-700 rounded-xl px-4 py-3 text-sm bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-50"
-            placeholderTextColor={isDark ? "#666" : "#a3a3a3"}
+            placeholderTextColor={isDark ? "#9ca3af" : "#a3a3a3"}
             accessibilityLabel="Email address"
             accessibilityRole="text"
           />
@@ -205,7 +205,7 @@ const LoginScreen = () => {
               autoComplete="password"
               editable={!loading}
             className="w-full border border-neutral-300 dark:border-neutral-700 rounded-xl px-4 py-3 text-sm bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-50 pr-20"
-            placeholderTextColor={isDark ? "#666" : "#a3a3a3"}
+            placeholderTextColor={isDark ? "#9ca3af" : "#a3a3a3"}
           />
             <Pressable
               onPress={() => setShowPassword(!showPassword)}
@@ -253,7 +253,7 @@ const LoginScreen = () => {
 
           {/* Forgot Password */}
           <Pressable onPress={() => navigation.navigate('ForgotPassword')} accessibilityLabel="Forgot password" accessibilityRole="link">
-            <Text className="text-xs font-semibold text-neutral-500">Forgot password?</Text>
+            <Text className="text-xs font-semibold text-neutral-500 dark:text-neutral-300">Forgot password?</Text>
           </Pressable>
 
           {/* Login Button */}
@@ -299,7 +299,7 @@ const LoginScreen = () => {
           <View className="items-center pt-4 flex-row justify-center" style={{ gap: 4 }}>
             <Text className="text-sm text-neutral-500 dark:text-neutral-400">Don't have an account?</Text>
             <Pressable onPress={() => navigation.navigate('Register')} accessibilityLabel="Sign up" accessibilityRole="link">
-              <Text className="text-sm font-semibold text-neutral-900 underline">Sign Up</Text>
+              <Text className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 underline">Sign Up</Text>
             </Pressable>
           </View>
 
@@ -307,7 +307,7 @@ const LoginScreen = () => {
           <View className="items-center pt-2 flex-row justify-center" style={{ gap: 4 }}>
             <Text className="text-sm text-neutral-500 dark:text-neutral-400">Are you a contractor?</Text>
             <Pressable onPress={() => navigation.navigate('ContractorSignup')} accessibilityLabel="Sign up as a contractor" accessibilityRole="link">
-              <Text className="text-sm font-semibold text-neutral-900 underline">Sign Up as a Contractor</Text>
+              <Text className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 underline">Sign Up as a Contractor</Text>
             </Pressable>
           </View>
 

@@ -167,7 +167,7 @@ const RegisterScreen = () => {
               autoComplete="given-name"
               editable={!loading}
               className="flex-1 border border-neutral-300 dark:border-neutral-700 rounded-xl px-4 py-3 text-sm bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-50"
-              placeholderTextColor={isDark ? "#666" : "#a3a3a3"}
+              placeholderTextColor={isDark ? "#9ca3af" : "#a3a3a3"}
             />
           </View>
 
@@ -182,7 +182,7 @@ const RegisterScreen = () => {
             autoComplete="email"
             editable={!loading}
             className="w-full border border-neutral-300 dark:border-neutral-700 rounded-xl px-4 py-3 text-sm bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-50"
-            placeholderTextColor={isDark ? "#666" : "#a3a3a3"}
+            placeholderTextColor={isDark ? "#9ca3af" : "#a3a3a3"}
           />
 
           {/* Password */}
@@ -195,7 +195,7 @@ const RegisterScreen = () => {
               autoComplete="new-password"
               editable={!loading}
               className="w-full border border-neutral-300 rounded-xl px-4 py-3 text-sm bg-white pr-20"
-              placeholderTextColor={isDark ? "#666" : "#a3a3a3"}
+              placeholderTextColor={isDark ? "#9ca3af" : "#a3a3a3"}
             />
             <Pressable
               onPress={() => setShowPassword(!showPassword)}
@@ -219,7 +219,7 @@ const RegisterScreen = () => {
             maxLength={10}
             editable={!loading}
             className="w-full border border-neutral-300 dark:border-neutral-700 rounded-xl px-4 py-3 text-sm bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-50"
-            placeholderTextColor={isDark ? "#666" : "#a3a3a3"}
+            placeholderTextColor={isDark ? "#9ca3af" : "#a3a3a3"}
           />
 
           {/* API Error */}
@@ -269,7 +269,7 @@ const RegisterScreen = () => {
           <View className="items-center pt-4 flex-row justify-center" style={{ gap: 4 }}>
             <Text className="text-sm text-neutral-500">Already have an account?</Text>
             <Pressable onPress={() => navigation.navigate('Login')}>
-              <Text className="text-sm font-semibold text-neutral-900 underline">Log In</Text>
+              <Text className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 underline">Log In</Text>
             </Pressable>
           </View>
 

@@ -285,7 +285,7 @@ export default function ContractorOnboardingScreen() {
                 value={description}
                 onChangeText={setDescription}
                 placeholder="Tell homeowners what makes your business special..."
-                placeholderTextColor={isDark ? "#666" : "#a3a3a3"}
+                placeholderTextColor={isDark ? "#9ca3af" : "#a3a3a3"}
                 multiline
                 maxLength={1000}
                 className="bg-neutral-50 dark:bg-neutral-900 rounded-2xl px-4 py-3 text-sm text-neutral-900 dark:text-white min-h-[100px] text-top"
@@ -316,21 +316,21 @@ export default function ContractorOnboardingScreen() {
                       value={service.name}
                       onChangeText={t => setServices(s => s.map((sv, idx) => idx === i ? { ...sv, name: t } : sv))}
                       placeholder="Service name (e.g., Kitchen Remodeling)"
-                      placeholderTextColor={isDark ? "#666" : "#a3a3a3"}
+                      placeholderTextColor={isDark ? "#9ca3af" : "#a3a3a3"}
                       className="bg-white dark:bg-neutral-800 rounded-xl px-3 py-2.5 text-sm text-neutral-900 dark:text-white mb-2"
                     />
                     <TextInput
                       value={service.description}
                       onChangeText={t => setServices(s => s.map((sv, idx) => idx === i ? { ...sv, description: t } : sv))}
                       placeholder="Brief description"
-                      placeholderTextColor={isDark ? "#666" : "#a3a3a3"}
+                      placeholderTextColor={isDark ? "#9ca3af" : "#a3a3a3"}
                       className="bg-white dark:bg-neutral-800 rounded-xl px-3 py-2.5 text-sm text-neutral-900 dark:text-white mb-2"
                     />
                     <TextInput
                       value={service.priceEstimate}
                       onChangeText={t => setServices(s => s.map((sv, idx) => idx === i ? { ...sv, priceEstimate: t } : sv))}
                       placeholder="Price range (e.g., $500 - $2,000)"
-                      placeholderTextColor={isDark ? "#666" : "#a3a3a3"}
+                      placeholderTextColor={isDark ? "#9ca3af" : "#a3a3a3"}
                       className="bg-white dark:bg-neutral-800 rounded-xl px-3 py-2.5 text-sm text-neutral-900 dark:text-white"
                     />
                   </View>
@@ -378,7 +378,7 @@ export default function ContractorOnboardingScreen() {
                       value={item.name}
                       onChangeText={t => setPortfolioItems(p => p.map((it, idx) => idx === i ? { ...it, name: t } : it))}
                       placeholder="Project name"
-                      placeholderTextColor={isDark ? "#666" : "#a3a3a3"}
+                      placeholderTextColor={isDark ? "#9ca3af" : "#a3a3a3"}
                       className="mt-1.5 text-xs text-neutral-700 dark:text-neutral-300"
                     />
                   </View>
@@ -412,7 +412,7 @@ export default function ContractorOnboardingScreen() {
                 value={zipCodes}
                 onChangeText={setZipCodes}
                 placeholder="Enter ZIP codes separated by commas (e.g., 10001, 10002, 10003)"
-                placeholderTextColor={isDark ? "#666" : "#a3a3a3"}
+                placeholderTextColor={isDark ? "#9ca3af" : "#a3a3a3"}
                 multiline
                 className="bg-neutral-50 dark:bg-neutral-900 rounded-2xl px-4 py-3 text-sm text-neutral-900 dark:text-white min-h-[80px]"
                 style={{ textAlignVertical: 'top' }}
@@ -442,7 +442,7 @@ export default function ContractorOnboardingScreen() {
                 value={licenseNumber}
                 onChangeText={setLicenseNumber}
                 placeholder="e.g., #ABC-12345"
-                placeholderTextColor={isDark ? "#666" : "#a3a3a3"}
+                placeholderTextColor={isDark ? "#9ca3af" : "#a3a3a3"}
                 className="bg-neutral-50 dark:bg-neutral-900 rounded-2xl px-4 py-3 text-sm text-neutral-900 dark:text-white"
               />
               <Text className="text-[10px] text-neutral-400 dark:text-neutral-500 mt-2">Verification typically takes 1-2 business days.</Text>

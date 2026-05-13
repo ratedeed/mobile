@@ -136,7 +136,7 @@ return (
               onChangeText={setTitle}
               maxLength={150}
               className="border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-3 text-sm bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-white mb-5"
-              placeholderTextColor={isDark ? "#666" : "#a3a3a3"}
+              placeholderTextColor={isDark ? "#9ca3af" : "#a3a3a3"}
             />
 
             {/* Description Input */}
@@ -149,7 +149,7 @@ return (
               numberOfLines={5}
               maxLength={2000}
               className="border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-3 text-sm bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-white mb-2 min-h-[120px]"
-              placeholderTextColor={isDark ? "#666" : "#a3a3a3"}
+              placeholderTextColor={isDark ? "#9ca3af" : "#a3a3a3"}
               style={{ textAlignVertical: 'top' }}
             />
             <View className="flex-row justify-end mb-5">
@@ -168,7 +168,7 @@ return (
                 onChangeText={setAmount}
                 keyboardType="decimal-pad"
                 className="flex-1 py-3 text-sm text-neutral-900 dark:text-white"
-                placeholderTextColor={isDark ? "#666" : "#a3a3a3"}
+                placeholderTextColor={isDark ? "#9ca3af" : "#a3a3a3"}
               />
             </View>
 

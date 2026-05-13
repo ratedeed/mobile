@@ -125,7 +125,7 @@ export default function ResetPasswordScreen() {
             onChangeText={(text) => { setNewPassword(text); setStatus('idle'); setMessage(null); }}
             secureTextEntry
             className="border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-3.5 text-sm bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-white"
-            placeholderTextColor={isDark ? "#666" : "#a3a3a3"}
+            placeholderTextColor={isDark ? "#9ca3af" : "#a3a3a3"}
             editable={status !== 'loading'}
           />
         </View>
@@ -138,7 +138,7 @@ export default function ResetPasswordScreen() {
             onChangeText={(text) => { setConfirmPassword(text); setStatus('idle'); setMessage(null); }}
             secureTextEntry
             className="border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-3.5 text-sm bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-white"
-            placeholderTextColor={isDark ? "#666" : "#a3a3a3"}
+            placeholderTextColor={isDark ? "#9ca3af" : "#a3a3a3"}
             editable={status !== 'loading'}
           />
         </View>

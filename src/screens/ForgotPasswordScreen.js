@@ -74,7 +74,7 @@ const ForgotPasswordScreen = () => {
               autoComplete="email"
               editable={!loading}
               className="w-full border border-neutral-300 dark:border-neutral-700 rounded-xl px-4 py-3 text-sm bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-50"
-              placeholderTextColor={isDark ? "#666" : "#a3a3a3"}
+              placeholderTextColor={isDark ? "#9ca3af" : "#a3a3a3"}
             />
 
             <Pressable
@@ -95,7 +95,7 @@ const ForgotPasswordScreen = () => {
 
             <Pressable onPress={() => navigation.navigate('Login')} className="items-center pt-2">
               <Text className="text-sm text-neutral-500 dark:text-neutral-400">
-                <Text className="font-semibold text-neutral-900 underline">Back to Log In</Text>
+                <Text className="font-semibold text-neutral-900 dark:text-neutral-100 underline">Back to Log In</Text>
               </Text>
             </Pressable>
           </View>
