@@ -309,7 +309,7 @@ const MessagesScreen = () => {
   const route = useRoute();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const { userId: currentUserId, userRole } = useAuth();
+  const { userId: currentUserId, userRole, isAuthenticated } = useAuth();
   const { contractorProfile } = useContractor();
   const { refreshUnreadMessagesCount } = useNotifications();
   const myContractorId = contractorProfile?._id || contractorProfile?.id;
@@ -688,6 +688,32 @@ const MessagesScreen = () => {
       if (target) setSelectedConversation(target);
     }
   }, [route.name, selectedConversation, loading, conversations]);
+
+  if (!isAuthenticated) {
+    return (
+      <View className="flex-1 bg-white dark:bg-neutral-950 items-center justify-center px-8" style={{ paddingTop: insets.top }}>
+        <View className="w-20 h-20 bg-indigo-50 dark:bg-indigo-900/20 rounded-full items-center justify-center mb-6">
+          <FontAwesome5 name="comments" size={32} color="#4F46E5" />
+        </View>
+        <Text className="text-2xl font-bold text-neutral-900 dark:text-white mb-2 text-center">Messages</Text>
+        <Text className="text-sm text-neutral-500 dark:text-neutral-400 text-center mb-8 leading-5">
+          Sign in to chat with contractors, discuss projects, and get quotes.
+        </Text>
+        <Pressable
+          onPress={() => navigation.navigate('Login')}
+          className="w-full py-4 bg-indigo-600 rounded-2xl items-center mb-3"
+        >
+          <Text className="text-white font-bold text-[15px]">Sign In or Create Account</Text>
+        </Pressable>
+        <Pressable
+          onPress={() => navigation.navigate('Explore')}
+          className="w-full py-4 rounded-2xl items-center"
+        >
+          <Text className="text-neutral-500 dark:text-neutral-400 font-semibold text-[15px]">Continue Browsing</Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView className="flex-1 bg-white dark:bg-neutral-950" behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}>

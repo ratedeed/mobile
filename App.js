@@ -104,14 +104,9 @@ function AppNavigator() {
   return (
     <View className="flex-1" style={{ backgroundColor: colorScheme === 'dark' ? '#0a0a0a' : '#ffffff' }}>
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
-      {isAuthenticated ? (
-        <>
-          <MainNavigator />
-          <EscrowTrustBanner />
-        </>
-      ) : (
-        <AuthNavigator />
-      )}
+      {/* Airbnb-style: always show MainNavigator so guests can browse */}
+      <MainNavigator />
+      {isAuthenticated && <EscrowTrustBanner />}
     </View>
   );
 }

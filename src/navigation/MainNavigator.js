@@ -34,6 +34,10 @@ import ContractorOnboardingScreen from '../screens/ContractorOnboardingScreen';
 import QuoteReviewScreen from '../screens/QuoteReviewScreen';
 import VerifyEmailChangeScreen from '../screens/VerifyEmailChangeScreen';
 import ResetPasswordScreen from '../screens/ResetPasswordScreen';
+import LoginScreen from '../screens/LoginScreen';
+import RegisterScreen from '../screens/RegisterScreen';
+import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
+import ContractorSignupScreen from '../screens/ContractorSignupScreen';
 
 import Typography from '../components/common/Typography';
 import { useAuth } from '../context/AuthContext';
@@ -287,6 +291,11 @@ export default function MainNavigator() {
       <Stack.Screen name="QuoteReview" component={QuoteReviewScreen} options={{ title: 'Review Quote' }} />
       <Stack.Screen name="VerifyEmailChange" component={VerifyEmailChangeScreen} options={{ title: 'Verify Email', headerShown: false }} />
       <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} options={{ title: 'Set New Password', headerShown: false }} />
+      {/* Auth screens available within Main stack for guest browsing flow */}
+      <Stack.Screen name="Login" component={LoginScreen} options={{ title: 'Sign In', headerShown: false }} />
+      <Stack.Screen name="Register" component={RegisterScreen} options={{ title: 'Create Account' }} />
+      <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} options={{ title: 'Reset Password' }} />
+      <Stack.Screen name="ContractorSignup" component={ContractorSignupScreen} options={{ title: 'Join as Pro', headerShown: false }} />
     </Stack.Navigator>
   );
 }

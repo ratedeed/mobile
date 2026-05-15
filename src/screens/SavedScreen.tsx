@@ -22,6 +22,7 @@ import { Contractor, RootStackParamList } from '../types';
 import { getCoverImageUrl, isSvgUrl } from '../utils/avatarUtils';
 import { getFavorites, removeFavorite } from '../utils/favoritesStore';
 import HapticFeedback from '../utils/haptics';
+import { useAuth } from '../context/AuthContext';
 
 import { CategoryIcon } from '../components/common/CategoryIcon';
 
@@ -45,6 +46,7 @@ const SavedScreen = () => {
   const isDark = useColorScheme() === 'dark';
   const navigation = useNavigation<NavigationProp>();
   const insets = useSafeAreaInsets();
+  const { isAuthenticated } = useAuth();
   const [allContractors, setAllContractors] = useState<Contractor[]>([]);
   const [savedIds, setSavedIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -125,6 +127,26 @@ const SavedScreen = () => {
       return cCat.includes(id || '') || cCat.includes(label || '');
     });
   }, [savedContractors, activeCategory]);
+
+  if (!isAuthenticated) {
+    return (
+      <View className="flex-1 bg-white dark:bg-neutral-950 items-center justify-center px-8" style={{ paddingTop: Math.max(insets.top, 16) }}>
+        <View className="w-20 h-20 bg-indigo-50 dark:bg-indigo-900/20 rounded-full items-center justify-center mb-6">
+          <Heart size={40} color="#4F46E5" weight="fill" />
+        </View>
+        <Text className="text-2xl font-bold text-neutral-900 dark:text-neutral-50 mb-2 text-center">Save Contractors</Text>
+        <Text className="text-sm text-neutral-500 dark:text-neutral-400 text-center mb-8 leading-5">
+          Sign in to save your favorite contractors and quickly find them later.
+        </Text>
+        <Pressable
+          onPress={() => navigation.navigate('Login')}
+          className="w-full py-4 bg-indigo-600 rounded-2xl items-center mb-3"
+        >
+          <Text className="text-white font-bold text-[15px]">Sign In or Create Account</Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   if (loading && !refreshing) {
     return (

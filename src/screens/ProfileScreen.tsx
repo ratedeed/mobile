@@ -116,10 +116,10 @@ function SettingsSheet({ title, onClose, children }: { title: string; onClose: (
 }
 
 // ---- Profile Screen ----
-const ProfileScreen: React.FC = () => {
+  const ProfileScreen: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const insets = useSafeAreaInsets();
-  const { logout, userId, firebaseUser: authUser } = useAuth();
+  const { logout, userId, firebaseUser: authUser, isAuthenticated } = useAuth();
 
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -327,6 +327,33 @@ const ProfileScreen: React.FC = () => {
       { text: 'Log Out', style: 'destructive', onPress: () => logout() },
     ]);
   };
+
+  // Guest view
+  if (!isAuthenticated) {
+    return (
+      <View className="flex-1 bg-white dark:bg-neutral-950 items-center justify-center px-8" style={{ paddingTop: Math.max(insets.top, 16) }}>
+        <View className="w-20 h-20 bg-indigo-50 dark:bg-indigo-900/20 rounded-full items-center justify-center mb-6">
+          <FontAwesome5 name="user-circle" size={40} color="#4F46E5" />
+        </View>
+        <Text className="text-2xl font-bold text-neutral-900 dark:text-neutral-50 mb-2 text-center">Welcome to Ratedeed</Text>
+        <Text className="text-sm text-neutral-500 dark:text-neutral-400 text-center mb-8 leading-5">
+          Sign in to save contractors, message pros, track your projects, and manage your account.
+        </Text>
+        <Pressable
+          onPress={() => navigation.navigate('Login')}
+          className="w-full py-4 bg-indigo-600 rounded-2xl items-center mb-3"
+        >
+          <Text className="text-white font-bold text-[15px]">Sign In or Create Account</Text>
+        </Pressable>
+        <Pressable
+          onPress={() => navigation.navigate('Explore' as any)}
+          className="w-full py-4 rounded-2xl items-center"
+        >
+          <Text className="text-neutral-500 dark:text-neutral-400 font-semibold text-[15px]">Continue Browsing</Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   if (loading) {
     return (

@@ -6,6 +6,7 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import { SvgImage } from '../components/common/SvgImage';
 import { getUserQuotes, cancelJob, resolveDispute, updateQuoteStatus } from '../utils/apiClient';
 import { getProfileImageUrl, isSvgUrl } from '../utils/avatarUtils';
+import { useAuth } from '../context/AuthContext';
 
 type TabFilter = 'all' | 'active' | 'completed';
 
@@ -35,6 +36,7 @@ export default function ActiveJobsScreen() {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
   const isDark = useColorScheme() === 'dark';
+  const { isAuthenticated } = useAuth();
   const [quotes, setQuotes] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<TabFilter>('all');
   const [loading, setLoading] = useState(true);
@@ -124,6 +126,32 @@ export default function ActiveJobsScreen() {
       default: return sorted;
     }
   }, [quotes, activeTab]);
+
+  if (!isAuthenticated) {
+    return (
+      <View className="flex-1 bg-white dark:bg-neutral-950 items-center justify-center px-8" style={{ paddingTop: Math.max(insets.top, 16) }}>
+        <View className="w-20 h-20 bg-indigo-50 dark:bg-indigo-900/20 rounded-full items-center justify-center mb-6">
+          <FontAwesome5 name="briefcase" size={32} color="#4F46E5" />
+        </View>
+        <Text className="text-2xl font-bold text-neutral-900 dark:text-neutral-50 mb-2 text-center">My Jobs</Text>
+        <Text className="text-sm text-neutral-500 dark:text-neutral-400 text-center mb-8 leading-5">
+          Sign in to view your active projects, quotes, and job history.
+        </Text>
+        <Pressable
+          onPress={() => navigation.navigate('Login')}
+          className="w-full py-4 bg-indigo-600 rounded-2xl items-center mb-3"
+        >
+          <Text className="text-white font-bold text-[15px]">Sign In or Create Account</Text>
+        </Pressable>
+        <Pressable
+          onPress={() => navigation.navigate('Explore')}
+          className="w-full py-4 rounded-2xl items-center"
+        >
+          <Text className="text-neutral-500 dark:text-neutral-400 font-semibold text-[15px]">Continue Browsing</Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   if (loading && !refreshing) {
     return (

@@ -23,6 +23,8 @@ import { browseContractors } from '../utils/apiClient';
 import { Contractor, RootStackParamList } from '../types';
 import { getCoverImageUrl, isSvgUrl } from '../utils/avatarUtils';
 import { getFavorites, addFavorite, removeFavorite } from '../utils/favoritesStore';
+import { useAuth } from '../context/AuthContext';
+import GuestPrompt from '../components/GuestPrompt';
 
 // ---- Categories matching web version (constants.ts) ----
 const CATEGORIES = [
@@ -181,6 +183,7 @@ function matchesCategory(contractor: Contractor, catId: string, catLabel: string
 const HomeScreen = () => {
   const navigation = useNavigation<NavigationProp>();
   const isDark = useColorScheme() === 'dark';
+  const { isAuthenticated } = useAuth();
   const [ipZipCode, setIpZipCode] = useState<string | null>(null);
   const [allContractors, setAllContractors] = useState<Contractor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -194,6 +197,7 @@ const HomeScreen = () => {
   const [nearbyLabel, setNearbyLabel] = useState('');
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const [showGuestPrompt, setShowGuestPrompt] = useState(false);
   const mountedRef = useRef(true);
 
   // Sync searchZip when IP zip is detected
@@ -306,6 +310,10 @@ const HomeScreen = () => {
   }, [fetchLocationAndData]);
 
   const toggleFav = async (id: string) => {
+    if (!isAuthenticated) {
+      setShowGuestPrompt(true);
+      return;
+    }
     HapticFeedback.medium();
     const isFav = favorites.has(id);
     
@@ -581,7 +589,15 @@ const HomeScreen = () => {
         </View>
       </ScrollView>
 
-
+      <GuestPrompt
+        visible={showGuestPrompt}
+        onClose={() => setShowGuestPrompt(false)}
+        onLogin={() => {
+          setShowGuestPrompt(false);
+          navigation.navigate('Login');
+        }}
+        action="save contractors"
+      />
     </KeyboardAvoidingView>
   );
 };

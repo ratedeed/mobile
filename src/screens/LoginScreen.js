@@ -71,6 +71,10 @@ const LoginScreen = () => {
         if (backendResponse?.token) {
           await updateBackendToken(backendResponse.token, backendResponse.emailVerified, backendResponse.user);
           Toast.show({ type: 'success', text1: 'Success', text2: 'Logged in successfully!' });
+          // Go back to browsing screen since MainNavigator is always shown
+          if (navigation.canGoBack()) {
+            navigation.goBack();
+          }
         } else {
           setApiError('Backend authentication failed. Please try again.');
         }

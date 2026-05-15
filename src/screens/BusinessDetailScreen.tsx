@@ -29,6 +29,8 @@ import { getCoverImageUrl, getProfileImageUrl, isSvgUrl } from '../utils/avatarU
 import { isFavorite, addFavorite, removeFavorite } from '../utils/favoritesStore';
 import { VerifiedBadge } from '../components/common/VerifiedBadge';
 import ServiceAreaMap from '../components/common/ServiceAreaMap';
+import { useAuth } from '../context/AuthContext';
+import GuestPrompt from '../components/GuestPrompt';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -99,8 +101,11 @@ const BusinessDetailScreen: React.FC = () => {
   const [descExpanded, setDescExpanded] = useState(false);
   const [showBackToTop, setShowBackToTop] = useState(false);
   const [showPhotoGallery, setShowPhotoGallery] = useState(false);
+  const [showGuestPrompt, setShowGuestPrompt] = useState(false);
+  const [guestAction, setGuestAction] = useState('do that');
   const scrollViewRef = useRef<ScrollView>(null);
   const flatListRef = useRef<FlatList>(null);
+  const { isAuthenticated } = useAuth();
 
   const handleClaimDocumentPick = async () => {
     try {
@@ -269,6 +274,11 @@ const BusinessDetailScreen: React.FC = () => {
   };
 
   const toggleFavorite = async () => {
+    if (!isAuthenticated) {
+      setGuestAction('save this contractor');
+      setShowGuestPrompt(true);
+      return;
+    }
     HapticFeedback.selection();
     const contractorId = contractor?._id || id;
     const previousState = isSaved;
@@ -953,6 +963,11 @@ const BusinessDetailScreen: React.FC = () => {
           )}
           <Pressable
             onPress={() => {
+              if (!isAuthenticated) {
+                setGuestAction('message this contractor');
+                setShowGuestPrompt(true);
+                return;
+              }
               const recipientUserId = extractId(c.user) || c._id || id;
               if (recipientUserId) {
                 navigation.navigate('ChatScreen', {
@@ -966,7 +981,14 @@ const BusinessDetailScreen: React.FC = () => {
             <FontAwesome5 name="comment" size={18} color={isDark ? '#ffffff' : '#171717'} />
           </Pressable>
           <Pressable
-            onPress={() => setIsQuoteModalVisible(true)}
+            onPress={() => {
+              if (!isAuthenticated) {
+                setGuestAction('request a quote');
+                setShowGuestPrompt(true);
+                return;
+              }
+              setIsQuoteModalVisible(true);
+            }}
             className="bg-indigo-600 px-6 py-3.5 rounded-2xl shadow-indigo-300"
           >
             <Text className="text-white font-bold">Request Quote</Text>
@@ -1151,6 +1173,16 @@ const BusinessDetailScreen: React.FC = () => {
           />
         </View>
       )}
+
+      <GuestPrompt
+        visible={showGuestPrompt}
+        onClose={() => setShowGuestPrompt(false)}
+        onLogin={() => {
+          setShowGuestPrompt(false);
+          navigation.navigate('Login');
+        }}
+        action={guestAction}
+      />
     </View>
   );
 };
