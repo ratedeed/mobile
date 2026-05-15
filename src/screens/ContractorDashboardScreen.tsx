@@ -772,7 +772,6 @@ const ContractorDashboardScreen: React.FC = () => {
               <View className="flex-1 pb-1">
                 <View className="flex-row items-center" style={{ gap: 6 }}>
                   <Text className="text-xl font-bold text-neutral-900 dark:text-white">{contractorName || "My Business"}</Text>
-                  <FontAwesome5 name="check-circle" size={16} color="#4F46E5" />
                 </View>
                 <View className="flex-row items-center mt-1" style={{ gap: 8 }}>
                   <StarRating rating={avgRating} />

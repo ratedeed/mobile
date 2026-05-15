@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, useColorScheme } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 
 type DateRange = 'week' | 'month' | 'quarter' | 'year';
@@ -20,6 +20,7 @@ interface AnalyticsTabProps {
 }
 
 export default function AnalyticsTab({ jobs, quotes, reviews, profile, loading }: AnalyticsTabProps) {
+  const isDark = useColorScheme() === 'dark';
   const [dateRange, setDateRange] = useState<DateRange>('month');
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedBar, setSelectedBar] = useState<number | null>(null);
@@ -183,21 +184,21 @@ export default function AnalyticsTab({ jobs, quotes, reviews, profile, loading }
         <View className="relative">
           <TouchableOpacity
             onPress={() => setShowDropdown(!showDropdown)}
-            className="self-end flex-row items-center bg-neutral-100 rounded-lg px-3 py-1.5"
+            className="self-end flex-row items-center bg-neutral-100 dark:bg-neutral-800 rounded-lg px-3 py-1.5"
             style={{ gap: 4 }}
           >
-            <Text className="text-xs font-semibold text-neutral-700">{dateRangeLabels[dateRange]}</Text>
-            <FontAwesome5 name="chevron-down" size={9} color="#525252" />
+            <Text className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">{dateRangeLabels[dateRange]}</Text>
+            <FontAwesome5 name="chevron-down" size={9} color={isDark ? "#a3a3a3" : "#525252"} />
           </TouchableOpacity>
           {showDropdown && (
-            <View className="absolute right-0 top-full mt-1 bg-white rounded-xl shadow-lg border border-neutral-200 z-50 py-1 min-w-[140px]" style={{ elevation: 8 }}>
+            <View className="absolute right-0 top-full mt-1 bg-white dark:bg-neutral-900 rounded-xl shadow-lg border border-neutral-200 dark:border-neutral-700 z-50 py-1 min-w-[140px]" style={{ elevation: 8 }}>
               {(['week', 'month', 'quarter', 'year'] as DateRange[]).map((key) => (
                 <TouchableOpacity
                   key={key}
                   onPress={() => { setDateRange(key); setShowDropdown(false); }}
-                  className={`px-3 py-2 ${dateRange === key ? 'bg-indigo-50' : ''}`}
+                  className={`px-3 py-2 ${dateRange === key ? 'bg-indigo-50 dark:bg-indigo-900/20' : ''}`}
                 >
-                  <Text className={`text-xs font-medium ${dateRange === key ? 'text-indigo-600' : 'text-neutral-700'}`}>
+                  <Text className={`text-xs font-medium ${dateRange === key ? 'text-indigo-600 dark:text-indigo-400' : 'text-neutral-700 dark:text-neutral-300'}`}>
                     {dateRangeLabels[key]}
                   </Text>
                 </TouchableOpacity>
@@ -209,67 +210,67 @@ export default function AnalyticsTab({ jobs, quotes, reviews, profile, loading }
         {/* KPI Cards */}
         <View className="flex-row flex-wrap" style={{ gap: 10 }}>
           {/* Revenue */}
-          <View className="bg-white rounded-xl p-3.5 border border-neutral-100" style={{ width: '48%' }}>
+          <View className="bg-white dark:bg-neutral-900 rounded-xl p-3.5 border border-neutral-100 dark:border-neutral-700" style={{ width: '48%' }}>
             <View className="flex-row items-center mb-2" style={{ gap: 6 }}>
-              <View className="w-7 h-7 rounded-lg bg-emerald-50 items-center justify-center">
+              <View className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 items-center justify-center">
                 <FontAwesome5 name="dollar-sign" size={12} color="#059669" />
               </View>
-              <Text className="text-[10px] text-neutral-500 font-medium">Revenue</Text>
+              <Text className="text-[10px] text-neutral-500 dark:text-neutral-400 font-medium">Revenue</Text>
             </View>
-            <Text className="text-lg font-bold text-neutral-900">${kpiData.totalRevenue.toLocaleString()}</Text>
+            <Text className="text-lg font-bold text-neutral-900 dark:text-white">${kpiData.totalRevenue.toLocaleString()}</Text>
           </View>
 
           {/* Active Jobs */}
-          <View className="bg-white rounded-xl p-3.5 border border-neutral-100" style={{ width: '48%' }}>
+          <View className="bg-white dark:bg-neutral-900 rounded-xl p-3.5 border border-neutral-100 dark:border-neutral-700" style={{ width: '48%' }}>
             <View className="flex-row items-center mb-2" style={{ gap: 6 }}>
-              <View className="w-7 h-7 rounded-lg bg-indigo-50 items-center justify-center">
+              <View className="w-7 h-7 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 items-center justify-center">
                 <FontAwesome5 name="briefcase" size={11} color="#4F46E5" />
               </View>
-              <Text className="text-[10px] text-neutral-500 font-medium">Active Jobs</Text>
+              <Text className="text-[10px] text-neutral-500 dark:text-neutral-400 font-medium">Active Jobs</Text>
             </View>
-            <Text className="text-lg font-bold text-neutral-900">{kpiData.activeJobs}</Text>
+            <Text className="text-lg font-bold text-neutral-900 dark:text-white">{kpiData.activeJobs}</Text>
           </View>
 
           {/* Response Rate */}
-          <View className="bg-white rounded-xl p-3.5 border border-neutral-100" style={{ width: '48%' }}>
+          <View className="bg-white dark:bg-neutral-900 rounded-xl p-3.5 border border-neutral-100 dark:border-neutral-700" style={{ width: '48%' }}>
             <View className="flex-row items-center mb-2" style={{ gap: 6 }}>
-              <View className="w-7 h-7 rounded-lg bg-sky-50 items-center justify-center">
+              <View className="w-7 h-7 rounded-lg bg-sky-50 dark:bg-sky-900/20 items-center justify-center">
                 <FontAwesome5 name="chart-line" size={11} color="#0284c7" />
               </View>
-              <Text className="text-[10px] text-neutral-500 font-medium">Response Rate</Text>
+              <Text className="text-[10px] text-neutral-500 dark:text-neutral-400 font-medium">Response Rate</Text>
             </View>
-            <Text className="text-lg font-bold text-neutral-900">{kpiData.responseRate}%</Text>
-            <View className="mt-1.5 w-full bg-neutral-100 rounded-full h-1.5">
+            <Text className="text-lg font-bold text-neutral-900 dark:text-white">{kpiData.responseRate}%</Text>
+            <View className="mt-1.5 w-full bg-neutral-100 dark:bg-neutral-700 rounded-full h-1.5">
               <View className="h-1.5 rounded-full bg-sky-500" style={{ width: `${kpiData.responseRate}%` }} />
             </View>
           </View>
 
           {/* Avg Rating */}
-          <View className="bg-white rounded-xl p-3.5 border border-neutral-100" style={{ width: '48%' }}>
+          <View className="bg-white dark:bg-neutral-900 rounded-xl p-3.5 border border-neutral-100 dark:border-neutral-700" style={{ width: '48%' }}>
             <View className="flex-row items-center mb-2" style={{ gap: 6 }}>
-              <View className="w-7 h-7 rounded-lg bg-yellow-50 items-center justify-center">
+              <View className="w-7 h-7 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 items-center justify-center">
                 <FontAwesome5 name="star" size={11} color="#eab308" solid />
               </View>
-              <Text className="text-[10px] text-neutral-500 font-medium">Avg. Rating</Text>
+              <Text className="text-[10px] text-neutral-500 dark:text-neutral-400 font-medium">Avg. Rating</Text>
             </View>
-            <Text className="text-lg font-bold text-neutral-900">{kpiData.avgRating.toFixed(1)}</Text>
+            <Text className="text-lg font-bold text-neutral-900 dark:text-white">{kpiData.avgRating.toFixed(1)}</Text>
             <View className="flex-row items-center mt-1" style={{ gap: 2 }}>
               {[1, 2, 3, 4, 5].map(i => (
-                <FontAwesome5 key={i} name="star" size={8} color={i <= Math.round(kpiData.avgRating) ? '#eab308' : '#e5e5e5'} solid />
+                <FontAwesome5 key={i} name="star" size={8} color={i <= Math.round(kpiData.avgRating) ? '#eab308' : (isDark ? '#404040' : '#e5e5e5')} solid />
               ))}
-              <Text className="text-[9px] text-neutral-500 ml-1">({kpiData.reviewCount})</Text>
+              <Text className="text-[9px] text-neutral-500 dark:text-neutral-400 ml-1">({kpiData.reviewCount})</Text>
             </View>
           </View>
         </View>
 
         {/* Monthly Revenue Bar Chart */}
-        <View className="bg-white rounded-xl p-4 border border-neutral-100">
+        <View className="bg-white dark:bg-neutral-900 rounded-xl p-4 border border-neutral-100 dark:border-neutral-700">
           <View className="flex-row items-center justify-between mb-3">
             <View>
-              <Text className="text-sm font-bold text-neutral-900">Monthly Revenue</Text>
-              <Text className="text-[10px] text-neutral-500 mt-0.5">Last 6 months</Text>
+              <Text className="text-sm font-bold text-neutral-900 dark:text-white">Monthly Revenue</Text>
+              <Text className="text-[10px] text-neutral-500 dark:text-neutral-400 mt-0.5">Last 6 months</Text>
             </View>
-            <FontAwesome5 name="chart-bar" size={14} color="#a3a3a3" />
+            <FontAwesome5 name="chart-bar" size={14} color={isDark ? "#737373" : "#a3a3a3"} />
           </View>
           <View className="flex-row items-end justify-between" style={{ height: 130, gap: 8 }}>
             {earningsData.map((d, i) => {
@@ -288,7 +289,7 @@ export default function AnalyticsTab({ jobs, quotes, reviews, profile, loading }
                     </View>
                   )}
                   <View className="w-full rounded-t-md" style={{ height: `${barHeight}%`, backgroundColor: isSelected ? '#4F46E5' : '#6366f1', opacity: isSelected ? 1 : 0.7 }} />
-                  <Text className="text-[9px] text-neutral-500 font-medium mt-1.5">{d.month}</Text>
+                  <Text className="text-[9px] text-neutral-500 dark:text-neutral-400 font-medium mt-1.5">{d.month}</Text>
                 </TouchableOpacity>
               );
             })}
@@ -297,85 +298,85 @@ export default function AnalyticsTab({ jobs, quotes, reviews, profile, loading }
 
         {/* Performance Metrics */}
         <View>
-          <Text className="text-sm font-bold text-neutral-900 mb-2">Performance</Text>
+          <Text className="text-sm font-bold text-neutral-900 dark:text-white mb-2">Performance</Text>
           <View className="flex-row flex-wrap" style={{ gap: 10 }}>
             {/* Conversion Rate */}
-            <View className="bg-white rounded-xl p-3.5 border border-neutral-100 flex-row items-center" style={{ width: '48%', gap: 10 }}>
+            <View className="bg-white dark:bg-neutral-900 rounded-xl p-3.5 border border-neutral-100 dark:border-neutral-700 flex-row items-center" style={{ width: '48%', gap: 10 }}>
               <View className="relative items-center justify-center" style={{ width: 48, height: 48 }}>
-                <View className="absolute w-12 h-12 rounded-full border-[5px] border-neutral-100" />
+                <View className="absolute w-12 h-12 rounded-full border-[5px] border-neutral-100 dark:border-neutral-700" />
                 <View
                   className="absolute w-12 h-12 rounded-full border-[5px] border-indigo-600"
                   style={{ borderTopColor: 'transparent', borderRightColor: 'transparent', transform: [{ rotate: `${(performanceMetrics.conversionRate / 100) * 360}deg` }] }}
                 />
-                <Text className="text-[10px] font-bold text-neutral-900">{performanceMetrics.conversionRate}%</Text>
+                <Text className="text-[10px] font-bold text-neutral-900 dark:text-white">{performanceMetrics.conversionRate}%</Text>
               </View>
               <View className="flex-1">
-                <Text className="text-xs font-bold text-neutral-900">Conversion</Text>
-                <Text className="text-[9px] text-neutral-500 mt-0.5">Quotes accepted</Text>
+                <Text className="text-xs font-bold text-neutral-900 dark:text-white">Conversion</Text>
+                <Text className="text-[9px] text-neutral-500 dark:text-neutral-400 mt-0.5">Quotes accepted</Text>
               </View>
             </View>
 
             {/* Avg Response Time */}
-            <View className="bg-white rounded-xl p-3.5 border border-neutral-100 flex-row items-center" style={{ width: '48%', gap: 10 }}>
-              <View className="w-12 h-12 rounded-xl bg-emerald-50 items-center justify-center">
+            <View className="bg-white dark:bg-neutral-900 rounded-xl p-3.5 border border-neutral-100 dark:border-neutral-700 flex-row items-center" style={{ width: '48%', gap: 10 }}>
+              <View className="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 items-center justify-center">
                 <FontAwesome5 name="clock" size={16} color="#059669" />
               </View>
               <View className="flex-1">
-                <Text className="text-sm font-bold text-neutral-900">{performanceMetrics.avgResponseTime}</Text>
-                <Text className="text-[9px] text-neutral-500 mt-0.5">Avg. first reply</Text>
+                <Text className="text-sm font-bold text-neutral-900 dark:text-white">{performanceMetrics.avgResponseTime}</Text>
+                <Text className="text-[9px] text-neutral-500 dark:text-neutral-400 mt-0.5">Avg. first reply</Text>
               </View>
             </View>
 
             {/* On-Time Rate */}
-            <View className="bg-white rounded-xl p-3.5 border border-neutral-100 flex-row items-center" style={{ width: '48%', gap: 10 }}>
+            <View className="bg-white dark:bg-neutral-900 rounded-xl p-3.5 border border-neutral-100 dark:border-neutral-700 flex-row items-center" style={{ width: '48%', gap: 10 }}>
               <View className="relative items-center justify-center" style={{ width: 48, height: 48 }}>
-                <View className="absolute w-12 h-12 rounded-full border-[5px] border-neutral-100" />
+                <View className="absolute w-12 h-12 rounded-full border-[5px] border-neutral-100 dark:border-neutral-700" />
                 <View
                   className="absolute w-12 h-12 rounded-full border-[5px] border-emerald-500"
                   style={{ borderTopColor: 'transparent', borderRightColor: 'transparent', transform: [{ rotate: `${(performanceMetrics.onTimeRate / 100) * 360}deg` }] }}
                 />
-                <Text className="text-[10px] font-bold text-neutral-900">{performanceMetrics.onTimeRate}%</Text>
+                <Text className="text-[10px] font-bold text-neutral-900 dark:text-white">{performanceMetrics.onTimeRate}%</Text>
               </View>
               <View className="flex-1">
-                <Text className="text-xs font-bold text-neutral-900">On-Time Rate</Text>
-                <Text className="text-[9px] text-neutral-500 mt-0.5">On schedule</Text>
+                <Text className="text-xs font-bold text-neutral-900 dark:text-white">On-Time Rate</Text>
+                <Text className="text-[9px] text-neutral-500 dark:text-neutral-400 mt-0.5">On schedule</Text>
               </View>
             </View>
 
             {/* Repeat Client Rate */}
-            <View className="bg-white rounded-xl p-3.5 border border-neutral-100 flex-row items-center" style={{ width: '48%', gap: 10 }}>
-              <View className="w-12 h-12 rounded-xl bg-amber-50 items-center justify-center">
+            <View className="bg-white dark:bg-neutral-900 rounded-xl p-3.5 border border-neutral-100 dark:border-neutral-700 flex-row items-center" style={{ width: '48%', gap: 10 }}>
+              <View className="w-12 h-12 rounded-xl bg-amber-50 dark:bg-amber-900/20 items-center justify-center">
                 <FontAwesome5 name="redo" size={14} color="#d97706" />
               </View>
               <View className="flex-1">
-                <Text className="text-sm font-bold text-neutral-900">{performanceMetrics.repeatRate}%</Text>
-                <Text className="text-[9px] text-neutral-500 mt-0.5">Repeat bookings</Text>
+                <Text className="text-sm font-bold text-neutral-900 dark:text-white">{performanceMetrics.repeatRate}%</Text>
+                <Text className="text-[9px] text-neutral-500 dark:text-neutral-400 mt-0.5">Repeat bookings</Text>
               </View>
             </View>
           </View>
         </View>
 
         {/* Recent Activity */}
-        <View className="bg-white rounded-xl p-4 border border-neutral-100">
+        <View className="bg-white dark:bg-neutral-900 rounded-xl p-4 border border-neutral-100 dark:border-neutral-700">
           <View className="flex-row items-center justify-between mb-3">
-            <Text className="text-sm font-bold text-neutral-900">Recent Activity</Text>
-            <Text className="text-[10px] text-neutral-400 font-medium">{recentActivity.length} events</Text>
+            <Text className="text-sm font-bold text-neutral-900 dark:text-white">Recent Activity</Text>
+            <Text className="text-[10px] text-neutral-400 dark:text-neutral-500 font-medium">{recentActivity.length} events</Text>
           </View>
           <View>
             {recentActivity.map((item: any, index: number) => (
               <View key={item.id} className="flex-row" style={{ gap: 10 }}>
                 <View className="items-center">
-                  <View className={`w-7 h-7 rounded-full items-center justify-center ${item.colorClass}`}>
+                  <View className={`w-7 h-7 rounded-full items-center justify-center ${item.colorClass} dark:bg-neutral-800`}>
                     <FontAwesome5 name={item.icon} size={10} color={item.iconColor} />
                   </View>
                   {index < recentActivity.length - 1 && (
-                    <View className="w-px flex-1 bg-neutral-100 mt-1" />
+                    <View className="w-px flex-1 bg-neutral-100 dark:bg-neutral-700 mt-1" />
                   )}
                 </View>
                 <View className="pb-3 flex-1">
-                  <Text className="text-xs font-semibold text-neutral-900">{item.title}</Text>
-                  <Text className="text-[10px] text-neutral-500 mt-0.5" numberOfLines={2}>{item.description}</Text>
-                  <Text className="text-[9px] text-neutral-400 mt-0.5">{item.time}</Text>
+                  <Text className="text-xs font-semibold text-neutral-900 dark:text-white">{item.title}</Text>
+                  <Text className="text-[10px] text-neutral-500 dark:text-neutral-400 mt-0.5" numberOfLines={2}>{item.description}</Text>
+                  <Text className="text-[9px] text-neutral-400 dark:text-neutral-500 mt-0.5">{item.time}</Text>
                 </View>
               </View>
             ))}
@@ -383,10 +384,10 @@ export default function AnalyticsTab({ jobs, quotes, reviews, profile, loading }
         </View>
 
         {/* Revenue by Service */}
-        <View className="bg-white rounded-xl p-4 border border-neutral-100">
+        <View className="bg-white dark:bg-neutral-900 rounded-xl p-4 border border-neutral-100 dark:border-neutral-700">
           <View className="flex-row items-center justify-between mb-3">
-            <Text className="text-sm font-bold text-neutral-900">Revenue by Service</Text>
-            <Text className="text-[10px] text-neutral-400 font-medium">${(totalServiceRevenue / 1000).toFixed(1)}k total</Text>
+            <Text className="text-sm font-bold text-neutral-900 dark:text-white">Revenue by Service</Text>
+            <Text className="text-[10px] text-neutral-400 dark:text-neutral-500 font-medium">${(totalServiceRevenue / 1000).toFixed(1)}k total</Text>
           </View>
           <View style={{ gap: 10 }}>
             {serviceBreakdown.map((service: any) => {
@@ -394,13 +395,13 @@ export default function AnalyticsTab({ jobs, quotes, reviews, profile, loading }
               return (
                 <View key={service.name}>
                   <View className="flex-row items-center justify-between mb-1">
-                    <Text className="text-xs font-medium text-neutral-700 flex-1" numberOfLines={1}>{service.name}</Text>
+                    <Text className="text-xs font-medium text-neutral-700 dark:text-neutral-300 flex-1" numberOfLines={1}>{service.name}</Text>
                     <View className="flex-row items-center" style={{ gap: 6 }}>
-                      <Text className="text-xs font-bold text-neutral-900">${(service.amount / 1000).toFixed(1)}k</Text>
-                      <Text className="text-[9px] text-neutral-400 w-7 text-right">{pct}%</Text>
+                      <Text className="text-xs font-bold text-neutral-900 dark:text-white">${(service.amount / 1000).toFixed(1)}k</Text>
+                      <Text className="text-[9px] text-neutral-400 dark:text-neutral-500 w-7 text-right">{pct}%</Text>
                     </View>
                   </View>
-                  <View className="w-full bg-neutral-100 rounded-full h-1.5">
+                  <View className="w-full bg-neutral-100 dark:bg-neutral-700 rounded-full h-1.5">
                     <View className="h-1.5 rounded-full" style={{ width: `${pct}%`, backgroundColor: service.color }} />
                   </View>
                 </View>
@@ -410,10 +411,10 @@ export default function AnalyticsTab({ jobs, quotes, reviews, profile, loading }
         </View>
 
         {/* Top Clients */}
-        <View className="bg-white rounded-xl p-4 border border-neutral-100">
+        <View className="bg-white dark:bg-neutral-900 rounded-xl p-4 border border-neutral-100 dark:border-neutral-700">
           <View className="flex-row items-center justify-between mb-3">
-            <Text className="text-sm font-bold text-neutral-900">Top Clients</Text>
-            <FontAwesome5 name="users" size={12} color="#a3a3a3" />
+            <Text className="text-sm font-bold text-neutral-900 dark:text-white">Top Clients</Text>
+            <FontAwesome5 name="users" size={12} color={isDark ? "#737373" : "#a3a3a3"} />
           </View>
           <View style={{ gap: 10 }}>
             {topClients.map((client: any, i: number) => (
@@ -421,27 +422,27 @@ export default function AnalyticsTab({ jobs, quotes, reviews, profile, loading }
                 <Text className="text-lg">{client.avatar}</Text>
                 <View className="flex-1">
                   <View className="flex-row items-center" style={{ gap: 4 }}>
-                    <Text className="text-xs font-bold text-neutral-900" numberOfLines={1}>{client.name}</Text>
+                    <Text className="text-xs font-bold text-neutral-900 dark:text-white" numberOfLines={1}>{client.name}</Text>
                     {i === 0 && topClients.length > 1 && (
-                      <View className="bg-amber-50 px-1.5 py-0.5 rounded-full">
-                        <Text className="text-[8px] font-bold text-amber-700">#1</Text>
+                      <View className="bg-amber-50 dark:bg-amber-900/30 px-1.5 py-0.5 rounded-full">
+                        <Text className="text-[8px] font-bold text-amber-700 dark:text-amber-400">#1</Text>
                       </View>
                     )}
                   </View>
                   <View className="flex-row items-center mt-0.5" style={{ gap: 4 }}>
-                    <Text className="text-[10px] text-neutral-500">{client.jobs} jobs</Text>
-                    <Text className="text-neutral-300">·</Text>
-                    <Text className="text-[10px] text-neutral-500">Last: {client.lastProject}</Text>
+                    <Text className="text-[10px] text-neutral-500 dark:text-neutral-400">{client.jobs} jobs</Text>
+                    <Text className="text-neutral-300 dark:text-neutral-600">·</Text>
+                    <Text className="text-[10px] text-neutral-500 dark:text-neutral-400">Last: {client.lastProject}</Text>
                   </View>
                 </View>
-                <Text className="text-sm font-bold text-neutral-900">${(client.total / 1000).toFixed(1)}k</Text>
+                <Text className="text-sm font-bold text-neutral-900 dark:text-white">${(client.total / 1000).toFixed(1)}k</Text>
               </View>
             ))}
           </View>
         </View>
 
         {/* Quick Actions */}
-        <View className="bg-white rounded-xl p-4 border border-neutral-100">
+        <View className="bg-white dark:bg-neutral-900 rounded-xl p-4 border border-neutral-100 dark:border-neutral-700">
           {/* TODO: Quick Actions not yet implemented */}
           {/* <Text className="text-sm font-bold text-neutral-900 mb-3">Quick Actions</Text>
           <View style={{ gap: 8 }}>
