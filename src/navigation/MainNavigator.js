@@ -110,6 +110,8 @@ function MainTabNavigator() {
           } else if (route.name === 'Saved') {
             return <Heart size={24} color={color} weight={weight} />;
           } else if (route.name === 'Messages') {
+            return <ChatCircle size={24} color={color} weight={weight} />;
+          } else if (route.name === 'Profile') {
             return <UserIcon size={24} color={color} weight={weight} />;
           }
           return null;

@@ -194,7 +194,7 @@ const RegisterScreen = () => {
               secureTextEntry={!showPassword}
               autoComplete="new-password"
               editable={!loading}
-              className="w-full border border-neutral-300 rounded-xl px-4 py-3 text-sm bg-white pr-20"
+              className="w-full border border-neutral-300 dark:border-neutral-700 rounded-xl px-4 py-3 text-sm bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-50 pr-20"
               placeholderTextColor={isDark ? "#9ca3af" : "#a3a3a3"}
             />
             <Pressable

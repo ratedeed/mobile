@@ -1,5 +1,4 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as SecureStore from 'expo-secure-store';
 import { API_BASE_URL } from '../config';
 import { get, post as apiPost, del } from './apiClient';
 
@@ -15,7 +14,7 @@ export const getFavorites = async (): Promise<string[]> => {
 };
 
 export const syncFavoritesWithServer = async () => {
-  const token = await SecureStore.getItemAsync('auth_token');
+  const token = await AsyncStorage.getItem('auth_token');
   if (!token) return;
 
   try {

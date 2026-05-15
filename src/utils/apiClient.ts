@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as SecureStore from 'expo-secure-store';
 import { API_BASE_URL } from '../config';
 import io, { Socket } from 'socket.io-client';
 // @ts-expect-error firebaseConfig is a JS module
@@ -45,7 +44,7 @@ export const getAuthHeaders = async (externalToken?: string): Promise<Record<str
   if (externalToken) {
     return { 'Authorization': `Bearer ${externalToken}` };
   }
-  const token = await SecureStore.getItemAsync('auth_token');
+  const token = await AsyncStorage.getItem('auth_token');
   return token ? { 'Authorization': `Bearer ${token}` } : {};
 };
 
@@ -53,7 +52,7 @@ let isRefreshing = false;
 let refreshPromise: Promise<any> | null = null;
 
 const refreshTokenIfNeeded = async (): Promise<void> => {
-  const rt = await SecureStore.getItemAsync('refresh_token');
+  const rt = await AsyncStorage.getItem('refresh_token');
   if (!rt) return;
 
   if (isRefreshing && refreshPromise) {
@@ -72,17 +71,17 @@ const refreshTokenIfNeeded = async (): Promise<void> => {
       });
       if (response.ok) {
         const data = await response.json();
-        if (data.token) await SecureStore.setItemAsync('auth_token', data.token);
-        if (data.refreshToken) await SecureStore.setItemAsync('refresh_token', data.refreshToken);
+        if (data.token) await AsyncStorage.setItem('auth_token', data.token);
+        if (data.refreshToken) await AsyncStorage.setItem('refresh_token', data.refreshToken);
       } else {
-        await SecureStore.deleteItemAsync('auth_token');
-        await SecureStore.deleteItemAsync('refresh_token');
+        await AsyncStorage.removeItem('auth_token');
+        await AsyncStorage.removeItem('refresh_token');
         await AsyncStorage.removeItem(USER_DATA_KEY);
         firebaseAuth.signOut();
       }
     } catch {
-      await SecureStore.deleteItemAsync('auth_token');
-      await SecureStore.deleteItemAsync('refresh_token');
+      await AsyncStorage.removeItem('auth_token');
+      await AsyncStorage.removeItem('refresh_token');
       await AsyncStorage.removeItem(USER_DATA_KEY);
       firebaseAuth.signOut();
     } finally {
@@ -301,8 +300,8 @@ const normalizeContractors = (list: any[]): Contractor[] => {
 export const login = async (email: string, password: string): Promise<any> => {
   const data = await post(`${API_BASE}/users/login`, { email, password });
   if (data && data.token) {
-    await SecureStore.setItemAsync('auth_token', data.token);
-    if (data.refreshToken) await SecureStore.setItemAsync('refresh_token', data.refreshToken);
+    await AsyncStorage.setItem('auth_token', data.token);
+    if (data.refreshToken) await AsyncStorage.setItem('refresh_token', data.refreshToken);
     const userData = { ...data.user };
     delete userData.token;
     delete userData.refreshToken;
@@ -312,8 +311,8 @@ export const login = async (email: string, password: string): Promise<any> => {
 };
 
 export const logout = async (): Promise<void> => {
-  await SecureStore.deleteItemAsync('auth_token');
-  await SecureStore.deleteItemAsync('refresh_token');
+  await AsyncStorage.removeItem('auth_token');
+  await AsyncStorage.removeItem('refresh_token');
   await AsyncStorage.removeItem(USER_DATA_KEY);
 };
 
@@ -337,8 +336,8 @@ export const backendLoginFirebase = async (idToken: string, email: string): Prom
   const headers = { 'Authorization': `Bearer ${idToken}` };
   const data = await post(`${API_BASE}/users/login`, { email, firebaseUid: firebaseAuth.currentUser?.uid }, headers);
   if (data && data.token) {
-    await SecureStore.setItemAsync('auth_token', data.token);
-    if (data.refreshToken) await SecureStore.setItemAsync('refresh_token', data.refreshToken);
+    await AsyncStorage.setItem('auth_token', data.token);
+    if (data.refreshToken) await AsyncStorage.setItem('refresh_token', data.refreshToken);
     const userData = { ...data.user };
     delete userData.token;
     delete userData.refreshToken;
@@ -453,7 +452,7 @@ export const initializeSocket = async () => {
   isInitializingSocket = true;
 
   try {
-    const token = await SecureStore.getItemAsync('auth_token');
+    const token = await AsyncStorage.getItem('auth_token');
 
     socket = io(API_BASE_URL, {
       transports: ['websocket', 'polling'],
@@ -776,7 +775,7 @@ export const getUserProfile = async (): Promise<User> => {
   const user = await get(`${API_BASE}/users/profile`, authHeaders);
   if (!user.createdAt) {
     try {
-      const token = await SecureStore.getItemAsync('auth_token');
+      const token = await AsyncStorage.getItem('auth_token');
       if (token) {
         const decoded: any = jwtDecode(token);
         if (decoded.iat) {
@@ -998,8 +997,8 @@ export const createPaymentIntent = async (quoteId: string): Promise<{ clientSecr
 export const appleSignIn = async (data: { identityToken: string; appleUserIdentifier: string; fullName?: { givenName?: string; familyName?: string }; email?: string }): Promise<any> => {
   const result = await post(`${API_BASE}/users/apple-signin`, data);
   if (result && result.token) {
-    await SecureStore.setItemAsync('auth_token', result.token);
-    if (result.refreshToken) await SecureStore.setItemAsync('refresh_token', result.refreshToken);
+    await AsyncStorage.setItem('auth_token', result.token);
+    if (result.refreshToken) await AsyncStorage.setItem('refresh_token', result.refreshToken);
     const userData = { ...result.user };
     delete userData.token;
     delete userData.refreshToken;

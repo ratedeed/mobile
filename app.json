@@ -13,6 +13,7 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
+      "buildNumber": "23",
       "supportsTablet": true,
       "bundleIdentifier": "com.ratedeed.app",
       "infoPlist": {
@@ -30,6 +31,7 @@
       }
     },
     "android": {
+      "versionCode": 23,
       "adaptiveIcon": {
         "foregroundImage": "./icon.png",
         "backgroundColor": "#ffffff"
@@ -51,11 +53,11 @@
       "favicon": "./icon.png"
     },
     "plugins": [
-      "expo-secure-store",
       "@react-native-firebase/app",
       [
         "@sentry/react-native/expo",
         {
+          "url": "https://us.sentry.io/",
           "organization": "ratedeed",
           "project": "ratedeed-mobile",
           "setCommits": false,

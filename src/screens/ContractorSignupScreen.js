@@ -317,7 +317,7 @@ const ContractorSignupScreen = () => {
           }}
           className="w-10 h-10 items-center justify-center rounded-full active:bg-neutral-100 dark:active:bg-neutral-900"
         >
-          <FontAwesome5 name="chevron-left" size={18} color="#171717" className="dark:text-neutral-50" />
+          <FontAwesome5 name="chevron-left" size={18} color={isDark ? "#fafafa" : "#171717"} />
         </Pressable>
         <Text className="text-lg font-bold text-neutral-900 dark:text-neutral-50 ml-2">Contractor Registration</Text>
       </View>

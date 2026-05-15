@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthInfo, UserRole } from '../types';
 import { syncFavoritesWithServer } from '../utils/favoritesStore';
 import { disconnectSocket } from '../utils/apiClient';
@@ -24,12 +24,12 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const saveUserData = async (data: Record<string, any>) => {
-  await SecureStore.setItemAsync(USER_DATA_KEY, JSON.stringify(data));
+  await AsyncStorage.setItem(USER_DATA_KEY, JSON.stringify(data));
 };
 
 const loadUserData = async (): Promise<Record<string, any> | null> => {
   try {
-    const raw = await SecureStore.getItemAsync(USER_DATA_KEY);
+    const raw = await AsyncStorage.getItem(USER_DATA_KEY);
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
@@ -62,12 +62,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const loadStoredAuth = async () => {
     try {
-      const token = await SecureStore.getItemAsync('auth_token');
+      const token = await AsyncStorage.getItem('auth_token');
       if (token) {
         if (isTokenExpired(token)) {
-          await SecureStore.deleteItemAsync('auth_token');
-          await SecureStore.deleteItemAsync('refresh_token');
-          await SecureStore.deleteItemAsync(USER_DATA_KEY);
+          await AsyncStorage.removeItem('auth_token');
+          await AsyncStorage.removeItem('refresh_token');
+          await AsyncStorage.removeItem(USER_DATA_KEY);
         } else {
           setBackendToken(token);
 
@@ -104,13 +104,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch {}
 
     try {
-      await SecureStore.deleteItemAsync('auth_token');
+      await AsyncStorage.removeItem('auth_token');
     } catch {}
     try {
-      await SecureStore.deleteItemAsync('refresh_token');
+      await AsyncStorage.removeItem('refresh_token');
     } catch {}
     try {
-      await SecureStore.deleteItemAsync(USER_DATA_KEY);
+      await AsyncStorage.removeItem(USER_DATA_KEY);
     } catch {}
 
     setBackendToken(null);
@@ -137,14 +137,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const updateBackendToken = useCallback(async (token: string, emailVerifiedStatus: boolean, userData?: any) => {
     if (token) {
-      await SecureStore.setItemAsync('auth_token', token);
+      await AsyncStorage.setItem('auth_token', token);
     }
 
     const currentData = await loadUserData() || {};
     const mergedData = { ...currentData, ...userData, emailVerified: emailVerifiedStatus };
 
     if (userData?.refreshToken) {
-      await SecureStore.setItemAsync('refresh_token', userData.refreshToken);
+      await AsyncStorage.setItem('refresh_token', userData.refreshToken);
       delete mergedData.refreshToken;
     }
     delete mergedData.token;

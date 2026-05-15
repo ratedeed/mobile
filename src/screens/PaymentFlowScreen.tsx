@@ -104,7 +104,7 @@ export default function PaymentFlowScreen() {
       <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: Math.max(insets.top, 12), paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#e5e5e5' }}>
         {currentStep === 0 && (
           <Pressable onPress={() => navigation.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center', marginLeft: -8 }}>
-            <FontAwesome5 name="chevron-left" size={18} color="#171717" />
+            <FontAwesome5 name="chevron-left" size={18} color={isDark ? "#ffffff" : "#171717"} />
           </Pressable>
         )}
         <Text style={{ fontSize: 14, fontWeight: 'bold', color: isDark ? '#ffffff' : '#171717', flex: 1, textAlign: 'center' }}>

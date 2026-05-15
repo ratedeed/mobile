@@ -437,7 +437,7 @@ const BusinessDetailScreen: React.FC = () => {
               onPress={() => flatListRef.current?.scrollToIndex({ index: activeImageIndex - 1, animated: true })}
               className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 items-center justify-center shadow-sm"
             >
-              <FontAwesome5 name="chevron-left" size={14} color="#171717" />
+              <FontAwesome5 name="chevron-left" size={14} color={isDark ? "#ffffff" : "#171717"} />
             </Pressable>
           )}
           {heroImages.length > 1 && activeImageIndex < heroImages.length - 1 && (
@@ -445,7 +445,7 @@ const BusinessDetailScreen: React.FC = () => {
               onPress={() => flatListRef.current?.scrollToIndex({ index: activeImageIndex + 1, animated: true })}
               className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 items-center justify-center shadow-sm"
             >
-              <FontAwesome5 name="chevron-right" size={14} color="#171717" />
+              <FontAwesome5 name="chevron-right" size={14} color={isDark ? "#ffffff" : "#171717"} />
             </Pressable>
           )}
 
@@ -477,7 +477,7 @@ const BusinessDetailScreen: React.FC = () => {
               onPress={() => navigation.goBack()}
               className="w-8 h-8 items-center justify-center bg-white dark:bg-neutral-950 rounded-full shadow-sm"
             >
-              <FontAwesome5 name="chevron-left" size={16} color="#171717" />
+              <FontAwesome5 name="chevron-left" size={16} color={isDark ? "#ffffff" : "#171717"} />
             </Pressable>
             <View className="flex-row" style={{ gap: 8 }}>
               <Pressable
@@ -492,13 +492,13 @@ const BusinessDetailScreen: React.FC = () => {
                 }}
                 className="w-8 h-8 items-center justify-center bg-white/90 dark:bg-neutral-800/90 rounded-full shadow-sm"
               >
-                <FontAwesome5 name="comment" size={14} color="#171717" />
+                <FontAwesome5 name="comment" size={14} color={isDark ? "#ffffff" : "#171717"} />
               </Pressable>
               <Pressable
                 onPress={handleShare}
                 className="w-8 h-8 items-center justify-center bg-white dark:bg-neutral-950 rounded-full shadow-sm"
               >
-                <FontAwesome5 name="share-alt" size={14} color="#171717" />
+                <FontAwesome5 name="share-alt" size={14} color={isDark ? "#ffffff" : "#171717"} />
               </Pressable>
               <Pressable
                 onPress={toggleFavorite}

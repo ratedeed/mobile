@@ -509,11 +509,8 @@ const ProfileScreen: React.FC = () => {
           <Toggle label="Job Updates" description="When a contractor responds to your quote request" defaultOn />
           <Toggle label="New Messages" description="When you receive a new message" defaultOn />
           <Toggle label="Payment Status" description="When payment is confirmed or released" defaultOn />
-          <Toggle label="New Reviews" description="When someone reviews your project" />
-          <Toggle label="Promotions" description="Deals and offers from Ratedeed" />
           <Text className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mt-4 mb-2">Email</Text>
           <Toggle label="Job Summary" description="Weekly digest of your active projects" defaultOn />
-          <Toggle label="Marketing Emails" description="Tips, guides, and product updates" />
         </SettingsSheet>
       )}
 

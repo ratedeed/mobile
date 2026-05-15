@@ -9,7 +9,6 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
-import * as SecureStore from 'expo-secure-store';
 import { API_BASE_URL } from '../config';
 import { post as apiPost } from '../utils/apiClient';
 import Typography from './common/Typography';

@@ -1501,10 +1501,10 @@ const ContractorDashboardScreen: React.FC = () => {
                       <TextInput
                         value={editableData.licenseNumber}
                         onChangeText={t => setEditableData(p => ({ ...p, licenseNumber: t }))}
-                        placeholder="e.g. #12345678"
-                        placeholderTextColor="#a3a3a3"
-                        className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm"
-                      />
+                      placeholder="e.g. #12345678"
+                      placeholderTextColor="#a3a3a3"
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm text-neutral-900 dark:text-white"
+                    />
                     </View>
 
                     <View>
@@ -1581,12 +1581,12 @@ const ContractorDashboardScreen: React.FC = () => {
                   <TextInput
                     value={editableData.description}
                     onChangeText={t => setEditableData(p => ({ ...p, description: t }))}
-                    placeholder="Tell homeowners about your business..."
-                    placeholderTextColor="#a3a3a3"
-                    multiline
-                    numberOfLines={4}
-                    className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm"
-                    style={{ textAlignVertical: "top", minHeight: 100 }}
+                      placeholder="Tell homeowners about your business..."
+                      placeholderTextColor="#a3a3a3"
+                      multiline
+                      numberOfLines={4}
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm text-neutral-900 dark:text-white"
+                      style={{ textAlignVertical: "top", minHeight: 100 }}
                   />
                 </View>
                 <View>
@@ -1594,20 +1594,20 @@ const ContractorDashboardScreen: React.FC = () => {
                   <TextInput
                     value={editableData.pricing}
                     onChangeText={t => setEditableData(p => ({ ...p, pricing: t }))}
-                    placeholder="e.g. $500 - $5,000"
-                    placeholderTextColor="#a3a3a3"
-                    className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm"
-                  />
+                      placeholder="e.g. $500 - $5,000"
+                      placeholderTextColor="#a3a3a3"
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm text-neutral-900 dark:text-white"
+                    />
                 </View>
                 <View>
                   <Text className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 dark:text-neutral-500 mb-1.5">Certifications</Text>
                   <TextInput
                     value={editableData.certifications}
                     onChangeText={t => setEditableData(p => ({ ...p, certifications: t }))}
-                    placeholder="Licensed, Bonded, Insured..."
-                    placeholderTextColor="#a3a3a3"
-                    className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm"
-                  />
+                      placeholder="Licensed, Bonded, Insured..."
+                      placeholderTextColor="#a3a3a3"
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm text-neutral-900 dark:text-white"
+                    />
                 </View>
               </View>
             )}
@@ -1638,12 +1638,12 @@ const ContractorDashboardScreen: React.FC = () => {
                   <TextInput
                     value={editableData.phone}
                     onChangeText={t => setEditableData(p => ({ ...p, phone: formatPhoneInput(t) }))}
-                    placeholder="212-555-0123"
-                    placeholderTextColor="#a3a3a3"
-                    keyboardType="phone-pad"
-                    maxLength={12}
-                    className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm"
-                  />
+                      placeholder="212-555-0123"
+                      placeholderTextColor="#a3a3a3"
+                      keyboardType="phone-pad"
+                      maxLength={12}
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm text-neutral-900 dark:text-white"
+                    />
                 </View>
                 <View>
                   <Text className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 dark:text-neutral-500 mb-1.5">Email</Text>
@@ -1663,11 +1663,11 @@ const ContractorDashboardScreen: React.FC = () => {
                   <TextInput
                     value={editableData.website}
                     onChangeText={t => setEditableData(p => ({ ...p, website: t }))}
-                    placeholder="https://yourwebsite.com"
-                    placeholderTextColor="#a3a3a3"
-                    autoCapitalize="none"
-                    className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm"
-                  />
+                      placeholder="https://yourwebsite.com"
+                      placeholderTextColor="#a3a3a3"
+                      autoCapitalize="none"
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm text-neutral-900 dark:text-white"
+                    />
                 </View>
                 <View>
                   <Text className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 dark:text-neutral-500 mb-1.5">Service Areas (Zip Codes)</Text>
@@ -1692,7 +1692,7 @@ const ContractorDashboardScreen: React.FC = () => {
                       placeholderTextColor="#a3a3a3"
                       keyboardType="number-pad"
                       maxLength={5}
-                      className="flex-1 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm"
+                      className="flex-1 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm text-neutral-900 dark:text-white"
                       onSubmitEditing={() => {
                         const val = newZip.trim();
                         if (val && !editableData.zipCodes.includes(val)) {
@@ -1720,10 +1720,10 @@ const ContractorDashboardScreen: React.FC = () => {
                   <TextInput
                     value={editableData.address}
                     onChangeText={searchAddress}
-                    placeholder="Start typing your address..."
-                    placeholderTextColor="#a3a3a3"
-                    className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm"
-                  />
+                      placeholder="Start typing your address..."
+                      placeholderTextColor="#a3a3a3"
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm text-neutral-900 dark:text-white"
+                    />
                   {isSearchingAddress && (
                     <View className="absolute right-3 top-8">
                       <ActivityIndicator size="small" color="#4F46E5" />

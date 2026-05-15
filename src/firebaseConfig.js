@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { initializeAuth, getReactNativePersistence } from 'firebase/auth';
-import * as SecureStore from 'expo-secure-store';
+import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
@@ -17,11 +17,7 @@ let auth;
 try {
   app = getApps().length ? getApp() : initializeApp(firebaseConfig);
   auth = initializeAuth(app, {
-    persistence: getReactNativePersistence({
-      getItem: SecureStore.getItemAsync,
-      setItem: SecureStore.setItemAsync,
-      removeItem: SecureStore.deleteItemAsync,
-    }),
+    persistence: getReactNativePersistence(ReactNativeAsyncStorage),
   });
 } catch (error) {
   if (__DEV__) {
