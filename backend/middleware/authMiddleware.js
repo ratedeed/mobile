@@ -57,4 +57,25 @@ const authorize = (roles = []) => {
   };
 };
 
-module.exports = { protect, authorize };
+/**
+ * @desc Optional auth middleware — sets req.user if a valid token is present,
+ *       but does NOT fail if missing or invalid. Use for public routes
+ *       that need to know the current user when available.
+ */
+const optionalProtect = asyncHandler(async (req, res, next) => {
+  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+    try {
+      const token = req.headers.authorization.split(' ')[1];
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const user = await User.findById(decoded.id).select('-password');
+      if (user) {
+        req.user = user;
+      }
+    } catch {
+      // silently ignore invalid tokens
+    }
+  }
+  next();
+});
+
+module.exports = { protect, authorize, optionalProtect };

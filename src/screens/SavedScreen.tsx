@@ -158,9 +158,6 @@ const SavedScreen = () => {
             <Heart size={32} color={isDark ? '#525252' : '#d4d4d4'} weight="bold" />
           </View>
           <EmptyState title="No saved contractors" message="Start exploring and save contractors you like." icon="❤️" />
-          <Text className="text-sm text-neutral-500 dark:text-neutral-400 mt-1 text-center">
-            Start exploring and save contractors you like.
-          </Text>
           <Pressable 
             onPress={() => navigation.navigate('Explore' as any)}
             className="mt-6 bg-neutral-900 dark:bg-neutral-50 px-8 py-3 rounded-xl"

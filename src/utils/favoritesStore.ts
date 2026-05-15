@@ -5,6 +5,22 @@ import { get, post as apiPost, del } from './apiClient';
 const FAVORITES_KEY = 'ratedeed_favorites';
 
 export const getFavorites = async (): Promise<string[]> => {
+  const token = await AsyncStorage.getItem('auth_token');
+
+  // 1. Always try server first — this is the single source of truth
+  if (token) {
+    try {
+      const serverIds = await get(`${API_BASE_URL}/api/users/favorites`);
+      if (Array.isArray(serverIds)) {
+        await AsyncStorage.setItem(FAVORITES_KEY, JSON.stringify(serverIds));
+        return serverIds;
+      }
+    } catch {
+      // server unreachable — fall back to local cache below
+    }
+  }
+
+  // 2. Fallback to local cache (guest mode or offline)
   try {
     const json = await AsyncStorage.getItem(FAVORITES_KEY);
     return json ? JSON.parse(json) : [];

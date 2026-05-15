@@ -46,6 +46,12 @@ export const usePushNotifications = () => {
         if (enabled) {
           const fcmToken = await getToken(messaging);
           setExpoPushToken(fcmToken);
+
+          try {
+            const { getAPNSToken } = require('@react-native-firebase/messaging');
+            const apnsToken = await getAPNSToken(messaging);
+            void apnsToken;
+          } catch {}
         }
       } catch {}
     };

@@ -158,7 +158,7 @@ const BusinessDetailScreen: React.FC = () => {
       const [postsData, reviewsData, favStatus] = await Promise.all([
         fetchContractorPosts(contractorId).catch(() => ({ posts: [] })),
         fetchContractorReviews(contractorId).catch(() => []),
-        isFavorite(contractorId)
+        isFavorite(contractorId),
       ]);
       
       if (!isMounted.current) return;
@@ -422,7 +422,7 @@ const BusinessDetailScreen: React.FC = () => {
             />
           ) : (
             <View className="w-full h-full bg-neutral-200 dark:bg-neutral-800 items-center justify-center">
-              <FontAwesome5 name="image" size={48} color="#a3a3a3" />
+              <FontAwesome5 name="image" size={48} color={isDark ? '#737373' : '#a3a3a3'} />
             </View>
           )}
 
@@ -504,13 +504,13 @@ const BusinessDetailScreen: React.FC = () => {
                 onPress={toggleFavorite}
                 className="w-8 h-8 items-center justify-center bg-white dark:bg-neutral-950 rounded-full shadow-sm"
               >
-                <FontAwesome5 name="heart" solid={isSaved} size={14} color={isSaved ? '#f43f5e' : '#171717'} />
+                <FontAwesome5 name="heart" solid={isSaved} size={14} color={isSaved ? '#f43f5e' : (isDark ? '#ffffff' : '#171717')} />
               </Pressable>
               <Pressable
                 onPress={() => setShowReportDialog(true)}
                 className="w-8 h-8 items-center justify-center bg-white dark:bg-neutral-950 rounded-full shadow-sm"
               >
-                <FontAwesome5 name="flag" size={14} color="#737373" />
+                <FontAwesome5 name="flag" size={14} color={isDark ? '#ffffff' : '#737373'} />
               </Pressable>
               {(!(contractor?.isVerified) && !contractor?.user) && (
                 <Pressable
@@ -542,7 +542,7 @@ const BusinessDetailScreen: React.FC = () => {
 
           {!!(location || (c as any).distance) && (
             <View className="flex-row items-center mt-2" style={{ gap: 4 }}>
-              <FontAwesome5 name="map-marker-alt" size={12} color="#737373" />
+              <FontAwesome5 name="map-marker-alt" size={12} color={isDark ? '#a3a3a3' : '#737373'} />
               <Text className="text-sm text-neutral-500 dark:text-neutral-400">{location || ''}</Text>
               {!!(c as any).distance && (
                 <Text className="text-sm text-neutral-500 dark:text-neutral-400"> · {(c as any).distance}</Text>
@@ -553,17 +553,17 @@ const BusinessDetailScreen: React.FC = () => {
           {/* Quick Stats */}
           <View className="flex-row mt-6 py-4 border-y border-neutral-100 dark:border-neutral-800">
             <View className="flex-1 items-center">
-              <FontAwesome5 name="award" size={18} color="#171717" />
+              <FontAwesome5 name="award" size={18} color={isDark ? '#ffffff' : '#171717'} />
               <Text className="text-sm font-bold text-neutral-900 dark:text-neutral-50 mt-1">{(c as any).yearsInBusiness || (c as any).yearsExperience || 0}</Text>
               <Text className="text-[10px] text-neutral-500 dark:text-neutral-400">Years Exp.</Text>
             </View>
             <View className="flex-1 items-center">
-              <FontAwesome5 name="star" solid size={18} color="#171717" />
+              <FontAwesome5 name="star" solid size={18} color={isDark ? '#ffffff' : '#171717'} />
               <Text className="text-sm font-bold text-neutral-900 dark:text-neutral-50 mt-1">{reviewCount}</Text>
               <Text className="text-[10px] text-neutral-500 dark:text-neutral-400">Reviews</Text>
             </View>
             <View className="flex-1 items-center">
-              <FontAwesome5 name="clock" size={18} color="#171717" />
+              <FontAwesome5 name="clock" size={18} color={isDark ? '#ffffff' : '#171717'} />
               <Text className="text-sm font-bold text-neutral-900 dark:text-neutral-50 mt-1">{(c as any).responseTime || 'N/A'}</Text>
               <Text className="text-[10px] text-neutral-500 dark:text-neutral-400">Response</Text>
             </View>
@@ -636,8 +636,8 @@ const BusinessDetailScreen: React.FC = () => {
                         {images[0] ? (
                           <Image source={{ uri: images[0] }} className="w-full h-full" resizeMode="cover" />
                         ) : (
-                          <View className="w-full h-full bg-neutral-100 items-center justify-center">
-                            <FontAwesome5 name="image" size={20} color="#d4d4d4" />
+                          <View className="w-full h-full bg-neutral-100 dark:bg-neutral-800 items-center justify-center">
+                            <FontAwesome5 name="image" size={20} color={isDark ? '#737373' : '#d4d4d4'} />
                           </View>
                         )}
                       </View>
@@ -817,9 +817,9 @@ const BusinessDetailScreen: React.FC = () => {
                       ) : featuredReview.user?.profilePicture ? (
                         <Image source={{ uri: featuredReview.user.profilePicture }} className="w-8 h-8 rounded-full" />
                       ) : (
-                        <View className="w-8 h-8 rounded-full bg-indigo-200 items-center justify-center">
-                          <FontAwesome5 name="user" size={10} color="#4F46E5" />
-                        </View>
+                        <View className="w-8 h-8 rounded-full bg-indigo-200 dark:bg-indigo-900 items-center justify-center">
+                            <FontAwesome5 name="user" size={10} color="#4F46E5" />
+                          </View>
                       )}
                       <View className="flex-1">
                         <Text className="text-xs font-bold text-neutral-900 dark:text-neutral-50">{featuredReview.user?.firstName} {featuredReview.user?.lastName}</Text>
@@ -845,8 +845,8 @@ const BusinessDetailScreen: React.FC = () => {
                         ) : review.user?.profilePicture ? (
                           <Image source={{ uri: review.user.profilePicture }} className="w-10 h-10 rounded-full" />
                         ) : (
-                          <View className="w-10 h-10 rounded-full bg-neutral-100 items-center justify-center">
-                            <FontAwesome5 name="user" size={14} color="#d4d4d4" />
+                          <View className="w-10 h-10 rounded-full bg-neutral-100 dark:bg-neutral-800 items-center justify-center">
+                            <FontAwesome5 name="user" size={14} color={isDark ? '#737373' : '#d4d4d4'} />
                           </View>
                         )}
                         <View className="flex-1">
@@ -874,7 +874,7 @@ const BusinessDetailScreen: React.FC = () => {
               </View>
             ) : (
               <View className="py-10 items-center justify-center">
-                <FontAwesome5 name="star" size={32} color="#f5f5f5" style={{ marginBottom: 12 }} />
+                <FontAwesome5 name="star" size={32} color={isDark ? '#525252' : '#f5f5f5'} style={{ marginBottom: 12 }} />
                 <Text className="text-neutral-400 text-sm">No reviews yet for this contractor</Text>
               </View>
             )}
@@ -963,7 +963,7 @@ const BusinessDetailScreen: React.FC = () => {
             }}
             className="w-12 h-12 items-center justify-center bg-neutral-100 dark:bg-neutral-800 rounded-xl"
           >
-            <FontAwesome5 name="comment" size={18} color="#171717" />
+            <FontAwesome5 name="comment" size={18} color={isDark ? '#ffffff' : '#171717'} />
           </Pressable>
           <Pressable
             onPress={() => setIsQuoteModalVisible(true)}

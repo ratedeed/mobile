@@ -5,7 +5,7 @@ const Contractor = require('../models/Contractor');
 const Lead = require('../models/Lead');
 const Job = require('../models/Job');
 const Quote = require('../models/Quote');
-const { protect } = require('../middleware/authMiddleware');
+const { protect, optionalProtect } = require('../middleware/authMiddleware');
 const { geocodeZip } = require('../utils/geocodeZip');
 
 // @desc    Get all contractors or search
@@ -244,8 +244,8 @@ router.get('/slug/:slug', asyncHandler(async (req, res) => {
 
 // @desc    Get contractor by ID
 // @route   GET /api/contractors/:id
-// @access  Public
-router.get('/:id', asyncHandler(async (req, res) => {
+// @access  Public (auth optional — includes isFavorited when logged in)
+router.get('/:id', optionalProtect, asyncHandler(async (req, res) => {
   const { id } = req.params;
   
   // Guard against non-ID strings that might have leaked past earlier routes
@@ -263,7 +263,15 @@ router.get('/:id', asyncHandler(async (req, res) => {
     const contractor = await Contractor.findById(id).populate('reviewsList.user', 'firstName lastName profilePicture');
     if (contractor) {
       const { password, posts, reviewsList, ...details } = contractor._doc;
-      res.json({ ...details, posts, reviewsList });
+      
+      let isFavorited = false;
+      if (req.user && req.user.savedContractors) {
+        isFavorited = req.user.savedContractors.some(
+          fid => fid.toString() === contractor._id.toString()
+        );
+      }
+      
+      res.json({ ...details, posts, reviewsList, isFavorited });
     } else {
       res.status(404).json({ message: 'Contractor not found' });
     }

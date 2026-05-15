@@ -690,7 +690,7 @@ const MessagesScreen = () => {
   }, [route.name, selectedConversation, loading, conversations]);
 
   return (
-    <KeyboardAvoidingView className="flex-1 bg-white dark:bg-neutral-950" behavior={Platform.OS === "ios" ? "height" : undefined} keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}>
+    <KeyboardAvoidingView className="flex-1 bg-white dark:bg-neutral-950" behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}>
       <View className="flex-1" style={{ paddingTop: insets.top }}>
 
         {!showChat ? (
@@ -895,17 +895,18 @@ const MessagesScreen = () => {
       
       <ReportModal visible={reportModalVisible} onClose={() => setReportModalVisible(false)} userName={chatName} onReport={handleReport} />
 
-      {userRole === 'contractor' && selectedConversation?.conversationId && (
+      {userRole === 'contractor' && (selectedConversation?.conversationId || selectedConversation?._id) && (
         <QuoteCreationSheet
           visible={showQuoteSheet}
           onClose={() => setShowQuoteSheet(false)}
-          conversationId={selectedConversation.conversationId}
+          conversationId={selectedConversation.conversationId || selectedConversation._id}
           recipientName={selectedConversation.otherParticipant?.firstName || chatName || "Client"}
           recipientPicture={selectedConversation.otherParticipant?.profilePicture}
           services={(contractorProfile?.servicesOffered || []).map((s) => s.name || s).filter(Boolean)}
           onCreated={() => {
-            if (selectedConversation?.conversationId) {
-              loadMessages(selectedConversation.conversationId);
+            const convId = selectedConversation?.conversationId || selectedConversation?._id;
+            if (convId) {
+              loadMessages(convId);
             }
           }}
         />

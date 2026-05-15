@@ -1,6 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Colors } from '../../constants/designTokens';
+import { View, Text, Pressable } from 'react-native';
 
 interface EmptyStateProps {
   title?: string;
@@ -18,55 +17,22 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   icon = '📭',
 }) => {
   return (
-    <View style={styles.container}>
-      <Text style={styles.icon}>{icon}</Text>
-      <Text style={styles.title}>{title}</Text>
-      <Text style={styles.message}>{message}</Text>
+    <View className="items-center justify-center px-6">
+      <Text className="text-5xl mb-4">{icon}</Text>
+      <Text className="text-lg font-semibold text-neutral-900 dark:text-neutral-50 mb-2 text-center">
+        {title}
+      </Text>
+      <Text className="text-sm text-neutral-600 dark:text-neutral-400 text-center mb-6 leading-5">
+        {message}
+      </Text>
       {actionLabel && onAction && (
-        <TouchableOpacity style={styles.button} onPress={onAction}>
-          <Text style={styles.buttonText}>{actionLabel}</Text>
-        </TouchableOpacity>
+        <Pressable
+          className="bg-indigo-600 dark:bg-indigo-500 px-6 py-3 rounded-lg"
+          onPress={onAction}
+        >
+          <Text className="text-white text-sm font-semibold">{actionLabel}</Text>
+        </Pressable>
       )}
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-    backgroundColor: Colors.neutral50,
-  },
-  icon: {
-    fontSize: 48,
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: Colors.neutral900,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  message: {
-    fontSize: 14,
-    color: Colors.neutral600,
-    textAlign: 'center',
-    marginBottom: 24,
-    lineHeight: 20,
-    paddingHorizontal: 16,
-  },
-  button: {
-    backgroundColor: Colors.primary500,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  buttonText: {
-    color: Colors.neutral50,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-});

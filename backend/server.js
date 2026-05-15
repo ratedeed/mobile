@@ -31,11 +31,15 @@ if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
     const serviceAccount = JSON.parse(
       Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT_KEY.replace(/\s/g, ''), 'base64').toString('utf8')
     );
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-      projectId: process.env.FIREBASE_PROJECT_ID,
-    }, 'ratedeedAdminApp');
-    console.log('Firebase Admin SDK initialized successfully.');
+    if (!admin.apps.length) {
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+        projectId: process.env.FIREBASE_PROJECT_ID,
+      });
+      console.log('Firebase Admin SDK initialized successfully.');
+    } else {
+      console.log('Firebase Admin SDK already initialized.');
+    }
   } catch (error) {
     console.error('Error initializing Firebase Admin SDK:', error);
   }
