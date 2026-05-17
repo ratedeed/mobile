@@ -744,13 +744,23 @@ const MessagesScreen = () => {
                 <FontAwesome5 name="chevron-left" size={16} color={isDark ? "#e5e5e5" : "#171717"} />
               </Pressable>
               <View className="relative">
-                {isSvgUrl(chatAvatar) ? <View className="w-10 h-10 rounded-full overflow-hidden"><SvgImage uri={chatAvatar} width="100%" height="100%" /></View> : <Image source={{ uri: chatAvatar }} className="w-10 h-10 rounded-full bg-neutral-100" />}
+                {loading && !selectedConversation ? (
+                  <View className="w-10 h-10 rounded-full bg-neutral-200 dark:bg-neutral-700" />
+                ) : isSvgUrl(chatAvatar) ? (
+                  <View className="w-10 h-10 rounded-full overflow-hidden"><SvgImage uri={chatAvatar} width="100%" height="100%" /></View>
+                ) : (
+                  <Image source={{ uri: chatAvatar }} className="w-10 h-10 rounded-full bg-neutral-100 dark:bg-neutral-700" />
+                )}
               </View>
               <View className="flex-1 min-w-0">
-                <View className="flex-row items-center" style={{ gap: 4 }}>
-                  <Text className="text-[15px] font-bold text-neutral-900 dark:text-white truncate" numberOfLines={1}>{chatName}</Text>
-                  {chatOther?.role === "contractor" && (chatOther?.isVerified || chatOther?.isTopRated) && <VerifiedBadge size={14} animate={false} />}
-                </View>
+                {loading && !selectedConversation ? (
+                  <View className="h-4 bg-neutral-200 dark:bg-neutral-700 rounded w-24 mt-1" />
+                ) : (
+                  <View className="flex-row items-center" style={{ gap: 4 }}>
+                    <Text className="text-[15px] font-bold text-neutral-900 dark:text-white truncate" numberOfLines={1}>{chatName}</Text>
+                    {chatOther?.role === "contractor" && (chatOther?.isVerified || chatOther?.isTopRated) && <VerifiedBadge size={14} animate={false} />}
+                  </View>
+                )}
               </View>
               <Pressable onPress={() => setActionSheetVisible(true)} className="w-11 h-11 items-center justify-center rounded-full" accessibilityLabel="Chat options" accessibilityRole="button"><FontAwesome5 name="ellipsis-h" size={16} color={isDark ? "#a3a3a3" : "#525252"} /></Pressable>
             </View>

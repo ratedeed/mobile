@@ -620,7 +620,7 @@ const BusinessDetailScreen: React.FC = () => {
                   return (
                     <View key={i} className="bg-neutral-50 dark:bg-neutral-900 rounded-xl p-3 flex-row items-center justify-between">
                       <Text className="text-sm font-medium text-neutral-800 dark:text-neutral-200">{name}</Text>
-                      {!!price && <Text className="text-xs font-bold text-indigo-600">{price}</Text>}
+                      <View className="bg-indigo-50 dark:bg-indigo-900/50 border border-indigo-100 dark:border-indigo-800 rounded-md px-2 py-1"><Text className="text-[10px] font-bold text-indigo-700 dark:text-indigo-400">Custom Quote</Text></View>
                     </View>
                   );
                 })}

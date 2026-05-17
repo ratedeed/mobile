@@ -162,7 +162,7 @@ export default function ServiceAreaMap({
       const allCoords = zipAreas.flatMap(za => za.coords);
       if (allCoords.length > 0) {
         mapRef.current.fitToCoordinates(allCoords, {
-          edgePadding: { top: 30, right: 30, bottom: 30, left: 30 },
+          edgePadding: { top: 10, right: 10, bottom: 10, left: 10 },
           animated: true,
         });
       }
@@ -186,8 +186,8 @@ export default function ServiceAreaMap({
         initialRegion={{
           latitude: center.lat,
           longitude: center.lng,
-          latitudeDelta: 0.1,
-          longitudeDelta: 0.1,
+          latitudeDelta: 0.04,
+          longitudeDelta: 0.04,
         }}
         scrollEnabled={true}
         zoomEnabled={true}

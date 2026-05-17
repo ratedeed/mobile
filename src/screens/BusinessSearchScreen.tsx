@@ -137,11 +137,10 @@ const ListingCard = ({
             <Text className="text-[10px] font-semibold text-emerald-700">Serves your area</Text>
           </View>
         )}
-        {price && (
-          <Text className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-50 mt-0.5">
-            From {price} <Text className="font-normal text-neutral-500 dark:text-neutral-400">project</Text>
-          </Text>
-        )}
+        <View className="flex-row items-center mt-1" style={{ gap: 4 }}>
+          <FontAwesome5 name="lock" size={10} color="#16a34a" />
+          <Text className="text-[12px] font-semibold text-neutral-700 dark:text-neutral-300">Escrow Protected</Text>
+        </View>
       </View>
     </Pressable>
   );
