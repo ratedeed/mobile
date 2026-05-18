@@ -176,43 +176,50 @@ export const EscrowTrustBanner = () => {
   });
 
   return (
-    <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0 }} pointerEvents="box-none">
-      <Animated.View
-        style={[
-          styles.banner,
-          {
-            transform: [{ translateY: slideAnim }],
-            opacity: opacityAnim,
-          }
-        ]}
-      >
-        <View style={styles.content}>
-          <Animated.View style={[styles.iconContainer, { transform: [{ rotate: rotateInterpolate }] }]}>
-            <FontAwesome5 name="hammer" size={32} color="#4F46E5" />
-          </Animated.View>
+    <>
+      {/* Backdrop — tap anywhere to dismiss */}
+      <Pressable style={styles.overlay} onPress={dismiss} />
 
-          <View style={styles.textContainer}>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center' }}>
-              <Animated.View style={{ opacity: text1Opacity, transform: [{ translateY: text1Y }] }}>
-                <Text style={styles.text}>Your money is held in </Text>
-              </Animated.View>
-              
-              <Animated.View style={{ opacity: text2Opacity, transform: [{ translateY: text2Y }] }}>
-                <AnimatedGradientText text="escrow " />
-              </Animated.View>
-              
-              <Animated.View style={{ opacity: text3Opacity, transform: [{ translateY: text3Y }] }}>
-                <Text style={styles.text}>until the job is done right.</Text>
-              </Animated.View>
+      {/* Banner wrapper — lets touches pass through to backdrop except on the banner itself */}
+      <View style={styles.overlay} pointerEvents="box-none">
+        <Animated.View
+          style={[
+            styles.banner,
+            {
+              transform: [{ translateY: slideAnim }],
+              opacity: opacityAnim,
+            }
+          ]}
+          pointerEvents="auto"
+        >
+          <View style={styles.content}>
+            <Animated.View style={[styles.iconContainer, { transform: [{ rotate: rotateInterpolate }] }]}>
+              <FontAwesome5 name="hammer" size={32} color="#4F46E5" />
+            </Animated.View>
+
+            <View style={styles.textContainer}>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center' }}>
+                <Animated.View style={{ opacity: text1Opacity, transform: [{ translateY: text1Y }] }}>
+                  <Text style={styles.text}>Your money is held in </Text>
+                </Animated.View>
+                
+                <Animated.View style={{ opacity: text2Opacity, transform: [{ translateY: text2Y }] }}>
+                  <AnimatedGradientText text="escrow " />
+                </Animated.View>
+                
+                <Animated.View style={{ opacity: text3Opacity, transform: [{ translateY: text3Y }] }}>
+                  <Text style={styles.text}>until the job is done right.</Text>
+                </Animated.View>
+              </View>
             </View>
-          </View>
 
-          <Pressable onPress={dismiss} style={styles.closeButton}>
-            <FontAwesome5 name="times" size={18} color="#A3A3A3" />
-          </Pressable>
-        </View>
-      </Animated.View>
-    </View>
+            <Pressable onPress={dismiss} style={styles.closeButton}>
+              <FontAwesome5 name="times" size={18} color="#A3A3A3" />
+            </Pressable>
+          </View>
+        </Animated.View>
+      </View>
+    </>
   );
 };
 
