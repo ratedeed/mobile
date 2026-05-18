@@ -42,6 +42,7 @@ import {
   emitTyping,
   emitMessageRead,
   blockUser,
+  getStripeAccountStatus,
 } from "../api";
 import { useAuth } from "../context/AuthContext";
 import { useContractor } from "../context/ContractorContext";
@@ -335,7 +336,8 @@ const MessagesScreen = () => {
   const [isOtherTyping, setIsOtherTyping] = useState(false);
   const [showScrollBtn, setShowScrollBtn] = useState(false);
   const [showQuoteSheet, setShowQuoteSheet] = useState(false);
-  
+  const [stripeStatus, setStripeStatus] = useState(null);
+
   const messagesRef = useRef();
   const selectedConvRef = useRef();
   selectedConvRef.current = selectedConversation;
@@ -421,6 +423,16 @@ const MessagesScreen = () => {
       return () => leaveConversationSocket(cId);
     }
   }, [selectedConversation?.conversationId]);
+
+  // ─── Stripe status for contractors ─────────────────────────────────────────
+  useEffect(() => {
+    if (userRole !== 'contractor') return;
+    let mounted = true;
+    getStripeAccountStatus()
+      .then((status) => { if (mounted) setStripeStatus(status); })
+      .catch(() => { if (mounted) setStripeStatus(null); });
+    return () => { mounted = false; };
+  }, [userRole]);
 
   // ─── Load conversations ────────────────────────────────────────────────────
   const loadConversations = useCallback(async (pullRefresh = false) => {
@@ -912,7 +924,29 @@ const MessagesScreen = () => {
 
             <View className="px-4 py-3 bg-white dark:bg-neutral-900 border-t border-neutral-100 dark:border-neutral-800 flex-row items-end" style={{ gap: 8, paddingBottom: insets.bottom + 12 || 12 }}>
               <Pressable onPress={pickImage} className="w-11 h-11 items-center justify-center rounded-full bg-neutral-50 dark:bg-neutral-800" accessibilityLabel="Attach image" accessibilityRole="button"><FontAwesome5 name="image" size={15} color={isDark ? "#a3a3a3" : "#737373"} /></Pressable>
-              {userRole === 'contractor' && selectedConversation?.conversationId && <Pressable onPress={() => setShowQuoteSheet(true)} className="w-11 h-11 items-center justify-center rounded-full bg-indigo-50" accessibilityLabel="Send quote" accessibilityRole="button"><FontAwesome5 name="tag" size={13} color="#4F46E5" /></Pressable>}
+              {userRole === 'contractor' && (selectedConversation?.conversationId || selectedConversation?._id) && (
+                <Pressable
+                  onPress={() => {
+                    if (!stripeStatus?.chargesEnabled) {
+                      Alert.alert(
+                        'Connect to Stripe',
+                        "You'll need a connected Stripe account before you can create and send quotes to clients.",
+                        [
+                          { text: 'Not now', style: 'cancel' },
+                          { text: 'Connect to Stripe', onPress: () => navigation.navigate('ContractorDashboard') }
+                        ]
+                      );
+                    } else {
+                      setShowQuoteSheet(true);
+                    }
+                  }}
+                  className="w-11 h-11 items-center justify-center rounded-full bg-indigo-50"
+                  accessibilityLabel="Send quote"
+                  accessibilityRole="button"
+                >
+                  <FontAwesome5 name="tag" size={13} color="#4F46E5" />
+                </Pressable>
+              )}
               <View className="flex-1 bg-neutral-100 dark:bg-neutral-800 rounded-2xl px-4 py-2.5 max-h-[120px]"><TextInput className="text-[15px] text-neutral-800 dark:text-neutral-200 leading-5" placeholder="Type a message..." placeholderTextColor={isDark ? "#9ca3af" : "#a3a3a3"} value={newMessage} onChangeText={handleTextChange} multiline style={{ maxHeight: 100 }} accessibilityLabel="Message input" accessibilityRole="text" /></View>
               <Pressable onPress={handleSendMessage} disabled={(!newMessage.trim() && !pendingAttachment) || isUploading} className={`w-11 h-11 rounded-full items-center justify-center mb-0.5 ${newMessage.trim() || pendingAttachment ? "bg-indigo-600" : "bg-neutral-200 dark:bg-neutral-700"}`} style={newMessage.trim() || pendingAttachment ? { shadowColor: "#4F46E5", shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { height: 2 }, elevation: 3 } : undefined} accessibilityLabel="Send message" accessibilityRole="button">
                 {isUploading ? <ActivityIndicator size="small" color="white" /> : <FontAwesome5 name="paper-plane" size={14} color={newMessage.trim() || pendingAttachment ? "white" : (isDark ? "#737373" : "#a3a3a3")} />}

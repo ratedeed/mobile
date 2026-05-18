@@ -247,6 +247,7 @@ const ContractorDashboardScreen: React.FC = () => {
   const [bannerDismissed, setBannerDismissed] = useState(true);
 
   const [imageLoading, setImageLoading] = useState(false);
+  const [isStripeConnecting, setIsStripeConnecting] = useState(false);
   const contractorId = realContractorId || currentUserId;
 
   const searchAddress = (text: string) => {
@@ -1097,19 +1098,46 @@ const ContractorDashboardScreen: React.FC = () => {
                       {!stripeStatus?.chargesEnabled && (
                         <Pressable
                           onPress={async () => {
-                            try { 
-                              const { url } = await getStripeConnectUrl(); 
-                              const result = await WebBrowser.openAuthSessionAsync(url, 'ratedeed://contractor-dashboard');
+                            if (isStripeConnecting) return;
+                            setIsStripeConnecting(true);
+                            try {
+                              const { url } = await getStripeConnectUrl();
+                              let result;
+                              try {
+                                result = await WebBrowser.openAuthSessionAsync(url, 'ratedeed://contractor-dashboard');
+                              } catch (browserError: any) {
+                                if (browserError?.message?.toLowerCase().includes('already open')) {
+                                  try { await WebBrowser.dismissBrowser(); } catch {}
+                                  Alert.alert(
+                                    'Browser Already Open',
+                                    'Please close any open browser windows and try again, or open Stripe setup in your default browser.',
+                                    [
+                                      { text: 'Cancel', style: 'cancel' },
+                                      { text: 'Open in Browser', onPress: () => Linking.openURL(url) }
+                                    ]
+                                  );
+                                  return;
+                                }
+                                throw browserError;
+                              }
                               if (result.type === 'success' && result.url?.includes('stripe_return=true')) {
                                 Alert.alert('Success', 'Stripe account connected successfully!');
-                                // Force a refresh of the profile/status
                                 setTimeout(() => navigation.replace('ContractorDashboard'), 500);
                               }
-                            } catch (e) { Alert.alert('Stripe Error', (e as any)?.message || 'Failed to connect Stripe. Check your internet connection and try again.'); }
+                            } catch (e) {
+                              Alert.alert('Stripe Error', (e as any)?.message || 'Failed to connect Stripe. Check your internet connection and try again.');
+                            } finally {
+                              setIsStripeConnecting(false);
+                            }
                           }}
-                          className="bg-indigo-600 px-3 py-2 rounded-lg"
+                          disabled={isStripeConnecting}
+                          className={`px-3 py-2 rounded-lg ${isStripeConnecting ? 'bg-indigo-400' : 'bg-indigo-600'}`}
                         >
-                          <Text className="text-xs font-semibold text-white">Connect</Text>
+                          {isStripeConnecting ? (
+                            <ActivityIndicator size="small" color="#fff" />
+                          ) : (
+                            <Text className="text-xs font-semibold text-white">Connect</Text>
+                          )}
                         </Pressable>
                       )}
                     </View>

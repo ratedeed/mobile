@@ -71,8 +71,11 @@ const LoginScreen = () => {
         if (backendResponse?.token) {
           await updateBackendToken(backendResponse.token, backendResponse.emailVerified, backendResponse.user);
           Toast.show({ type: 'success', text1: 'Success', text2: 'Logged in successfully!' });
-          // Go back to browsing screen since MainNavigator is always shown
-          if (navigation.canGoBack()) {
+          // If user is a contractor, go to dashboard instead of going back to signup
+          const role = backendResponse.user?.role;
+          if (role === 'contractor') {
+            navigation.navigate('ContractorDashboard');
+          } else if (navigation.canGoBack()) {
             navigation.goBack();
           }
         } else {
