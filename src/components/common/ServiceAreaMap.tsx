@@ -199,10 +199,10 @@ export default function ServiceAreaMap({
         showsBuildings={false}
         showsIndoors={false}
         toolbarEnabled={false}
-        mapType="standard"
+        mapType="none"
       >
         <UrlTile
-          urlTemplate="https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png"
+          urlTemplate="https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png"
           maximumZ={19}
           flipY={false}
         />
@@ -219,9 +219,20 @@ export default function ServiceAreaMap({
 
         <Marker
           coordinate={{ latitude: center.lat, longitude: center.lng }}
-          title={businessName}
-          pinColor="#4F46E5"
-        />
+          tracksViewChanges={false}
+        >
+          <View style={{
+            width: 36, height: 36,
+            backgroundColor: '#4F46E5',
+            borderRadius: 18,
+            alignItems: 'center', justifyContent: 'center',
+            shadowColor: '#4F46E5', shadowOpacity: 0.4, shadowRadius: 12, shadowOffset: { width: 0, height: 2 },
+            elevation: 5,
+            borderWidth: 3, borderColor: 'white'
+          }}>
+            <FontAwesome5 name="map-marker-alt" size={14} color="white" solid />
+          </View>
+        </Marker>
       </MapView>
 
       {zipCodes.length > 0 && (

@@ -716,40 +716,7 @@ const BusinessDetailScreen: React.FC = () => {
             );
           })()}
 
-          {/* Certifications & Licenses */}
-          {(() => {
-            const certs = (c as any).certifications;
-            const license = (c as any).licenseNumber;
-            if ((!certs || !Array.isArray(certs) || certs.length === 0) && !license) return null;
-            return (
-              <View className="mt-8">
-                <Text className="text-base font-bold text-neutral-900 dark:text-neutral-50 mb-3">Certifications & Licenses</Text>
-                <View style={{ gap: 8 }}>
-                  {license && (
-                    <View className="flex-row items-center bg-white dark:bg-neutral-900 rounded-xl border border-neutral-100 dark:border-neutral-800 p-3" style={{ gap: 12 }}>
-                      <View className="w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-950 items-center justify-center">
-                        <FontAwesome5 name="id-badge" size={12} color="#059669" />
-                      </View>
-                      <View className="flex-1">
-                        <Text className="text-sm font-semibold text-neutral-900 dark:text-neutral-50">License #{license}</Text>
-                        {(c as any).isVerified && <Text className="text-xs text-emerald-600">Verified</Text>}
-                      </View>
-                      <FontAwesome5 name="check-circle" size={16} color="#059669" />
-                    </View>
-                  )}
-                  {Array.isArray(certs) && certs.map((cert: string, i: number) => (
-                    <View key={i} className="flex-row items-center bg-white dark:bg-neutral-900 rounded-xl border border-neutral-100 dark:border-neutral-800 p-3" style={{ gap: 12 }}>
-                      <View className="w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-950 items-center justify-center">
-                        <FontAwesome5 name="award" size={12} color="#059669" />
-                      </View>
-                      <Text className="flex-1 text-sm font-medium text-neutral-900 dark:text-neutral-50">{cert}</Text>
-                      <FontAwesome5 name="check-circle" size={14} color="#059669" />
-                    </View>
-                  ))}
-                </View>
-              </View>
-            );
-          })()}
+          {/* Certifications & Licenses removed */}
 
           {/* Service Area */}
           {(() => {

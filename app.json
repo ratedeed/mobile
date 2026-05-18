@@ -100,7 +100,12 @@
           "enableApplePay": true
         }
       ],
-      "expo-tracking-transparency"
+      [
+        "expo-tracking-transparency",
+        {
+          "userTrackingPermission": "Allow RateDeed to use your data to provide a better, more personalized experience and for analytics."
+        }
+      ]
     ],
     "scheme": "ratedeed",
     "extra": {
