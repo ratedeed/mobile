@@ -26,7 +26,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as ImagePicker from "expo-image-picker";
 import { uploadToCloudinary, CLOUDINARY_FOLDERS } from "../utils/cloudinary";
 
-import { getUserProfile, updateUserProfile } from '../api';
+import { getUserProfile, updateUserProfile, getBlockedUsers, unblockUser } from '../api';
 import { useAuth } from '../context/AuthContext';
 import { User } from '../types';
 import { FontAwesome5 } from '@expo/vector-icons';
@@ -231,6 +231,26 @@ const ProfileScreen: React.FC = () => {
   const [emailMessage, setEmailMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [pwMessage, setPwMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [blockedUsers, setBlockedUsers] = useState<any[]>([]);
+  const [loadingBlocked, setLoadingBlocked] = useState(false);
+
+  const loadBlockedUsers = useCallback(async () => {
+    setLoadingBlocked(true);
+    try {
+      const users = await getBlockedUsers();
+      if (Array.isArray(users)) setBlockedUsers(users);
+    } catch { /* */ } finally { setLoadingBlocked(false); }
+  }, []);
+
+  const handleUnblock = async (userId: string) => {
+    try {
+      await unblockUser(userId);
+      setBlockedUsers((prev) => prev.filter((u) => u._id !== userId && u.id !== userId));
+      Alert.alert('Unblocked', 'User has been unblocked.');
+    } catch {
+      Alert.alert('Error', 'Failed to unblock user.');
+    }
+  };
 
   const loadProfile = useCallback(async () => {
     try {
@@ -550,6 +570,13 @@ const ProfileScreen: React.FC = () => {
         </Pressable>
         <View className="pt-5 mt-2 border-t border-neutral-100 dark:border-neutral-800">
           <SectionLabel>Data &amp; Privacy</SectionLabel>
+          <Pressable onPress={() => { closeSheet(); setTimeout(() => { setActiveSheet('blocked-users'); loadBlockedUsers(); }, 350); }} className="flex-row items-center justify-between py-4 active:opacity-60">
+            <View className="flex-1 mr-4">
+              <Text className="text-[15px] font-medium text-neutral-900 dark:text-neutral-50">Blocked Users</Text>
+              <Text className="text-[13px] text-neutral-400 dark:text-neutral-500 mt-0.5">Manage users you've blocked</Text>
+            </View>
+            <FontAwesome5 name="chevron-right" size={12} color="#c4c4c4" />
+          </Pressable>
           <Pressable onPress={() => { closeSheet(); Linking.openURL('https://ratedeed.com/legal/privacy'); }} className="flex-row items-center justify-between py-4 active:opacity-60">
             <View className="flex-1 mr-4">
               <Text className="text-[15px] font-medium text-neutral-900 dark:text-neutral-50">Privacy Policy</Text>
@@ -651,6 +678,49 @@ const ProfileScreen: React.FC = () => {
             <Text className="text-[15px] font-semibold text-white dark:text-neutral-900">Contact Support</Text>
           </Pressable>
         </View>
+      </SettingsSheet>
+
+      <SettingsSheet title="Blocked Users" onClose={closeSheet} visible={activeSheet === 'blocked-users'}>
+        {loadingBlocked ? (
+          <View className="items-center py-10">
+            <ActivityIndicator size="small" color="#4F46E5" />
+          </View>
+        ) : blockedUsers.length === 0 ? (
+          <View className="items-center py-10">
+            <Text className="text-[15px] text-neutral-400 dark:text-neutral-500">No blocked users</Text>
+          </View>
+        ) : (
+          <View style={{ gap: 12 }}>
+            {blockedUsers.map((blockedUser) => (
+              <View key={blockedUser._id || blockedUser.id} className="flex-row items-center justify-between py-3 border-b border-neutral-100 dark:border-neutral-800">
+                <View className="flex-row items-center" style={{ gap: 12 }}>
+                  {(() => {
+                    const avatarUrl = getProfileImageUrl(blockedUser.firstName || 'User', blockedUser.profilePicture || '');
+                    return isSvgUrl(avatarUrl) ? (
+                      <View className="w-10 h-10 rounded-full overflow-hidden">
+                        <SvgImage uri={avatarUrl} width="100%" height="100%" />
+                      </View>
+                    ) : (
+                      <Image source={{ uri: avatarUrl }} style={{ width: 40, height: 40, borderRadius: 20 }} />
+                    );
+                  })()}
+                  <View>
+                    <Text className="text-[15px] font-medium text-neutral-900 dark:text-neutral-50">
+                      {blockedUser.firstName || ''} {blockedUser.lastName || ''}
+                    </Text>
+                    <Text className="text-[13px] text-neutral-400 dark:text-neutral-500">{blockedUser.email || ''}</Text>
+                  </View>
+                </View>
+                <Pressable
+                  onPress={() => handleUnblock(blockedUser._id || blockedUser.id)}
+                  className="px-4 py-2 rounded-lg bg-neutral-100 dark:bg-neutral-800"
+                >
+                  <Text className="text-[13px] font-semibold text-neutral-700 dark:text-neutral-300">Unblock</Text>
+                </Pressable>
+              </View>
+            ))}
+          </View>
+        )}
       </SettingsSheet>
     </View>
   );

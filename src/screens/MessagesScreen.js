@@ -42,6 +42,8 @@ import {
   emitTyping,
   emitMessageRead,
   blockUser,
+  unblockUser,
+  getBlockedUsers,
   getStripeAccountStatus,
 } from "../api";
 import { useAuth } from "../context/AuthContext";
@@ -337,6 +339,7 @@ const MessagesScreen = () => {
   const [showScrollBtn, setShowScrollBtn] = useState(false);
   const [showQuoteSheet, setShowQuoteSheet] = useState(false);
   const [stripeStatus, setStripeStatus] = useState(null);
+  const [blockedUsers, setBlockedUsers] = useState(new Set());
 
   const messagesRef = useRef();
   const selectedConvRef = useRef();
@@ -433,6 +436,20 @@ const MessagesScreen = () => {
       .catch(() => { if (mounted) setStripeStatus(null); });
     return () => { mounted = false; };
   }, [userRole]);
+
+  // ─── Load blocked users ────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!currentUserId) return;
+    let mounted = true;
+    getBlockedUsers()
+      .then((users) => {
+        if (mounted && Array.isArray(users)) {
+          setBlockedUsers(new Set(users.map((u) => resolveId(u))));
+        }
+      })
+      .catch(() => {});
+    return () => { mounted = false; };
+  }, [currentUserId]);
 
   // ─── Load conversations ────────────────────────────────────────────────────
   const loadConversations = useCallback(async (pullRefresh = false) => {
@@ -673,10 +690,30 @@ const MessagesScreen = () => {
     }
     try {
       await blockUser(targetId);
+      setBlockedUsers((prev) => new Set([...prev, targetId]));
       Alert.alert("Blocked", `${chatName} has been blocked. You will no longer receive messages from them.`);
       setSelectedConversation(null);
     } catch (e) {
       Alert.alert("Error", e?.message || "Failed to block user. Please try again.");
+    }
+  };
+
+  const handleUnblockUser = async () => {
+    const targetId = resolveId(selectedConversation?.otherParticipant);
+    if (!targetId) {
+      Alert.alert("Error", "Unable to unblock user. Please try again.");
+      return;
+    }
+    try {
+      await unblockUser(targetId);
+      setBlockedUsers((prev) => {
+        const next = new Set(prev);
+        next.delete(targetId);
+        return next;
+      });
+      Alert.alert("Unblocked", `${chatName} has been unblocked. You can now message them again.`);
+    } catch (e) {
+      Alert.alert("Error", e?.message || "Failed to unblock user. Please try again.");
     }
   };
 
@@ -960,7 +997,9 @@ const MessagesScreen = () => {
       
       <ActionSheet visible={actionSheetVisible} onClose={() => setActionSheetVisible(false)} title="Chat Options" options={[
         { id: "report", label: "Report User", icon: "flag", isDestructive: true, onPress: () => { setActionSheetVisible(false); setTimeout(() => setReportModalVisible(true), 300); } },
-        { id: "block", label: "Block User", icon: "ban", isDestructive: true, onPress: () => Alert.alert("Block User", `Are you sure you want to block ${chatName}? You will no longer receive messages from them.`, [{ text: "Cancel", style: "cancel" }, { text: "Block", style: "destructive", onPress: handleBlockUser }]) }
+        blockedUsers.has(resolveId(selectedConversation?.otherParticipant))
+          ? { id: "unblock", label: "Unblock User", icon: "user-check", onPress: () => Alert.alert("Unblock User", `Are you sure you want to unblock ${chatName}?`, [{ text: "Cancel", style: "cancel" }, { text: "Unblock", onPress: handleUnblockUser }]) }
+          : { id: "block", label: "Block User", icon: "ban", isDestructive: true, onPress: () => Alert.alert("Block User", `Are you sure you want to block ${chatName}? You will no longer receive messages from them.`, [{ text: "Cancel", style: "cancel" }, { text: "Block", style: "destructive", onPress: handleBlockUser }]) }
       ]} />
       
       <ReportModal visible={reportModalVisible} onClose={() => setReportModalVisible(false)} userName={chatName} onReport={handleReport} />

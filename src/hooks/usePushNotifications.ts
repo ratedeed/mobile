@@ -6,6 +6,8 @@ import {
   getToken,
   onMessage,
   onTokenRefresh,
+  requestPermission,
+  AuthorizationStatus,
 } from '@react-native-firebase/messaging';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 
@@ -28,42 +30,26 @@ export const usePushNotifications = () => {
   const navigation = useNavigation<NavigationProp<any>>();
   const [expoPushToken, setExpoPushToken] = useState<string | undefined>();
   const [notification, setNotification] = useState<Notifications.Notification | undefined>();
-  const apnsReadyRef = useRef(false);
 
-  // ─── Permissions + APNS registration ──────────────────────────────────────
-  // On iOS, FCM needs an APNS token first. When expo-notifications is also
-  // installed it can interfere with Firebase's delegate swizzling. We request
-  // permissions through expo-notifications (which calls registerForRemoteNotifications)
-  // and then poll for the APNS token before asking Firebase for an FCM token.
   useEffect(() => {
     const messaging = getMessaging();
 
     const initPush = async () => {
       try {
-        const { status: existingStatus } = await Notifications.getPermissionsAsync();
-        let finalStatus = existingStatus;
+        const authStatus = await requestPermission(messaging);
+        const enabled =
+          authStatus === AuthorizationStatus.AUTHORIZED ||
+          authStatus === AuthorizationStatus.PROVISIONAL;
 
-        if (existingStatus !== 'granted') {
-          const { status } = await Notifications.requestPermissionsAsync({
-            ios: {
-              allowAlert: true,
-              allowBadge: true,
-              allowSound: true,
-            },
-          });
-          finalStatus = status;
-        }
-
-        if (__DEV__) {
-          console.log('[Push] Notification permission status:', finalStatus);
-        }
-
-        if (finalStatus !== 'granted') {
-          console.warn('[Push] Notification permission denied');
+        if (!enabled) {
+          if (__DEV__) console.warn('[Push] Notification permission denied');
           return;
         }
 
-        // iOS: wait up to 5s for APNS token to propagate to Firebase
+        if (__DEV__) {
+          console.log('[Push] Notification permission granted');
+        }
+
         if (Platform.OS === 'ios') {
           let apnsToken: string | null = null;
           for (let i = 0; i < 10; i++) {
@@ -72,7 +58,6 @@ export const usePushNotifications = () => {
               apnsToken = await getAPNSToken(messaging);
             } catch {}
             if (apnsToken) {
-              apnsReadyRef.current = true;
               if (__DEV__) {
                 console.log('[Push] APNS token acquired:', apnsToken.substring(0, 20) + '...');
               }
@@ -80,9 +65,8 @@ export const usePushNotifications = () => {
             }
             await new Promise(r => setTimeout(r, 500));
           }
-          if (!apnsToken) {
-            console.error('[Push] APNS token never arrived — iOS remote notifications will not work. ' +
-              'Make sure Push Notifications capability is enabled in Xcode and the provisioning profile includes it.');
+          if (!apnsToken && __DEV__) {
+            console.warn('[Push] APNS token not available — this is expected on simulators. Push will work on real devices.');
           }
         }
 
@@ -99,7 +83,6 @@ export const usePushNotifications = () => {
     initPush();
   }, []);
 
-  // ─── Save token to backend ────────────────────────────────────────────────
   useEffect(() => {
     if (isAuthenticated && expoPushToken) {
       savePushToken(expoPushToken).catch((err: any) => {
@@ -108,7 +91,6 @@ export const usePushNotifications = () => {
     }
   }, [isAuthenticated, expoPushToken]);
 
-  // ─── Token refresh ────────────────────────────────────────────────────────
   useEffect(() => {
     const messaging = getMessaging();
     const unsubscribe = onTokenRefresh(messaging, token => {
@@ -120,7 +102,6 @@ export const usePushNotifications = () => {
     return unsubscribe;
   }, []);
 
-  // ─── Foreground message handler ───────────────────────────────────────────
   useEffect(() => {
     const messaging = getMessaging();
     const unsubscribe = onMessage(messaging, async remoteMessage => {
@@ -130,8 +111,8 @@ export const usePushNotifications = () => {
       }
       await Notifications.scheduleNotificationAsync({
         content: {
-          title: String(data.title || 'New Notification'),
-          body: String(data.body || 'You have a new message.'),
+          title: String(data.title || remoteMessage.notification?.title || 'New Notification'),
+          body: String(data.body || remoteMessage.notification?.body || 'You have a new message.'),
           data: data as Record<string, string>,
         },
         trigger: null,
@@ -149,9 +130,7 @@ export const usePushNotifications = () => {
     };
   }, [refreshNotifications]);
 
-  // ─── Notification tap handler ─────────────────────────────────────────────
   useEffect(() => {
-    // Handle taps when app is in background (not killed)
     const responseListener = Notifications.addNotificationResponseReceivedListener(response => {
       if (!isAuthenticated) return;
       const data = response.notification.request.content.data;
@@ -168,7 +147,6 @@ export const usePushNotifications = () => {
       }
     });
 
-    // Handle taps when app was killed (iOS / Android)
     const checkInitialNotification = async () => {
       const response = await Notifications.getLastNotificationResponseAsync();
       if (!response || !isAuthenticated) return;

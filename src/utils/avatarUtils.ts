@@ -200,42 +200,42 @@ export function generateAvatarDataUrl(name: string, size: number = 200, category
 
   let patternSvg = '';
   if (patternType === 0) {
-    const cx = 30 + rng(hash + 1) * 40;
-    const cy = 30 + rng(hash + 2) * 40;
+    const cx = (30 + rng(hash + 1) * 40) * s / 100;
+    const cy = (30 + rng(hash + 2) * 40) * s / 100;
     for (let i = 1; i <= 4; i++) {
       const r = 10 + i * 8;
-      patternSvg += `<circle cx="${cx}%" cy="${cy}%" r="${r}" fill="none" stroke="white" stroke-width="0.5" opacity="${patternOpacity * (1 - i * 0.15)}" />`;
+      patternSvg += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="white" stroke-width="0.5" opacity="${patternOpacity * (1 - i * 0.15)}" />`;
     }
     for (let i = 0; i < 6; i++) {
-      const dx = 15 + rng(hash + 10 + i) * 70;
-      const dy = 15 + rng(hash + 20 + i) * 70;
+      const dx = (15 + rng(hash + 10 + i) * 70) * s / 100;
+      const dy = (15 + rng(hash + 20 + i) * 70) * s / 100;
       const dr = 1 + rng(hash + 30 + i) * 2.5;
-      patternSvg += `<circle cx="${dx}%" cy="${dy}%" r="${dr}" fill="white" opacity="${patternOpacity * 0.8}" />`;
+      patternSvg += `<circle cx="${dx}" cy="${dy}" r="${dr}" fill="white" opacity="${patternOpacity * 0.8}" />`;
     }
   } else if (patternType === 1) {
-    const baseX = 20 + rng(hash + 1) * 30;
-    const baseY = 20 + rng(hash + 2) * 30;
+    const baseX = (20 + rng(hash + 1) * 30) * s / 100;
+    const baseY = (20 + rng(hash + 2) * 30) * s / 100;
     const hexR = 12 + rng(hash + 3) * 10;
     const hexPoints = Array.from({ length: 6 }, (_, i) => {
       const angle = (Math.PI / 3) * i - Math.PI / 6;
-      return `${baseX + hexR * Math.cos(angle)}%,${baseY + hexR * Math.sin(angle)}%`;
+      return `${baseX + hexR * Math.cos(angle)},${baseY + hexR * Math.sin(angle)}`;
     }).join(' ');
     patternSvg += `<polygon points="${hexPoints}" fill="none" stroke="white" stroke-width="0.6" opacity="${patternOpacity}" />`;
     const hex2R = hexR * 0.55;
-    const hex2X = 65 + rng(hash + 4) * 25;
-    const hex2Y = 60 + rng(hash + 5) * 25;
+    const hex2X = (65 + rng(hash + 4) * 25) * s / 100;
+    const hex2Y = (60 + rng(hash + 5) * 25) * s / 100;
     const hex2Points = Array.from({ length: 6 }, (_, i) => {
       const angle = (Math.PI / 3) * i;
-      return `${hex2X + hex2R * Math.cos(angle)}%,${hex2Y + hex2R * Math.sin(angle)}%`;
+      return `${hex2X + hex2R * Math.cos(angle)},${hex2Y + hex2R * Math.sin(angle)}`;
     }).join(' ');
     patternSvg += `<polygon points="${hex2Points}" fill="none" stroke="white" stroke-width="0.5" opacity="${patternOpacity * 0.7}" />`;
   } else {
     for (let i = 0; i < 5; i++) {
-      const x1 = 10 + rng(hash + 10 + i) * 30;
-      const y1 = 5 + i * 22;
-      const x2 = x1 + 15 + rng(hash + 20 + i) * 30;
-      const y2 = y1 + 18 + rng(hash + 30 + i) * 12;
-      patternSvg += `<line x1="${x1}%" y1="${y1}%" x2="${x2}%" y2="${y2}%" stroke="white" stroke-width="0.5" opacity="${patternOpacity}" stroke-linecap="round" />`;
+      const x1 = (10 + rng(hash + 10 + i) * 30) * s / 100;
+      const y1 = (5 + i * 22) * s / 100;
+      const x2 = x1 + (15 + rng(hash + 20 + i) * 30) * s / 100;
+      const y2 = y1 + (18 + rng(hash + 30 + i) * 12) * s / 100;
+      patternSvg += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="white" stroke-width="0.5" opacity="${patternOpacity}" stroke-linecap="round" />`;
     }
   }
 
@@ -267,7 +267,7 @@ export function generateAvatarDataUrl(name: string, size: number = 200, category
     <g>${patternSvg}</g>
     <rect width="${s}" height="${s}" fill="url(#${uid}-rg3)" />
     <text
-      x="50%" y="52%"
+      x="${s / 2}" y="${s * 0.52}"
       text-anchor="middle"
       dominant-baseline="central"
       font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
