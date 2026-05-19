@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { auth as authModule } from '../firebaseConfig';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, verifyBeforeUpdateEmail } from 'firebase/auth';
 import { changePassword as apiChangePassword, deleteAccount } from '../utils/apiClient';
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   ScrollView,
@@ -14,10 +14,11 @@ import {
   Image,
   RefreshControl,
   TextInput,
-  SafeAreaView,
   KeyboardAvoidingView,
   Platform,
   Linking,
+  Modal,
+  Animated,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -25,26 +26,25 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as ImagePicker from "expo-image-picker";
 import { uploadToCloudinary, CLOUDINARY_FOLDERS } from "../utils/cloudinary";
 
-import { getUserProfile, updateUserProfile, updateProfilePicture } from '../api';
+import { getUserProfile, updateUserProfile } from '../api';
 import { useAuth } from '../context/AuthContext';
 import { User } from '../types';
-import { API_BASE_URL } from '../config';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { SvgImage } from '../components/common/SvgImage';
 import { getProfileImageUrl, isSvgUrl } from '../utils/avatarUtils';
 import { useColorScheme } from 'nativewind';
 
-// @ts-ignore - firebaseConfig is a JS module
+// @ts-ignore
 const auth = authModule as unknown as import('firebase/auth').Auth;
 
 type RootStackParamList = {
   Profile: undefined;
   ContractorDashboard: undefined;
-  EditProfile: undefined;
-  Settings: undefined;
+  Login: undefined;
+  Explore: undefined;
 };
 
-// ---- Toggle Component ----
+// ─── Toggle ───────────────────────────────────────────────────────────
 function Toggle({ label, description, defaultOn = false, onValueChange }: { label: string; description: string; defaultOn?: boolean; onValueChange?: (val: boolean) => void }) {
   const [on, setOn] = useState(defaultOn);
   const handleToggle = () => {
@@ -53,21 +53,24 @@ function Toggle({ label, description, defaultOn = false, onValueChange }: { labe
     onValueChange?.(next);
   };
   return (
-    <View className="flex-row items-center justify-between py-3 border-b border-neutral-100 dark:border-neutral-800">
-      <View className="flex-1 mr-4">
-        <Text className="text-sm font-medium text-neutral-900 dark:text-neutral-50">{label}</Text>
-        <Text className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">{description}</Text>
+    <View className="flex-row items-center justify-between py-4">
+      <View className="flex-1 mr-5">
+        <Text className="text-[15px] font-medium text-neutral-900 dark:text-neutral-50">{label}</Text>
+        {description ? <Text className="text-[13px] text-neutral-400 dark:text-neutral-500 mt-0.5 leading-4">{description}</Text> : null}
       </View>
-      <Pressable onPress={handleToggle}>
-        <View className={`w-12 h-7 rounded-full relative ${on ? 'bg-indigo-600' : 'bg-neutral-300'}`}>
-          <View className={`w-5 h-5 bg-white dark:bg-neutral-950 rounded-full absolute top-1 ${on ? 'right-1' : 'left-1'}`} style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 1, elevation: 1 }} />
+      <Pressable onPress={handleToggle} hitSlop={8}>
+        <View className={`w-[51px] h-[31px] rounded-full p-[2px] ${on ? 'bg-neutral-900 dark:bg-neutral-100' : 'bg-neutral-300 dark:bg-neutral-700'}`}>
+          <View
+            className={`w-[27px] h-[27px] rounded-full bg-white dark:bg-neutral-800 ${on ? 'ml-[20px]' : 'ml-0'}`}
+            style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.15, shadowRadius: 2, elevation: 2 }}
+          />
         </View>
       </Pressable>
     </View>
   );
 }
 
-// ---- Dark Mode Toggle ----
+// ─── Dark Mode Toggle ─────────────────────────────────────────────────
 function DarkModeToggle() {
   const { colorScheme, setColorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -79,47 +82,111 @@ function DarkModeToggle() {
   };
 
   return (
-    <View className="flex-row items-center justify-between py-3 border-b border-neutral-100 dark:border-neutral-800">
-      <View className="flex-1 mr-4">
-        <Text className="text-sm font-medium text-neutral-900 dark:text-neutral-50">Dark Mode</Text>
-        <Text className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">Switch between light and dark themes</Text>
+    <View className="flex-row items-center justify-between py-4">
+      <View className="flex-1 mr-5">
+        <Text className="text-[15px] font-medium text-neutral-900 dark:text-neutral-50">Dark Mode</Text>
+        <Text className="text-[13px] text-neutral-400 dark:text-neutral-500 mt-0.5 leading-4">Switch between light and dark themes</Text>
       </View>
-      <Pressable onPress={handleToggle}>
-        <View className={`w-12 h-7 rounded-full relative ${isDark ? 'bg-indigo-600' : 'bg-neutral-300'}`}>
-          <View className={`w-5 h-5 bg-white dark:bg-neutral-950 rounded-full absolute top-1 ${isDark ? 'right-1' : 'left-1'}`} style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 1, elevation: 1 }} />
+      <Pressable onPress={handleToggle} hitSlop={8}>
+        <View className={`w-[51px] h-[31px] rounded-full p-[2px] ${isDark ? 'bg-neutral-100' : 'bg-neutral-900'}`}>
+          <View
+            className={`w-[27px] h-[27px] rounded-full bg-white dark:bg-neutral-800 ${isDark ? 'ml-[20px]' : 'ml-0'}`}
+            style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.15, shadowRadius: 2, elevation: 2 }}
+          />
         </View>
       </Pressable>
     </View>
   );
 }
 
-// ---- Settings Sheet ----
-function SettingsSheet({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+// ─── Styled Input ─────────────────────────────────────────────────────
+function StyledInput(props: any) {
+  const [focused, setFocused] = useState(false);
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
+
   return (
-    <View className="absolute inset-0 z-[90] justify-end" style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
-      <Pressable className="flex-1" onPress={onClose} />
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <View className="bg-white dark:bg-neutral-950 rounded-t-3xl">
-          <View className="flex-row items-center justify-between px-5 pt-4 pb-2 border-b border-neutral-100 dark:border-neutral-800">
-            <Text className="text-lg font-bold text-neutral-900 dark:text-neutral-50">{title}</Text>
-            <Pressable onPress={onClose} className="w-8 h-8 items-center justify-center rounded-full">
-              <FontAwesome5 name="times" size={16} color="#737373" />
-            </Pressable>
-          </View>
-          <ScrollView className="px-5 py-4 pb-10 max-h-[70vh]" keyboardShouldPersistTaps="handled">
-            {children}
-          </ScrollView>
-        </View>
-      </KeyboardAvoidingView>
-    </View>
+    <TextInput
+      {...props}
+      onFocus={(e: any) => { setFocused(true); props.onFocus?.(e); }}
+      onBlur={(e: any) => { setFocused(false); props.onBlur?.(e); }}
+      className={`w-full rounded-lg px-3 text-[15px] text-neutral-900 dark:text-neutral-50 bg-neutral-50 dark:bg-neutral-900 ${
+        focused
+          ? 'border-2 border-neutral-900 dark:border-neutral-100'
+          : 'border border-neutral-200 dark:border-neutral-800'
+      } ${props.className || ''}`}
+      style={[{ height: 56, paddingTop: 0, paddingBottom: 0 }, props.style]}
+      placeholderTextColor={isDark ? '#525252' : '#b0b0b0'}
+    />
   );
 }
 
-// ---- Profile Screen ----
-  const ProfileScreen: React.FC = () => {
+// ─── Settings Sheet ───────────────────────────────────────────────────
+function SettingsSheet({ title, onClose, children, visible }: { title: string; onClose: () => void; children: React.ReactNode; visible: boolean }) {
+  const slideAnim = useRef(new Animated.Value(400)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (visible) {
+      Animated.parallel([
+        Animated.timing(slideAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
+        Animated.timing(fadeAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
+      ]).start();
+    }
+  }, [visible]);
+
+  const handleClose = () => {
+    Animated.parallel([
+      Animated.timing(slideAnim, { toValue: 400, duration: 200, useNativeDriver: true }),
+      Animated.timing(fadeAnim, { toValue: 0, duration: 150, useNativeDriver: true }),
+    ]).start(() => onClose());
+  };
+
+  if (!visible) return null;
+
+  return (
+    <Modal transparent visible={visible} onRequestClose={handleClose} animationType="none" statusBarTranslucent>
+      <Animated.View className="flex-1 justify-end" style={{ backgroundColor: 'rgba(0,0,0,0.5)', opacity: fadeAnim }}>
+        <Pressable className="absolute inset-0" onPress={handleClose} />
+        <Animated.View style={{ transform: [{ translateY: slideAnim }] }}>
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+            <View className="bg-white dark:bg-neutral-950 rounded-t-[24px]">
+              <View className="items-center pt-3 pb-1">
+                <View className="w-9 h-[5px] rounded-full bg-neutral-300 dark:bg-neutral-600" />
+              </View>
+              <View className="flex-row items-center justify-between px-6 pt-2 pb-4">
+                <Text className="text-[20px] font-bold text-neutral-900 dark:text-neutral-50">{title}</Text>
+                <Pressable onPress={handleClose} className="w-10 h-10 items-center justify-center rounded-full bg-neutral-100 dark:bg-neutral-800">
+                  <FontAwesome5 name="times" size={14} color="#737373" />
+                </Pressable>
+              </View>
+              <ScrollView className="px-6 pb-12 max-h-[70vh]" keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+                {children}
+              </ScrollView>
+            </View>
+          </KeyboardAvoidingView>
+        </Animated.View>
+      </Animated.View>
+    </Modal>
+  );
+}
+
+// ─── Section Label ────────────────────────────────────────────────────
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <Text className="text-[12px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-[0.08em] mb-2">
+      {children}
+    </Text>
+  );
+}
+
+// ─── Profile Screen ───────────────────────────────────────────────────
+const ProfileScreen: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const insets = useSafeAreaInsets();
-  const { logout, userId, firebaseUser: authUser, isAuthenticated } = useAuth();
+  const { logout, firebaseUser: authUser, isAuthenticated } = useAuth();
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
 
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -130,43 +197,30 @@ function SettingsSheet({ title, onClose, children }: { title: string; onClose: (
 
   const fetchIpZipCode = useCallback(async () => {
     try {
-      const response = await fetch(`https://free.freeipapi.com/api/json`);
-      const data = await response.json();
-      if (data.zipCode) {
-        setIpZipCode(data.zipCode);
-      }
-    } catch {/* IP geolocation optional */}
+      const data = await (await fetch('https://free.freeipapi.com/api/json')).json();
+      if (data.zipCode) setIpZipCode(data.zipCode);
+    } catch { /* */ }
   }, []);
 
   const loadHapticsSetting = useCallback(async () => {
     try {
       const val = await AsyncStorage.getItem('haptics_enabled');
-      if (val !== null) {
-        setHapticsEnabled(val === 'true');
-      }
-    } catch { /* haptics setting optional */ }
+      if (val !== null) setHapticsEnabled(val === 'true');
+    } catch { /* */ }
   }, []);
 
   const saveHapticsSetting = async (enabled: boolean) => {
-    try {
-      setHapticsEnabled(enabled);
-      await AsyncStorage.setItem('haptics_enabled', enabled.toString());
-    } catch { /* non-critical */ }
+    try { setHapticsEnabled(enabled); await AsyncStorage.setItem('haptics_enabled', enabled.toString()); } catch { /* */ }
   };
 
-  useFocusEffect(useCallback(() => { 
-    fetchIpZipCode();
-    loadHapticsSetting();
-  }, [fetchIpZipCode, loadHapticsSetting]));
+  useFocusEffect(useCallback(() => { fetchIpZipCode(); loadHapticsSetting(); }, [fetchIpZipCode, loadHapticsSetting]));
 
-  // Edit profile state
   const [editData, setEditData] = useState({ firstName: '', lastName: '', email: '', zipCode: '' });
   const [saving, setSaving] = useState(false);
   const [editMessage, setEditMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [profilePicPreview, setProfilePicPreview] = useState<string>('');
   const [profilePicUri, setProfilePicUri] = useState<string | null>(null);
 
-  // Change password state
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -174,10 +228,8 @@ function SettingsSheet({ title, onClose, children }: { title: string; onClose: (
   const [emailNew, setEmailNew] = useState("");
   const [emailPassword, setEmailPassword] = useState("");
   const [emailSaving, setEmailSaving] = useState(false);
-  const [emailMessage, setEmailMessage] = useState<{type: "success" | "error"; text: string} | null>(null);
+  const [emailMessage, setEmailMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [pwMessage, setPwMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-
-  // FAQ state
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   const loadProfile = useCallback(async () => {
@@ -191,153 +243,93 @@ function SettingsSheet({ title, onClose, children }: { title: string; onClose: (
         email: userData.email || '',
         zipCode: userData.zipCode || '',
       });
-    } catch (err) {
-      // console.error('Failed to load profile:', err);
-    } finally {
-      if (isMounted.current) {
-        setLoading(false);
-        setRefreshing(false);
-      }
+    } catch { /* */ } finally {
+      if (isMounted.current) { setLoading(false); setRefreshing(false); }
     }
   }, []);
 
   const isMounted = React.useRef(true);
-  useEffect(() => {
-    return () => {
-      isMounted.current = false;
-    };
-  }, []);
+  useEffect(() => { return () => { isMounted.current = false; }; }, []);
 
   useFocusEffect(useCallback(() => { loadProfile(); }, [loadProfile]));
-
   const onRefresh = useCallback(() => { setRefreshing(true); loadProfile(); }, [loadProfile]);
+
   const handleUpdateProfilePic = async () => {
     try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-      });
-      if (!result.canceled && result.assets && result.assets.length > 0) {
+      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.8 });
+      if (!result.canceled && result.assets?.length > 0) {
         setProfilePicUri(result.assets[0].uri);
         setProfilePicPreview(result.assets[0].uri);
       }
-    } catch (err) {
-      setEditMessage({ type: "error", text: "Failed to pick image." });
-    }
+    } catch { setEditMessage({ type: "error", text: "Failed to pick image." }); }
   };
 
-
   const handleSaveProfile = async () => {
-    setSaving(true);
-    setEditMessage(null);
+    setSaving(true); setEditMessage(null);
     try {
       let finalProfilePicUrl = user?.profilePicture;
-      if (profilePicUri) {
-        finalProfilePicUrl = await uploadToCloudinary(profilePicUri, CLOUDINARY_FOLDERS.USER_PROFILE);
-      }
+      if (profilePicUri) finalProfilePicUrl = await uploadToCloudinary(profilePicUri, CLOUDINARY_FOLDERS.USER_PROFILE);
       const data = await updateUserProfile({ ...editData, profilePicture: finalProfilePicUrl });
       setUser(data);
       setEditMessage({ type: 'success', text: 'Profile updated!' });
       setTimeout(() => { setActiveSheet(null); setProfilePicPreview(''); setProfilePicUri(null); }, 1500);
-    } catch (err: any) {
-      setEditMessage({ type: 'error', text: err?.message || 'Failed to update.' });
-    } finally {
-      setSaving(false);
-    }
+    } catch (err: any) { setEditMessage({ type: 'error', text: err?.message || 'Failed to update.' }); }
+    finally { setSaving(false); }
   };
 
-  
   const handleChangeEmail = async () => {
     setEmailMessage(null);
-    if (!emailNew || !emailPassword) {
-      setEmailMessage({ type: 'error', text: 'New email and current password required.' });
-      return;
-    }
+    if (!emailNew || !emailPassword) { setEmailMessage({ type: 'error', text: 'New email and current password required.' }); return; }
     setEmailSaving(true);
     try {
-      if (!auth.currentUser) throw new Error('You must be logged in to change your email.');
-
-      const credential = EmailAuthProvider.credential(user?.email || '', emailPassword);
-      await reauthenticateWithCredential(auth.currentUser, credential);
-
+      if (!auth.currentUser) throw new Error('You must be logged in.');
+      await reauthenticateWithCredential(auth.currentUser, EmailAuthProvider.credential(user?.email || '', emailPassword));
       await verifyBeforeUpdateEmail(auth.currentUser, emailNew.trim());
-
-      setEmailMessage({ type: 'success', text: 'Verification email sent to ' + emailNew.trim() + '. Please check your inbox to confirm, then log out and log back in to see the changes.' });
+      setEmailMessage({ type: 'success', text: 'Verification email sent. Please check your inbox, then log out and back in.' });
       setTimeout(() => { setActiveSheet(null); setEmailNew(''); setEmailPassword(''); }, 5000);
     } catch (err: any) {
-      if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') {
-        setEmailMessage({ type: 'error', text: 'Current password is incorrect.' });
-      } else if (err.code === 'auth/email-already-in-use') {
-        setEmailMessage({ type: 'error', text: 'This email is already associated with another account.' });
-      } else if (err.code === 'auth/too-many-requests') {
-        setEmailMessage({ type: 'error', text: 'Too many attempts. Please try again later.' });
-      } else {
-        setEmailMessage({ type: 'error', text: err?.message || 'Failed to request email change.' });
-      }
-    } finally {
-      setEmailSaving(false);
-    }
+      if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') setEmailMessage({ type: 'error', text: 'Current password is incorrect.' });
+      else if (err.code === 'auth/email-already-in-use') setEmailMessage({ type: 'error', text: 'This email is already in use.' });
+      else if (err.code === 'auth/too-many-requests') setEmailMessage({ type: 'error', text: 'Too many attempts. Try again later.' });
+      else setEmailMessage({ type: 'error', text: err?.message || 'Failed.' });
+    } finally { setEmailSaving(false); }
   };
 
   const handleChangePassword = async () => {
     setPwMessage(null);
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      setPwMessage({ type: 'error', text: 'All fields required.' });
-      return;
-    }
-    if (newPassword.length < 8) {
-      setPwMessage({ type: 'error', text: 'Minimum 8 characters.' });
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      setPwMessage({ type: 'error', text: 'Passwords do not match.' });
-      return;
-    }
+    if (!currentPassword || !newPassword || !confirmPassword) { setPwMessage({ type: 'error', text: 'All fields required.' }); return; }
+    if (newPassword.length < 8) { setPwMessage({ type: 'error', text: 'Minimum 8 characters.' }); return; }
+    if (newPassword !== confirmPassword) { setPwMessage({ type: 'error', text: 'Passwords do not match.' }); return; }
     setPwSaving(true);
     try {
-      if (!auth.currentUser || !user?.email) {
-        throw new Error('You must be logged in to change your password.');
-      }
-
-      const credential = EmailAuthProvider.credential(user.email, currentPassword);
-      await reauthenticateWithCredential(auth.currentUser, credential);
-
+      if (!auth.currentUser || !user?.email) throw new Error('You must be logged in.');
+      await reauthenticateWithCredential(auth.currentUser, EmailAuthProvider.credential(user.email, currentPassword));
       await updatePassword(auth.currentUser, newPassword);
-
       await apiChangePassword(currentPassword, newPassword);
-
       setPwMessage({ type: 'success', text: 'Password changed!' });
       setTimeout(() => { setActiveSheet(null); setCurrentPassword(''); setNewPassword(''); setConfirmPassword(''); }, 1500);
     } catch (err: any) {
-      if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') {
-        setPwMessage({ type: 'error', text: 'Current password is incorrect.' });
-      } else {
-        setPwMessage({ type: 'error', text: err?.message || 'Failed to change password.' });
-      }
-    } finally {
-      setPwSaving(false);
-    }
+      if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') setPwMessage({ type: 'error', text: 'Current password is incorrect.' });
+      else setPwMessage({ type: 'error', text: err?.message || 'Failed to change password.' });
+    } finally { setPwSaving(false); }
   };
 
   const handleLogout = () => {
-    Alert.alert('Log Out', 'Are you sure?', [
+    Alert.alert('Log Out', 'Are you sure you want to log out?', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Log Out', style: 'destructive', onPress: () => logout() },
     ]);
   };
 
-  // Guest view
   if (!isAuthenticated) {
     return (
-      <View className="flex-1 bg-white dark:bg-neutral-950 items-center justify-center px-8" style={{ paddingTop: Math.max(insets.top, 16) }}>
-        <View className="w-20 h-20 bg-indigo-50 dark:bg-indigo-900/20 rounded-full items-center justify-center mb-6">
-          <FontAwesome5 name="user-circle" size={40} color="#4F46E5" />
+      <View className="flex-1 bg-white dark:bg-neutral-950 items-center justify-center px-8" style={{ paddingTop: Math.max(insets.top, 20) }}>
+        <View className="w-20 h-20 rounded-full bg-indigo-50 dark:bg-indigo-900/30 items-center justify-center mb-6">
+          <FontAwesome5 name="user" size={32} color="#4F46E5" />
         </View>
         <Text className="text-2xl font-bold text-neutral-900 dark:text-neutral-50 mb-2 text-center">Welcome to Ratedeed</Text>
         <Text className="text-sm text-neutral-500 dark:text-neutral-400 text-center mb-8 leading-5">
-          Sign in to save contractors, message pros, track your projects, and manage your account.
+          Sign in to save contractors, message pros, and manage your projects.
         </Text>
         <Pressable
           onPress={() => navigation.navigate('Login')}
@@ -345,10 +337,7 @@ function SettingsSheet({ title, onClose, children }: { title: string; onClose: (
         >
           <Text className="text-white font-bold text-[15px]">Sign In or Create Account</Text>
         </Pressable>
-        <Pressable
-          onPress={() => navigation.navigate('Explore' as any)}
-          className="w-full py-4 rounded-2xl items-center"
-        >
+        <Pressable onPress={() => navigation.navigate('Explore' as any)} className="w-full py-4 rounded-2xl items-center">
           <Text className="text-neutral-500 dark:text-neutral-400 font-semibold text-[15px]">Continue Browsing</Text>
         </Pressable>
       </View>
@@ -357,7 +346,7 @@ function SettingsSheet({ title, onClose, children }: { title: string; onClose: (
 
   if (loading) {
     return (
-      <View className="flex-1 bg-neutral-50 dark:bg-neutral-900 items-center justify-center">
+      <View className="flex-1 bg-neutral-50 dark:bg-neutral-950 items-center justify-center">
         <ActivityIndicator size="large" color="#4F46E5" />
       </View>
     );
@@ -365,12 +354,22 @@ function SettingsSheet({ title, onClose, children }: { title: string; onClose: (
 
   const closeSheet = () => setActiveSheet(null);
 
-  const menuItems = [
-    { icon: 'user-edit', label: 'Edit Profile', sheet: 'edit-profile', desc: 'Name, email, phone, photo' },
-    { icon: 'bell', label: 'Notifications', sheet: 'notifications', desc: 'Push, email, job updates' },
-    { icon: 'shield-alt', label: 'Privacy & Security', sheet: 'privacy', desc: 'Password, 2FA, data' },
-    { icon: 'cog', label: 'App Settings', sheet: 'settings', desc: 'Theme, language, defaults' },
-    { icon: 'question-circle', label: 'Help Center', sheet: 'help', desc: 'FAQs, support, contact' },
+  const menuSections = [
+    {
+      heading: 'Account',
+      items: [
+        { icon: 'user-edit', label: 'Edit Profile', sheet: 'edit-profile', iconColor: '#4F46E5', iconBg: 'bg-indigo-50 dark:bg-indigo-950' },
+        { icon: 'bell', label: 'Notifications', sheet: 'notifications', iconColor: '#D97706', iconBg: 'bg-amber-50 dark:bg-amber-950' },
+      ],
+    },
+    {
+      heading: 'Support',
+      items: [
+        { icon: 'shield-alt', label: 'Privacy & Security', sheet: 'privacy', iconColor: '#059669', iconBg: 'bg-emerald-50 dark:bg-emerald-950' },
+        { icon: 'cog', label: 'App Settings', sheet: 'settings', iconColor: '#6B7280', iconBg: 'bg-neutral-100 dark:bg-neutral-800' },
+        { icon: 'question-circle', label: 'Help Center', sheet: 'help', iconColor: '#2563EB', iconBg: 'bg-blue-50 dark:bg-blue-950' },
+      ],
+    },
   ];
 
   const faqs = [
@@ -382,55 +381,40 @@ function SettingsSheet({ title, onClose, children }: { title: string; onClose: (
   ];
 
   return (
-    <View className="flex-1 bg-white dark:bg-neutral-950" style={{ paddingTop: Math.max(insets.top, 16) }}>
-      <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
+    <View className="flex-1 bg-neutral-50 dark:bg-neutral-950" style={{ paddingTop: Math.max(insets.top, 12) }}>
+      <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#4F46E5" />}>
         {/* Profile Header */}
-        <View className="bg-white dark:bg-neutral-950 px-4 pb-5">
-          <View className="flex-row items-center" style={{ gap: 16 }}>
-            <View className="relative">
-              <Pressable onPress={handleUpdateProfilePic}>
-              {(() => {
-                const avatarUrl = getProfileImageUrl(user?.firstName || 'User', user?.profilePicture || '');
-                return isSvgUrl(avatarUrl) ? (
-                  <View className="w-[72px] h-[72px] rounded-full overflow-hidden">
-                    <SvgImage uri={avatarUrl} width="100%" height="100%" />
-                  </View>
-                ) : (
-                  <Image
-                    source={{ uri: avatarUrl }}
-                    className="w-[72px] h-[72px] rounded-full"
-                  />
-                );
-              })()}
-              <Pressable
-                onPress={() => setActiveSheet('edit-profile')}
-                className="absolute -bottom-1 -right-1 w-7 h-7 bg-indigo-600 rounded-full items-center justify-center border-2 border-white"
-              >
-                <FontAwesome5 name="pen" size={10} color="#fff" />
-              </Pressable>
-              </Pressable>
-            </View>
-
-
-            <View className="flex-1">
-              <Text className="text-xl font-bold text-neutral-900 dark:text-neutral-50">{user?.firstName || 'User'} {user?.lastName || ''}</Text>
-              <Text className="text-sm text-neutral-500 dark:text-neutral-400">{user?.email || ''}</Text>
-              <View className="flex-row mt-1" style={{ gap: 4 }}>
-                <View className="bg-indigo-50 px-2 py-0.5 rounded-full">
-                  <Text className="text-[10px] font-bold text-indigo-600 capitalize">{user?.role || 'User'}</Text>
+        <View className="px-6 pt-4 pb-2">
+          <View className="flex-row items-center" style={{ gap: 20 }}>
+            <Pressable onPress={() => setActiveSheet('edit-profile')}>
+              <View className="relative">
+                <View style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.12, shadowRadius: 12, elevation: 5 }}>
+                  {(() => {
+                    const avatarUrl = getProfileImageUrl(user?.firstName || 'User', user?.profilePicture || '');
+                    return isSvgUrl(avatarUrl) ? (
+                      <View className="w-[88px] h-[88px] rounded-full overflow-hidden" style={{ borderWidth: 3, borderColor: isDark ? '#262626' : '#ffffff' }}>
+                        <SvgImage uri={avatarUrl} width="100%" height="100%" />
+                      </View>
+                    ) : (
+                      <Image source={{ uri: avatarUrl }} style={{ width: 88, height: 88, borderRadius: 44, borderWidth: 3, borderColor: isDark ? '#262626' : '#ffffff' }} />
+                    );
+                  })()}
                 </View>
-                <View className="bg-neutral-100 dark:bg-neutral-900 px-2 py-0.5 rounded-full">
-                  <Text className="text-[10px] font-bold text-neutral-700 dark:text-neutral-300">Since {user?.createdAt ? new Date(user.createdAt).getFullYear() : '2024'}</Text>
+                <View className="absolute -bottom-0.5 -right-0.5 w-8 h-8 bg-neutral-900 dark:bg-neutral-100 rounded-full items-center justify-center" style={{ borderWidth: 3, borderColor: isDark ? '#0a0a0a' : '#f5f5f5' }}>
+                  <FontAwesome5 name="pen" size={10} color={isDark ? '#171717' : '#ffffff'} />
                 </View>
               </View>
+            </Pressable>
+
+            <View className="flex-1" style={{ gap: 3 }}>
+              <Text className="text-[26px] font-bold text-neutral-900 dark:text-neutral-50 leading-tight tracking-tight">
+                {user?.firstName || 'User'} {user?.lastName || ''}
+              </Text>
+              <Text className="text-[15px] text-neutral-400 dark:text-neutral-500">{user?.email || ''}</Text>
               {(user?.role === 'contractor' || user?.role === 'admin') && (
-                <Pressable
-                  onPress={() => navigation.navigate('ContractorDashboard')}
-                  className="mt-2 flex-row items-center justify-center py-2 bg-neutral-900 dark:bg-neutral-50 rounded-lg"
-                  style={{ gap: 6 }}
-                >
-                  <FontAwesome5 name="briefcase" size={10} color="#fff" />
-                  <Text className="text-xs font-semibold text-white dark:text-neutral-900">Switch to Contractor Dashboard</Text>
+                <Pressable onPress={() => navigation.navigate('ContractorDashboard')} className="mt-2 self-start flex-row items-center py-2 px-4 bg-neutral-900 dark:bg-neutral-100 rounded-xl" style={{ gap: 8 }}>
+                  <FontAwesome5 name="briefcase" size={11} color={isDark ? '#171717' : '#ffffff'} />
+                  <Text className="text-[13px] font-semibold text-white dark:text-neutral-900">Contractor Dashboard</Text>
                 </Pressable>
               )}
             </View>
@@ -438,259 +422,236 @@ function SettingsSheet({ title, onClose, children }: { title: string; onClose: (
         </View>
 
         {/* Stats */}
-        <View className="bg-white dark:bg-neutral-950 mt-2 px-4 py-4">
-          <View className="flex-row">
-            <View className="flex-1 items-center border-r border-neutral-200 dark:border-neutral-700">
-              <Text className="text-xl font-bold text-neutral-900 dark:text-neutral-50">0</Text>
-              <Text className="text-xs text-neutral-500 dark:text-neutral-400">Reviews</Text>
-            </View>
-            <View className="flex-1 items-center border-r border-neutral-200 dark:border-neutral-700">
-              <Text className="text-xl font-bold text-neutral-900 dark:text-neutral-50">0</Text>
-              <Text className="text-xs text-neutral-500 dark:text-neutral-400">Conversations</Text>
-            </View>
-            <View className="flex-1 items-center">
-              <Text className="text-xl font-bold text-neutral-900 dark:text-neutral-50">0</Text>
-              <Text className="text-xs text-neutral-500 dark:text-neutral-400">Projects</Text>
-            </View>
+        <View className="px-6 py-5">
+          <View className="flex-row" style={{ gap: 10 }}>
+            {[{ value: '0', label: 'Reviews' }, { value: '0', label: 'Messages' }, { value: '0', label: 'Projects' }].map((stat, i) => (
+              <View key={i} className="flex-1 bg-white dark:bg-neutral-900 rounded-2xl py-4 px-3 items-center" style={{ borderWidth: 1, borderColor: isDark ? '#262626' : '#f0f0f0' }}>
+                <Text className="text-[22px] font-bold text-neutral-900 dark:text-neutral-50 tracking-tight">{stat.value}</Text>
+                <Text className="text-[12px] font-medium text-neutral-400 dark:text-neutral-500 mt-1">{stat.label}</Text>
+              </View>
+            ))}
           </View>
         </View>
 
-        {/* Menu */}
-        <View className="bg-white dark:bg-neutral-950 mt-2">
-          {menuItems.map((item, i) => (
-            <Pressable
-              key={item.label}
-              onPress={() => setActiveSheet(item.sheet)}
-              className={`flex-row items-center px-4 py-3.5 ${i < menuItems.length - 1 ? 'border-b border-neutral-100 dark:border-neutral-800' : ''}`}
-              style={{ gap: 12 }}
-            >
-              <FontAwesome5 name={item.icon} size={18} color="#404040" />
-              <View className="flex-1">
-                <Text className="text-sm font-medium text-neutral-900 dark:text-neutral-50">{item.label}</Text>
-                <Text className="text-[11px] text-neutral-400">{item.desc}</Text>
+        {/* Menu Sections */}
+        <View className="mt-2">
+          {menuSections.map((section, sectionIdx) => (
+            <View key={sectionIdx} className="mb-5">
+              <View className="px-6 mb-2">
+                <SectionLabel>{section.heading}</SectionLabel>
               </View>
-              <FontAwesome5 name="chevron-right" size={12} color="#a3a3a3" />
-            </Pressable>
+              <View className="mx-6 rounded-2xl overflow-hidden bg-white dark:bg-neutral-900" style={{ borderWidth: 1, borderColor: isDark ? '#262626' : '#f0f0f0' }}>
+                {section.items.map((item, i) => (
+                  <Pressable
+                    key={item.label}
+                    onPress={() => setActiveSheet(item.sheet)}
+                    className={`flex-row items-center px-5 py-[16px] active:bg-neutral-50 dark:active:bg-neutral-800 ${i < section.items.length - 1 ? 'border-b border-neutral-100 dark:border-neutral-800' : ''}`}
+                    style={{ gap: 14 }}
+                  >
+                    <View className={`w-10 h-10 rounded-xl items-center justify-center ${item.iconBg}`}>
+                      <FontAwesome5 name={item.icon as any} size={16} color={item.iconColor} />
+                    </View>
+                    <Text className="flex-1 text-[16px] font-medium text-neutral-900 dark:text-neutral-50">{item.label}</Text>
+                    <FontAwesome5 name="chevron-right" size={11} color="#c4c4c4" />
+                  </Pressable>
+                ))}
+              </View>
+            </View>
           ))}
-        </View>
 
-        {/* Log Out */}
-        <View className="bg-white dark:bg-neutral-950 mt-2 mb-20">
-          <Pressable onPress={handleLogout} className="flex-row items-center px-4 py-3.5" style={{ gap: 12 }}>
-            <FontAwesome5 name="sign-out-alt" size={18} color="#4F46E5" />
-            <Text className="text-sm font-medium text-indigo-500">Log Out</Text>
-          </Pressable>
+          {/* Log Out */}
+          <View className="mx-6 mb-24 rounded-2xl overflow-hidden bg-white dark:bg-neutral-900" style={{ borderWidth: 1, borderColor: isDark ? '#262626' : '#f0f0f0' }}>
+            <Pressable onPress={handleLogout} className="flex-row items-center px-5 py-[16px] active:bg-red-50 dark:active:bg-red-950" style={{ gap: 14 }}>
+              <View className="w-10 h-10 rounded-xl items-center justify-center bg-red-50 dark:bg-red-950">
+                <FontAwesome5 name="sign-out-alt" size={16} color="#EF4444" />
+              </View>
+              <Text className="flex-1 text-[16px] font-medium text-red-500">Log Out</Text>
+            </Pressable>
+          </View>
         </View>
       </ScrollView>
 
-      {/* Edit Profile Sheet */}
-      {activeSheet === 'edit-profile' && (
-        <SettingsSheet title="Edit Profile" onClose={closeSheet}>
-          <View className="items-center mb-4">
+      {/* Sheets */}
+      <SettingsSheet title="Edit Profile" onClose={closeSheet} visible={activeSheet === 'edit-profile'}>
+        <View className="items-center mb-6">
+          <Pressable onPress={handleUpdateProfilePic}>
             <View className="relative">
-              <Pressable onPress={handleUpdateProfilePic}>
-                <Image
-                  source={{ uri: profilePicPreview || user?.profilePicture || "" }}
-                  className="w-20 h-20 rounded-full bg-neutral-200 dark:bg-neutral-800"
-                />
-                <View className="absolute -bottom-1 -right-1 w-7 h-7 bg-indigo-600 rounded-full items-center justify-center border-2 border-white">
-                  <FontAwesome5 name="pen" size={10} color="#fff" />
-                </View>
-              </Pressable>
+              {(() => {
+                const sheetAvatarUri = profilePicPreview || user?.profilePicture || getProfileImageUrl(user?.firstName || 'User', '');
+                return isSvgUrl(sheetAvatarUri) ? (
+                  <View style={{ width: 88, height: 88, borderRadius: 44, overflow: 'hidden' }}>
+                    <SvgImage uri={sheetAvatarUri} width="100%" height="100%" />
+                  </View>
+                ) : (
+                  <Image source={{ uri: sheetAvatarUri }} style={{ width: 88, height: 88, borderRadius: 44 }} />
+                );
+              })()}
+              <View className="absolute -bottom-0.5 -right-0.5 w-8 h-8 bg-neutral-900 dark:bg-neutral-100 rounded-full items-center justify-center" style={{ borderWidth: 3, borderColor: isDark ? '#171717' : '#ffffff' }}>
+                <FontAwesome5 name="camera" size={11} color={isDark ? '#171717' : '#ffffff'} />
+              </View>
             </View>
-          </View>
-
-          {editMessage && (
-            <View className={`mb-4 px-3 py-2 rounded-lg ${editMessage.type === 'success' ? 'bg-emerald-50' : 'bg-indigo-50'}`}>
-              <Text className={`text-sm ${editMessage.type === 'success' ? 'text-emerald-700' : 'text-indigo-700'}`}>{editMessage.text}</Text>
-            </View>
-          )}
-          <Text className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 mb-1">First name</Text>
-          <TextInput value={editData.firstName} onChangeText={t => setEditData(p => ({ ...p, firstName: t }))} className="w-full border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm mb-3 text-neutral-900 dark:text-neutral-50" />
-          <Text className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 mb-1">Last name</Text>
-          <TextInput value={editData.lastName} onChangeText={t => setEditData(p => ({ ...p, lastName: t }))} className="w-full border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm mb-3 text-neutral-900 dark:text-neutral-50" />
-          <Text className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 mb-1">Email</Text>
-          <View className="flex-row items-center mb-3" style={{ gap: 8 }}>
-            <TextInput 
-              value={user?.email} 
-              editable={false} 
-              className="flex-1 border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm text-neutral-500 bg-neutral-50 dark:bg-neutral-800" 
-            />
-            <Pressable onPress={() => { setActiveSheet('change-email'); }} className="px-2">
-              <Text className="text-xs font-semibold text-indigo-600">Change</Text>
-            </Pressable>
-          </View>
-          <Text className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 mb-1">Zip code</Text>
-          <TextInput value={editData.zipCode} onChangeText={t => setEditData(p => ({ ...p, zipCode: t }))} keyboardType="numeric" maxLength={10} className="w-full border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm mb-3 text-neutral-900 dark:text-neutral-50" />
-          <Pressable onPress={handleSaveProfile} disabled={saving} className="w-full py-3 bg-indigo-600 rounded-xl items-center mt-2 flex-row justify-center" style={{ gap: 8 }}>
-            {saving && <ActivityIndicator size="small" color="#fff" />}
-            <Text className="text-sm font-semibold text-white dark:text-neutral-900">{saving ? 'Saving...' : 'Save Changes'}</Text>
           </Pressable>
-        </SettingsSheet>
-      )}
+        </View>
 
-      {/* Notifications Sheet */}
-      {activeSheet === 'notifications' && (
-        <SettingsSheet title="Notifications" onClose={closeSheet}>
-          <Text className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-2">Push Notifications</Text>
-          <Toggle label="Job Updates" description="When a contractor responds to your quote request" defaultOn />
-          <Toggle label="New Messages" description="When you receive a new message" defaultOn />
-          <Toggle label="Payment Status" description="When payment is confirmed or released" defaultOn />
-          <Text className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mt-4 mb-2">Email</Text>
+        {editMessage && (
+          <View className={`mb-5 px-4 py-3 rounded-xl ${editMessage.type === 'success' ? 'bg-emerald-50 dark:bg-emerald-950' : 'bg-red-50 dark:bg-red-950'}`}>
+            <Text className={`text-[14px] font-medium ${editMessage.type === 'success' ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400'}`}>{editMessage.text}</Text>
+          </View>
+        )}
+
+        <Text className="text-[13px] font-semibold text-neutral-500 dark:text-neutral-400 mb-2">First name</Text>
+        <StyledInput value={editData.firstName} onChangeText={(t: string) => setEditData(p => ({ ...p, firstName: t }))} className="mb-5" />
+
+        <Text className="text-[13px] font-semibold text-neutral-500 dark:text-neutral-400 mb-2">Last name</Text>
+        <StyledInput value={editData.lastName} onChangeText={(t: string) => setEditData(p => ({ ...p, lastName: t }))} className="mb-5" />
+
+        <Text className="text-[13px] font-semibold text-neutral-500 dark:text-neutral-400 mb-2">Email</Text>
+        <View className="flex-row items-center mb-5" style={{ gap: 10 }}>
+          <StyledInput value={user?.email} editable={false} className="flex-1 text-neutral-400" />
+          <Pressable onPress={() => setActiveSheet('change-email')} className="px-1">
+            <Text className="text-[14px] font-semibold text-indigo-600 dark:text-indigo-400">Change</Text>
+          </Pressable>
+        </View>
+
+        <Text className="text-[13px] font-semibold text-neutral-500 dark:text-neutral-400 mb-2">Zip code</Text>
+        <StyledInput value={editData.zipCode} onChangeText={(t: string) => setEditData(p => ({ ...p, zipCode: t }))} keyboardType="numeric" maxLength={10} className="mb-6" />
+
+        <Pressable onPress={handleSaveProfile} disabled={saving} className="w-full h-[52px] bg-neutral-900 dark:bg-neutral-100 rounded-xl items-center justify-center flex-row" style={{ gap: 8 }}>
+          {saving && <ActivityIndicator size="small" color={isDark ? '#171717' : '#ffffff'} />}
+          <Text className="text-[15px] font-semibold text-white dark:text-neutral-900">{saving ? 'Saving...' : 'Save Changes'}</Text>
+        </Pressable>
+      </SettingsSheet>
+
+      <SettingsSheet title="Notifications" onClose={closeSheet} visible={activeSheet === 'notifications'}>
+        <SectionLabel>Push Notifications</SectionLabel>
+        <Toggle label="Job Updates" description="When a contractor responds to your quote request" defaultOn />
+        <Toggle label="New Messages" description="When you receive a new message" defaultOn />
+        <Toggle label="Payment Status" description="When payment is confirmed or released" defaultOn />
+        <View className="mt-4">
+          <SectionLabel>Email</SectionLabel>
           <Toggle label="Job Summary" description="Weekly digest of your active projects" defaultOn />
-        </SettingsSheet>
-      )}
+        </View>
+      </SettingsSheet>
 
-      {/* Privacy & Security Sheet */}
-      {activeSheet === 'privacy' && (
-        <SettingsSheet title="Privacy & Security" onClose={closeSheet}>
-          <Pressable onPress={() => { closeSheet(); setTimeout(() => setActiveSheet('change-password'), 300); }} className="flex-row items-center justify-between py-2">
-            <View>
-              <Text className="text-sm font-medium text-neutral-900 dark:text-neutral-50">Change Password</Text>
-              <Text className="text-xs text-neutral-500 dark:text-neutral-400">Update your account password</Text>
-            </View>
-            <FontAwesome5 name="chevron-right" size={12} color="#a3a3a3" />
-          </Pressable>
-          <Pressable onPress={() => { closeSheet(); setTimeout(() => setActiveSheet('change-email'), 300); }} className="flex-row items-center justify-between py-2 mb-2">
-            <View>
-              <Text className="text-sm font-medium text-neutral-900 dark:text-neutral-50">Change Email</Text>
-              <Text className="text-xs text-neutral-500 dark:text-neutral-400">Update your email address</Text>
-            </View>
-            <FontAwesome5 name="chevron-right" size={12} color="#a3a3a3" />
-          </Pressable>
-          <View className="pt-2 border-t border-neutral-100 dark:border-neutral-800 mt-2">
-            <Text className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-2">Data &amp; Privacy</Text>
-            <Pressable onPress={() => { closeSheet(); Linking.openURL('https://ratedeed.com/legal/privacy'); }} className="flex-row items-center justify-between py-2">
-              <View>
-                <Text className="text-sm font-medium text-neutral-900 dark:text-neutral-50">Privacy Policy</Text>
-                <Text className="text-xs text-neutral-500 dark:text-neutral-400">View our privacy policy</Text>
-              </View>
-              <FontAwesome5 name="chevron-right" size={12} color="#a3a3a3" />
-            </Pressable>
-            <Pressable onPress={() => { closeSheet(); Linking.openURL('https://ratedeed.com/legal/terms'); }} className="flex-row items-center justify-between py-2">
-              <View>
-                <Text className="text-sm font-medium text-neutral-900 dark:text-neutral-50">Terms of Service</Text>
-                <Text className="text-xs text-neutral-500 dark:text-neutral-400">View our terms of service</Text>
-              </View>
-              <FontAwesome5 name="chevron-right" size={12} color="#a3a3a3" />
-            </Pressable>
+      <SettingsSheet title="Privacy & Security" onClose={closeSheet} visible={activeSheet === 'privacy'}>
+        <Pressable onPress={() => { closeSheet(); setTimeout(() => setActiveSheet('change-password'), 350); }} className="flex-row items-center justify-between py-4 active:opacity-60">
+          <View className="flex-1 mr-4">
+            <Text className="text-[15px] font-medium text-neutral-900 dark:text-neutral-50">Change Password</Text>
+            <Text className="text-[13px] text-neutral-400 dark:text-neutral-500 mt-0.5">Update your account password</Text>
           </View>
-          <View className="pt-4 border-t border-neutral-100 dark:border-neutral-800 mt-2">
-            <Pressable onPress={() => {
-              Alert.alert(
-                'Delete Account',
-                'This will permanently delete your account and all associated data. This cannot be undone.',
-                [
-                  { text: 'Cancel', style: 'cancel' },
-                  { text: 'Delete', style: 'destructive', onPress: async () => {
-                    try {
-                      await deleteAccount();
-                      await logout();
-                    } catch {
-                      Alert.alert('Error', 'Failed to delete account. Please try again.');
-                    }
-                  }},
-                ]
-              );
-            }}><Text className="text-sm font-medium text-red-500">Delete Account</Text></Pressable>
-            <Text className="text-[11px] text-neutral-400 mt-0.5">Permanently delete your account and all data</Text>
+          <FontAwesome5 name="chevron-right" size={12} color="#c4c4c4" />
+        </Pressable>
+        <Pressable onPress={() => { closeSheet(); setTimeout(() => setActiveSheet('change-email'), 350); }} className="flex-row items-center justify-between py-4 active:opacity-60">
+          <View className="flex-1 mr-4">
+            <Text className="text-[15px] font-medium text-neutral-900 dark:text-neutral-50">Change Email</Text>
+            <Text className="text-[13px] text-neutral-400 dark:text-neutral-500 mt-0.5">Update your email address</Text>
           </View>
-        </SettingsSheet>
-      )}
+          <FontAwesome5 name="chevron-right" size={12} color="#c4c4c4" />
+        </Pressable>
+        <View className="pt-5 mt-2 border-t border-neutral-100 dark:border-neutral-800">
+          <SectionLabel>Data &amp; Privacy</SectionLabel>
+          <Pressable onPress={() => { closeSheet(); Linking.openURL('https://ratedeed.com/legal/privacy'); }} className="flex-row items-center justify-between py-4 active:opacity-60">
+            <View className="flex-1 mr-4">
+              <Text className="text-[15px] font-medium text-neutral-900 dark:text-neutral-50">Privacy Policy</Text>
+              <Text className="text-[13px] text-neutral-400 dark:text-neutral-500 mt-0.5">View our privacy policy</Text>
+            </View>
+            <FontAwesome5 name="chevron-right" size={12} color="#c4c4c4" />
+          </Pressable>
+          <Pressable onPress={() => { closeSheet(); Linking.openURL('https://ratedeed.com/legal/terms'); }} className="flex-row items-center justify-between py-4 active:opacity-60">
+            <View className="flex-1 mr-4">
+              <Text className="text-[15px] font-medium text-neutral-900 dark:text-neutral-50">Terms of Service</Text>
+              <Text className="text-[13px] text-neutral-400 dark:text-neutral-500 mt-0.5">View our terms of service</Text>
+            </View>
+            <FontAwesome5 name="chevron-right" size={12} color="#c4c4c4" />
+          </Pressable>
+        </View>
+        <View className="pt-5 mt-2 border-t border-neutral-100 dark:border-neutral-800">
+          <Pressable
+            onPress={() => Alert.alert('Delete Account', 'This will permanently delete your account and all associated data. This cannot be undone.', [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Delete', style: 'destructive', onPress: async () => { try { await deleteAccount(); await logout(); } catch { Alert.alert('Error', 'Failed to delete account.'); } } },
+            ])}
+            className="py-4 active:opacity-60"
+          >
+            <Text className="text-[15px] font-semibold text-red-500">Delete Account</Text>
+            <Text className="text-[13px] text-neutral-400 dark:text-neutral-500 mt-0.5">Permanently delete your account and all data</Text>
+          </Pressable>
+        </View>
+      </SettingsSheet>
 
-      
-      {/* Change Email Sheet */}
-      {activeSheet === 'change-email' && (
-        <SettingsSheet title="Change Email" onClose={closeSheet}>
-          {emailMessage && (
-            <View className={`mb-4 px-3 py-2 rounded-lg ${emailMessage.type === 'success' ? 'bg-emerald-50' : 'bg-indigo-50'}`}>
-              <Text className={`text-sm ${emailMessage.type === 'success' ? 'text-emerald-700' : 'text-indigo-700'}`}>{emailMessage.text}</Text>
-            </View>
-          )}
-          <Text className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 mb-1">Current Email</Text>
-          <TextInput value={user?.email} editable={false} className="w-full border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm mb-3 text-neutral-500 bg-neutral-50 dark:bg-neutral-800" />
-          
-          <Text className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 mb-1">New Email</Text>
-          <TextInput value={emailNew} onChangeText={setEmailNew} keyboardType="email-address" autoCapitalize="none" className="w-full border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm mb-3 text-neutral-900 dark:text-neutral-50" placeholderTextColor="#a3a3a3" />
-          
-          <Text className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 mb-1">Current Password</Text>
-          <TextInput value={emailPassword} onChangeText={setEmailPassword} secureTextEntry className="w-full border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm mb-3 text-neutral-900 dark:text-neutral-50" placeholderTextColor="#a3a3a3" />
-          
-          <Pressable onPress={handleChangeEmail} disabled={emailSaving} className="w-full py-3 bg-indigo-600 rounded-xl items-center flex-row justify-center mt-2" style={{ gap: 8 }}>
-            {emailSaving && <ActivityIndicator size="small" color="#fff" />}
-            <Text className="text-sm font-semibold text-white dark:text-neutral-900">{emailSaving ? 'Sending...' : 'Send Verification Email'}</Text>
-          </Pressable>
-          <Text className="text-xs text-neutral-400 text-center mt-3">
-            We'll send a verification link to your new email.
-          </Text>
-        </SettingsSheet>
-      )}
-  
-      {/* Change Password Sheet */}
-      {activeSheet === 'change-password' && (
-        <SettingsSheet title="Change Password" onClose={closeSheet}>
-          {pwMessage && (
-            <View className={`mb-4 px-3 py-2 rounded-lg ${pwMessage.type === 'success' ? 'bg-emerald-50' : 'bg-indigo-50'}`}>
-              <Text className={`text-sm ${pwMessage.type === 'success' ? 'text-emerald-700' : 'text-indigo-700'}`}>{pwMessage.text}</Text>
-            </View>
-          )}
-          <Text className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 mb-1">Current Password</Text>
-          <TextInput value={currentPassword} onChangeText={setCurrentPassword} secureTextEntry className="w-full border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm mb-3 text-neutral-900 dark:text-neutral-50" placeholderTextColor="#a3a3a3" />
-          <Text className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 mb-1">New Password</Text>
-          <TextInput value={newPassword} onChangeText={setNewPassword} secureTextEntry className="w-full border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm mb-1 text-neutral-900 dark:text-neutral-50" placeholderTextColor="#a3a3a3" />
-          <Text className="text-[11px] text-neutral-400 mb-3">Minimum 8 characters</Text>
-          <Text className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 mb-1">Confirm New Password</Text>
-          <TextInput value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry className="w-full border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm mb-3 text-neutral-900 dark:text-neutral-50" placeholderTextColor="#a3a3a3" />
-          <Pressable onPress={handleChangePassword} disabled={pwSaving} className="w-full py-3 bg-indigo-600 rounded-xl items-center flex-row justify-center" style={{ gap: 8 }}>
-            {pwSaving && <ActivityIndicator size="small" color="#fff" />}
-            <Text className="text-sm font-semibold text-white dark:text-neutral-900">{pwSaving ? 'Updating...' : 'Change Password'}</Text>
-          </Pressable>
-        </SettingsSheet>
-      )}
-
-      {/* App Settings Sheet */}
-      {activeSheet === 'settings' && (
-        <SettingsSheet title="App Settings" onClose={closeSheet}>
-          <Text className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 mb-1">Language</Text>
-          <View className="border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 flex-row items-center justify-between mb-3">
-            <Text className="text-sm text-neutral-900 dark:text-neutral-50">English (US)</Text>
-            <FontAwesome5 name="chevron-down" size={12} color="#a3a3a3" />
+      <SettingsSheet title="Change Email" onClose={closeSheet} visible={activeSheet === 'change-email'}>
+        {emailMessage && (
+          <View className={`mb-5 px-4 py-3 rounded-xl ${emailMessage.type === 'success' ? 'bg-emerald-50 dark:bg-emerald-950' : 'bg-red-50 dark:bg-red-950'}`}>
+            <Text className={`text-[14px] font-medium ${emailMessage.type === 'success' ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400'}`}>{emailMessage.text}</Text>
           </View>
-          <Text className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 mb-1">Default Service Area</Text>
-          <TextInput defaultValue={user?.zipCode || ipZipCode} className="w-full border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm mb-3 text-neutral-900 dark:text-neutral-50" />
+        )}
+        <Text className="text-[13px] font-semibold text-neutral-500 dark:text-neutral-400 mb-2">Current Email</Text>
+        <StyledInput value={user?.email} editable={false} className="mb-5 text-neutral-400" />
+        <Text className="text-[13px] font-semibold text-neutral-500 dark:text-neutral-400 mb-2">New Email</Text>
+        <StyledInput value={emailNew} onChangeText={setEmailNew} keyboardType="email-address" autoCapitalize="none" className="mb-5" placeholder="Enter new email" />
+        <Text className="text-[13px] font-semibold text-neutral-500 dark:text-neutral-400 mb-2">Current Password</Text>
+        <StyledInput value={emailPassword} onChangeText={setEmailPassword} secureTextEntry className="mb-6" placeholder="Enter current password" />
+        <Pressable onPress={handleChangeEmail} disabled={emailSaving} className="w-full h-[52px] bg-neutral-900 dark:bg-neutral-100 rounded-xl items-center justify-center flex-row" style={{ gap: 8 }}>
+          {emailSaving && <ActivityIndicator size="small" color={isDark ? '#171717' : '#ffffff'} />}
+          <Text className="text-[15px] font-semibold text-white dark:text-neutral-900">{emailSaving ? 'Sending...' : 'Send Verification Email'}</Text>
+        </Pressable>
+        <Text className="text-[13px] text-neutral-400 dark:text-neutral-500 text-center mt-4 leading-[18px]">We'll send a verification link to your new email address.</Text>
+      </SettingsSheet>
+
+      <SettingsSheet title="Change Password" onClose={closeSheet} visible={activeSheet === 'change-password'}>
+        {pwMessage && (
+          <View className={`mb-5 px-4 py-3 rounded-xl ${pwMessage.type === 'success' ? 'bg-emerald-50 dark:bg-emerald-950' : 'bg-red-50 dark:bg-red-950'}`}>
+            <Text className={`text-[14px] font-medium ${pwMessage.type === 'success' ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400'}`}>{pwMessage.text}</Text>
+          </View>
+        )}
+        <Text className="text-[13px] font-semibold text-neutral-500 dark:text-neutral-400 mb-2">Current Password</Text>
+        <StyledInput value={currentPassword} onChangeText={setCurrentPassword} secureTextEntry className="mb-5" placeholder="Enter current password" />
+        <Text className="text-[13px] font-semibold text-neutral-500 dark:text-neutral-400 mb-2">New Password</Text>
+        <StyledInput value={newPassword} onChangeText={setNewPassword} secureTextEntry className="mb-1" placeholder="Enter new password" />
+        <Text className="text-[12px] text-neutral-400 dark:text-neutral-500 mb-5">Minimum 8 characters</Text>
+        <Text className="text-[13px] font-semibold text-neutral-500 dark:text-neutral-400 mb-2">Confirm New Password</Text>
+        <StyledInput value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry className="mb-6" placeholder="Re-enter new password" />
+        <Pressable onPress={handleChangePassword} disabled={pwSaving} className="w-full h-[52px] bg-neutral-900 dark:bg-neutral-100 rounded-xl items-center justify-center flex-row" style={{ gap: 8 }}>
+          {pwSaving && <ActivityIndicator size="small" color={isDark ? '#171717' : '#ffffff'} />}
+          <Text className="text-[15px] font-semibold text-white dark:text-neutral-900">{pwSaving ? 'Updating...' : 'Change Password'}</Text>
+        </Pressable>
+      </SettingsSheet>
+
+      <SettingsSheet title="App Settings" onClose={closeSheet} visible={activeSheet === 'settings'}>
+        <Text className="text-[13px] font-semibold text-neutral-500 dark:text-neutral-400 mb-2">Language</Text>
+        <View className="flex-row items-center justify-between px-4 rounded-xl mb-5 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800" style={{ height: 52 }}>
+          <Text className="text-[15px] text-neutral-900 dark:text-neutral-50">English (US)</Text>
+          <FontAwesome5 name="chevron-down" size={12} color="#a3a3a3" />
+        </View>
+        <Text className="text-[13px] font-semibold text-neutral-500 dark:text-neutral-400 mb-2">Default Service Area</Text>
+        <StyledInput defaultValue={user?.zipCode || ipZipCode} className="mb-5" />
+        <View className="border-t border-neutral-100 dark:border-neutral-800 pt-2">
           <DarkModeToggle />
-          <Toggle 
-            label="Haptic Feedback" 
-            description="Vibrate on button taps and interactions" 
-            defaultOn={hapticsEnabled} 
-            onValueChange={saveHapticsSetting}
-          />
-          <View className="pt-2 border-t border-neutral-100 dark:border-neutral-800 mt-2">
-            <Text className="text-xs text-neutral-400">Version 1.0.0 · Build 2026.04</Text>
-          </View>
-        </SettingsSheet>
-      )}
+          <Toggle label="Haptic Feedback" description="Vibrate on button taps and interactions" defaultOn={hapticsEnabled} onValueChange={saveHapticsSetting} />
+        </View>
+        <View className="pt-5 mt-2 border-t border-neutral-100 dark:border-neutral-800">
+          <Text className="text-[12px] text-neutral-300 dark:text-neutral-600">Version 1.0.0 · Build 2026.04</Text>
+        </View>
+      </SettingsSheet>
 
-      {/* Help Center Sheet */}
-      {activeSheet === 'help' && (
-        <SettingsSheet title="Help Center" onClose={closeSheet}>
-          {faqs.map((faq, i) => (
-            <View key={i} className="border-b border-neutral-100 dark:border-neutral-800">
-              <Pressable onPress={() => setOpenFaq(openFaq === i ? null : i)} className="flex-row items-center justify-between py-3">
-                <Text className="text-sm font-medium text-neutral-900 dark:text-neutral-50 flex-1 mr-4">{faq.q}</Text>
-                <FontAwesome5 name={openFaq === i ? 'chevron-up' : 'chevron-down'} size={12} color="#a3a3a3" />
-              </Pressable>
-              {openFaq === i && <Text className="text-sm text-neutral-600 dark:text-neutral-400 leading-5 pb-3">{faq.a}</Text>}
-            </View>
-          ))}
-          <View className="pt-4 border-t border-neutral-100 dark:border-neutral-800 mt-2 items-center">
-            <Text className="text-sm text-neutral-500 dark:text-neutral-400 mb-3">Still need help?</Text>
-            <Pressable onPress={() => Linking.openURL('mailto:support@ratedeed.com')} className="w-full py-3 border border-indigo-600 rounded-xl items-center">
-              <Text className="text-sm font-semibold text-indigo-600">Contact Support</Text>
+      <SettingsSheet title="Help Center" onClose={closeSheet} visible={activeSheet === 'help'}>
+        <SectionLabel>Frequently Asked Questions</SectionLabel>
+        {faqs.map((faq, i) => (
+          <View key={i} className="border-b border-neutral-100 dark:border-neutral-800">
+            <Pressable onPress={() => setOpenFaq(openFaq === i ? null : i)} className="flex-row items-center justify-between py-4 active:opacity-60">
+              <Text className="text-[15px] font-medium text-neutral-900 dark:text-neutral-50 flex-1 mr-4 leading-[20px]">{faq.q}</Text>
+              <FontAwesome5 name={openFaq === i ? 'chevron-up' : 'chevron-down'} size={11} color="#a3a3a3" />
             </Pressable>
+            {openFaq === i && <Text className="text-[14px] text-neutral-500 dark:text-neutral-400 leading-[22px] pb-4">{faq.a}</Text>}
           </View>
-        </SettingsSheet>
-      )}
+        ))}
+        <View className="pt-6 mt-2 border-t border-neutral-100 dark:border-neutral-800 items-center">
+          <Text className="text-[14px] text-neutral-400 dark:text-neutral-500 mb-4">Still need help?</Text>
+          <Pressable onPress={() => Linking.openURL('mailto:support@ratedeed.com')} className="w-full h-[52px] bg-neutral-900 dark:bg-neutral-100 rounded-xl items-center justify-center">
+            <Text className="text-[15px] font-semibold text-white dark:text-neutral-900">Contact Support</Text>
+          </Pressable>
+        </View>
+      </SettingsSheet>
     </View>
   );
 };

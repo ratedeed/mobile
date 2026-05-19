@@ -1,6 +1,6 @@
 // ================================================================
 // Avatar & Banner Utilities — Client-side SVG generation
-// Generates beautiful, Airbnb-quality default avatars and banners
+// Generates beautiful default avatars and banners
 // as SVG data URIs. No API calls needed.
 // ================================================================
 

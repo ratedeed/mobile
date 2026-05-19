@@ -6,8 +6,9 @@ import * as Notifications from 'expo-notifications';
 
 setBackgroundMessageHandler(getMessaging(), async remoteMessage => {
   const data = remoteMessage.data || {};
-  const title = remoteMessage.notification?.title || data.title || 'New Message';
-  const body = remoteMessage.notification?.body || data.body || 'You have a new message.';
+  // Backend sends data-only FCM messages to avoid duplicates on Android.
+  const title = data.title || 'New Message';
+  const body = data.body || 'You have a new message.';
 
   await Notifications.scheduleNotificationAsync({
     content: {

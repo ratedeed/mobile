@@ -659,7 +659,7 @@ const ContractorDashboardScreen: React.FC = () => {
     );
   }
 
-  // Profile completion tracking (Airbnb-style)
+  // Profile completion tracking
   const completionSteps = [
     { key: 'photo', done: !!avatarUrl, label: 'Photo' },
     { key: 'description', done: !!editableData.description, label: 'Description' },
@@ -672,7 +672,7 @@ const ContractorDashboardScreen: React.FC = () => {
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0} className="flex-1 bg-neutral-50 dark:bg-neutral-800">
-      {/* Profile Completion Banner (Airbnb-style) */}
+      {/* Profile Completion Banner */}
       {showBanner && (
         <View className="bg-white dark:bg-neutral-900 border-b border-neutral-100 dark:border-neutral-800 px-4 py-3">
           <View className="flex-row items-center justify-between mb-1.5">
