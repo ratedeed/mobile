@@ -66,6 +66,7 @@ const linking = {
       Notifications: 'notifications',
       BusinessSearch: 'search',
       QuoteReview: 'quote-review/:quoteId',
+      ContractorDashboard: 'contractor-dashboard',
       VerifyEmailChange: 'verify-email-change',
       ResetPassword: 'reset-password',
     },

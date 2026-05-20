@@ -249,7 +249,7 @@ const ContractorSignupScreen = () => {
 
       await auth.signOut();
       Alert.alert('Success', 'Registration successful! Please verify your email before signing in.');
-      navigation.navigate('Login');
+      navigation.replace('Login');
     } catch (error) {
       if (userCreated) {
         try { await deleteUser(userCreated); } catch {}

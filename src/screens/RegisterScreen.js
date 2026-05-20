@@ -52,8 +52,20 @@ const RegisterScreen = () => {
       });
 
       if (backendResponse?.token) {
-        await updateBackendToken(backendResponse.token, backendResponse.emailVerified, backendResponse);
+        await updateBackendToken(backendResponse.token, backendResponse.emailVerified, backendResponse.user || backendResponse);
         Toast.show({ type: 'success', text1: 'Success', text2: 'Signed in with Apple!' });
+
+        const role = (backendResponse.user?.role || backendResponse.role);
+        if (role === 'contractor') {
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'Main' }, { name: 'ContractorDashboard' }],
+          });
+        } else if (navigation.canGoBack()) {
+          navigation.goBack();
+        } else {
+          navigation.navigate('Main');
+        }
       } else {
         setApiError('Apple Sign-In failed. Please try again.');
       }

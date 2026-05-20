@@ -1,4 +1,5 @@
-import { useNavigation } from '@react-navigation/native';
+import * as Clipboard from 'expo-clipboard';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import * as WebBrowser from 'expo-web-browser';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useColorScheme } from 'react-native';
@@ -178,6 +179,7 @@ function Sheet({ visible, onClose, title, children }: { visible: boolean; onClos
 // ================================================================
 const ContractorDashboardScreen: React.FC = () => {
   const navigation = useNavigation<any>();
+  const route = useRoute();
   const { userId: currentUserId, updateUser } = useAuth();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -216,6 +218,7 @@ const ContractorDashboardScreen: React.FC = () => {
   const [verificationResult, setVerificationResult] = useState<{ success: boolean; message: string } | null>(null);
 
   const [editableData, setEditableData] = useState({
+    slug: "",
     description: "",
     pricing: "",
     certifications: "" as any,
@@ -436,6 +439,7 @@ const ContractorDashboardScreen: React.FC = () => {
       setAvatarUrl(getProfileImageUrl(name, rawAvatar, cat));
 
       setEditableData({
+        slug: profile.slug || "",
         description: profile.description || "",
         pricing: profile.pricing || "",
         certifications: profile.certifications || "",
@@ -474,7 +478,23 @@ const ContractorDashboardScreen: React.FC = () => {
     }
   }, []);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => {
+    loadData();
+
+    // Handle tab navigation from other screens
+    const initialTab = (route.params as any)?.initialTab;
+    if (initialTab && TABS.some(t => t.key === initialTab)) {
+      setActiveTab(initialTab);
+    }
+
+    // Handle deep-linked Stripe return
+    const stripeReturn = (route.params as any)?.stripe_return;
+    if (stripeReturn === 'true' || stripeReturn === true) {
+      Alert.alert('Success', 'Stripe account connected successfully!');
+      loadData(); // Refresh status
+    }
+  }, [loadData, (route.params as any)?.initialTab, (route.params as any)?.stripe_return]);
+
 
   useEffect(() => {
     return () => {
@@ -1269,19 +1289,36 @@ const ContractorDashboardScreen: React.FC = () => {
                 Copy your direct profile link to share with clients or add to your social media bios.
               </Text>
               <View className="flex-row items-center bg-neutral-100 dark:bg-neutral-800 rounded-lg px-3 mb-4">
-                <Text className="flex-1 text-sm text-neutral-500 dark:text-neutral-400 dark:text-neutral-500 py-3" numberOfLines={1}>https://ratedeed.com/contractor/my-profile</Text>
-                <Pressable onPress={() => Alert.alert('Coming Soon', 'Profile link sharing will be available in the next update.')} className="p-2">
+                <Text className="flex-1 text-sm text-neutral-500 dark:text-neutral-400 py-3" numberOfLines={1}>
+                  https://ratedeed.com/contractor/{editableData.slug || 'my-profile'}
+                </Text>
+                <Pressable 
+                  onPress={async () => {
+                    await Clipboard.setStringAsync(`https://ratedeed.com/contractor/${editableData.slug || ''}`);
+                    Alert.alert('Copied!', 'Profile link copied to clipboard.');
+                  }} 
+                  className="p-2"
+                >
                   <FontAwesome5 name="copy" size={14} color={isDark ? "#a3a3a3" : "#737373"} />
                 </Pressable>
               </View>
               <View className="flex-row justify-center" style={{ gap: 16 }}>
                 {[
-                  { name: 'facebook-f', color: '#1877F2' },
-                  { name: 'twitter', color: '#1DA1F2' },
-                  { name: 'linkedin-in', color: '#0A66C2' },
-                  { name: 'whatsapp', color: '#25D366' },
+                  { name: 'facebook-f', color: '#1877F2', url: `https://www.facebook.com/sharer/sharer.php?u=https://ratedeed.com/contractor/${editableData.slug}` },
+                  { name: 'x-twitter', color: '#000000', url: `https://twitter.com/intent/tweet?url=https://ratedeed.com/contractor/${editableData.slug}` },
+                  { name: 'linkedin-in', color: '#0A66C2', url: `https://www.linkedin.com/sharing/share-offsite/?url=https://ratedeed.com/contractor/${editableData.slug}` },
+                  { name: 'whatsapp', color: '#25D366', url: `whatsapp://send?text=Check out my profile on Ratedeed: https://ratedeed.com/contractor/${editableData.slug}` },
                 ].map(social => (
-                  <Pressable key={social.name} onPress={() => Alert.alert('Coming Soon', 'Social sharing will be available in the next update.')} className="w-11 h-11 rounded-full items-center justify-center" style={{ backgroundColor: social.color }}>
+                  <Pressable 
+                    key={social.name} 
+                    onPress={() => {
+                      Linking.openURL(social.url).catch(() => {
+                        Alert.alert('Error', 'Could not open sharing app.');
+                      });
+                    }} 
+                    className="w-11 h-11 rounded-full items-center justify-center" 
+                    style={{ backgroundColor: social.color }}
+                  >
                     <FontAwesome5 name={social.name} size={16} color="#fff" />
                   </Pressable>
                 ))}

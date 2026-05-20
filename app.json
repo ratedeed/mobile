@@ -13,7 +13,7 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "buildNumber": "23",
+      "buildNumber": "28",
       "supportsTablet": true,
       "bundleIdentifier": "com.ratedeed.app",
       "infoPlist": {
@@ -31,7 +31,7 @@
       }
     },
     "android": {
-      "versionCode": 23,
+      "versionCode": 28,
       "adaptiveIcon": {
         "foregroundImage": "./icon.png",
         "backgroundColor": "#ffffff"

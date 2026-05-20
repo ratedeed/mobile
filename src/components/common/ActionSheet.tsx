@@ -9,6 +9,7 @@ import {
   Modal,
   Pressable,
 } from 'react-native';
+import { FontAwesome5 } from '@expo/vector-icons';
 import { Colors, Spacing, Radii } from '../../constants/designTokens';
 
 interface ActionSheetOption {
@@ -117,7 +118,14 @@ const ActionSheet: React.FC<ActionSheetProps> = ({
                 activeOpacity={0.7}
               >
                 {option.icon && (
-                  <Text style={styles.optionIcon}>{option.icon}</Text>
+                  <View style={styles.iconContainer}>
+                    <FontAwesome5
+                      name={option.icon}
+                      size={18}
+                      color={option.destructive ? Colors.error500 : Colors.primary500}
+                      solid
+                    />
+                  </View>
                 )}
                 <Text
                   style={[
@@ -191,6 +199,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.md + 2,
     borderBottomWidth: 1,
     borderBottomColor: Colors.neutral100,
+    position: 'relative',
   },
   firstOption: {
     borderTopLeftRadius: Radii.lg,
@@ -201,12 +210,18 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: Radii.lg,
     borderBottomRightRadius: Radii.lg,
   },
-  optionIcon: {
-    fontSize: 20,
-    marginRight: Spacing.sm,
+  iconContainer: {
+    position: 'absolute',
+    left: Spacing.md,
+    width: 32,
+    height: 32,
+    borderRadius: Radii.md,
+    backgroundColor: Colors.neutral50,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   optionText: {
-    fontSize: 20,
+    fontSize: 17,
     fontWeight: '400',
     color: Colors.primary500,
     textAlign: 'center',

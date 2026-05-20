@@ -71,12 +71,17 @@ const LoginScreen = () => {
         if (backendResponse?.token) {
           await updateBackendToken(backendResponse.token, backendResponse.emailVerified, backendResponse.user);
           Toast.show({ type: 'success', text1: 'Success', text2: 'Logged in successfully!' });
-          // If user is a contractor, go to dashboard instead of going back to signup
+          // If user is a contractor, go to dashboard and reset stack to prevent going back to signup
           const role = backendResponse.user?.role;
           if (role === 'contractor') {
-            navigation.navigate('ContractorDashboard');
+            navigation.reset({
+              index: 0,
+              routes: [{ name: 'Main' }, { name: 'ContractorDashboard' }],
+            });
           } else if (navigation.canGoBack()) {
             navigation.goBack();
+          } else {
+            navigation.navigate('Main');
           }
         } else {
           setApiError('Backend authentication failed. Please try again.');
@@ -124,7 +129,20 @@ const LoginScreen = () => {
         setShowVerificationMessage(false);
         const backendResponse = await backendLoginFirebase(idToken, auth.currentUser.email);
         if (backendResponse?.token) {
-          await updateBackendToken(backendResponse.token, backendResponse.emailVerified);
+          await updateBackendToken(backendResponse.token, backendResponse.emailVerified, backendResponse.user);
+          Toast.show({ type: 'success', text1: 'Success', text2: 'Logged in successfully!' });
+          
+          const role = backendResponse.user?.role;
+          if (role === 'contractor') {
+            navigation.reset({
+              index: 0,
+              routes: [{ name: 'Main' }, { name: 'ContractorDashboard' }],
+            });
+          } else if (navigation.canGoBack()) {
+            navigation.goBack();
+          } else {
+            navigation.navigate('Main');
+          }
         }
       } else {
         Toast.show({ type: 'info', text1: 'Not Verified', text2: 'Email still not verified. Check your inbox.' });
@@ -152,8 +170,20 @@ const LoginScreen = () => {
       });
 
       if (backendResponse?.token) {
-        await updateBackendToken(backendResponse.token, backendResponse.emailVerified, backendResponse);
+        await updateBackendToken(backendResponse.token, backendResponse.emailVerified, backendResponse.user || backendResponse);
         Toast.show({ type: 'success', text1: 'Success', text2: 'Signed in with Apple!' });
+
+        const role = (backendResponse.user?.role || backendResponse.role);
+        if (role === 'contractor') {
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'Main' }, { name: 'ContractorDashboard' }],
+          });
+        } else if (navigation.canGoBack()) {
+          navigation.goBack();
+        } else {
+          navigation.navigate('Main');
+        }
       } else {
         setApiError('Apple Sign-In failed. Please try again.');
       }

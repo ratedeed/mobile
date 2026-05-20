@@ -65,8 +65,11 @@ export const usePushNotifications = () => {
             }
             await new Promise(r => setTimeout(r, 500));
           }
-          if (!apnsToken && __DEV__) {
-            console.warn('[Push] APNS token not available — this is expected on simulators. Push will work on real devices.');
+          if (!apnsToken) {
+            if (__DEV__) {
+              console.warn('[Push] APNS token not available — common on iOS Simulators. Push notifications will work on real devices.');
+            }
+            return;
           }
         }
 

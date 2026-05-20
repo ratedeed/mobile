@@ -15,6 +15,7 @@ import {
   RefreshControl,
   Modal,
   Linking,
+  Keyboard,
 } from "react-native";
 import { FontAwesome5 } from "@expo/vector-icons";
 import { useRoute, useNavigation } from "@react-navigation/native";
@@ -451,6 +452,17 @@ const MessagesScreen = () => {
     return () => { mounted = false; };
   }, [currentUserId]);
 
+  // ─── Scroll to bottom when keyboard shows ──────────────────────────────────
+  useEffect(() => {
+    const showSub = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', () => {
+      // Small delay to let layout settle before scrolling
+      setTimeout(() => {
+        messagesRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    });
+    return () => showSub.remove();
+  }, []);
+
   // ─── Load conversations ────────────────────────────────────────────────────
   const loadConversations = useCallback(async (pullRefresh = false) => {
     if (!currentUserId) return;
@@ -537,8 +549,14 @@ const MessagesScreen = () => {
 
   // ─── Load messages ─────────────────────────────────────────────────────────
   const loadMessages = useCallback(async (conversationId) => {
+    if (!conversationId) return;
     setLoading(true);
     try {
+      // Mark conversation as read on backend immediately
+      const { markConversationAsRead } = await import("../api");
+      await markConversationAsRead(conversationId);
+      refreshUnreadMessagesCount();
+
       const data = await fetchMessages(conversationId);
       const msgs = Array.isArray(data) ? data : data?.messages || [];
       setMessages([...msgs].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt)));
@@ -551,9 +569,9 @@ const MessagesScreen = () => {
           unreadCount: 0
         }
       }));
-      
-      refreshUnreadMessagesCount(); // Update global badge when chat is opened
-    } catch {} finally { setLoading(false); }
+    } catch (err) {
+      console.error("[Messages] Load error:", err);
+    } finally { setLoading(false); }
   }, [currentUserId, refreshUnreadMessagesCount]);
 
   useEffect(() => {
@@ -814,7 +832,7 @@ const MessagesScreen = () => {
               <Pressable onPress={() => setActionSheetVisible(true)} className="w-11 h-11 items-center justify-center rounded-full" accessibilityLabel="Chat options" accessibilityRole="button"><FontAwesome5 name="ellipsis-h" size={16} color={isDark ? "#a3a3a3" : "#525252"} /></Pressable>
             </View>
 
-            <ScrollView ref={messagesRef} className="flex-1 bg-neutral-50/60 dark:bg-neutral-950/60" contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 }} onContentSizeChange={() => messagesRef.current?.scrollToEnd({ animated: false })} onScroll={(e) => { const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent; setShowScrollBtn(contentSize.height - layoutMeasurement.height - contentOffset.y > 300); }} scrollEventThrottle={64}>
+            <ScrollView ref={messagesRef} className="flex-1 bg-neutral-50/60 dark:bg-neutral-950/60" contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 }} onContentSizeChange={() => messagesRef.current?.scrollToEnd({ animated: false })} onScroll={(e) => { const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent; setShowScrollBtn(contentSize.height - layoutMeasurement.height - contentOffset.y > 300); }} scrollEventThrottle={64} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" maintainVisibleContentPosition={{ minIndexForVisible: 0, autoscrollToTopThreshold: 10 }}>
               {loading ? (
                 <View className="items-center py-10"><ActivityIndicator size="small" color="#818CF8" /></View>
               ) : (
@@ -961,29 +979,49 @@ const MessagesScreen = () => {
 
             <View className="px-4 py-3 bg-white dark:bg-neutral-900 border-t border-neutral-100 dark:border-neutral-800 flex-row items-end" style={{ gap: 8, paddingBottom: insets.bottom + 12 || 12 }}>
               <Pressable onPress={pickImage} className="w-11 h-11 items-center justify-center rounded-full bg-neutral-50 dark:bg-neutral-800" accessibilityLabel="Attach image" accessibilityRole="button"><FontAwesome5 name="image" size={15} color={isDark ? "#a3a3a3" : "#737373"} /></Pressable>
-              {userRole === 'contractor' && (selectedConversation?.conversationId || selectedConversation?._id) && (
-                <Pressable
-                  onPress={() => {
-                    if (!stripeStatus?.chargesEnabled) {
-                      Alert.alert(
-                        'Connect to Stripe',
-                        "You'll need a connected Stripe account before you can create and send quotes to clients.",
-                        [
-                          { text: 'Not now', style: 'cancel' },
-                          { text: 'Connect to Stripe', onPress: () => navigation.navigate('ContractorDashboard') }
-                        ]
-                      );
-                    } else {
-                      setShowQuoteSheet(true);
-                    }
-                  }}
-                  className="w-11 h-11 items-center justify-center rounded-full bg-indigo-50"
-                  accessibilityLabel="Send quote"
-                  accessibilityRole="button"
-                >
-                  <FontAwesome5 name="tag" size={13} color="#4F46E5" />
-                </Pressable>
-              )}
+              
+              {(() => {
+                const isContractor = userRole === 'contractor';
+                const hasConversation = !!(selectedConversation?.conversationId || selectedConversation?._id);
+                // Use both local check and context check for robustness
+                const chargesEnabled = stripeStatus?.chargesEnabled || contractorProfile?.stripeAccountChargesEnabled || contractorProfile?.chargesEnabled;
+                
+                if (__DEV__ && isContractor && hasConversation && !chargesEnabled) {
+                  console.log('[Messages] Quote button suppressed: Stripe charges not enabled', { stripeStatus, contractorProfile });
+                }
+
+                if (isContractor && hasConversation) {
+                  return (
+                    <Pressable
+                      onPress={() => {
+                        if (!chargesEnabled) {
+                          Alert.alert(
+                            'Connect to Stripe',
+                            "You'll need a connected Stripe account with active charges enabled before you can create and send quotes to clients. Tapping 'Go to Payments' will take you there.",
+                            [
+                              { text: 'Not now', style: 'cancel' },
+                              { text: 'Go to Payments', onPress: () => navigation.navigate('ContractorDashboard', { initialTab: 'payments' }) }
+                            ]
+                          );
+                        } else {
+                          setShowQuoteSheet(true);
+                        }
+                      }}
+                      className="w-11 h-11 items-center justify-center rounded-full bg-indigo-50"
+                      accessibilityLabel="Send quote"
+                      accessibilityRole="button"
+                    >
+                      <FontAwesome5 
+                        name="tag" 
+                        size={13} 
+                        color={chargesEnabled ? "#4F46E5" : "#94a3b8"} 
+                      />
+                    </Pressable>
+                  );
+                }
+                return null;
+              })()}
+
               <View className="flex-1 bg-neutral-100 dark:bg-neutral-800 rounded-2xl px-4 py-2.5 max-h-[120px]"><TextInput className="text-[15px] text-neutral-800 dark:text-neutral-200 leading-5" placeholder="Type a message..." placeholderTextColor={isDark ? "#9ca3af" : "#a3a3a3"} value={newMessage} onChangeText={handleTextChange} multiline style={{ maxHeight: 100 }} accessibilityLabel="Message input" accessibilityRole="text" /></View>
               <Pressable onPress={handleSendMessage} disabled={(!newMessage.trim() && !pendingAttachment) || isUploading} className={`w-11 h-11 rounded-full items-center justify-center mb-0.5 ${newMessage.trim() || pendingAttachment ? "bg-indigo-600" : "bg-neutral-200 dark:bg-neutral-700"}`} style={newMessage.trim() || pendingAttachment ? { shadowColor: "#4F46E5", shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { height: 2 }, elevation: 3 } : undefined} accessibilityLabel="Send message" accessibilityRole="button">
                 {isUploading ? <ActivityIndicator size="small" color="white" /> : <FontAwesome5 name="paper-plane" size={14} color={newMessage.trim() || pendingAttachment ? "white" : (isDark ? "#737373" : "#a3a3a3")} />}
