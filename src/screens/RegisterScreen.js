@@ -52,11 +52,11 @@ const RegisterScreen = () => {
       });
 
       if (backendResponse?.token) {
-        await updateBackendToken(backendResponse.token, backendResponse.emailVerified, backendResponse.user || backendResponse);
+        const { token, refreshToken, ...userData } = backendResponse;
+        await updateBackendToken(backendResponse.token, backendResponse.emailVerified, userData);
         Toast.show({ type: 'success', text1: 'Success', text2: 'Signed in with Apple!' });
 
-        const role = (backendResponse.user?.role || backendResponse.role);
-        if (role === 'contractor') {
+        if (userData.role === 'contractor') {
           navigation.reset({
             index: 0,
             routes: [{ name: 'Main' }, { name: 'ContractorDashboard' }],

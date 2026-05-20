@@ -9,7 +9,7 @@ import {
   Animated,
   PanResponder,
   Modal,
-  ScrollView,
+  StatusBar,
 } from 'react-native';
 import { Colors, Spacing } from '../constants/designTokens';
 
@@ -66,30 +66,36 @@ const ImageLightbox: React.FC<ImageLightboxProps> = ({
   const handleDoubleTap = () => {
     const now = Date.now();
     if (now - lastTap.current < 300) {
+      const newScale = scale === 1 ? 2 : 1;
       Animated.spring(scaleValue, {
-        toValue: scale === 1 ? 2 : 1,
+        toValue: newScale,
         useNativeDriver: true,
       }).start();
-      setScale(scale === 1 ? 2 : 1);
+      setScale(newScale);
     }
     lastTap.current = now;
   };
 
-  const goToImage = (index: number) => {
-    setCurrentIndex(index);
-  };
-
   if (!visible || images.length === 0) return null;
+
+  const uri = images[currentIndex];
 
   return (
     <Modal
       visible={visible}
-      transparent
+      transparent={false}
       animationType="fade"
       onRequestClose={onClose}
       statusBarTranslucent
     >
+      <StatusBar backgroundColor="#000" barStyle="light-content" />
       <View style={styles.container}>
+        {/* Close button - top right */}
+        <TouchableOpacity style={styles.closeButton} onPress={onClose} activeOpacity={0.7}>
+          <Text style={styles.closeText}>✕</Text>
+        </TouchableOpacity>
+
+        {/* Main image area */}
         <Animated.View
           style={[
             styles.imageContainer,
@@ -108,39 +114,22 @@ const ImageLightbox: React.FC<ImageLightboxProps> = ({
             onPress={handleDoubleTap}
             style={styles.imageWrapper}
           >
-            <ScrollView
-              horizontal
-              pagingEnabled
-              showsHorizontalScrollIndicator={false}
-              contentOffset={{ x: currentIndex * SCREEN_WIDTH, y: 0 }}
-              onMomentumScrollEnd={(e) => {
-                const index = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
-                setCurrentIndex(index);
-              }}
-            >
-              {images.map((uri, index) => (
-                <Image
-                  key={index}
-                  source={{ uri }}
-                  style={styles.image}
-                  resizeMode="contain"
-                />
-              ))}
-            </ScrollView>
+            <Image
+              source={{ uri }}
+              style={styles.image}
+              resizeMode="contain"
+            />
           </TouchableOpacity>
         </Animated.View>
 
-        <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-          <Text style={styles.closeText}>✕</Text>
-        </TouchableOpacity>
-
+        {/* Pagination dots for multiple images */}
         {images.length > 1 && (
           <View style={styles.pagination}>
             <View style={styles.paginationDots}>
               {images.map((_, index) => (
                 <TouchableOpacity
                   key={index}
-                  onPress={() => goToImage(index)}
+                  onPress={() => setCurrentIndex(index)}
                 >
                   <View
                     style={[
@@ -166,7 +155,7 @@ const ImageLightbox: React.FC<ImageLightboxProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.95)',
+    backgroundColor: '#000',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -184,27 +173,31 @@ const styles = StyleSheet.create({
   },
   image: {
     width: SCREEN_WIDTH,
-    height: SCREEN_HEIGHT * 0.8,
+    height: SCREEN_HEIGHT,
   },
   closeButton: {
     position: 'absolute',
-    top: 60,
+    top: 50,
     right: 20,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 10,
   },
   closeText: {
-    fontSize: 20,
-    color: Colors.neutral50,
-    fontWeight: '600',
+    fontSize: 22,
+    color: '#fff',
+    fontWeight: '700',
+    marginTop: -2,
   },
   pagination: {
     position: 'absolute',
-    bottom: 50,
+    bottom: 40,
     left: 0,
     right: 0,
     flexDirection: 'row',
@@ -223,7 +216,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.4)',
   },
   dotActive: {
-    backgroundColor: Colors.neutral50,
+    backgroundColor: '#fff',
     width: 24,
   },
   counter: {
@@ -234,7 +227,7 @@ const styles = StyleSheet.create({
   },
   counterText: {
     fontSize: 14,
-    color: Colors.neutral50,
+    color: '#fff',
     fontWeight: '500',
   },
 });

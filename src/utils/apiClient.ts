@@ -338,9 +338,7 @@ export const backendLoginFirebase = async (idToken: string, email: string): Prom
   if (data && data.token) {
     await AsyncStorage.setItem('auth_token', data.token);
     if (data.refreshToken) await AsyncStorage.setItem('refresh_token', data.refreshToken);
-    const userData = { ...data.user };
-    delete userData.token;
-    delete userData.refreshToken;
+    const { token, refreshToken, ...userData } = data;
     await AsyncStorage.setItem(USER_DATA_KEY, JSON.stringify(userData));
   }
   return data;

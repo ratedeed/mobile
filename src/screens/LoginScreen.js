@@ -69,11 +69,10 @@ const LoginScreen = () => {
       try {
         const backendResponse = await backendLoginFirebase(idToken, email);
         if (backendResponse?.token) {
-          await updateBackendToken(backendResponse.token, backendResponse.emailVerified, backendResponse.user);
+          const { token, refreshToken, ...userData } = backendResponse;
+          await updateBackendToken(backendResponse.token, backendResponse.emailVerified, userData);
           Toast.show({ type: 'success', text1: 'Success', text2: 'Logged in successfully!' });
-          // If user is a contractor, go to dashboard and reset stack to prevent going back to signup
-          const role = backendResponse.user?.role;
-          if (role === 'contractor') {
+          if (userData.role === 'contractor') {
             navigation.reset({
               index: 0,
               routes: [{ name: 'Main' }, { name: 'ContractorDashboard' }],
@@ -129,11 +128,11 @@ const LoginScreen = () => {
         setShowVerificationMessage(false);
         const backendResponse = await backendLoginFirebase(idToken, auth.currentUser.email);
         if (backendResponse?.token) {
-          await updateBackendToken(backendResponse.token, backendResponse.emailVerified, backendResponse.user);
+          const { token, refreshToken, ...userData } = backendResponse;
+          await updateBackendToken(backendResponse.token, backendResponse.emailVerified, userData);
           Toast.show({ type: 'success', text1: 'Success', text2: 'Logged in successfully!' });
           
-          const role = backendResponse.user?.role;
-          if (role === 'contractor') {
+          if (userData.role === 'contractor') {
             navigation.reset({
               index: 0,
               routes: [{ name: 'Main' }, { name: 'ContractorDashboard' }],
@@ -170,11 +169,11 @@ const LoginScreen = () => {
       });
 
       if (backendResponse?.token) {
-        await updateBackendToken(backendResponse.token, backendResponse.emailVerified, backendResponse.user || backendResponse);
+        const { token, refreshToken, ...userData } = backendResponse;
+        await updateBackendToken(backendResponse.token, backendResponse.emailVerified, userData);
         Toast.show({ type: 'success', text1: 'Success', text2: 'Signed in with Apple!' });
 
-        const role = (backendResponse.user?.role || backendResponse.role);
-        if (role === 'contractor') {
+        if (userData.role === 'contractor') {
           navigation.reset({
             index: 0,
             routes: [{ name: 'Main' }, { name: 'ContractorDashboard' }],

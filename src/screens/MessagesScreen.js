@@ -981,14 +981,9 @@ const MessagesScreen = () => {
               <Pressable onPress={pickImage} className="w-11 h-11 items-center justify-center rounded-full bg-neutral-50 dark:bg-neutral-800" accessibilityLabel="Attach image" accessibilityRole="button"><FontAwesome5 name="image" size={15} color={isDark ? "#a3a3a3" : "#737373"} /></Pressable>
               
               {(() => {
-                const isContractor = userRole === 'contractor';
+                const isContractor = userRole === 'contractor' || !!contractorProfile?._id;
                 const hasConversation = !!(selectedConversation?.conversationId || selectedConversation?._id);
-                // Use both local check and context check for robustness
                 const chargesEnabled = stripeStatus?.chargesEnabled || contractorProfile?.stripeAccountChargesEnabled || contractorProfile?.chargesEnabled;
-                
-                if (__DEV__ && isContractor && hasConversation && !chargesEnabled) {
-                  console.log('[Messages] Quote button suppressed: Stripe charges not enabled', { stripeStatus, contractorProfile });
-                }
 
                 if (isContractor && hasConversation) {
                   return (
@@ -1050,6 +1045,7 @@ const MessagesScreen = () => {
           recipientName={selectedConversation.otherParticipant?.firstName || chatName || "Client"}
           recipientPicture={selectedConversation.otherParticipant?.profilePicture}
           services={(contractorProfile?.servicesOffered || []).map((s) => s.name || s).filter(Boolean)}
+          category={contractorProfile?.category || ''}
           onCreated={() => {
             const convId = selectedConversation?.conversationId || selectedConversation?._id;
             if (convId) {
