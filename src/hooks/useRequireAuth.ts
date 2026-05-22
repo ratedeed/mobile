@@ -23,10 +23,10 @@ export function useRequireAuth() {
   const handleLogin = useCallback(() => {
     setShowGuestPrompt(false);
     // Navigate to auth stack — we'll add a param to know where to return
-    navigation.navigate('Auth' as any, { 
+    (navigation as any).navigate('Auth', { 
       screen: 'Login',
       params: { returnTo: 'Main' }
-    } as any);
+    });
   }, [navigation]);
 
   const handleClose = useCallback(() => {

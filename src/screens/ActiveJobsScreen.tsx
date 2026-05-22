@@ -4,7 +4,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { SvgImage } from '../components/common/SvgImage';
-import { getUserQuotes, cancelJob, resolveDispute, updateQuoteStatus } from '../utils/apiClient';
+import { getUserQuotes, cancelJob, cancelDispute, updateQuoteStatus } from '../utils/apiClient';
 import { getProfileImageUrl, isSvgUrl } from '../utils/avatarUtils';
 import { useAuth } from '../context/AuthContext';
 
@@ -97,15 +97,14 @@ export default function ActiveJobsScreen() {
     }
   };
 
-  const handleResolveDispute = async (jobId: string, action: 'resume_job' | 'refund') => {
+  const handleCancelDispute = async (jobId: string) => {
     try {
-      await resolveDispute(jobId, action);
-      const actionLabel = action === 'refund' ? 'refund issued' : 'job resumed';
-      Alert.alert('Dispute Resolved', `The dispute has been resolved and ${actionLabel}.`, [
+      await cancelDispute(jobId);
+      Alert.alert('Dispute Cancelled', 'Your dispute has been cancelled and the job has resumed. An admin may still review the matter.', [
         { text: 'OK', onPress: () => loadJobs() },
       ]);
     } catch (err: any) {
-      Alert.alert('Error', err?.message || 'Failed to resolve dispute.');
+      Alert.alert('Error', err?.message || 'Failed to cancel dispute.');
     }
   };
 
@@ -241,12 +240,18 @@ export default function ActiveJobsScreen() {
               <Pressable 
                 key={quote._id} 
                 className="bg-white dark:bg-neutral-950 rounded-2xl border border-neutral-100 dark:border-neutral-800 p-4 mb-3 shadow-sm"
-                onPress={() => navigation.navigate('PaymentFlow', {
-                  quoteId: quote._id,
-                  totalAmount: quote.totalAmount || quote.quoteTotal || 0,
-                  contractorName: quote.contractorId?.companyName || quote.contractorId?.businessName || 'Contractor',
-                  description: quote.description || quote.projectTitle || 'Home Project',
-                })}
+                onPress={() => {
+                  if (quote.jobId) {
+                    navigation.navigate('JobDetail', { jobId: quote.jobId });
+                  } else {
+                    navigation.navigate('PaymentFlow', {
+                      quoteId: quote._id,
+                      totalAmount: quote.totalAmount || quote.quoteTotal || 0,
+                      contractorName: quote.contractorId?.companyName || quote.contractorId?.businessName || 'Contractor',
+                      description: quote.description || quote.projectTitle || 'Home Project',
+                    });
+                  }
+                }}
               >
                 <View className="flex-row" style={{ gap: 12 }}>
                   <View className="w-12 h-12 rounded-xl bg-neutral-100 dark:bg-neutral-900 items-center justify-center shrink-0 overflow-hidden">
@@ -318,37 +323,22 @@ export default function ActiveJobsScreen() {
                     )}
 
                     {quote.status.toLowerCase() === 'disputed' && (
-                      <View className="mt-3 bg-red-50 border border-red-100 rounded-xl p-3" style={{ gap: 8 }}>
-                        <Text className="text-xs font-semibold text-red-800">Resolve Dispute</Text>
-                        <Text className="text-xs text-red-600 leading-4">Choose how to resolve this dispute.</Text>
-                        <View className="flex-row" style={{ gap: 8 }}>
-                          <Pressable
-                            onPress={() => Alert.alert(
-                              'Resume Job',
-                              'Release the escrowed funds to the contractor and mark the job as complete?',
-                              [
-                                { text: 'Cancel', style: 'cancel' },
-                                { text: 'Resume', onPress: () => handleResolveDispute(quote._id, 'resume_job') },
-                              ]
-                            )}
-                            className="flex-1 py-2 rounded-lg bg-white dark:bg-red-900/20 border border-red-200 dark:border-red-800 items-center"
-                          >
-                            <Text className="text-xs font-semibold text-red-700 dark:text-red-300">Resume Job</Text>
-                          </Pressable>
-                          <Pressable
-                            onPress={() => Alert.alert(
-                              'Issue Refund',
-                              'Refund the escrowed payment back to you?',
-                              [
-                                { text: 'Cancel', style: 'cancel' },
-                                { text: 'Refund', style: 'destructive', onPress: () => handleResolveDispute(quote._id, 'refund') },
-                              ]
-                            )}
-                            className="flex-1 py-2 rounded-lg bg-red-600 items-center"
-                          >
-                            <Text className="text-xs font-semibold text-white">Issue Refund</Text>
-                          </Pressable>
-                        </View>
+                      <View className="mt-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-3" style={{ gap: 6 }}>
+                        <Text className="text-xs font-semibold text-red-800 dark:text-red-300">Dispute Under Review</Text>
+                        <Text className="text-xs text-red-600 dark:text-red-400 leading-4">Our team is reviewing your dispute. You can cancel the dispute to resume the job, or wait for an admin to resolve it.</Text>
+                        <Pressable
+                          onPress={() => Alert.alert(
+                            'Cancel Dispute',
+                            'This will cancel your dispute and resume the job. Continue?',
+                            [
+                              { text: 'No', style: 'cancel' },
+                              { text: 'Cancel Dispute', style: 'destructive', onPress: () => handleCancelDispute(quote.jobId || quote._id) },
+                            ]
+                          )}
+                          className="py-2 rounded-lg bg-white dark:bg-neutral-800 border border-red-200 dark:border-red-800 items-center"
+                        >
+                          <Text className="text-xs font-semibold text-red-700 dark:text-red-300">Cancel Dispute & Resume Job</Text>
+                        </Pressable>
                       </View>
                     )}
 

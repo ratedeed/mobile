@@ -159,21 +159,17 @@ const BusinessSearchScreen: React.FC = () => {
     searchType === 'category' ? (query || 'all') : 'all'
   );
   const [contractors, setContractors] = useState<Contractor[]>([]);
-  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
   const [totalResults, setTotalResults] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [nearbyLabel, setNearbyLabel] = useState('');
   const isFirstRender = useRef(true);
 
-  const fetchContractors = useCallback(async (pageNum = 1, append = false) => {
+  const fetchContractors = useCallback(async () => {
     try {
-      if (pageNum === 1) setLoading(true);
-      else setLoadingMore(true);
+      setLoading(true);
 
-      const filters: any = { page: pageNum, limit: 20, sortBy: 'rating' };
+      const filters: any = { page: 1, limit: 500, sortBy: 'rating' };
 
       if (searchZip) {
         filters.zipCode = searchZip;
@@ -191,11 +187,7 @@ const BusinessSearchScreen: React.FC = () => {
       const data: any = await browseContractors(filters);
       const list = data?.contractors || data?.data || (Array.isArray(data) ? data : []);
 
-      if (append) {
-        setContractors(prev => [...prev, ...list]);
-      } else {
-        setContractors(list);
-      }
+      setContractors(list);
       
       // Handle nearby label
       if (searchZip && data?.isExpanded) {
@@ -206,14 +198,12 @@ const BusinessSearchScreen: React.FC = () => {
       }
 
       setTotalResults(data?.total || list.length);
-      setHasMore(data?.page < (data?.pages || 1));
-      setPage(pageNum);
     } catch (error) {
       // console.error('Error fetching contractors:', error);
-      if (!append) { setContractors([]); setTotalResults(0); }
+      setContractors([]);
+      setTotalResults(0);
     } finally {
       setLoading(false);
-      setLoadingMore(false);
       setRefreshing(false);
     }
   }, [searchZip, searchName, activeCategory]);
@@ -221,24 +211,20 @@ const BusinessSearchScreen: React.FC = () => {
   useEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false;
-      fetchContractors(1);
+      fetchContractors();
       return;
     }
-    fetchContractors(1);
+    fetchContractors();
   }, [activeCategory, fetchContractors]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (!isFirstRender.current) fetchContractors(1);
+      if (!isFirstRender.current) fetchContractors();
     }, 500);
     return () => clearTimeout(timer);
   }, [searchZip, searchName, fetchContractors]);
 
-  const handleLoadMore = () => {
-    if (!loadingMore && hasMore) fetchContractors(page + 1, true);
-  };
-
-  const onRefresh = () => { setRefreshing(true); fetchContractors(1); };
+  const onRefresh = () => { setRefreshing(true); fetchContractors(); };
 
   const handleCategorySelect = (catId: string) => {
     setActiveCategory(catId);
@@ -276,7 +262,7 @@ const BusinessSearchScreen: React.FC = () => {
             <TextInput
               value={searchZip}
               onChangeText={text => { setSearchZip(text); setActiveCategory('all'); }}
-              onSubmitEditing={() => fetchContractors(1)}
+              onSubmitEditing={() => fetchContractors()}
               placeholder="Zip code"
               placeholderTextColor="#a3a3a3"
               keyboardType="numeric"
@@ -300,7 +286,7 @@ const BusinessSearchScreen: React.FC = () => {
             <TextInput
               value={searchName}
               onChangeText={text => { setSearchName(text); setActiveCategory('all'); }}
-              onSubmitEditing={() => fetchContractors(1)}
+              onSubmitEditing={() => fetchContractors()}
               placeholder="Contractor name..."
               placeholderTextColor="#a3a3a3"
               className="bg-neutral-100 dark:bg-neutral-900 dark:text-neutral-50 rounded-full pl-10 pr-9 py-2.5 text-sm"
@@ -315,7 +301,7 @@ const BusinessSearchScreen: React.FC = () => {
 
           {/* Search Button */}
           <Pressable
-            onPress={() => fetchContractors(1)}
+            onPress={() => fetchContractors()}
             className="bg-indigo-600 rounded-full p-2.5 shrink-0"
           >
             <FontAwesome5 name="search" size={14} color="#fff" />
@@ -380,29 +366,6 @@ const BusinessSearchScreen: React.FC = () => {
           numColumns={2}
           columnWrapperStyle={{ justifyContent: 'space-between' }}
           contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 100 }}
-          ListFooterComponent={
-            hasMore ? (
-              <View className="py-8 items-center">
-                <Pressable
-                  onPress={handleLoadMore}
-                  disabled={loadingMore}
-                  className="flex-row items-center px-6 py-3 border border-neutral-200 dark:border-neutral-700 rounded-xl"
-                  style={{ gap: 8 }}
-                >
-                  {loadingMore ? (
-                    <ActivityIndicator size="small" color={isDark ? '#ffffff' : '#171717'} />
-                  ) : (
-                    <FontAwesome5 name="chevron-down" size={14} color={isDark ? '#d4d4d4' : '#171717'} />
-                  )}
-                  <Text className="text-sm font-semibold text-neutral-900 dark:text-neutral-50">
-                    {loadingMore ? 'Loading...' : 'Load More'}
-                  </Text>
-                </Pressable>
-              </View>
-            ) : null
-          }
-          onEndReached={handleLoadMore}
-          onEndReachedThreshold={0.3}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         />
       ) : hasSearch ? (

@@ -718,13 +718,18 @@ const BusinessDetailScreen: React.FC = () => {
 
           {/* Certifications & Licenses removed */}
 
-          {/* Service Area */}
           {(() => {
             const zipCodes = (c as any).serviceZipCodes || (c as any).zipCodesCovered || [];
             const serviceAreaText = (c as any).serviceArea || location;
             const hasMapData = !!serviceAreaText || (zipCodes && zipCodes.length > 0);
             if (!hasMapData) return null;
             const zipStrings = (zipCodes || []).map((zc: any) => typeof zc === 'string' ? zc : zc.zip || zc.name);
+            const businessCenter = (c as any).businessCenter || 
+              ((c as any).location && typeof (c as any).location === 'object' && Array.isArray((c as any).location.coordinates) && (c as any).location.coordinates.length === 2
+                ? [(c as any).location.coordinates[1], (c as any).location.coordinates[0]]
+                : undefined);
+            const lat = businessCenter ? businessCenter[0] : undefined;
+            const lng = businessCenter ? businessCenter[1] : undefined;
             return (
               <View className="mt-8">
                 <Text className="text-base font-bold text-neutral-900 dark:text-neutral-50 mb-1">Service Area</Text>
@@ -738,6 +743,9 @@ const BusinessDetailScreen: React.FC = () => {
                   businessName={c.companyName || c.businessName || 'Contractor'}
                   locationName={serviceAreaText}
                   zipCodes={zipStrings}
+                  zipGeoData={(c as any).zipGeoData || []}
+                  latitude={lat}
+                  longitude={lng}
                   height={180}
                 />
                 {zipCodes.length > 0 && (

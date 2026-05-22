@@ -30,6 +30,7 @@ import ReviewScreen from '../screens/ReviewScreen';
 import DisputeScreen from '../screens/DisputeScreen';
 import EarningsScreen from '../screens/EarningsScreen';
 import ChangeOrderScreen from '../screens/ChangeOrderScreen';
+import JobDetailScreen from '../screens/JobDetailScreen';
 import ContractorOnboardingScreen from '../screens/ContractorOnboardingScreen';
 import QuoteReviewScreen from '../screens/QuoteReviewScreen';
 import VerifyEmailChangeScreen from '../screens/VerifyEmailChangeScreen';
@@ -287,6 +288,7 @@ export default function MainNavigator() {
       <Stack.Screen name="DisputeScreen" component={DisputeScreen} options={{ title: 'File a Dispute' }} />
       <Stack.Screen name="EarningsScreen" component={EarningsScreen} options={{ title: 'Earnings', headerShown: false }} />
       <Stack.Screen name="ChangeOrderScreen" component={ChangeOrderScreen} options={{ title: 'Change Order' }} />
+      <Stack.Screen name="JobDetail" component={JobDetailScreen} options={{ title: '', headerShown: false }} />
       <Stack.Screen name="BusinessSearch" component={BusinessSearchScreen} options={{ title: '', headerShown: false }} />
       <Stack.Screen name="QuoteReview" component={QuoteReviewScreen} options={{ title: 'Review Quote' }} />
       <Stack.Screen name="VerifyEmailChange" component={VerifyEmailChangeScreen} options={{ title: 'Verify Email', headerShown: false }} />

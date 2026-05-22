@@ -1252,16 +1252,19 @@ const ContractorDashboardScreen: React.FC = () => {
                   ) : (
                     <View style={{ gap: 10 }}>
                       {jobs.map(job => (
-                        <View key={job._id} className="bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-700 p-4">
+                        <Pressable key={job._id} onPress={() => navigation.navigate('JobDetail', { jobId: job._id })} className="bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-700 p-4 active:bg-neutral-50 dark:active:bg-neutral-800">
                           <View className="flex-row justify-between items-start">
                             <View>
                               <Text className="text-sm font-semibold text-neutral-900 dark:text-white">{job.title || job.projectTitle || 'Job'}</Text>
                               <Text className="text-sm text-neutral-600 dark:text-neutral-300">{formatCurrency((job.totalAmount || job.amount || 0) / 100)}</Text>
                             </View>
-                            <StatusBadge status={job.status} />
+                            <View className="flex-row items-center" style={{ gap: 6 }}>
+                              <StatusBadge status={job.status} />
+                              <FontAwesome5 name="chevron-right" size={10} color="#a3a3a3" />
+                            </View>
                           </View>
                           <Text className="text-xs text-neutral-400 dark:text-neutral-500 mt-2">{formatDate(job.createdAt)}</Text>
-                        </View>
+                        </Pressable>
                       ))}
                     </View>
                   )}

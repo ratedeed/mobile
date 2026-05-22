@@ -329,7 +329,11 @@ export interface Quote {
   subtotal: number; // Contractor payout (in cents)
   platformFee: number; // Platform profit (in cents)
   totalAmount: number; // What customer pays (in cents)
+  estimatedStartDate?: string;
   estimatedCompletionDate?: string;
+  estimatedDuration?: string;
+  startTime?: string;
+  endTime?: string;
   contractorNotes?: string;
   status: 'pending_user_approval' | 'accepted' | 'rejected' | 'expired';
   isMilestone?: boolean;

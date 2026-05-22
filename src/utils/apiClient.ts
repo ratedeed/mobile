@@ -857,9 +857,9 @@ export const releaseFunds = async (jobId: string): Promise<any> => {
   return post(`${API_BASE}/jobs/${jobId}/release`, {}, authHeaders);
 };
 
-export const markJobComplete = async (jobId: string): Promise<any> => {
+export const markJobComplete = async (jobId: string, completionNotes?: string): Promise<any> => {
   const authHeaders = await getAuthHeaders();
-  return post(`${API_BASE}/jobs/${jobId}/complete`, {}, authHeaders);
+  return post(`${API_BASE}/jobs/${jobId}/complete`, { completionNotes }, authHeaders);
 };
 
 export const raiseDispute = async (jobId: string, reason: string, milestoneId?: string, evidence?: string[]): Promise<any> => {
@@ -1023,9 +1023,28 @@ export const updateQuoteStatus = async (quoteId: string, status: 'accepted' | 'r
 // Dispute Resolution
 // ==========================================
 
-export const resolveDispute = async (jobId: string, action: 'resume_job' | 'refund'): Promise<any> => {
+export const resolveDispute = async (jobId: string, action: 'release_all' | 'refund_all' | 'split' | 'resume', notes?: string): Promise<any> => {
   const authHeaders = await getAuthHeaders();
-  return post(`${API_BASE}/jobs/${jobId}/dispute/resolve`, { action }, authHeaders);
+  return post(`${API_BASE}/jobs/${jobId}/dispute/resolve`, { action, notes }, authHeaders);
+};
+
+export const cancelDispute = async (jobId: string): Promise<any> => {
+  const authHeaders = await getAuthHeaders();
+  return post(`${API_BASE}/jobs/${jobId}/dispute/cancel`, {}, authHeaders);
+};
+
+// ==========================================
+// Job Detail
+// ==========================================
+
+export const getJobById = async (jobId: string): Promise<any> => {
+  const authHeaders = await getAuthHeaders();
+  return get(`${API_BASE}/jobs/${jobId}`, authHeaders);
+};
+
+export const uploadProgressPhoto = async (jobId: string, url: string): Promise<any> => {
+  const authHeaders = await getAuthHeaders();
+  return post(`${API_BASE}/jobs/${jobId}/progress-photo`, { url }, authHeaders);
 };
 
 // ==========================================

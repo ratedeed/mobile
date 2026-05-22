@@ -9,6 +9,7 @@ interface ServiceAreaMapProps {
   latitude?: number;
   longitude?: number;
   zipCodes?: string[];
+  zipGeoData?: any[];
   height?: number;
 }
 
@@ -110,6 +111,7 @@ export default function ServiceAreaMap({
   latitude,
   longitude,
   zipCodes = [],
+  zipGeoData = [],
   height = 220,
 }: ServiceAreaMapProps) {
   const mapRef = useRef<MapView>(null);
@@ -133,8 +135,32 @@ export default function ServiceAreaMap({
     return () => { cancelled = true; };
   }, [latitude, longitude, locationName]);
 
-  // Fetch zip code polygons
+  // Fetch zip code polygons or use zipGeoData
   useEffect(() => {
+    if (zipGeoData && zipGeoData.length > 0) {
+      const results: ZipArea[] = zipGeoData
+        .filter((zc: any) => zc && zc.bounds)
+        .map((zc: any) => {
+          const [sw, ne] = zc.bounds;
+          return {
+            zip: zc.zip,
+            coords: [
+              { latitude: sw[0], longitude: sw[1] },
+              { latitude: sw[0], longitude: ne[1] },
+              { latitude: ne[0], longitude: ne[1] },
+              { latitude: ne[0], longitude: sw[1] }
+            ]
+          };
+        });
+      setZipAreas(results);
+      if (!center && results.length > 0) {
+        const avgLat = results[0].coords.reduce((s, c) => s + c.latitude, 0) / results[0].coords.length;
+        const avgLng = results[0].coords.reduce((s, c) => s + c.longitude, 0) / results[0].coords.length;
+        setCenter({ lat: avgLat, lng: avgLng });
+      }
+      return;
+    }
+
     if (!zipCodes.length) { setZipAreas([]); return; }
     let cancelled = false;
     (async () => {
@@ -154,7 +180,7 @@ export default function ServiceAreaMap({
       }
     })();
     return () => { cancelled = true; };
-  }, [zipCodes.join(',')]);
+  }, [zipCodes.join(','), zipGeoData]);
 
   // Zoom to show all areas once polygons are loaded
   useEffect(() => {

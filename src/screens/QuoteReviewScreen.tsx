@@ -28,6 +28,67 @@ export default function QuoteReviewScreen() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [showDeclineConfirm, setShowDeclineConfirm] = useState(false);
 
+  const [timeLeft, setTimeLeft] = useState('');
+  const [isExpired, setIsExpired] = useState(false);
+  const [isUrgent, setIsUrgent] = useState(false);
+
+  useEffect(() => {
+    if (!quote || !quote.expiresAt) {
+      setTimeLeft('');
+      setIsExpired(false);
+      setIsUrgent(false);
+      return;
+    }
+
+    const expiryTime = new Date(quote.expiresAt).getTime();
+
+    function updateTimer() {
+      const now = Date.now();
+      const diff = expiryTime - now;
+
+      if (diff <= 0) {
+        setTimeLeft('Expired');
+        setIsExpired(true);
+        setIsUrgent(false);
+        return true; // Stop
+      }
+
+      const sixHoursMs = 6 * 60 * 60 * 1000;
+      setIsUrgent(diff < sixHoursMs);
+      setIsExpired(false);
+
+      const totalSecs = Math.floor(diff / 1000);
+      const days = Math.floor(totalSecs / 86400);
+      const hours = Math.floor((totalSecs % 86400) / 3600);
+      const minutes = Math.floor((totalSecs % 3600) / 60);
+      const seconds = totalSecs % 60;
+
+      let timeText = '';
+      if (days > 0) {
+        timeText = `${days}d ${hours}h ${minutes}m`;
+      } else {
+        const hrsStr = String(hours).padStart(2, '0');
+        const minsStr = String(minutes).padStart(2, '0');
+        const secsStr = String(seconds).padStart(2, '0');
+        timeText = `${hrsStr}:${minsStr}:${secsStr}`;
+      }
+      setTimeLeft(timeText);
+      return false;
+    }
+
+    const shouldStop = updateTimer();
+    if (shouldStop) return;
+
+    const interval = setInterval(() => {
+      const stop = updateTimer();
+      if (stop) {
+        clearInterval(interval);
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [quote]);
+
   useEffect(() => {
     if (!quoteId) {
       setError('Missing quote ID.');
@@ -146,6 +207,48 @@ export default function QuoteReviewScreen() {
               <Text className="text-xs text-emerald-700 dark:text-emerald-300 mt-0.5">Proceed to payment to get started.</Text>
             </View>
           </View>
+        )}
+
+        {/* Airbnb-style Countdown / Expiration Banner */}
+        {quote.status === 'pending' && (
+          isExpired ? (
+            <View className="bg-red-50 dark:bg-red-950/30 rounded-xl p-4 flex-row items-start border border-red-100 dark:border-red-900/50 mb-4" style={{ gap: 12 }}>
+              <View className="w-8 h-8 rounded-full bg-red-100 dark:bg-red-900/40 items-center justify-center mt-0.5">
+                <FontAwesome5 name="exclamation-triangle" size={13} color="#ef4444" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-sm font-bold text-red-800 dark:text-red-300">This quote has expired</Text>
+                <Text className="text-xs text-red-700 dark:text-red-400 mt-1 leading-4">
+                  The 24-hour window to accept this quote has passed. Please contact the contractor to request a new quote.
+                </Text>
+              </View>
+            </View>
+          ) : isUrgent ? (
+            <View className="bg-amber-50 dark:bg-amber-950/30 rounded-xl p-4 flex-row items-start border border-amber-200 dark:border-amber-900/50 mb-4" style={{ gap: 12 }}>
+              <View className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-900/40 items-center justify-center mt-0.5">
+                <FontAwesome5 name="clock" size={13} color="#d97706" />
+              </View>
+              <View className="flex-1">
+                <View className="flex-row justify-between items-baseline">
+                  <Text className="text-sm font-bold text-amber-800 dark:text-amber-300">Expires soon</Text>
+                  <Text className="text-sm font-black text-amber-900 dark:text-amber-200 font-mono tracking-wider">{timeLeft}</Text>
+                </View>
+                <Text className="text-xs text-amber-700 dark:text-amber-400 mt-1 leading-4">
+                  Review and accept within the next {timeLeft} to lock in this price and schedule.
+                </Text>
+              </View>
+            </View>
+          ) : timeLeft ? (
+            <View className="bg-white dark:bg-neutral-900 rounded-xl p-4 flex-row items-center justify-between border border-neutral-200 dark:border-neutral-700 mb-4">
+              <View className="flex-row items-center" style={{ gap: 10 }}>
+                <FontAwesome5 name="clock" size={13} color="#4f46e5" />
+                <Text className="text-xs font-semibold text-neutral-600 dark:text-neutral-300">Time remaining to accept:</Text>
+              </View>
+              <View className="bg-neutral-100 dark:bg-neutral-800 px-2.5 py-1 rounded-md">
+                <Text className="text-xs font-extrabold text-neutral-900 dark:text-neutral-100 font-mono tracking-wide">{timeLeft}</Text>
+              </View>
+            </View>
+          ) : null
         )}
 
         {/* Contractor Card */}
@@ -291,21 +394,31 @@ export default function QuoteReviewScreen() {
         <View className="absolute bottom-0 left-0 right-0 bg-white dark:bg-neutral-900 border-t border-neutral-200 dark:border-neutral-700 px-4 py-3">
           <Pressable
             onPress={handleAccept}
-            disabled={actionLoading !== null}
+            disabled={actionLoading !== null || isExpired}
             className={`py-3.5 rounded-xl items-center flex-row justify-center mb-2 ${
-              actionLoading ? 'bg-indigo-400' : 'bg-indigo-600'
+              isExpired 
+                ? 'bg-neutral-300 dark:bg-neutral-800' 
+                : actionLoading 
+                  ? 'bg-indigo-400' 
+                  : 'bg-indigo-600'
             }`}
             style={{ gap: 8 }}
           >
             {actionLoading === 'accept' ? (
               <ActivityIndicator size="small" color="#fff" />
             ) : null}
-            <Text className="text-white font-bold text-sm">
-              {quote.status === 'accepted' ? 'Continue to Payment' : actionLoading === 'accept' ? 'Accepting...' : `Accept & Pay ${Number(totalInDollars).toLocaleString()}`}
+            <Text className={`font-bold text-sm ${isExpired ? 'text-neutral-500' : 'text-white'}`}>
+              {quote.status === 'accepted' 
+                ? 'Continue to Payment' 
+                : isExpired 
+                  ? 'Quote Expired' 
+                  : actionLoading === 'accept' 
+                    ? 'Accepting...' 
+                    : `Accept & Pay ${Number(totalInDollars).toLocaleString()}`}
             </Text>
-            {actionLoading !== 'accept' && <FontAwesome5 name="arrow-right" size={12} color="#fff" />}
+            {actionLoading !== 'accept' && !isExpired && <FontAwesome5 name="arrow-right" size={12} color="#fff" />}
           </Pressable>
-          {isPending && (<Pressable onPress={() => setShowDeclineConfirm(true)} disabled={actionLoading !== null} className="py-2 items-center"> <Text className="text-sm text-neutral-500 dark:text-neutral-400 dark:text-neutral-500">Decline this quote</Text> </Pressable>)}
+          {isPending && !isExpired && (<Pressable onPress={() => setShowDeclineConfirm(true)} disabled={actionLoading !== null} className="py-2 items-center"> <Text className="text-sm text-neutral-500 dark:text-neutral-400 dark:text-neutral-500">Decline this quote</Text> </Pressable>)}
         </View>
       )}
 

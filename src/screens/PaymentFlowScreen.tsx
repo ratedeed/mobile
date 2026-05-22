@@ -98,6 +98,23 @@ export default function PaymentFlowScreen() {
     }
   };
 
+  const verifyPaymentStatus = async () => {
+    try {
+      setPaying(true);
+      const { getQuote } = await import('../api');
+      const quote = await getQuote(quoteId);
+      if (quote && (quote.status === 'accepted' || quote.status === 'paid' || quote.jobId)) {
+        setCurrentStep(2);
+      } else {
+        Alert.alert('Payment Not Confirmed', 'We could not confirm your payment yet. If you just paid, please wait a moment and try again.');
+      }
+    } catch (e) {
+      Alert.alert('Error', 'Could not verify payment status.');
+    } finally {
+      setPaying(false);
+    }
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: isDark ? '#09090B' : '#ffffff' }}>
       {/* Header */}
@@ -203,6 +220,18 @@ export default function PaymentFlowScreen() {
                   <Text style={{ fontSize: 16, fontWeight: 'bold', color: 'white' }}>Secure Checkout</Text>
                 </>
               )}
+            </Pressable>
+            
+            <Pressable
+              onPress={verifyPaymentStatus}
+              disabled={paying}
+              style={{
+                width: '100%', paddingVertical: 14, borderRadius: 12, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, marginTop: 12,
+                backgroundColor: paying ? '#f5f5f5' : '#f4f4f5', borderWidth: 1, borderColor: '#e4e4e7'
+              }}
+            >
+              <FontAwesome5 name="sync" size={12} color={isDark ? '#a3a3a3' : '#737373'} />
+              <Text style={{ fontSize: 14, fontWeight: '600', color: isDark ? '#a3a3a3' : '#52525b' }}>Verify Payment Status</Text>
             </Pressable>
             
             <View style={{ alignItems: 'center', marginTop: 16 }}>

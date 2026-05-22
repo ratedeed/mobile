@@ -315,7 +315,7 @@ const MessagesScreen = () => {
   const insets = useSafeAreaInsets();
   const { userId: currentUserId, userRole, isAuthenticated } = useAuth();
   const { contractorProfile } = useContractor();
-  const { refreshUnreadMessagesCount } = useNotifications();
+  const { refreshUnreadMessagesCount, refreshNotifications } = useNotifications();
   const myContractorId = contractorProfile?._id || contractorProfile?.id;
 
   const recipientId = route.params?.recipientId;
@@ -388,6 +388,7 @@ const MessagesScreen = () => {
         if (!isMessageFromMe(msg)) {
           emitMessageRead(msg._id, currentUserId, selectedConvRef.current?.conversationId);
           refreshUnreadMessagesCount();
+          refreshNotifications();
         }
       }
     };
@@ -556,6 +557,7 @@ const MessagesScreen = () => {
       const { markConversationAsRead } = await import("../api");
       await markConversationAsRead(conversationId);
       refreshUnreadMessagesCount();
+      refreshNotifications();
 
       const data = await fetchMessages(conversationId);
       const msgs = Array.isArray(data) ? data : data?.messages || [];
@@ -572,7 +574,7 @@ const MessagesScreen = () => {
     } catch (err) {
       console.error("[Messages] Load error:", err);
     } finally { setLoading(false); }
-  }, [currentUserId, refreshUnreadMessagesCount]);
+  }, [currentUserId, refreshUnreadMessagesCount, refreshNotifications]);
 
   useEffect(() => {
     const cId = selectedConversation?.conversationId;
