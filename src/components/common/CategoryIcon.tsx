@@ -208,6 +208,8 @@ function CustomIcon({ name, active }: { name: string; active: boolean }) {
   }
 }
 
+let categoryEntrancePlayed = false;
+
 export const CategoryIcon = memo(function CategoryIcon({ 
   name, 
   active, 
@@ -234,19 +236,28 @@ export const CategoryIcon = memo(function CategoryIcon({
 
   // ── Entrance Animation (Matches Web's complex 3D pop) ──
   useEffect(() => {
-    const delay = index * 100;
-    progress.value = 0;
-    progress.value = withDelay(
-      delay,
-      withSpring(1, { 
-        damping: 12, 
-        stiffness: 90,
-        mass: 1 
-      })
-    );
+    const delay = categoryEntrancePlayed ? 0 : index * 100;
+    let timer: NodeJS.Timeout;
+
+    if (categoryEntrancePlayed) {
+      progress.value = 1;
+    } else {
+      progress.value = 0;
+      progress.value = withDelay(
+        delay,
+        withSpring(1, { 
+          damping: 12, 
+          stiffness: 90,
+          mass: 1 
+        })
+      );
+      timer = setTimeout(() => {
+        categoryEntrancePlayed = true;
+      }, 2000);
+    }
 
     // ── Start Idle Float after entrance ──
-    setTimeout(() => {
+    const floatTimer = setTimeout(() => {
       floatVal.value = withRepeat(
         withSequence(
           withTiming(1, { duration: cfg3D.floatSpeed / 2, easing: Easing.inOut(Easing.ease) }),
@@ -255,7 +266,12 @@ export const CategoryIcon = memo(function CategoryIcon({
         -1,
         true
       );
-    }, delay + 1200);
+    }, categoryEntrancePlayed ? 0 : delay + 1200);
+
+    return () => {
+      if (timer) clearTimeout(timer);
+      clearTimeout(floatTimer);
+    };
   }, [name, index, cfg3D.floatSpeed]);
 
   // ── Press Animation ──
