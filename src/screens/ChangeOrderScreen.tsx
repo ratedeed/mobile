@@ -13,22 +13,40 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
-import { createChangeOrder } from '../api';
+import { createChangeOrder, acceptChangeOrder, declineChangeOrder } from '../api';
+import { useAuth } from '../context/AuthContext';
+
+const sanitizeAmount = (text: string) => {
+  let cleaned = text.replace(/[^0-9.]/g, '');
+  const parts = cleaned.split('.');
+  if (parts.length > 2) {
+    cleaned = parts[0] + '.' + parts.slice(1).join('');
+  }
+  return cleaned;
+};
+
+const formatCurrency = (cents: number) => `$${(cents / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
 
 export default function ChangeOrderScreen() {
   const isDark = useColorScheme() === 'dark';
   const navigation = useNavigation();
   const route = useRoute();
-  const { jobId, mode, changeOrderId } = (route.params || {}) as {
+  const { userRole } = useAuth();
+  const isContractor = userRole === 'contractor';
+  const isUser = !isContractor;
+
+  const { jobId, mode, changeOrderId, changeOrder: initialChangeOrder } = (route.params || {}) as {
     jobId: string;
     mode: 'create' | 'review';
     changeOrderId?: string;
+    changeOrder?: any;
   };
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [changeOrderState, setChangeOrderState] = useState(initialChangeOrder);
 
   const handleSubmit = async () => {
     if (!title.trim()) {
@@ -72,6 +90,38 @@ export default function ChangeOrderScreen() {
     }
   };
 
+  const handleAccept = async () => {
+    if (!jobId || !changeOrderState?._id) return;
+    setSubmitting(true);
+    try {
+      await acceptChangeOrder(jobId, changeOrderState._id);
+      setChangeOrderState((prev: any) => ({ ...prev, status: 'accepted' }));
+      Alert.alert('Success', 'Change order accepted successfully.', [
+        { text: 'OK', onPress: () => navigation.goBack() }
+      ]);
+    } catch (err: any) {
+      Alert.alert('Error', err?.message || 'Failed to accept change order.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDecline = async () => {
+    if (!jobId || !changeOrderState?._id) return;
+    setSubmitting(true);
+    try {
+      await declineChangeOrder(jobId, changeOrderState._id);
+      setChangeOrderState((prev: any) => ({ ...prev, status: 'declined' }));
+      Alert.alert('Success', 'Change order declined.', [
+        { text: 'OK', onPress: () => navigation.goBack() }
+      ]);
+    } catch (err: any) {
+      Alert.alert('Error', err?.message || 'Failed to decline change order.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const isValid =
     title.trim().length > 0 &&
     description.trim().length > 0 &&
@@ -80,25 +130,25 @@ export default function ChangeOrderScreen() {
     parseFloat(amount) > 0;
 
   const isCreate = mode === 'create';
-return (
-  <KeyboardAvoidingView
-    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
-    className="flex-1 bg-white dark:bg-neutral-950"
-  >
-    {/* Header */}
-    <View className="border-b border-neutral-200 dark:border-neutral-700 px-4 py-3 flex-row items-center">
-      <Pressable
-        onPress={() => navigation.goBack()}
-        className="w-8 h-8 items-center justify-center"
-      >
-        <FontAwesome5 name="chevron-left" size={18} color={isDark ? '#ffffff' : '#171717'} />
-      </Pressable>
-      <Text className="flex-1 text-sm font-bold text-neutral-900 dark:text-white text-center">
-        {isCreate ? 'New Change Order' : 'Change Order Details'}
-      </Text>
-      <View className="w-8" />
-    </View>
+  return (
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+      className="flex-1 bg-white dark:bg-neutral-950"
+    >
+      {/* Header */}
+      <View className="border-b border-neutral-200 dark:border-neutral-700 px-4 py-3 flex-row items-center">
+        <Pressable
+          onPress={() => navigation.goBack()}
+          className="w-8 h-8 items-center justify-center"
+        >
+          <FontAwesome5 name="chevron-left" size={18} color={isDark ? '#ffffff' : '#171717'} />
+        </Pressable>
+        <Text className="flex-1 text-sm font-bold text-neutral-900 dark:text-white text-center">
+          {isCreate ? 'New Change Order' : 'Change Order Details'}
+        </Text>
+        <View className="w-8" />
+      </View>
 
       <ScrollView
         className="flex-1 px-6"
@@ -165,7 +215,7 @@ return (
               <TextInput
                 placeholder="0.00"
                 value={amount}
-                onChangeText={setAmount}
+                onChangeText={(text) => setAmount(sanitizeAmount(text))}
                 keyboardType="decimal-pad"
                 className="flex-1 py-3 text-sm text-neutral-900 dark:text-white"
                 placeholderTextColor={isDark ? "#9ca3af" : "#a3a3a3"}
@@ -216,20 +266,86 @@ return (
             </Text>
           </>
         ) : (
-          /* Review Mode Placeholder */
-          <View className="bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-700 p-8 items-center">
-            <View className="w-16 h-16 rounded-full bg-indigo-50 dark:bg-indigo-900/20 items-center justify-center mb-4">
-              <FontAwesome5 name="file-contract" size={24} color="#4F46E5" />
+          /* Review Mode Details */
+          <View className="bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-700 p-6">
+            <View className="flex-row items-center justify-between mb-4">
+              <Text className="text-lg font-bold text-neutral-900 dark:text-white">
+                {changeOrderState?.title || 'Change Order Details'}
+              </Text>
+              <View className={`px-2.5 py-0.5 rounded-full ${
+                changeOrderState?.status === 'accepted'
+                  ? 'bg-emerald-50 dark:bg-emerald-900/30'
+                  : changeOrderState?.status === 'declined'
+                  ? 'bg-red-50 dark:bg-red-900/30'
+                  : 'bg-amber-50 dark:bg-amber-900/30'
+              }`}>
+                <Text className={`text-xs font-semibold ${
+                  changeOrderState?.status === 'accepted'
+                    ? 'text-emerald-700 dark:text-emerald-300'
+                    : changeOrderState?.status === 'declined'
+                    ? 'text-red-700 dark:text-red-300'
+                    : 'text-amber-700 dark:text-amber-300'
+                }`}>
+                  {changeOrderState?.status || 'pending'}
+                </Text>
+              </View>
             </View>
-            <Text className="text-base font-semibold text-neutral-900 dark:text-white mb-2">Change Order Review</Text>
-            <Text className="text-sm text-neutral-500 dark:text-neutral-400 text-center leading-5">
-              {changeOrderId
-                ? `Reviewing change order #${changeOrderId}. The details and response options will appear here.`
-                : 'Change order details will appear here once loaded.'}
-            </Text>
+
+            {changeOrderState?.description ? (
+              <View className="mb-4">
+                <Text className="text-xs text-neutral-400 dark:text-neutral-500 mb-1">Description</Text>
+                <Text className="text-sm text-neutral-700 dark:text-neutral-300">
+                  {changeOrderState.description}
+                </Text>
+              </View>
+            ) : null}
+
+            <View className="border-t border-neutral-100 dark:border-neutral-800 pt-4 mb-6">
+              <View className="flex-row items-center justify-between">
+                <Text className="text-sm font-medium text-neutral-500 dark:text-neutral-400">Additional Amount</Text>
+                <Text className="text-xl font-bold text-neutral-900 dark:text-white">
+                  {changeOrderState ? formatCurrency(changeOrderState.amount) : '$0.00'}
+                </Text>
+              </View>
+            </View>
+
+            {isUser && changeOrderState?.status === 'pending' ? (
+              <View className="flex-row" style={{ gap: 12 }}>
+                <Pressable
+                  onPress={handleDecline}
+                  disabled={submitting}
+                  className="flex-1 py-3 border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/10 rounded-xl items-center"
+                >
+                  {submitting ? (
+                    <ActivityIndicator size="small" color="#ef4444" />
+                  ) : (
+                    <Text className="text-red-600 dark:text-red-400 font-bold text-sm">Decline</Text>
+                  )}
+                </Pressable>
+
+                <Pressable
+                  onPress={handleAccept}
+                  disabled={submitting}
+                  className="flex-1 py-3 bg-emerald-600 rounded-xl items-center"
+                >
+                  {submitting ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Text className="text-white font-bold text-sm">Accept</Text>
+                  )}
+                </Pressable>
+              </View>
+            ) : (
+              <Text className="text-xs text-neutral-400 dark:text-neutral-500 text-center leading-5 mt-2">
+                {changeOrderState?.status === 'pending'
+                  ? 'Awaiting response from the homeowner.'
+                  : `This change order was ${changeOrderState?.status || 'processed'}.`}
+              </Text>
+            )}
           </View>
         )}
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
+

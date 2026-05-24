@@ -96,12 +96,23 @@ export default function ContractorOnboardingScreen() {
     return uri;
   };
 
-  const saveAndNext = async () => {
+  const saveAndNext = async (isSkip = false) => {
+    if (isSkip) {
+      if (currentStep < STEPS.length - 1) {
+        setCurrentStep(currentStep + 1);
+      }
+      return;
+    }
     setSaving(true);
     try {
       const updateData: any = {};
 
       if (currentStep === 1) {
+        if (!description.trim()) {
+          Alert.alert('Required', 'Please enter a description about your business.');
+          setSaving(false);
+          return;
+        }
         if (profilePictureUri) {
           const cloudinaryUrl = await uploadToCloudinary(profilePictureUri, CLOUDINARY_FOLDERS.CONTRACTOR_PROFILE);
           updateData.profilePicture = cloudinaryUrl;
@@ -111,7 +122,7 @@ export default function ContractorOnboardingScreen() {
           updateData.bannerImage = cloudinaryUrl;
           updateData.bannerUrl = cloudinaryUrl;
         }
-        if (description) updateData.description = description;
+        updateData.description = description.trim();
       } else if (currentStep === 2) {
         const valid = services.filter(s => s.name.trim());
         if (valid.length > 0) updateData.servicesOffered = valid;
@@ -129,9 +140,19 @@ export default function ContractorOnboardingScreen() {
         }
         if (uploaded.length > 0) updateData.portfolio = uploaded;
       } else if (currentStep === 4) {
-        if (zipCodes.trim()) {
-          updateData.zipCodesCovered = zipCodes.split(',').map(z => z.trim()).filter(Boolean);
+        const rawCodes = zipCodes.split(',').map(z => z.trim()).filter(Boolean);
+        if (rawCodes.length === 0) {
+          Alert.alert('Required', 'Please enter at least one ZIP code.');
+          setSaving(false);
+          return;
         }
+        const invalidCodes = rawCodes.filter(z => !/^\d{5}$/.test(z));
+        if (invalidCodes.length > 0) {
+          Alert.alert('Invalid ZIP Code', `The following ZIP codes are invalid: ${invalidCodes.join(', ')}. Please enter only 5-digit ZIP codes.`);
+          setSaving(false);
+          return;
+        }
+        updateData.zipCodesCovered = rawCodes;
       } else if (currentStep === 5) {
         if (licenseNumber.trim()) updateData.licenseNumber = licenseNumber;
       }
@@ -490,7 +511,7 @@ export default function ContractorOnboardingScreen() {
           )}
           {currentStep < STEPS.length - 1 ? (
             <Pressable
-              onPress={saveAndNext}
+              onPress={() => saveAndNext(false)}
               disabled={saving}
               className="flex-1 py-3 bg-neutral-900 dark:bg-white rounded-xl flex-row items-center justify-center"
               style={{ gap: 8, opacity: saving ? 0.5 : 1 }}
@@ -521,9 +542,9 @@ export default function ContractorOnboardingScreen() {
               )}
             </Pressable>
           )}
-          {currentStep < STEPS.length - 1 && currentStep > 0 && (
+          {currentStep < STEPS.length - 1 && currentStep > 1 && (
             <Pressable
-              onPress={saveAndNext}
+              onPress={() => saveAndNext(true)}
               disabled={saving}
               className="py-3"
             >

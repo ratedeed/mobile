@@ -436,10 +436,7 @@ const BusinessDetailScreen: React.FC = () => {
             </View>
           )}
 
-          {/* Gradient overlay */}
-          {heroImages.length > 0 && (
-            <View className="absolute bottom-0 left-0 right-0 h-24" style={{ backgroundColor: 'rgba(0,0,0,0.3)' }} />
-          )}
+
 
           {/* Carousel arrows */}
           {heroImages.length > 1 && activeImageIndex > 0 && (
@@ -560,6 +557,8 @@ const BusinessDetailScreen: React.FC = () => {
             </View>
           )}
 
+
+
           {/* Quick Stats */}
           <View className="flex-row mt-6 py-4 border-y border-neutral-100 dark:border-neutral-800">
             <View className="flex-1 items-center">
@@ -597,17 +596,47 @@ const BusinessDetailScreen: React.FC = () => {
             </View>
           )}
 
-          {/* Service Badges */}
-          {serviceBadges.length > 0 && (
-            <View className="flex-row flex-wrap mt-4" style={{ gap: 8 }}>
-              {serviceBadges.map((b, i) => (
-                <View key={i} className="flex-row items-center bg-indigo-50 dark:bg-indigo-950 border border-indigo-200 dark:border-indigo-800 rounded-full px-3 py-1.5" style={{ gap: 6 }}>
-                  <FontAwesome5 name={b.icon} size={10} color="#4F46E5" />
-                  <Text className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">{b.label}</Text>
-                </View>
-              ))}
+          {/* Top 3 Highlights (Vertical List) */}
+          <View className="py-6 border-b border-neutral-100 dark:border-neutral-800" style={{ gap: 20 }}>
+            {/* Highlight 1: Verified & Licensed */}
+            <View className="flex-row items-start" style={{ gap: 16 }}>
+              <FontAwesome5 name="check-circle" size={24} color={isDark ? '#e2e8f0' : '#171717'} style={{ marginTop: 2 }} />
+              <View className="flex-1">
+                <Text className="text-base font-bold text-neutral-900 dark:text-neutral-50">Verified & Licensed</Text>
+                <Text className="text-sm text-neutral-500 dark:text-neutral-400 mt-1 leading-5">
+                  We've verified this contractor's identity{c.isVerified ? ' and state licenses' : ''} to ensure top-tier quality standards.
+                </Text>
+              </View>
             </View>
-          )}
+
+            {/* Highlight 2: Experience / Response */}
+            {(((c as any).yearsInBusiness || (c as any).yearsExperience || 0) > 0 || !!(c as any).responseTime) && (
+              <View className="flex-row items-start" style={{ gap: 16 }}>
+                <FontAwesome5 name="clock" size={24} color={isDark ? '#e2e8f0' : '#171717'} style={{ marginTop: 2 }} />
+                <View className="flex-1">
+                  <Text className="text-base font-bold text-neutral-900 dark:text-neutral-50">
+                    {((c as any).yearsInBusiness || (c as any).yearsExperience || 0) > 0
+                      ? `${(c as any).yearsInBusiness || (c as any).yearsExperience} Years Experience`
+                      : `Fast Response`}
+                  </Text>
+                  <Text className="text-sm text-neutral-500 dark:text-neutral-400 mt-1 leading-5">
+                    A highly experienced professional with a proven track record of timely communication and project delivery.
+                  </Text>
+                </View>
+              </View>
+            )}
+
+            {/* Highlight 3: Escrow Protected */}
+            <View className="flex-row items-start" style={{ gap: 16 }}>
+              <FontAwesome5 name="lock" size={24} color={isDark ? '#e2e8f0' : '#171717'} style={{ marginTop: 2 }} />
+              <View className="flex-1">
+                <Text className="text-base font-bold text-neutral-900 dark:text-neutral-50">Escrow Protected</Text>
+                <Text className="text-sm text-neutral-500 dark:text-neutral-400 mt-1 leading-5">
+                  Your funds are held securely in escrow and only released when you are completely satisfied with the work.
+                </Text>
+              </View>
+            </View>
+          </View>
 
           {/* Services */}
           {services.length > 0 && (
@@ -926,6 +955,7 @@ const BusinessDetailScreen: React.FC = () => {
         <View>
           <Text className="text-lg font-bold text-neutral-900 dark:text-neutral-50">From {priceMin || 'N/A'}</Text>
           <Text className="text-[10px] text-neutral-500 uppercase tracking-tighter">Starting Project Price</Text>
+          <Text className="text-[10px] text-neutral-400 mt-0.5">You won't be charged yet</Text>
         </View>
         <View className="flex-row items-center" style={{ gap: 8 }}>
           {(c.contactInfo?.phoneNumber || (c as any).phone) && (
@@ -975,31 +1005,45 @@ const BusinessDetailScreen: React.FC = () => {
       {isQuoteModalVisible && (
         <View className="absolute inset-0 z-[100] justify-end" style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
           <Pressable className="flex-1" onPress={() => setIsQuoteModalVisible(false)} />
-          <View className="bg-white dark:bg-neutral-950 rounded-t-3xl p-6">
-            <Text className="text-xl font-bold mb-4">Request Quote</Text>
-            <TextInput
-              placeholder="What do you need help with?"
-              className="bg-neutral-50 dark:bg-neutral-900 p-4 rounded-xl mb-3 text-sm"
-              value={quoteProjectTitle}
-              onChangeText={setQuoteProjectTitle}
-            />
-            <TextInput
-              placeholder="Describe your project in detail..."
-              multiline
-              numberOfLines={4}
-              className="bg-neutral-50 dark:bg-neutral-900 p-4 rounded-xl mb-4 text-sm"
-              style={{ height: 100, textAlignVertical: 'top' }}
-              value={quoteDescription}
-              onChangeText={setQuoteDescription}
-            />
+          <View className="bg-white dark:bg-neutral-950 rounded-t-3xl p-6 pb-10">
+            <Text className="text-xl font-bold mb-4 text-neutral-900 dark:text-neutral-50">Request Quote</Text>
+            
+            {/* Crisp Outlined Inputs Card */}
+            <View className="border border-neutral-300 dark:border-neutral-700 rounded-xl overflow-hidden mb-4 bg-neutral-50 dark:bg-neutral-900">
+              <View className="p-3 border-b border-neutral-300 dark:border-neutral-700">
+                <Text className="text-[10px] font-extrabold text-neutral-900 dark:text-neutral-200 uppercase tracking-wider">Project Title</Text>
+                <TextInput
+                  placeholder="What do you need help with? (e.g. Roof Repair)"
+                  placeholderTextColor={isDark ? '#737373' : '#a3a3a3'}
+                  className="text-[15px] text-neutral-800 dark:text-neutral-200 mt-1 p-0"
+                  value={quoteProjectTitle}
+                  onChangeText={setQuoteProjectTitle}
+                />
+              </View>
+              <View className="p-3">
+                <Text className="text-[10px] font-extrabold text-neutral-900 dark:text-neutral-200 uppercase tracking-wider">Project Details</Text>
+                <TextInput
+                  placeholder="Describe your project in detail..."
+                  placeholderTextColor={isDark ? '#737373' : '#a3a3a3'}
+                  multiline
+                  numberOfLines={4}
+                  className="text-[15px] text-neutral-800 dark:text-neutral-200 mt-1 p-0 text-left"
+                  style={{ minHeight: 80, textAlignVertical: 'top' }}
+                  value={quoteDescription}
+                  onChangeText={setQuoteDescription}
+                />
+              </View>
+            </View>
+
             <View className="flex-row" style={{ gap: 12 }}>
-              <Pressable onPress={() => setIsQuoteModalVisible(false)} className="flex-1 py-4 items-center">
-                <Text className="text-neutral-500 font-bold">Cancel</Text>
+              <Pressable onPress={() => setIsQuoteModalVisible(false)} className="flex-1 py-4 items-center justify-center">
+                <Text className="text-neutral-500 dark:text-neutral-400 font-bold">Cancel</Text>
               </Pressable>
-              <Pressable onPress={handleRequestQuote} className="flex-2 bg-indigo-600 py-4 px-10 rounded-xl items-center">
+              <Pressable onPress={handleRequestQuote} className="flex-2 bg-indigo-600 py-4 px-10 rounded-xl items-center justify-center">
                 <Text className="text-white font-bold">Send Request</Text>
               </Pressable>
             </View>
+            <Text className="text-center text-xs text-neutral-500 dark:text-neutral-400 mt-3">You won't be charged yet</Text>
           </View>
         </View>
       )}

@@ -45,6 +45,15 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; 
 const formatCurrency = (cents: number) => `$${(cents / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
 const formatDate = (d: string) => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
+const sanitizeAmount = (text: string) => {
+  let cleaned = text.replace(/[^0-9.]/g, '');
+  const parts = cleaned.split('.');
+  if (parts.length > 2) {
+    cleaned = parts[0] + '.' + parts.slice(1).join('');
+  }
+  return cleaned;
+};
+
 export default function JobDetailScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<RouteProp<RootStackParamList, 'JobDetail'>>();
@@ -109,9 +118,14 @@ export default function JobDetailScreen() {
       Alert.alert('Error', 'Title and amount are required.');
       return;
     }
+    const parsedAmount = parseFloat(coAmount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      Alert.alert('Error', 'Please enter a valid amount greater than 0.');
+      return;
+    }
     setActionLoading('changeOrder');
     try {
-      await createChangeOrder(jobId, { title: coTitle.trim(), description: coDescription.trim(), amount: Math.round(parseFloat(coAmount) * 100) });
+      await createChangeOrder(jobId, { title: coTitle.trim(), description: coDescription.trim(), amount: Math.round(parsedAmount * 100) });
       Alert.alert('Success', 'Change order sent!');
       setShowChangeOrder(false);
       setCoTitle('');
@@ -124,6 +138,7 @@ export default function JobDetailScreen() {
       setActionLoading(null);
     }
   };
+
 
   if (loading) {
     return (
@@ -363,7 +378,7 @@ export default function JobDetailScreen() {
                   <Text className="text-[14px] font-bold text-white">Release Payment</Text>
                 </Pressable>
               )}
-              {isUser && !['disputed', 'cancelled', 'refunded', 'completed_paid'].includes(job.status) && job.status !== 'completed_pending_release' && (
+              {isUser && !['disputed', 'cancelled', 'refunded', 'completed_paid'].includes(job.status) && (
                 <Pressable
                   onPress={() => navigation.navigate('DisputeScreen', { jobId: job._id })}
                   className="flex-row items-center justify-center py-3 rounded-xl border border-red-300 dark:border-red-800"
@@ -417,7 +432,7 @@ export default function JobDetailScreen() {
               <Text className="text-[12px] font-semibold text-neutral-500 dark:text-neutral-400 mb-1">Additional Amount ($)</Text>
               <View className="flex-row items-center border border-neutral-200 dark:border-neutral-700 rounded-xl px-3 bg-white dark:bg-neutral-900">
                 <Text className="text-[14px] text-neutral-400">$</Text>
-                <TextInput value={coAmount} onChangeText={setCoAmount} placeholder="0" placeholderTextColor="#a3a3a3" keyboardType="decimal-pad" className="flex-1 py-2.5 text-[14px] font-semibold text-neutral-900 dark:text-neutral-50" />
+                <TextInput value={coAmount} onChangeText={(text) => setCoAmount(sanitizeAmount(text))} placeholder="0" placeholderTextColor="#a3a3a3" keyboardType="decimal-pad" className="flex-1 py-2.5 text-[14px] font-semibold text-neutral-900 dark:text-neutral-50" />
               </View>
             </View>
             <Pressable

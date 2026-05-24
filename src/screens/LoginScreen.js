@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
-import { backendLoginFirebase, syncEmailVerificationStatus, appleSignIn } from '../api';
+import { backendLoginFirebase, syncEmailVerificationStatus, appleSignIn, getContractorProfile } from '../api';
 import { auth } from '../firebaseConfig';
 import { sendEmailVerification, signInWithEmailAndPassword } from 'firebase/auth';
 import Toast from 'react-native-toast-message';
@@ -30,6 +30,28 @@ const LoginScreen = () => {
   const [apiError, setApiError] = useState(null);
   const navigation = useNavigation();
   const { updateBackendToken } = useAuth();
+
+  const redirectContractor = async () => {
+    try {
+      const profile = await getContractorProfile();
+      if (profile && profile.onboardingComplete === true) {
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Main' }, { name: 'ContractorDashboard' }],
+        });
+      } else {
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Main' }, { name: 'ContractorOnboarding' }],
+        });
+      }
+    } catch (err) {
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Main' }, { name: 'ContractorOnboarding' }],
+      });
+    }
+  };
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(user => {
@@ -73,10 +95,7 @@ const LoginScreen = () => {
           await updateBackendToken(backendResponse.token, backendResponse.emailVerified, userData);
           Toast.show({ type: 'success', text1: 'Success', text2: 'Logged in successfully!' });
           if (userData.role === 'contractor') {
-            navigation.reset({
-              index: 0,
-              routes: [{ name: 'Main' }, { name: 'ContractorDashboard' }],
-            });
+            await redirectContractor();
           } else if (navigation.canGoBack()) {
             navigation.goBack();
           } else {
@@ -133,10 +152,7 @@ const LoginScreen = () => {
           Toast.show({ type: 'success', text1: 'Success', text2: 'Logged in successfully!' });
           
           if (userData.role === 'contractor') {
-            navigation.reset({
-              index: 0,
-              routes: [{ name: 'Main' }, { name: 'ContractorDashboard' }],
-            });
+            await redirectContractor();
           } else if (navigation.canGoBack()) {
             navigation.goBack();
           } else {
@@ -174,10 +190,7 @@ const LoginScreen = () => {
         Toast.show({ type: 'success', text1: 'Success', text2: 'Signed in with Apple!' });
 
         if (userData.role === 'contractor') {
-          navigation.reset({
-            index: 0,
-            routes: [{ name: 'Main' }, { name: 'ContractorDashboard' }],
-          });
+          await redirectContractor();
         } else if (navigation.canGoBack()) {
           navigation.goBack();
         } else {
