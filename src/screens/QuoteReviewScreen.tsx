@@ -209,7 +209,7 @@ export default function QuoteReviewScreen() {
           </View>
         )}
 
-        {/* Airbnb-style Countdown / Expiration Banner */}
+        {/* Countdown / Expiration Banner */}
         {quote.status === 'pending' && (
           isExpired ? (
             <View className="bg-red-50 dark:bg-red-950/30 rounded-xl p-4 flex-row items-start border border-red-100 dark:border-red-900/50 mb-4" style={{ gap: 12 }}>
