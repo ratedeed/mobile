@@ -105,7 +105,8 @@
         {
           "userTrackingPermission": "Allow RateDeed to use your data to provide a better, more personalized experience and for analytics."
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "scheme": "ratedeed",
     "extra": {

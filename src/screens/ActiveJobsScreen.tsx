@@ -351,7 +351,7 @@ export default function ActiveJobsScreen() {
                             : 'This will cancel the job. Continue?',
                           [
                             { text: 'Keep Job', style: 'cancel' },
-                            { text: 'Cancel Job', style: 'destructive', onPress: () => handleCancel(quote._id) }
+                            { text: 'Cancel Job', style: 'destructive', onPress: () => handleCancel(quote.jobId || quote._id) }
                           ]
                         )}
                         className="flex-row items-center mt-3"

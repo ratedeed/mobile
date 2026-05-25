@@ -73,7 +73,8 @@ const BusinessDetailScreen: React.FC = () => {
   const route = useRoute();
   const navigation = useNavigation<NavigationProp>();
   const isDark = useColorScheme() === 'dark';
-  const { id } = route.params as { id: string };
+  const params = route.params as { id?: string; slug?: string } || {};
+  const id = params.id || params.slug || '';
   
   const [contractor, setContractor] = useState<Contractor | null>(null);
   const [contractorPosts, setContractorPosts] = useState<Post[]>([]);

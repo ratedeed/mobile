@@ -2,8 +2,9 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthInfo, UserRole } from '../types';
 import { syncFavoritesWithServer } from '../utils/favoritesStore';
-import { disconnectSocket } from '../utils/apiClient';
+import { disconnectSocket, setAuthInvalidatedCallback } from '../utils/apiClient';
 import { jwtDecode } from 'jwt-decode';
+import { getSecureItem, setSecureItem, removeSecureItem } from '../utils/secureStore';
 
 const USER_DATA_KEY = 'ratedeed-user-data';
 
@@ -23,29 +24,30 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const saveUserData = async (data: Record<string, any>) => {
-  await AsyncStorage.setItem(USER_DATA_KEY, JSON.stringify(data));
+const isTokenExpired = (token: string): boolean => {
+  try {
+    const decoded: any = jwtDecode(token);
+    if (!decoded.exp) return false;
+    const now = Date.now() / 1000;
+    return decoded.exp < now;
+  } catch {
+    return true;
+  }
 };
 
-const loadUserData = async (): Promise<Record<string, any> | null> => {
+const loadUserData = async (): Promise<any | null> => {
   try {
-    const raw = await AsyncStorage.getItem(USER_DATA_KEY);
-    return raw ? JSON.parse(raw) : null;
+    const data = await AsyncStorage.getItem(USER_DATA_KEY);
+    return data ? JSON.parse(data) : null;
   } catch {
     return null;
   }
 };
 
-const isTokenExpired = (token: string): boolean => {
+const saveUserData = async (data: any): Promise<void> => {
   try {
-    const decoded: any = jwtDecode(token);
-    if (decoded.exp) {
-      return Date.now() >= decoded.exp * 1000;
-    }
-    return false;
-  } catch {
-    return true;
-  }
+    await AsyncStorage.setItem(USER_DATA_KEY, JSON.stringify(data));
+  } catch {}
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -56,17 +58,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    loadStoredAuth();
-  }, []);
-
   const loadStoredAuth = async () => {
     try {
-      const token = await AsyncStorage.getItem('auth_token');
+      const token = await getSecureItem('auth_token');
       if (token) {
         if (isTokenExpired(token)) {
-          await AsyncStorage.removeItem('auth_token');
-          await AsyncStorage.removeItem('refresh_token');
+          await removeSecureItem('auth_token');
+          await removeSecureItem('refresh_token');
           await AsyncStorage.removeItem(USER_DATA_KEY);
         } else {
           setBackendToken(token);
@@ -104,10 +102,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch {}
 
     try {
-      await AsyncStorage.removeItem('auth_token');
+      await removeSecureItem('auth_token');
     } catch {}
     try {
-      await AsyncStorage.removeItem('refresh_token');
+      await removeSecureItem('refresh_token');
     } catch {}
     try {
       await AsyncStorage.removeItem(USER_DATA_KEY);
@@ -119,6 +117,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsEmailVerified(false);
     setUserRole(null);
   }, []);
+
+  useEffect(() => {
+    loadStoredAuth();
+    setAuthInvalidatedCallback(() => {
+      logout();
+    });
+  }, [logout]);
 
   const updateUser = useCallback(async (userData: Partial<AuthInfo>) => {
     try {
@@ -137,14 +142,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const updateBackendToken = useCallback(async (token: string, emailVerifiedStatus: boolean, userData?: any) => {
     if (token) {
-      await AsyncStorage.setItem('auth_token', token);
+      await setSecureItem('auth_token', token);
     }
 
     const currentData = await loadUserData() || {};
     const mergedData = { ...currentData, ...userData, emailVerified: emailVerifiedStatus };
 
     if (userData?.refreshToken) {
-      await AsyncStorage.setItem('refresh_token', userData.refreshToken);
+      await setSecureItem('refresh_token', userData.refreshToken);
       delete mergedData.refreshToken;
     }
     delete mergedData.token;

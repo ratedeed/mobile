@@ -237,6 +237,7 @@ function MainTabNavigator() {
 export default function MainNavigator() {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const { userRole, isAuthenticated } = useAuth();
 
   const dynamicScreenOptions = {
     headerStyle: {
@@ -262,12 +263,12 @@ export default function MainNavigator() {
             width: 36,
             height: 36,
             borderRadius: 18,
-            backgroundColor: '#F4F4F5',
+            backgroundColor: isDark ? '#27272A' : '#F4F4F5',
             alignItems: 'center',
             justifyContent: 'center',
           }}
         >
-          <CaretLeft size={20} color="#09090B" weight="bold" />
+          <CaretLeft size={20} color={isDark ? '#FAFAFA' : '#09090B'} weight="bold" />
         </TouchableOpacity>
       ) : null,
     cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
@@ -277,16 +278,20 @@ export default function MainNavigator() {
     <Stack.Navigator screenOptions={dynamicScreenOptions}>
       <Stack.Screen name="Main" component={MainTabNavigator} options={{ headerShown: false }} />
       <Stack.Screen name="BusinessDetail" component={BusinessDetailScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="ContractorDashboard" component={ContractorDashboardScreen} options={{ title: '' }} />
-      <Stack.Screen name="ContractorOnboarding" component={ContractorOnboardingScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="ContractorEditProfile" component={ContractorEditProfileScreen} options={{ headerShown: false }} />
+      {isAuthenticated && (userRole === 'contractor' || userRole === 'admin') ? (
+        <>
+          <Stack.Screen name="ContractorDashboard" component={ContractorDashboardScreen} options={{ title: '' }} />
+          <Stack.Screen name="ContractorOnboarding" component={ContractorOnboardingScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="ContractorEditProfile" component={ContractorEditProfileScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="EarningsScreen" component={EarningsScreen} options={{ title: 'Earnings', headerShown: false }} />
+        </>
+      ) : null}
       <Stack.Screen name="Notifications" component={NotificationsScreen} />
       <Stack.Screen name="ChatScreen" component={MessagesScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ActiveJobs" component={ActiveJobsScreen} options={{ title: '', headerShown: false }} />
       <Stack.Screen name="PaymentFlow" component={PaymentFlowScreen} options={{ title: '', headerShown: false }} />
       <Stack.Screen name="ReviewScreen" component={ReviewScreen} options={{ title: 'Leave a Review' }} />
       <Stack.Screen name="DisputeScreen" component={DisputeScreen} options={{ title: 'File a Dispute' }} />
-      <Stack.Screen name="EarningsScreen" component={EarningsScreen} options={{ title: 'Earnings', headerShown: false }} />
       <Stack.Screen name="ChangeOrderScreen" component={ChangeOrderScreen} options={{ title: 'Change Order' }} />
       <Stack.Screen name="JobDetail" component={JobDetailScreen} options={{ title: '', headerShown: false }} />
       <Stack.Screen name="BusinessSearch" component={BusinessSearchScreen} options={{ title: '', headerShown: false }} />

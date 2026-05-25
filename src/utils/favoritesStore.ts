@@ -1,11 +1,12 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../config';
 import { get, post as apiPost, del } from './apiClient';
+import { getSecureItem } from './secureStore';
 
 const FAVORITES_KEY = 'ratedeed_favorites';
 
 export const getFavorites = async (): Promise<string[]> => {
-  const token = await AsyncStorage.getItem('auth_token');
+  const token = await getSecureItem('auth_token');
 
   // 1. Always try server first — this is the single source of truth
   if (token) {
@@ -30,7 +31,7 @@ export const getFavorites = async (): Promise<string[]> => {
 };
 
 export const syncFavoritesWithServer = async () => {
-  const token = await AsyncStorage.getItem('auth_token');
+  const token = await getSecureItem('auth_token');
   if (!token) return;
 
   try {

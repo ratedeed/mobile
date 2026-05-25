@@ -455,13 +455,17 @@ const MessagesScreen = () => {
 
   // ─── Scroll to bottom when keyboard shows ──────────────────────────────────
   useEffect(() => {
+    let timerId;
     const showSub = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', () => {
       // Small delay to let layout settle before scrolling
-      setTimeout(() => {
+      timerId = setTimeout(() => {
         messagesRef.current?.scrollToEnd({ animated: true });
       }, 100);
     });
-    return () => showSub.remove();
+    return () => {
+      showSub.remove();
+      if (timerId) clearTimeout(timerId);
+    };
   }, []);
 
   // ─── Load conversations ────────────────────────────────────────────────────
@@ -737,6 +741,168 @@ const MessagesScreen = () => {
     }
   };
 
+  const handleSelectConversation = useCallback((item) => {
+    HapticFeedback.selection();
+    setSelectedConversation(item);
+  }, []);
+
+  const renderMessageItem = useCallback(({ item: msg, index: idx }) => {
+    if (msg.type === "system" || resolveId(msg.senderId || msg.sender) === "system") {
+      return (
+        <View key={msg._id || `s-${idx}`} className="items-center my-4">
+          <View className="bg-neutral-200/60 dark:bg-neutral-700/60 px-4 py-1.5 rounded-full">
+            <Text className="text-[11px] text-neutral-500 dark:text-neutral-400 font-medium">{msg.messageText}</Text>
+          </View>
+        </View>
+      );
+    }
+    const isMe = msg.isMe;
+    return (
+      <View key={msg._id || `m-${idx}`}>
+        {msg.showDate && (
+          <View className="items-center my-5">
+            <View className="bg-white/80 dark:bg-neutral-800/80 px-4 py-1.5 rounded-full shadow-sm border border-neutral-100/50 dark:border-neutral-700/50">
+              <Text className="text-[11px] font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">{formatChatDate(msg.createdAt)}</Text>
+            </View>
+          </View>
+        )}
+        <View className={`flex-row ${isMe ? "justify-end" : "justify-start"} ${msg.isFirstInGroup ? "mt-4" : "mt-1"}`}>
+          {!isMe && msg.isFirstInGroup ? (
+            <View className="w-8 mr-2 mt-1 items-center">
+              {isSvgUrl(chatAvatar) ? (
+                <View className="w-7 h-7 rounded-full overflow-hidden"><SvgImage uri={chatAvatar} width="100%" height="100%" /></View>
+              ) : (
+                <Image source={{ uri: chatAvatar }} className="w-7 h-7 rounded-full bg-neutral-100" />
+              )}
+            </View>
+          ) : !isMe ? (
+            <View className="w-8 mr-2" />
+          ) : null}
+          <View className={`${(msg.type === "quote" || msg.quoteId) && msg.quote ? "w-[92%]" : "max-w-[78%]"} ${isMe ? "items-end" : "items-start"}`}>
+            {(msg.type === "quote" || msg.quoteId) && msg.quote ? (
+              <>
+                <View className="w-full bg-white dark:bg-neutral-800 rounded-2xl border border-neutral-200 dark:border-neutral-700 overflow-hidden" style={{ shadowColor: "#000", shadowOpacity: isDark ? 0 : 0.06, shadowRadius: 8, shadowOffset: { height: 2 }, elevation: isDark ? 0 : 2 }}>
+                  {msg.quote.status && msg.quote.status !== 'pending' && msg.quote.status !== 'pending_user_approval' && (
+                    <View className={`px-4 py-2 flex-row items-center border-b ${msg.quote.status === 'accepted' || msg.quote.status === 'funded_in_progress' ? (isDark ? 'bg-emerald-900/40 border-emerald-800' : 'bg-emerald-50 border-emerald-100') : msg.quote.status === 'rejected' || msg.quote.status === 'declined' ? (isDark ? 'bg-red-900/40 border-red-800' : 'bg-red-50 border-red-100') : (isDark ? 'bg-amber-900/40 border-amber-800' : 'bg-amber-50 border-amber-100')}`}>
+                      <FontAwesome5 name={msg.quote.status === 'accepted' || msg.quote.status === 'funded_in_progress' ? 'check-circle' : msg.quote.status === 'rejected' || msg.quote.status === 'declined' ? 'times-circle' : 'clock'} size={12} color={msg.quote.status === 'accepted' || msg.quote.status === 'funded_in_progress' ? (isDark ? '#6ee7b7' : '#059669') : msg.quote.status === 'rejected' || msg.quote.status === 'declined' ? (isDark ? '#fca5a5' : '#dc2626') : (isDark ? '#fcd34d' : '#d97706')} />
+                      <Text className={`text-[12px] font-semibold ml-2 ${msg.quote.status === 'accepted' || msg.quote.status === 'funded_in_progress' ? (isDark ? 'text-emerald-300' : 'text-emerald-700') : msg.quote.status === 'rejected' || msg.quote.status === 'declined' ? (isDark ? 'text-red-300' : 'text-red-700') : (isDark ? 'text-amber-300' : 'text-amber-700')}`}>
+                        {msg.quote.status === 'accepted' || msg.quote.status === 'funded_in_progress' ? 'Quote Accepted' : msg.quote.status === 'rejected' || msg.quote.status === 'declined' ? 'Quote Declined' : 'Pending Review'}
+                      </Text>
+                    </View>
+                  )}
+                  
+                  {/* Contractor row */}
+                  <View className="flex-row p-4 pb-3" style={{ gap: 12 }}>
+                    {isSvgUrl(chatAvatar) ? (
+                      <View className="w-10 h-10 rounded-full overflow-hidden bg-neutral-100 dark:bg-neutral-700"><SvgImage uri={chatAvatar} width="100%" height="100%" /></View>
+                    ) : (
+                      <Image source={{ uri: chatAvatar }} className="w-10 h-10 rounded-full bg-neutral-100 dark:bg-neutral-700" />
+                    )}
+                    <View className="flex-1 min-w-0">
+                      <Text className="text-[14px] font-semibold text-neutral-900 dark:text-white" numberOfLines={1}>{chatName}</Text>
+                      <View className="flex-row items-center mt-0.5" style={{ gap: 4 }}>
+                        <FontAwesome5 name="star" size={10} color="#eab308" solid />
+                        <Text className="text-[12px]" style={{ color: isDark ? '#d4d4d4' : '#737373' }}>{msg.quote.contractor?.averageRating || '5.0'}</Text>
+                      </View>
+                    </View>
+                  </View>
+                  
+                  {/* Category + Description */}
+                  <View className="px-4 pb-3">
+                    <View className="flex-row mb-1.5" style={{ gap: 6 }}>
+                      <View className="px-2 py-0.5 rounded-md" style={{ backgroundColor: isDark ? '#1e3a8a' : '#eff6ff' }}><Text className="text-[11px] font-semibold" style={{ color: isDark ? '#93c5fd' : '#1d4ed8' }}>{msg.quote.serviceType || msg.quote.category || 'Service'}</Text></View>
+                      {msg.quote.revisions > 0 && <View className="px-2 py-0.5 rounded-md" style={{ backgroundColor: isDark ? '#581c87' : '#faf5ff' }}><Text className="text-[11px] font-medium" style={{ color: isDark ? '#d8b4fe' : '#7e22ce' }}>Revision #{msg.quote.revisions}</Text></View>}
+                    </View>
+                    <Text className="text-[15px] font-semibold" style={{ color: isDark ? '#ffffff' : '#171717' }}>{msg.quote.description || msg.quote.projectName || 'Project Quote'}</Text>
+                    {msg.quote.description && msg.quote.projectName && msg.quote.description !== msg.quote.projectName && (
+                      <Text className="text-[13px] mt-1 leading-[18px]" style={{ color: isDark ? '#d4d4d4' : '#525252' }}>{msg.quote.description}</Text>
+                    )}
+                  </View>
+                  
+                  {/* Dates */}
+                  {(msg.quote.estimatedStartDate || msg.quote.estimatedCompletionDate) && (
+                    <View className="px-4 pb-3 flex-row" style={{ gap: 16 }}>
+                      {msg.quote.estimatedStartDate && (
+                        <View className="flex-row items-center" style={{ gap: 6 }}>
+                          <FontAwesome5 name="calendar" size={12} color={isDark ? "#a3a3a3" : "#737373"} />
+                          <Text className="text-[12px] font-medium" style={{ color: isDark ? '#d4d4d4' : '#404040' }}>
+                            {(() => { try { return new Date(msg.quote.estimatedStartDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); } catch { return 'TBD'; } })()}
+                          </Text>
+                        </View>
+                      )}
+                      {msg.quote.estimatedCompletionDate && (
+                        <View className="flex-row items-center" style={{ gap: 6 }}>
+                          <FontAwesome5 name="clock" size={12} color={isDark ? "#a3a3a3" : "#737373"} />
+                          <Text className="text-[12px]" style={{ color: isDark ? '#d4d4d4' : '#737373' }}>
+                            {(() => { try { return new Date(msg.quote.estimatedCompletionDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); } catch { return 'TBD'; } })()}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  )}
+                  
+                  {/* Divider */}
+                  <View className="mx-4 h-px bg-neutral-100 dark:bg-neutral-700" />
+                  
+                  {/* Line items */}
+                  <View className="p-4 py-3" style={{ gap: 10 }}>
+                    {(msg.quote.lineItems || []).length > 0 ? (
+                      msg.quote.lineItems.map((item, idx) => (
+                        <View key={idx} className="flex-row justify-between">
+                          <Text className="text-[13px] flex-1 mr-3" numberOfLines={1} style={{ color: isDark ? '#d4d4d4' : '#525252' }}>{item.description || item.label || `Item ${idx + 1}`}</Text>
+                          <Text className="text-[13px] font-medium" style={{ color: isDark ? '#ffffff' : '#171717' }}>${((item.amount || 0) / 100).toLocaleString()}</Text>
+                        </View>
+                      ))
+                    ) : (
+                      <View className="flex-row justify-between">
+                        <Text className="text-[13px]" style={{ color: isDark ? '#d4d4d4' : '#525252' }}>Project Cost</Text>
+                        <Text className="text-[13px] font-medium" style={{ color: isDark ? '#ffffff' : '#171717' }}>${(() => { const a = (msg.quote.subtotal || msg.quote.totalAmount || 0) / 100; return Number.isFinite(a) ? a.toLocaleString() : '0'; })()}</Text>
+                      </View>
+                    )}
+                    
+                    <View className="h-px bg-neutral-100 dark:bg-neutral-700 my-1" />
+                    
+                    <View className="flex-row justify-between items-center">
+                      <Text className="text-[13px] font-semibold" style={{ color: isDark ? '#ffffff' : '#171717' }}>Total</Text>
+                      <Text className="text-[18px] font-bold" style={{ color: isDark ? '#ffffff' : '#171717' }}>${(() => {
+                        const amount = msg.quote.totalAmount != null ? msg.quote.totalAmount / 100 : msg.quote.total != null ? msg.quote.total : 0;
+                        return Number.isFinite(amount) ? amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00';
+                      })()}</Text>
+                    </View>
+                  </View>
+                  
+                  {/* Escrow notice */}
+                  <View className="mx-4 mb-4 p-3 rounded-xl flex-row items-start" style={{ gap: 8, backgroundColor: isDark ? '#1e3a8a' : '#eff6ff' }}>
+                    <FontAwesome5 name="shield-alt" size={14} color={isDark ? "#60a5fa" : "#2563EB"} style={{ marginTop: 1 }} />
+                    <Text className="text-[11px] flex-1 leading-[16px]" style={{ color: isDark ? '#bfdbfe' : '#1d4ed8' }}>Secure escrow — funds held until you approve the completed work.</Text>
+                  </View>
+                  
+                  {/* Action button */}
+                  <View className="px-4 pb-4">
+                    <Pressable onPress={() => navigation.navigate('QuoteReview', { quoteId: msg.quoteId || msg.quote.id || msg.quote._id })} className="py-3 bg-indigo-600 rounded-xl items-center flex-row justify-center" style={{ gap: 6 }} accessibilityLabel="Review quote details" accessibilityRole="button">
+                      <Text className="text-[14px] font-semibold text-white">Review Details</Text>
+                      <FontAwesome5 name="arrow-right" size={12} color="#FFFFFF" />
+                    </Pressable>
+                  </View>
+                </View>
+                {msg.isLastInGroup && <View className={`flex-row items-center mt-1.5 px-1 ${isMe ? "justify-end" : "justify-start"}`} style={{ gap: 4 }}><Text className="text-[10px] text-neutral-400 font-medium">{msg.timeStr}</Text>{isMe && <FontAwesome5 name={msg.read ? "check-double" : "check"} size={9} color={msg.read ? "#10b981" : "#c4b5fd"} solid={msg.read} />}</View>}
+              </>
+            ) : (
+              <>
+                <View className={`px-[14px] py-[10px] ${isMe ? `bg-indigo-600 ${msg.isFirstInGroup ? "rounded-2xl rounded-tr-md" : "rounded-2xl"}` : `bg-white dark:bg-neutral-800 ${msg.isFirstInGroup ? "rounded-2xl rounded-tl-md" : "rounded-2xl"}`}`} style={!isMe ? { shadowColor: isDark ? "transparent" : "#000", shadowOpacity: isDark ? 0 : 0.04, shadowRadius: 8, shadowOffset: { height: 1 }, elevation: isDark ? 0 : 1 } : undefined}>
+                  {msg.attachmentUrl && /\.(jpg|jpeg|png|gif|webp)$/i.test(msg.attachmentUrl) && <Pressable onPress={() => { setActiveImage(msg.attachmentUrl); setLightboxVisible(true); }} className="mb-1.5 -mx-[2px] -mt-[2px] overflow-hidden" style={{ borderRadius: msg.isFirstInGroup ? 14 : 16 }}><Image source={{ uri: msg.attachmentUrl }} style={{ width: 240, height: 180 }} resizeMode="cover" /></Pressable>}
+                  {msg.attachmentUrl && !/\.(jpg|jpeg|png|gif|webp)$/i.test(msg.attachmentUrl) && <Pressable onPress={() => Linking.openURL(msg.attachmentUrl)} className={`flex-row items-center p-2.5 rounded-xl mb-1.5 border ${isMe ? "bg-white/10 border-white/20" : "bg-neutral-50 dark:bg-neutral-700 border-neutral-200 dark:border-neutral-600"}`}><FontAwesome5 name="file-alt" size={14} color={isMe ? "white" : (isDark ? "#a3a3a3" : "#737373")} /><Text className={`text-[12px] ml-2 font-semibold ${isMe ? "text-white" : "text-neutral-600 dark:text-neutral-300"}`}>View Attachment</Text></Pressable>}
+                  {msg.messageText ? <Text className={`text-[15px] leading-[22px] ${isMe ? "text-white" : "text-neutral-800 dark:text-neutral-100"}`}>{msg.messageText}</Text> : null}
+                </View>
+                {msg.isLastInGroup && <View className={`flex-row items-center mt-1 px-1 ${isMe ? "justify-end" : "justify-start"}`} style={{ gap: 4 }}><Text className="text-[10px] text-neutral-400 font-medium">{msg.timeStr}</Text>{isMe && <FontAwesome5 name={msg.read ? "check-double" : "check"} size={9} color={msg.read ? "#10b981" : "#c4b5fd"} solid={msg.read} />}</View>}
+              </>
+            )}
+          </View>
+        </View>
+      </View>
+    );
+  }, [chatAvatar, chatName, isDark, navigation, setActiveImage, setLightboxVisible]);
+
   const filteredConversations = useMemo(() => {
     return Object.values(conversations)
       .filter((c) => c.lastMessage)
@@ -803,7 +969,7 @@ const MessagesScreen = () => {
             ) : filteredConversations.length === 0 ? (
               <EmptyInbox />
             ) : (
-              <FlatList data={filteredConversations} keyExtractor={(c) => c.conversationId || c._id} renderItem={({ item }) => <ConversationItem conv={item} currentUserId={currentUserId} onlineUsers={onlineUsers} onPress={() => { HapticFeedback.selection(); setSelectedConversation(item); }} />} ItemSeparatorComponent={() => <View className="ml-[82px] border-b border-neutral-100 dark:border-neutral-800" />} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadConversations(true)} tintColor="#818CF8" />} contentContainerStyle={{ paddingBottom: 20 }} />
+              <FlatList data={filteredConversations} keyExtractor={(c) => c.conversationId || c._id} renderItem={({ item }) => <ConversationItem conv={item} currentUserId={currentUserId} onlineUsers={onlineUsers} onPress={handleSelectConversation} />} ItemSeparatorComponent={() => <View className="ml-[82px] border-b border-neutral-100 dark:border-neutral-800" />} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadConversations(true)} tintColor="#818CF8" />} contentContainerStyle={{ paddingBottom: 20 }} />
             )}
           </View>
         ) : (
@@ -834,146 +1000,25 @@ const MessagesScreen = () => {
               <Pressable onPress={() => setActionSheetVisible(true)} className="w-11 h-11 items-center justify-center rounded-full" accessibilityLabel="Chat options" accessibilityRole="button"><FontAwesome5 name="ellipsis-h" size={16} color={isDark ? "#a3a3a3" : "#525252"} /></Pressable>
             </View>
 
-            <ScrollView ref={messagesRef} className="flex-1 bg-neutral-50/60 dark:bg-neutral-950/60" contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 }} onContentSizeChange={() => messagesRef.current?.scrollToEnd({ animated: false })} onScroll={(e) => { const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent; setShowScrollBtn(contentSize.height - layoutMeasurement.height - contentOffset.y > 300); }} scrollEventThrottle={64} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" maintainVisibleContentPosition={{ minIndexForVisible: 0, autoscrollToTopThreshold: 10 }}>
-              {loading ? (
-                <View className="items-center py-10"><ActivityIndicator size="small" color="#818CF8" /></View>
-              ) : (
-                processedMessages.map((msg, idx) => {
-                  if (msg.type === "system" || resolveId(msg.senderId || msg.sender) === "system") return <View key={msg._id || `s-${idx}`} className="items-center my-4"><View className="bg-neutral-200/60 dark:bg-neutral-700/60 px-4 py-1.5 rounded-full"><Text className="text-[11px] text-neutral-500 dark:text-neutral-400 font-medium">{msg.messageText}</Text></View></View>;
-                  const isMe = msg.isMe;
-                  return (
-                    <View key={msg._id || `m-${idx}`}>
-                      {msg.showDate && <View className="items-center my-5"><View className="bg-white/80 dark:bg-neutral-800/80 px-4 py-1.5 rounded-full shadow-sm border border-neutral-100/50 dark:border-neutral-700/50"><Text className="text-[11px] font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">{formatChatDate(msg.createdAt)}</Text></View></View>}
-                      <View className={`flex-row ${isMe ? "justify-end" : "justify-start"} ${msg.isFirstInGroup ? "mt-4" : "mt-1"}`}>
-                        {!isMe && msg.isFirstInGroup ? <View className="w-8 mr-2 mt-1 items-center">{isSvgUrl(chatAvatar) ? <View className="w-7 h-7 rounded-full overflow-hidden"><SvgImage uri={chatAvatar} width="100%" height="100%" /></View> : <Image source={{ uri: chatAvatar }} className="w-7 h-7 rounded-full bg-neutral-100" />}</View> : !isMe ? <View className="w-8 mr-2" /> : null}
-                        <View className={`${(msg.type === "quote" || msg.quoteId) && msg.quote ? "w-[92%]" : "max-w-[78%]"} ${isMe ? "items-end" : "items-start"}`}>
-                          {(msg.type === "quote" || msg.quoteId) && msg.quote ? (
-                            <>
-                              <View className="w-full bg-white dark:bg-neutral-800 rounded-2xl border border-neutral-200 dark:border-neutral-700 overflow-hidden" style={{ shadowColor: "#000", shadowOpacity: isDark ? 0 : 0.06, shadowRadius: 8, shadowOffset: { height: 2 }, elevation: isDark ? 0 : 2 }}>
-                                {/* Status banner */}
-                                {msg.quote.status && msg.quote.status !== 'pending' && msg.quote.status !== 'pending_user_approval' && (
-                                  <View className={`px-4 py-2 flex-row items-center border-b ${msg.quote.status === 'accepted' || msg.quote.status === 'funded_in_progress' ? (isDark ? 'bg-emerald-900/40 border-emerald-800' : 'bg-emerald-50 border-emerald-100') : msg.quote.status === 'rejected' || msg.quote.status === 'declined' ? (isDark ? 'bg-red-900/40 border-red-800' : 'bg-red-50 border-red-100') : (isDark ? 'bg-amber-900/40 border-amber-800' : 'bg-amber-50 border-amber-100')}`}>
-                                    <FontAwesome5 name={msg.quote.status === 'accepted' || msg.quote.status === 'funded_in_progress' ? 'check-circle' : msg.quote.status === 'rejected' || msg.quote.status === 'declined' ? 'times-circle' : 'clock'} size={12} color={msg.quote.status === 'accepted' || msg.quote.status === 'funded_in_progress' ? (isDark ? '#6ee7b7' : '#059669') : msg.quote.status === 'rejected' || msg.quote.status === 'declined' ? (isDark ? '#fca5a5' : '#dc2626') : (isDark ? '#fcd34d' : '#d97706')} />
-                                    <Text className={`text-[12px] font-semibold ml-2 ${msg.quote.status === 'accepted' || msg.quote.status === 'funded_in_progress' ? (isDark ? 'text-emerald-300' : 'text-emerald-700') : msg.quote.status === 'rejected' || msg.quote.status === 'declined' ? (isDark ? 'text-red-300' : 'text-red-700') : (isDark ? 'text-amber-300' : 'text-amber-700')}`}>
-                                      {msg.quote.status === 'accepted' || msg.quote.status === 'funded_in_progress' ? 'Quote Accepted' : msg.quote.status === 'rejected' || msg.quote.status === 'declined' ? 'Quote Declined' : 'Pending Review'}
-                                    </Text>
-                                  </View>
-                                )}
-                                
-                                {/* Contractor row */}
-                                <View className="flex-row p-4 pb-3" style={{ gap: 12 }}>
-                                  {isSvgUrl(chatAvatar) ? (
-                                    <View className="w-10 h-10 rounded-full overflow-hidden bg-neutral-100 dark:bg-neutral-700"><SvgImage uri={chatAvatar} width="100%" height="100%" /></View>
-                                  ) : (
-<Image source={{ uri: chatAvatar }} className="w-10 h-10 rounded-full bg-neutral-100 dark:bg-neutral-700" />
-                                  )}
-                                  <View className="flex-1 min-w-0">
-                                    <Text className="text-[14px] font-semibold text-neutral-900 dark:text-white" numberOfLines={1}>{chatName}</Text>
-                                    <View className="flex-row items-center mt-0.5" style={{ gap: 4 }}>
-                                      <FontAwesome5 name="star" size={10} color="#eab308" solid />
-                                      <Text className="text-[12px]" style={{ color: isDark ? '#d4d4d4' : '#737373' }}>{msg.quote.contractor?.averageRating || '5.0'}</Text>
-                                    </View>
-                                  </View>
-                                </View>
-                                
-                                {/* Category + Description */}
-                                <View className="px-4 pb-3">
-                                  <View className="flex-row mb-1.5" style={{ gap: 6 }}>
-                                    <View className="px-2 py-0.5 rounded-md" style={{ backgroundColor: isDark ? '#1e3a8a' : '#eff6ff' }}><Text className="text-[11px] font-semibold" style={{ color: isDark ? '#93c5fd' : '#1d4ed8' }}>{msg.quote.serviceType || msg.quote.category || 'Service'}</Text></View>
-                                    {msg.quote.revisions > 0 && <View className="px-2 py-0.5 rounded-md" style={{ backgroundColor: isDark ? '#581c87' : '#faf5ff' }}><Text className="text-[11px] font-medium" style={{ color: isDark ? '#d8b4fe' : '#7e22ce' }}>Revision #{msg.quote.revisions}</Text></View>}
-                                  </View>
-                                  <Text className="text-[15px] font-semibold" style={{ color: isDark ? '#ffffff' : '#171717' }}>{msg.quote.description || msg.quote.projectName || 'Project Quote'}</Text>
-                                  {msg.quote.description && msg.quote.projectName && msg.quote.description !== msg.quote.projectName && (
-                                    <Text className="text-[13px] mt-1 leading-[18px]" style={{ color: isDark ? '#d4d4d4' : '#525252' }}>{msg.quote.description}</Text>
-                                  )}
-                                </View>
-                                
-                                {/* Dates */}
-                                {(msg.quote.estimatedStartDate || msg.quote.estimatedCompletionDate) && (
-                                  <View className="px-4 pb-3 flex-row" style={{ gap: 16 }}>
-                                    {msg.quote.estimatedStartDate && (
-                                      <View className="flex-row items-center" style={{ gap: 6 }}>
-                                        <FontAwesome5 name="calendar" size={12} color={isDark ? "#a3a3a3" : "#737373"} />
-                                        <Text className="text-[12px] font-medium" style={{ color: isDark ? '#d4d4d4' : '#404040' }}>
-                                          {(() => { try { return new Date(msg.quote.estimatedStartDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); } catch { return 'TBD'; } })()}
-                                        </Text>
-                                      </View>
-                                    )}
-                                    {msg.quote.estimatedCompletionDate && (
-                                      <View className="flex-row items-center" style={{ gap: 6 }}>
-                                        <FontAwesome5 name="clock" size={12} color={isDark ? "#a3a3a3" : "#737373"} />
-                                        <Text className="text-[12px]" style={{ color: isDark ? '#d4d4d4' : '#737373' }}>
-                                          {(() => { try { return new Date(msg.quote.estimatedCompletionDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); } catch { return 'TBD'; } })()}
-                                        </Text>
-                                      </View>
-                                    )}
-                                  </View>
-                                )}
-                                
-                                {/* Divider */}
-                                <View className="mx-4 h-px bg-neutral-100 dark:bg-neutral-700" />
-                                
-                                {/* Line items */}
-                                <View className="p-4 py-3" style={{ gap: 10 }}>
-                                  {(msg.quote.lineItems || []).length > 0 ? (
-                                    msg.quote.lineItems.map((item, idx) => (
-                                      <View key={idx} className="flex-row justify-between">
-                                        <Text className="text-[13px] flex-1 mr-3" numberOfLines={1} style={{ color: isDark ? '#d4d4d4' : '#525252' }}>{item.description || item.label || `Item ${idx + 1}`}</Text>
-                                        <Text className="text-[13px] font-medium" style={{ color: isDark ? '#ffffff' : '#171717' }}>${((item.amount || 0) / 100).toLocaleString()}</Text>
-                                      </View>
-                                    ))
-                                  ) : (
-                                    <View className="flex-row justify-between">
-                                      <Text className="text-[13px]" style={{ color: isDark ? '#d4d4d4' : '#525252' }}>Project Cost</Text>
-                                      <Text className="text-[13px] font-medium" style={{ color: isDark ? '#ffffff' : '#171717' }}>${(() => { const a = (msg.quote.subtotal || msg.quote.totalAmount || 0) / 100; return Number.isFinite(a) ? a.toLocaleString() : '0'; })()}</Text>
-                                    </View>
-                                  )}
-                                  
-                                  <View className="h-px bg-neutral-100 dark:bg-neutral-700 my-1" />
-                                  
-                                  <View className="flex-row justify-between items-center">
-                                    <Text className="text-[13px] font-semibold" style={{ color: isDark ? '#ffffff' : '#171717' }}>Total</Text>
-                                    <Text className="text-[18px] font-bold" style={{ color: isDark ? '#ffffff' : '#171717' }}>${(() => {
-                                      const amount = msg.quote.totalAmount != null ? msg.quote.totalAmount / 100 : msg.quote.total != null ? msg.quote.total : 0;
-                                      return Number.isFinite(amount) ? amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00';
-                                    })()}</Text>
-                                  </View>
-                                </View>
-                                
-                                {/* Escrow notice */}
-                                <View className="mx-4 mb-4 p-3 rounded-xl flex-row items-start" style={{ gap: 8, backgroundColor: isDark ? '#1e3a8a' : '#eff6ff' }}>
-                                  <FontAwesome5 name="shield-alt" size={14} color={isDark ? "#60a5fa" : "#2563EB"} style={{ marginTop: 1 }} />
-                                  <Text className="text-[11px] flex-1 leading-[16px]" style={{ color: isDark ? '#bfdbfe' : '#1d4ed8' }}>Secure escrow — funds held until you approve the completed work.</Text>
-                                </View>
-                                
-                                {/* Action button */}
-                                <View className="px-4 pb-4">
-                                  <Pressable onPress={() => navigation.navigate('QuoteReview', { quoteId: msg.quoteId || msg.quote.id || msg.quote._id })} className="py-3 bg-indigo-600 rounded-xl items-center flex-row justify-center" style={{ gap: 6 }} accessibilityLabel="Review quote details" accessibilityRole="button">
-                                    <Text className="text-[14px] font-semibold text-white">Review Details</Text>
-                                    <FontAwesome5 name="arrow-right" size={12} color="#FFFFFF" />
-                                  </Pressable>
-                                </View>
-                              </View>
-                              {msg.isLastInGroup && <View className={`flex-row items-center mt-1.5 px-1 ${isMe ? "justify-end" : "justify-start"}`} style={{ gap: 4 }}><Text className="text-[10px] text-neutral-400 font-medium">{msg.timeStr}</Text>{isMe && <FontAwesome5 name={msg.read ? "check-double" : "check"} size={9} color={msg.read ? "#10b981" : "#c4b5fd"} solid={msg.read} />}</View>}
-                            </>
-                          ) : (
-                            <>
-                              <View className={`px-[14px] py-[10px] ${isMe ? `bg-indigo-600 ${msg.isFirstInGroup ? "rounded-2xl rounded-tr-md" : "rounded-2xl"}` : `bg-white dark:bg-neutral-800 ${msg.isFirstInGroup ? "rounded-2xl rounded-tl-md" : "rounded-2xl"}`}`} style={!isMe ? { shadowColor: isDark ? "transparent" : "#000", shadowOpacity: isDark ? 0 : 0.04, shadowRadius: 8, shadowOffset: { height: 1 }, elevation: isDark ? 0 : 1 } : undefined}>
-                                {msg.attachmentUrl && /\.(jpg|jpeg|png|gif|webp)$/i.test(msg.attachmentUrl) && <Pressable onPress={() => { setActiveImage(msg.attachmentUrl); setLightboxVisible(true); }} className="mb-1.5 -mx-[2px] -mt-[2px] overflow-hidden" style={{ borderRadius: msg.isFirstInGroup ? 14 : 16 }}><Image source={{ uri: msg.attachmentUrl }} style={{ width: 240, height: 180 }} resizeMode="cover" /></Pressable>}
-                                {msg.attachmentUrl && !/\.(jpg|jpeg|png|gif|webp)$/i.test(msg.attachmentUrl) && <Pressable onPress={() => Linking.openURL(msg.attachmentUrl)} className={`flex-row items-center p-2.5 rounded-xl mb-1.5 border ${isMe ? "bg-white/10 border-white/20" : "bg-neutral-50 dark:bg-neutral-700 border-neutral-200 dark:border-neutral-600"}`}><FontAwesome5 name="file-alt" size={14} color={isMe ? "white" : (isDark ? "#a3a3a3" : "#737373")} /><Text className={`text-[12px] ml-2 font-semibold ${isMe ? "text-white" : "text-neutral-600 dark:text-neutral-300"}`}>View Attachment</Text></Pressable>}
-                                {msg.messageText ? <Text className={`text-[15px] leading-[22px] ${isMe ? "text-white" : "text-neutral-800 dark:text-neutral-100"}`}>{msg.messageText}</Text> : null}
-                              </View>
-                              {msg.isLastInGroup && <View className={`flex-row items-center mt-1 px-1 ${isMe ? "justify-end" : "justify-start"}`} style={{ gap: 4 }}><Text className="text-[10px] text-neutral-400 font-medium">{msg.timeStr}</Text>{isMe && <FontAwesome5 name={msg.read ? "check-double" : "check"} size={9} color={msg.read ? "#10b981" : "#c4b5fd"} solid={msg.read} />}</View>}
-                            </>
-                          )}
-                        </View>
-                      </View>
-                    </View>
-                  );
-                })
-              )}
-              {isOtherTyping && <TypingIndicator name={chatName?.split(" ")[0]} />}
-            </ScrollView>
+            <FlatList
+              ref={messagesRef}
+              data={processedMessages}
+              renderItem={renderMessageItem}
+              keyExtractor={(item, idx) => item._id || `msg-${idx}`}
+              className="flex-1 bg-neutral-50/60 dark:bg-neutral-950/60"
+              contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 }}
+              onContentSizeChange={() => messagesRef.current?.scrollToEnd({ animated: false })}
+              onScroll={(e) => {
+                const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
+                setShowScrollBtn(contentSize.height - layoutMeasurement.height - contentOffset.y > 300);
+              }}
+              scrollEventThrottle={64}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+              maintainVisibleContentPosition={{ minIndexForVisible: 0, autoscrollToTopThreshold: 10 }}
+              ListFooterComponent={isOtherTyping ? <TypingIndicator name={chatName?.split(" ")[0]} /> : null}
+              ListHeaderComponent={loading ? <View className="items-center py-10"><ActivityIndicator size="small" color="#818CF8" /></View> : null}
+            />
 
             {showScrollBtn && <Pressable onPress={() => { HapticFeedback.selection(); messagesRef.current?.scrollToEnd({ animated: true }); }} className="absolute bottom-24 right-4 w-11 h-11 bg-white dark:bg-neutral-800 rounded-full items-center justify-center shadow-lg" style={{ shadowColor: "#000", shadowOpacity: 0.12, shadowRadius: 8, shadowOffset: { height: 2 }, elevation: 5 }} accessibilityLabel="Scroll to bottom" accessibilityRole="button"><FontAwesome5 name="chevron-down" size={12} color={isDark ? "#a3a3a3" : "#525252"} /></Pressable>}
 

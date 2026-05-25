@@ -217,10 +217,14 @@ export const NotificationsProvider: React.FC<{ children: ReactNode }> = ({ child
     Notifications.setBadgeCountAsync(isAuthenticated ? unreadCount : 0).catch(() => {});
   }, [unreadCount, isAuthenticated]);
 
-  // Clear badge on logout
+  // Clear badge and context state on logout
   useEffect(() => {
     if (!isAuthenticated) {
       Notifications.setBadgeCountAsync(0).catch(() => {});
+      setNotifications([]);
+      setUnreadMessagesCount(0);
+      setIsLoading(false);
+      setError(null);
     }
   }, [isAuthenticated]);
 

@@ -194,6 +194,15 @@ const ProfileScreen: React.FC = () => {
   const [activeSheet, setActiveSheet] = useState<string | null>(null);
   const [ipZipCode, setIpZipCode] = useState<string>('');
   const [hapticsEnabled, setHapticsEnabled] = useState<boolean>(true);
+  const [defaultZip, setDefaultZip] = useState('');
+
+  useEffect(() => {
+    if (user?.zipCode) {
+      setDefaultZip(user.zipCode);
+    } else if (ipZipCode && !defaultZip) {
+      setDefaultZip(ipZipCode);
+    }
+  }, [user?.zipCode, ipZipCode]);
 
   const fetchIpZipCode = useCallback(async () => {
     try {
@@ -332,6 +341,14 @@ const ProfileScreen: React.FC = () => {
       if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') setPwMessage({ type: 'error', text: 'Current password is incorrect.' });
       else setPwMessage({ type: 'error', text: err?.message || 'Failed to change password.' });
     } finally { setPwSaving(false); }
+  };
+
+  const handleUpdateZipCode = async (newZip: string) => {
+    try {
+      const updatedUser = await updateUserProfile({ zipCode: newZip });
+      setUser(updatedUser);
+      setEditData(prev => ({ ...prev, zipCode: newZip }));
+    } catch {}
   };
 
   const handleLogout = () => {
@@ -651,7 +668,23 @@ const ProfileScreen: React.FC = () => {
           <FontAwesome5 name="chevron-down" size={12} color="#a3a3a3" />
         </View>
         <Text className="text-[13px] font-semibold text-neutral-500 dark:text-neutral-400 mb-2">Default Service Area</Text>
-        <StyledInput defaultValue={user?.zipCode || ipZipCode} className="mb-5" />
+        <StyledInput 
+          value={defaultZip} 
+          onChangeText={setDefaultZip}
+          onBlur={() => {
+            if (defaultZip && defaultZip !== user?.zipCode) {
+              handleUpdateZipCode(defaultZip);
+            }
+          }}
+          onSubmitEditing={() => {
+            if (defaultZip && defaultZip !== user?.zipCode) {
+              handleUpdateZipCode(defaultZip);
+            }
+          }}
+          keyboardType="numeric"
+          maxLength={10}
+          className="mb-5" 
+        />
         <View className="border-t border-neutral-100 dark:border-neutral-800 pt-2">
           <DarkModeToggle />
           <Toggle label="Haptic Feedback" description="Vibrate on button taps and interactions" defaultOn={hapticsEnabled} onValueChange={saveHapticsSetting} />

@@ -61,6 +61,13 @@ export const ContractorProvider: React.FC<{ children: ReactNode }> = ({ children
   useEffect(() => {
     if (isAuthenticated && userRole === 'contractor') {
       refreshContractorData();
+    } else {
+      setContractorProfile(null);
+      setJobs([]);
+      setLeads([]);
+      setQuotes([]);
+      setEarnings(null);
+      setError(null);
     }
   }, [isAuthenticated, userRole]);
 

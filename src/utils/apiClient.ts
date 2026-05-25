@@ -7,6 +7,7 @@ import { auth } from '../firebaseConfig';
 import { Auth } from 'firebase/auth';
 import { jwtDecode } from 'jwt-decode';
 import { AppState } from 'react-native';
+import { getSecureItem, setSecureItem, removeSecureItem } from './secureStore';
 
 // @ts-ignore - firebaseConfig is a JS module
 const firebaseAuth: Auth = auth as unknown as Auth;
@@ -44,15 +45,20 @@ export const getAuthHeaders = async (externalToken?: string): Promise<Record<str
   if (externalToken) {
     return { 'Authorization': `Bearer ${externalToken}` };
   }
-  const token = await AsyncStorage.getItem('auth_token');
+  const token = await getSecureItem('auth_token');
   return token ? { 'Authorization': `Bearer ${token}` } : {};
 };
 
 let isRefreshing = false;
 let refreshPromise: Promise<any> | null = null;
+let onAuthInvalidated: (() => void) | null = null;
+
+export const setAuthInvalidatedCallback = (callback: () => void) => {
+  onAuthInvalidated = callback;
+};
 
 const refreshTokenIfNeeded = async (): Promise<void> => {
-  const rt = await AsyncStorage.getItem('refresh_token');
+  const rt = await getSecureItem('refresh_token');
   if (!rt) return;
 
   if (isRefreshing && refreshPromise) {
@@ -71,17 +77,19 @@ const refreshTokenIfNeeded = async (): Promise<void> => {
       });
       if (response.ok) {
         const data = await response.json();
-        if (data.token) await AsyncStorage.setItem('auth_token', data.token);
-        if (data.refreshToken) await AsyncStorage.setItem('refresh_token', data.refreshToken);
+        if (data.token) await setSecureItem('auth_token', data.token);
+        if (data.refreshToken) await setSecureItem('refresh_token', data.refreshToken);
       } else {
-        await AsyncStorage.removeItem('auth_token');
-        await AsyncStorage.removeItem('refresh_token');
+        if (onAuthInvalidated) onAuthInvalidated();
+        await removeSecureItem('auth_token');
+        await removeSecureItem('refresh_token');
         await AsyncStorage.removeItem(USER_DATA_KEY);
         firebaseAuth.signOut();
       }
     } catch {
-      await AsyncStorage.removeItem('auth_token');
-      await AsyncStorage.removeItem('refresh_token');
+      if (onAuthInvalidated) onAuthInvalidated();
+      await removeSecureItem('auth_token');
+      await removeSecureItem('refresh_token');
       await AsyncStorage.removeItem(USER_DATA_KEY);
       firebaseAuth.signOut();
     } finally {
@@ -300,8 +308,8 @@ const normalizeContractors = (list: any[]): Contractor[] => {
 export const login = async (email: string, password: string): Promise<any> => {
   const data = await post(`${API_BASE}/users/login`, { email, password });
   if (data && data.token) {
-    await AsyncStorage.setItem('auth_token', data.token);
-    if (data.refreshToken) await AsyncStorage.setItem('refresh_token', data.refreshToken);
+    await setSecureItem('auth_token', data.token);
+    if (data.refreshToken) await setSecureItem('refresh_token', data.refreshToken);
     const userData = { ...data.user };
     delete userData.token;
     delete userData.refreshToken;
@@ -311,8 +319,12 @@ export const login = async (email: string, password: string): Promise<any> => {
 };
 
 export const logout = async (): Promise<void> => {
-  await AsyncStorage.removeItem('auth_token');
-  await AsyncStorage.removeItem('refresh_token');
+  try {
+    const authHeaders = await getAuthHeaders();
+    await post(`${API_BASE}/users/push-token`, { token: '' }, authHeaders).catch(() => {});
+  } catch {}
+  await removeSecureItem('auth_token');
+  await removeSecureItem('refresh_token');
   await AsyncStorage.removeItem(USER_DATA_KEY);
 };
 
@@ -336,8 +348,8 @@ export const backendLoginFirebase = async (idToken: string, email: string): Prom
   const headers = { 'Authorization': `Bearer ${idToken}` };
   const data = await post(`${API_BASE}/users/login`, { email, firebaseUid: firebaseAuth.currentUser?.uid }, headers);
   if (data && data.token) {
-    await AsyncStorage.setItem('auth_token', data.token);
-    if (data.refreshToken) await AsyncStorage.setItem('refresh_token', data.refreshToken);
+    await setSecureItem('auth_token', data.token);
+    if (data.refreshToken) await setSecureItem('refresh_token', data.refreshToken);
     const { token, refreshToken, ...userData } = data;
     await AsyncStorage.setItem(USER_DATA_KEY, JSON.stringify(userData));
   }
@@ -450,7 +462,7 @@ export const initializeSocket = async () => {
   isInitializingSocket = true;
 
   try {
-    const token = await AsyncStorage.getItem('auth_token');
+    const token = await getSecureItem('auth_token');
 
     socket = io(API_BASE_URL, {
       transports: ['websocket', 'polling'],
@@ -463,6 +475,9 @@ export const initializeSocket = async () => {
 
     socket.on('connect', () => {
       isInitializingSocket = false;
+      if (currentSocketUserId) {
+        socket?.emit('register', currentSocketUserId);
+      }
       const listeners = [...pendingListeners];
       pendingListeners = [];
       listeners.forEach(({ event, callback }) => {
@@ -773,7 +788,7 @@ export const getUserProfile = async (): Promise<User> => {
   const user = await get(`${API_BASE}/users/profile`, authHeaders);
   if (!user.createdAt) {
     try {
-      const token = await AsyncStorage.getItem('auth_token');
+      const token = await getSecureItem('auth_token');
       if (token) {
         const decoded: any = jwtDecode(token);
         if (decoded.iat) {
@@ -995,8 +1010,8 @@ export const createPaymentIntent = async (quoteId: string): Promise<{ clientSecr
 export const appleSignIn = async (data: { identityToken: string; appleUserIdentifier: string; fullName?: { givenName?: string; familyName?: string }; email?: string }): Promise<any> => {
   const result = await post(`${API_BASE}/users/apple-signin`, data);
   if (result && result.token) {
-    await AsyncStorage.setItem('auth_token', result.token);
-    if (result.refreshToken) await AsyncStorage.setItem('refresh_token', result.refreshToken);
+    await setSecureItem('auth_token', result.token);
+    if (result.refreshToken) await setSecureItem('refresh_token', result.refreshToken);
     const userData = { ...result.user };
     delete userData.token;
     delete userData.refreshToken;

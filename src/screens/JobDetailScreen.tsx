@@ -367,6 +367,16 @@ export default function JobDetailScreen() {
                   <Text className="text-[14px] font-bold text-white">Create Change Order</Text>
                 </Pressable>
               )}
+              {isUser && ['awaiting_payment', 'partially_funded', 'accepted'].includes(job.status) && (
+                <Pressable
+                  onPress={() => navigation.navigate('PaymentFlow', { jobId: job._id, quoteId: job.quote?._id })}
+                  className="flex-row items-center justify-center py-3.5 bg-indigo-600 rounded-xl"
+                  style={{ gap: 8 }}
+                >
+                  <FontAwesome5 name="credit-card" size={14} color="#fff" />
+                  <Text className="text-[14px] font-bold text-white">Complete Payment</Text>
+                </Pressable>
+              )}
               {isUser && (job.status === 'completed_pending_release' || (job.isMilestone && job.status === 'funded_in_progress')) && (
                 <Pressable
                   onPress={handleReleaseFunds}

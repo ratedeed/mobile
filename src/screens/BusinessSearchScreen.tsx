@@ -165,18 +165,30 @@ const BusinessSearchScreen: React.FC = () => {
   const [nearbyLabel, setNearbyLabel] = useState('');
   const isFirstRender = useRef(true);
 
+  // Debounced search states to prevent API spam
+  const [debouncedZip, setDebouncedZip] = useState(query || '');
+  const [debouncedName, setDebouncedName] = useState(routeName || '');
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedZip(searchZip);
+      setDebouncedName(searchName);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchZip, searchName]);
+
   const fetchContractors = useCallback(async () => {
     try {
       setLoading(true);
 
       const filters: any = { page: 1, limit: 500, sortBy: 'rating' };
 
-      if (searchZip) {
-        filters.zipCode = searchZip;
+      if (debouncedZip) {
+        filters.zipCode = debouncedZip;
       }
       
-      if (searchName) {
-        filters.name = searchName;
+      if (debouncedName) {
+        filters.name = debouncedName;
       }
 
       if (activeCategory !== 'all') {
@@ -190,7 +202,7 @@ const BusinessSearchScreen: React.FC = () => {
       setContractors(list);
       
       // Handle nearby label
-      if (searchZip && data?.isExpanded) {
+      if (debouncedZip && data?.isExpanded) {
         if (data.expansionTier === 2) setNearbyLabel('Showing nearby cities');
         else if (data.expansionTier === 3) setNearbyLabel('Showing nearby cities & region');
       } else {
@@ -206,23 +218,11 @@ const BusinessSearchScreen: React.FC = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [searchZip, searchName, activeCategory]);
+  }, [debouncedZip, debouncedName, activeCategory]);
 
   useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      fetchContractors();
-      return;
-    }
     fetchContractors();
-  }, [activeCategory, fetchContractors]);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (!isFirstRender.current) fetchContractors();
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [searchZip, searchName, fetchContractors]);
+  }, [fetchContractors]);
 
   const onRefresh = () => { setRefreshing(true); fetchContractors(); };
 
@@ -230,20 +230,21 @@ const BusinessSearchScreen: React.FC = () => {
     setActiveCategory(catId);
   };
 
-  const renderCard = ({ item }: { item: Contractor }) => (
+  const renderCard = useCallback(({ item }: { item: Contractor }) => (
     <View className="w-[48%]">
       <ListingCard
         listing={item}
-        searchZip={searchZip}
+        searchZip={debouncedZip}
         onPress={() => {
           if (item.slug) navigation.navigate('BusinessDetail', { slug: item.slug });
           else if (item._id) navigation.navigate('BusinessDetail', { id: item._id });
         }}
       />
     </View>
-  );
+  ), [navigation, debouncedZip]);
 
   const hasSearch = searchZip.trim().length > 0 || searchName.trim().length > 0 || activeCategory !== 'all';
+  const displayResults = hasSearch ? contractors : [];
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1 bg-white dark:bg-neutral-950">
@@ -358,11 +359,11 @@ const BusinessSearchScreen: React.FC = () => {
           <ActivityIndicator size="large" color={isDark ? '#a3a3a3' : '#737373'} />
           <Text className="text-sm text-neutral-500 dark:text-neutral-400 mt-3">Searching contractors...</Text>
         </View>
-      ) : contractors.length > 0 ? (
+      ) : displayResults.length > 0 ? (
         <FlatList
-          data={contractors}
+          data={displayResults}
           renderItem={renderCard}
-          keyExtractor={item => item._id || item.slug || Math.random().toString()}
+          keyExtractor={(item, index) => item._id || item.slug || index.toString()}
           numColumns={2}
           columnWrapperStyle={{ justifyContent: 'space-between' }}
           contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 100 }}

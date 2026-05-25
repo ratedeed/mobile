@@ -170,7 +170,7 @@ export default function QuoteReviewScreen() {
   const contractorCategory = quote.contractor?.category || '';
   const lineItems = quote.lineItems || [];
   const total = quote.totalAmount || quote.total || 0;
-  const totalInDollars = total > 1000 ? (total / 100).toFixed(2) : total;
+  const totalInDollars = (total / 100).toFixed(2);
   const isPending = (quote.status === 'pending' || quote.status === 'pending_user_approval');
 
   if (quote.status === 'rejected') {
@@ -295,7 +295,7 @@ export default function QuoteReviewScreen() {
                   ) : null}
                 </View>
                 <Text className="text-sm font-semibold text-neutral-900 dark:text-white">
-                  ${(item.amount > 1000 ? (item.amount / 100).toFixed(2) : item.amount).toLocaleString()}
+                  ${(item.amount / 100).toFixed(2)}
                 </Text>
               </View>
             ))}

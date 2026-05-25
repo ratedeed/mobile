@@ -203,7 +203,7 @@ export default function QuoteCreationSheet({
         .map(item => ({
           label: item.description.trim(),
           description: item.description.trim(),
-          amount: parseFloat(item.amount) || 0,
+          amount: Math.round((parseFloat(item.amount) || 0) * 100),
         }));
 
       await createQuoteFromChat({
