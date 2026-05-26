@@ -341,12 +341,26 @@ const MessagesScreen = () => {
   const [showQuoteSheet, setShowQuoteSheet] = useState(false);
   const [stripeStatus, setStripeStatus] = useState(null);
   const [blockedUsers, setBlockedUsers] = useState(new Set());
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+
+  const blockedUsersRef = useRef(new Set());
+  blockedUsersRef.current = blockedUsers;
 
   const messagesRef = useRef();
   const selectedConvRef = useRef();
   selectedConvRef.current = selectedConversation;
   const typingTimeoutRef = useRef(null);
   const lastTypingEmit = useRef(0);
+
+  // ─── Keyboard visibility listener ──────────────────────────────────────────
+  useEffect(() => {
+    const show = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', () => setKeyboardVisible(true));
+    const hide = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide', () => setKeyboardVisible(false));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
 
   // ─── isMe detection (unified User identity) ──────────────────────────────────
   const myIds = useMemo(() => {
@@ -372,6 +386,11 @@ const MessagesScreen = () => {
     registerSocket(currentUserId);
 
     const handleNewMessage = (msg) => {
+      const senderId = resolveId(msg.senderId || msg.sender);
+      if (blockedUsersRef.current.has(senderId)) {
+        return; // Ignore messages from blocked senders
+      }
+
       const convoId = msg.conversationId || msg.conversation;
       setConversations((prev) => {
         const convo = prev[convoId] || { conversationId: convoId, _id: convoId, participants: [], messages: [], lastMessage: null, unreadCount: 0 };
@@ -626,6 +645,11 @@ const MessagesScreen = () => {
     try {
       let cId = selectedConversation.conversationId || selectedConversation._id;
       let targetId = resolveId(selectedConversation.otherParticipant);
+
+      if (blockedUsersRef.current.has(targetId)) {
+        Alert.alert("Blocked", "You cannot send messages to a blocked user.");
+        return;
+      }
 
       if (cId?.startsWith("temp-")) {
         const resp = await createConversation([currentUserId, targetId]);
@@ -1024,7 +1048,7 @@ const MessagesScreen = () => {
 
             {pendingAttachment && <View className="px-4 py-2.5 bg-white dark:bg-neutral-900 border-t border-neutral-100 dark:border-neutral-800 flex-row items-center justify-between"><View className="flex-row items-center" style={{ gap: 10 }}><Image source={{ uri: pendingAttachment.uri }} className="w-12 h-12 rounded-xl" /><View><Text className="text-[12px] font-semibold text-neutral-700 dark:text-neutral-300">Image ready to send</Text><Text className="text-[10px] text-neutral-400 dark:text-neutral-500">Tap send to share</Text></View></View><Pressable onPress={() => setPendingAttachment(null)} className="w-7 h-7 bg-neutral-100 dark:bg-neutral-700 rounded-full items-center justify-center"><FontAwesome5 name="times" size={10} color={isDark ? "#a3a3a3" : "#525252"} /></Pressable></View>}
 
-            <View className="px-4 py-3 bg-white dark:bg-neutral-900 border-t border-neutral-100 dark:border-neutral-800 flex-row items-end" style={{ gap: 8, paddingBottom: insets.bottom + 12 || 12 }}>
+            <View className="px-4 py-3 bg-white dark:bg-neutral-900 border-t border-neutral-100 dark:border-neutral-800 flex-row items-end" style={{ gap: 8, paddingBottom: keyboardVisible ? 12 : (insets.bottom + 12 || 12) }}>
               <Pressable onPress={pickImage} className="w-11 h-11 items-center justify-center rounded-full bg-neutral-50 dark:bg-neutral-800" accessibilityLabel="Attach image" accessibilityRole="button"><FontAwesome5 name="image" size={15} color={isDark ? "#a3a3a3" : "#737373"} /></Pressable>
               
               {(() => {

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, Animated, Easing, StyleSheet } from 'react-native';
+import { View, Text, Animated, Easing, StyleSheet, useColorScheme } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import { FontAwesome5 } from '@expo/vector-icons';
 
@@ -10,6 +10,10 @@ const LOGO_COLOR = '#4F46E5'; // Indigo-600
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 const AnimatedSplashScreen = ({ onComplete, minDuration = 2800 }) => {
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  const splashBgColor = isDark ? '#171717' : '#ffffff';
+
   const logoScale = useRef(new Animated.Value(0.3)).current;
   const logoOpacity = useRef(new Animated.Value(0)).current;
   const wordmarkOpacity = useRef(new Animated.Value(0)).current;
@@ -113,7 +117,7 @@ const AnimatedSplashScreen = ({ onComplete, minDuration = 2800 }) => {
   }, []);
 
   return (
-    <Animated.View style={[styles.container, { backgroundColor: SPLASH_COLOR, opacity: fadeAnim }]} pointerEvents="none">
+    <Animated.View style={[styles.container, { backgroundColor: splashBgColor, opacity: fadeAnim }]} pointerEvents="none">
       <View style={styles.logoContainer}>
         {/* Pulse 2 */}
         <Animated.View style={[styles.pulseRing, {
@@ -147,7 +151,7 @@ const AnimatedSplashScreen = ({ onComplete, minDuration = 2800 }) => {
           marginTop: 24,
           zIndex: 10,
         }}>
-          <Text style={styles.wordmark}>ratedeed</Text>
+          <Text style={[styles.wordmark, { color: isDark ? '#ffffff' : LOGO_COLOR }]}>ratedeed</Text>
         </Animated.View>
       </View>
     </Animated.View>

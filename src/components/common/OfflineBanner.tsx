@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '../../constants/designTokens';
 
 interface OfflineBannerProps {
@@ -7,10 +8,11 @@ interface OfflineBannerProps {
 }
 
 export const OfflineBanner: React.FC<OfflineBannerProps> = ({ isVisible }) => {
+  const insets = useSafeAreaInsets();
   if (!isVisible) return null;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: Math.max(insets.top, 8) }]}>
       <Text style={styles.text}>No internet connection</Text>
     </View>
   );
@@ -23,9 +25,10 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: Colors.warning500,
-    paddingVertical: 8,
+    paddingBottom: 8,
     paddingHorizontal: 16,
     alignItems: 'center',
+    justifyContent: 'center',
     zIndex: 9999,
   },
   text: {

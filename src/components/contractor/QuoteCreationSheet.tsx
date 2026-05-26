@@ -88,7 +88,7 @@ export default function QuoteCreationSheet({
     }
   }, [visible]);
 
-  const isStripeConnected = stripeStatus?.chargesEnabled && stripeStatus?.status === 'active';
+  const isStripeConnected = !!stripeStatus?.chargesEnabled;
 
   const addLineItem = () => {
     setLineItems(prev => [...prev, { description: '', amount: '' }]);
@@ -184,7 +184,7 @@ export default function QuoteCreationSheet({
   };
 
   const handleSubmit = async () => {
-    if (!isValid || submitting || (!stripeLoading && !isStripeConnected)) return;
+    if (!isValid || submitting || stripeLoading || !isStripeConnected) return;
     setError('');
     setSubmitting(true);
 
@@ -606,16 +606,16 @@ export default function QuoteCreationSheet({
           </Pressable>
           <Pressable
             onPress={handleSubmit}
-            disabled={!isValid || submitting || (!stripeLoading && !isStripeConnected)}
-            className={`flex-1 py-3.5 rounded-xl flex-row items-center justify-center ${isValid && !submitting && (stripeLoading || isStripeConnected) ? 'bg-indigo-600' : 'bg-neutral-200 dark:bg-neutral-700'}`}
+            disabled={!isValid || submitting || stripeLoading || !isStripeConnected}
+            className={`flex-1 py-3.5 rounded-xl flex-row items-center justify-center ${isValid && !submitting && !stripeLoading && isStripeConnected ? 'bg-indigo-600' : 'bg-neutral-200 dark:bg-neutral-700'}`}
             style={{ gap: 6 }}
           >
             {submitting ? (
               <ActivityIndicator size="small" color="#fff" />
             ) : (
               <>
-                <FontAwesome5 name="paper-plane" size={12} color={isValid && (stripeLoading || isStripeConnected) ? '#fff' : '#a3a3a3'} />
-                <Text className={`text-[14px] font-bold ${isValid && (stripeLoading || isStripeConnected) ? 'text-white' : 'text-neutral-400 dark:text-neutral-500'}`}>Send Quote</Text>
+                <FontAwesome5 name="paper-plane" size={12} color={isValid && !stripeLoading && isStripeConnected ? '#fff' : '#a3a3a3'} />
+                <Text className={`text-[14px] font-bold ${isValid && !stripeLoading && isStripeConnected ? 'text-white' : 'text-neutral-400 dark:text-neutral-500'}`}>Send Quote</Text>
               </>
             )}
           </Pressable>

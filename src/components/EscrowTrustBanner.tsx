@@ -181,7 +181,7 @@ export const EscrowTrustBanner = () => {
       <Pressable style={styles.overlay} onPress={dismiss} />
 
       {/* Banner wrapper — lets touches pass through to backdrop except on the banner itself */}
-      <View style={styles.overlay} pointerEvents="box-none">
+      <View style={styles.container} pointerEvents="box-none">
         <Animated.View
           style={[
             styles.banner,
@@ -224,9 +224,12 @@ export const EscrowTrustBanner = () => {
 };
 
 const styles = StyleSheet.create({
+  container: {
+    ...StyleSheet.absoluteFillObject,
+  },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'transparent',
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
   },
   banner: {
     position: 'absolute',

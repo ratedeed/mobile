@@ -10,6 +10,7 @@ import {
   Platform,
   Linking,
   TextInput,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -57,10 +58,21 @@ const sanitizeAmount = (text: string) => {
 export default function JobDetailScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<RouteProp<RootStackParamList, 'JobDetail'>>();
-  const { jobId } = route.params;
-  const insets = useSafeAreaInsets();
+  const { jobId } = route.params || {};
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
+
+  if (!jobId) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: isDark ? '#09090b' : '#ffffff' }}>
+        <Text style={{ fontSize: 16, fontWeight: 'bold', color: isDark ? '#ffffff' : '#171717' }}>Invalid Job Reference</Text>
+        <Pressable onPress={() => navigation.goBack()} style={{ marginTop: 16, paddingHorizontal: 16, paddingVertical: 8, backgroundColor: '#4f46e5', borderRadius: 8 }}>
+          <Text style={{ color: 'white', fontWeight: 'bold' }}>Go Back</Text>
+        </Pressable>
+      </View>
+    );
+  }
+  const insets = useSafeAreaInsets();
   const { userRole, userId } = useAuth();
 
   const [job, setJob] = useState<any>(null);
@@ -212,7 +224,7 @@ export default function JobDetailScreen() {
               </View>
               <View className="flex-row justify-between py-1">
                 <Text className="text-[12px] text-neutral-500 dark:text-neutral-400">Platform fee (5%)</Text>
-                <Text className="text-[12px] text-neutral-500 dark:text-neutral-400">{formatCurrency(quote.platformFee || 0)}</Text>
+                <Text className="text-[12px] text-neutral-500 dark:text-neutral-400">{formatCurrency(quote.serviceFee || Math.round((quote.totalAmount || 0) * 0.05))}</Text>
               </View>
               <View className="h-px bg-neutral-200 dark:bg-neutral-700 my-2" />
               <View className="flex-row justify-between">
@@ -318,14 +330,14 @@ export default function JobDetailScreen() {
             </View>
           )}
 
-          {job.disputeStatus && job.disputeStatus !== 'none' && (
+          {job.disputeStatus && (job.disputeStatus === 'pending' || job.disputeStatus === 'under_review') && (
             <View className="p-4 rounded-2xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20">
               <View className="flex-row items-center mb-2" style={{ gap: 8 }}>
                 <FontAwesome5 name="exclamation-triangle" size={16} color="#dc2626" />
                 <Text className="text-[14px] font-bold text-red-700 dark:text-red-300">Dispute Active</Text>
               </View>
               {job.disputeReason && <Text className="text-[13px] text-red-600 dark:text-red-400">{job.disputeReason}</Text>}
-              {isUser && (job.disputeStatus === 'pending' || job.disputeStatus === 'under_review') && (
+              {isUser && (
                 <View className="mt-3" style={{ gap: 8 }}>
                   <Text className="text-[12px] text-red-600 dark:text-red-400">Our team is reviewing your dispute. You can cancel it to resume the job, or wait for an admin to resolve it.</Text>
                   <Pressable
@@ -340,6 +352,24 @@ export default function JobDetailScreen() {
                   </Pressable>
                 </View>
               )}
+            </View>
+          )}
+
+          {job.disputeStatus === 'resolved' && (
+            <View className="p-4 rounded-2xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20">
+              <View className="flex-row items-center mb-2" style={{ gap: 8 }}>
+                <FontAwesome5 name="check-circle" size={16} color="#059669" />
+                <Text className="text-[14px] font-bold text-emerald-700 dark:text-emerald-300">Dispute Resolved</Text>
+              </View>
+              {job.resolutionAction && (
+                <Text className="text-[13px] font-semibold text-emerald-800 dark:text-emerald-200 mb-1">
+                  Resolution Action: {job.resolutionAction === 'release_all' ? 'Funds released to contractor' :
+                                      job.resolutionAction === 'refund_all' ? 'Funds refunded to homeowner' :
+                                      job.resolutionAction === 'split' ? 'Funds split between contractor and homeowner' :
+                                      'Job resumed'}
+                </Text>
+              )}
+              {job.resolutionNotes && <Text className="text-[13px] text-emerald-600 dark:text-emerald-400">{job.resolutionNotes}</Text>}
             </View>
           )}
 
@@ -369,7 +399,13 @@ export default function JobDetailScreen() {
               )}
               {isUser && ['awaiting_payment', 'partially_funded', 'accepted'].includes(job.status) && (
                 <Pressable
-                  onPress={() => navigation.navigate('PaymentFlow', { jobId: job._id, quoteId: job.quote?._id })}
+                  onPress={() => navigation.navigate('PaymentFlow', {
+                    jobId: job._id,
+                    quoteId: job.quote?._id,
+                    totalAmount: job.quote?.totalAmount || job.quote?.total || 0,
+                    contractorName: contractor.companyName || contractor.businessName || 'Contractor',
+                    description: job.quote?.description || job.quote?.projectName || 'Project Payment'
+                  })}
                   className="flex-row items-center justify-center py-3.5 bg-indigo-600 rounded-xl"
                   style={{ gap: 8 }}
                 >
@@ -419,42 +455,47 @@ export default function JobDetailScreen() {
       {showChangeOrder && (
         <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <Pressable className="absolute inset-0" onPress={() => setShowChangeOrder(false)} />
-          <View className="absolute bottom-0 left-0 right-0 bg-white dark:bg-neutral-950 rounded-t-2xl p-5" style={{ paddingBottom: insets.bottom + 20 }}>
-            <View className="flex-row items-center justify-between mb-4">
-              <Text className="text-[17px] font-bold text-neutral-900 dark:text-neutral-50">Change Order</Text>
-              <Pressable onPress={() => setShowChangeOrder(false)} className="w-8 h-8 items-center justify-center rounded-full bg-neutral-100 dark:bg-neutral-800">
-                <FontAwesome5 name="times" size={14} color="#737373" />
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={{ flex: 1, justifyContent: 'flex-end' }}
+          >
+            <View className="bg-white dark:bg-neutral-950 rounded-t-2xl p-5" style={{ paddingBottom: insets.bottom + 20 }}>
+              <View className="flex-row items-center justify-between mb-4">
+                <Text className="text-[17px] font-bold text-neutral-900 dark:text-neutral-50">Change Order</Text>
+                <Pressable onPress={() => setShowChangeOrder(false)} className="w-8 h-8 items-center justify-center rounded-full bg-neutral-100 dark:bg-neutral-800">
+                  <FontAwesome5 name="times" size={14} color="#737373" />
+                </Pressable>
+              </View>
+              <View className="mb-3">
+                <Text className="text-[12px] font-semibold text-neutral-500 dark:text-neutral-400 mb-1">Title</Text>
+                <View className="border border-neutral-200 dark:border-neutral-700 rounded-xl px-3 py-2.5 bg-white dark:bg-neutral-900">
+                  <TextInput value={coTitle} onChangeText={setCoTitle} placeholder="e.g., Additional electrical work" placeholderTextColor="#a3a3a3" className="text-[14px] text-neutral-900 dark:text-neutral-50" />
+                </View>
+              </View>
+              <View className="mb-3">
+                <Text className="text-[12px] font-semibold text-neutral-500 dark:text-neutral-400 mb-1">Description</Text>
+                <View className="border border-neutral-200 dark:border-neutral-700 rounded-xl px-3 py-2.5 bg-white dark:bg-neutral-900">
+                  <TextInput value={coDescription} onChangeText={setCoDescription} placeholder="Describe the additional work..." placeholderTextColor="#a3a3a3" className="text-[14px] text-neutral-900 dark:text-neutral-50" multiline numberOfLines={3} style={{ minHeight: 60, textAlignVertical: 'top' }} />
+                </View>
+              </View>
+              <View className="mb-4">
+                <Text className="text-[12px] font-semibold text-neutral-500 dark:text-neutral-400 mb-1">Additional Amount ($)</Text>
+                <View className="flex-row items-center border border-neutral-200 dark:border-neutral-700 rounded-xl px-3 bg-white dark:bg-neutral-900">
+                  <Text className="text-[14px] text-neutral-400">$</Text>
+                  <TextInput value={coAmount} onChangeText={(text) => setCoAmount(sanitizeAmount(text))} placeholder="0" placeholderTextColor="#a3a3a3" keyboardType="decimal-pad" className="flex-1 py-2.5 text-[14px] font-semibold text-neutral-900 dark:text-neutral-50" />
+                </View>
+              </View>
+              <Pressable
+                onPress={handleCreateChangeOrder}
+                disabled={!coTitle.trim() || !coAmount.trim() || actionLoading === 'changeOrder'}
+                className={`w-full py-3.5 rounded-xl items-center justify-center flex-row ${coTitle.trim() && coAmount.trim() ? 'bg-amber-500' : 'bg-neutral-200 dark:bg-neutral-700'}`}
+                style={{ gap: 8 }}
+              >
+                {actionLoading === 'changeOrder' ? <ActivityIndicator size="small" color="#fff" /> : <FontAwesome5 name="paper-plane" size={13} color={coTitle.trim() && coAmount.trim() ? '#fff' : '#a3a3a3'} />}
+                <Text className={`text-[14px] font-bold ${coTitle.trim() && coAmount.trim() ? 'text-white' : 'text-neutral-400'}`}>Send Change Order</Text>
               </Pressable>
             </View>
-            <View className="mb-3">
-              <Text className="text-[12px] font-semibold text-neutral-500 dark:text-neutral-400 mb-1">Title</Text>
-              <View className="border border-neutral-200 dark:border-neutral-700 rounded-xl px-3 py-2.5 bg-white dark:bg-neutral-900">
-                <TextInput value={coTitle} onChangeText={setCoTitle} placeholder="e.g., Additional electrical work" placeholderTextColor="#a3a3a3" className="text-[14px] text-neutral-900 dark:text-neutral-50" />
-              </View>
-            </View>
-            <View className="mb-3">
-              <Text className="text-[12px] font-semibold text-neutral-500 dark:text-neutral-400 mb-1">Description</Text>
-              <View className="border border-neutral-200 dark:border-neutral-700 rounded-xl px-3 py-2.5 bg-white dark:bg-neutral-900">
-                <TextInput value={coDescription} onChangeText={setCoDescription} placeholder="Describe the additional work..." placeholderTextColor="#a3a3a3" className="text-[14px] text-neutral-900 dark:text-neutral-50" multiline numberOfLines={3} style={{ minHeight: 60, textAlignVertical: 'top' }} />
-              </View>
-            </View>
-            <View className="mb-4">
-              <Text className="text-[12px] font-semibold text-neutral-500 dark:text-neutral-400 mb-1">Additional Amount ($)</Text>
-              <View className="flex-row items-center border border-neutral-200 dark:border-neutral-700 rounded-xl px-3 bg-white dark:bg-neutral-900">
-                <Text className="text-[14px] text-neutral-400">$</Text>
-                <TextInput value={coAmount} onChangeText={(text) => setCoAmount(sanitizeAmount(text))} placeholder="0" placeholderTextColor="#a3a3a3" keyboardType="decimal-pad" className="flex-1 py-2.5 text-[14px] font-semibold text-neutral-900 dark:text-neutral-50" />
-              </View>
-            </View>
-            <Pressable
-              onPress={handleCreateChangeOrder}
-              disabled={!coTitle.trim() || !coAmount.trim() || actionLoading === 'changeOrder'}
-              className={`w-full py-3.5 rounded-xl items-center justify-center flex-row ${coTitle.trim() && coAmount.trim() ? 'bg-amber-500' : 'bg-neutral-200 dark:bg-neutral-700'}`}
-              style={{ gap: 8 }}
-            >
-              {actionLoading === 'changeOrder' ? <ActivityIndicator size="small" color="#fff" /> : <FontAwesome5 name="paper-plane" size={13} color={coTitle.trim() && coAmount.trim() ? '#fff' : '#a3a3a3'} />}
-              <Text className={`text-[14px] font-bold ${coTitle.trim() && coAmount.trim() ? 'text-white' : 'text-neutral-400'}`}>Send Change Order</Text>
-            </Pressable>
-          </View>
+          </KeyboardAvoidingView>
         </View>
       )}
     </View>

@@ -171,6 +171,7 @@ export interface Notification {
   read: boolean;
   type?: 'new_message' | 'new_review' | 'admin_alert' | 'system_update' | 'new_quote' | 'quote_accepted' | 'quote_rejected' | 'new_lead' | 'job_update' | 'job_funded';
   createdAt?: string;
+  sender?: any;
 }
 
 export interface AuthInfo {

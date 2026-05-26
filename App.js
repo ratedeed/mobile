@@ -6,7 +6,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import AnimatedSplashScreen from './src/components/AnimatedSplashScreen';
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import AuthNavigator from './src/navigation/AuthNavigator';
 import MainNavigator from './src/navigation/MainNavigator';
 import LoadingScreen from './src/screens/LoadingScreen';
 import { AuthProvider, useAuth } from './src/context/AuthContext';

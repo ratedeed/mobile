@@ -135,7 +135,7 @@ const ListingCard = ({
           </Text>
           <View className="flex-row items-center shrink-0" style={{ gap: 2 }}>
             <FontAwesome5 name="star" solid size={12} color="#eab308" />
-            <Text className="text-xs font-bold text-slate-600">
+            <Text className="text-xs font-bold text-slate-600 dark:text-neutral-300">
               {(listing.averageRating || 0).toFixed(2)}
             </Text>
           </View>

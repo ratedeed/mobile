@@ -21,10 +21,11 @@ export default function ReviewScreen() {
   const isDark = useColorScheme() === 'dark';
   const navigation = useNavigation();
   const route = useRoute();
-  const { quoteId, contractorId, contractorName } = (route.params || {}) as {
+  const { quoteId, contractorId, contractorName, jobId } = (route.params || {}) as {
     quoteId: string;
     contractorId?: string;
     contractorName?: string;
+    jobId?: string;
   };
 
   const [rating, setRating] = useState(0);
@@ -53,7 +54,7 @@ export default function ReviewScreen() {
         rating,
         title: title.trim(),
         comment: comment.trim(),
-        quoteId,
+        jobId: jobId || quoteId,
       } as any);
       Alert.alert('Thank you!', 'Your review has been submitted.', [
         { text: 'Done', onPress: () => navigation.goBack() },

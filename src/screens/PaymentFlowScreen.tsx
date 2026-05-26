@@ -4,7 +4,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { createCheckoutSession, createPaymentIntent } from '../api';
+import { createCheckoutSession, createPaymentIntent, getQuote } from '../api';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useStripe, usePlatformPay, confirmPlatformPayPayment, PlatformPay } from '@stripe/stripe-react-native';
 
@@ -29,7 +29,9 @@ export default function PaymentFlowScreen() {
 
   useEffect(() => {
     async function checkApplePay() {
-      const supported = await isPlatformPaySupported({ googlePay: { testEnv: true } });
+      const supported = await isPlatformPaySupported(
+        Platform.OS === 'android' ? { googlePay: { testEnv: true } } : {}
+      );
       setApplePayAvailable(supported);
     }
     if (Platform.OS === 'ios') {
@@ -44,7 +46,12 @@ export default function PaymentFlowScreen() {
     }
     try {
       setPaying(true);
-      const { clientSecret } = await createPaymentIntent(quoteId);
+      const response = await createPaymentIntent(quoteId);
+      if (!response?.clientSecret) {
+        Alert.alert('Payment Error', 'Could not initialize Apple Pay session.');
+        return;
+      }
+      const { clientSecret } = response;
 
       const { paymentIntent, error } = await confirmPlatformPayPayment(
         clientSecret,
@@ -101,7 +108,6 @@ export default function PaymentFlowScreen() {
   const verifyPaymentStatus = async () => {
     try {
       setPaying(true);
-      const { getQuote } = await import('../api');
       const quote = await getQuote(quoteId);
       if (quote && (quote.status === 'accepted' || quote.status === 'paid' || quote.jobId)) {
         setCurrentStep(2);

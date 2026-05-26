@@ -24,18 +24,6 @@ export const Tabs: React.FC<TabsProps> = ({
   variant = 'default',
 }) => {
   const scrollViewRef = useRef<ScrollView>(null);
-  const indicatorPosition = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    const activeIndex = tabs.findIndex(tab => tab.key === activeTab);
-    if (activeIndex !== -1) {
-      Animated.spring(indicatorPosition, {
-        toValue: activeIndex,
-        useNativeDriver: true,
-        friction: 8,
-      }).start();
-    }
-  }, [activeTab, tabs, indicatorPosition]);
 
   if (variant === 'pills') {
     return (

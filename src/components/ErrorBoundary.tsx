@@ -1,6 +1,7 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { View, StyleSheet, Text, TouchableOpacity, Platform } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
+import * as Sentry from '@sentry/react-native';
 import Typography from './common/Typography';
 import Button from './common/Button';
 import { Spacing, Colors, Radii } from '../constants/designTokens';
@@ -31,7 +32,8 @@ class ErrorBoundary extends Component<Props, State> {
     return { hasError: true, error };
   }
 
-componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
+  componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
+    Sentry.captureException(error, { extra: { errorInfo } });
     this.setState({
       error,
       errorInfo,

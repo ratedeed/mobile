@@ -6,9 +6,16 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 }
 
 export const useStaggeredAnimation = (itemCount: number, baseDelay = 50) => {
-  const animations = useRef(
-    Array.from({ length: itemCount }, () => new Animated.Value(0))
-  ).current;
+  const animationsRef = useRef<Animated.Value[]>([]);
+
+  if (animationsRef.current.length < itemCount) {
+    const diff = itemCount - animationsRef.current.length;
+    for (let i = 0; i < diff; i++) {
+      animationsRef.current.push(new Animated.Value(0));
+    }
+  }
+
+  const animations = animationsRef.current;
 
   const fadeIn = useCallback((index: number, duration = 300) => {
     Animated.timing(animations[index], {

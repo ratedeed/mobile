@@ -2,9 +2,11 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthInfo, UserRole } from '../types';
 import { syncFavoritesWithServer } from '../utils/favoritesStore';
-import { disconnectSocket, setAuthInvalidatedCallback } from '../utils/apiClient';
+import { disconnectSocket, setAuthInvalidatedCallback, logout as apiLogout } from '../utils/apiClient';
 import { jwtDecode } from 'jwt-decode';
 import { getSecureItem, setSecureItem, removeSecureItem } from '../utils/secureStore';
+import { auth } from '../firebaseConfig';
+import { signOut } from 'firebase/auth';
 
 const USER_DATA_KEY = 'ratedeed-user-data';
 
@@ -62,16 +64,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const token = await getSecureItem('auth_token');
       if (token) {
+        let activeToken = token;
         if (isTokenExpired(token)) {
-          await removeSecureItem('auth_token');
-          await removeSecureItem('refresh_token');
-          await AsyncStorage.removeItem(USER_DATA_KEY);
-        } else {
-          setBackendToken(token);
+          try {
+            const { refreshTokenIfNeeded } = require('../utils/apiClient');
+            await refreshTokenIfNeeded();
+            const refreshedToken = await getSecureItem('auth_token');
+            if (refreshedToken && !isTokenExpired(refreshedToken)) {
+              activeToken = refreshedToken;
+            } else {
+              throw new Error('Refresh token failed');
+            }
+          } catch (err: any) {
+            const errMsg = err?.message || '';
+            if (errMsg.includes('Auth invalidated')) {
+              await removeSecureItem('auth_token');
+              await removeSecureItem('refresh_token');
+              await AsyncStorage.removeItem(USER_DATA_KEY);
+              activeToken = '';
+            } else {
+              activeToken = token;
+            }
+          }
+        }
+
+        if (activeToken) {
+          setBackendToken(activeToken);
 
           let decodedId = null;
           try {
-            const decodedToken: any = jwtDecode(token);
+            const decodedToken: any = jwtDecode(activeToken);
             decodedId = decodedToken.id || decodedToken._id;
           } catch {}
 
@@ -102,14 +124,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch {}
 
     try {
-      await removeSecureItem('auth_token');
+      await apiLogout();
     } catch {}
+
     try {
-      await removeSecureItem('refresh_token');
-    } catch {}
-    try {
-      await AsyncStorage.removeItem(USER_DATA_KEY);
-    } catch {}
+      if (auth && auth.app) {
+        await signOut(auth);
+      }
+    } catch (e) {
+      if (__DEV__) console.warn('Firebase signOut failed:', e);
+    }
 
     setBackendToken(null);
     setUserId(null);
@@ -122,6 +146,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     loadStoredAuth();
     setAuthInvalidatedCallback(() => {
       logout();
+    });
+    const { setAuthTokenUpdatedCallback } = require('../utils/apiClient');
+    setAuthTokenUpdatedCallback((newToken: string) => {
+      setBackendToken(newToken);
     });
   }, [logout]);
 

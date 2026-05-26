@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ViewStyle,
 } from 'react-native';
+import { FontAwesome } from '@expo/vector-icons';
 import { Colors, Spacing } from '../../constants/designTokens';
 
 interface StarRatingProps {
@@ -32,14 +33,17 @@ const StarRating: React.FC<StarRatingProps> = ({
     const isFilled = starNumber <= Math.floor(rating);
     const isHalf = starNumber === Math.ceil(rating) && rating % 1 !== 0;
 
-    const starChar = isHalf ? '½' : '★';
+    let iconName: 'star' | 'star-half-full' | 'star-o' = 'star-o';
+    if (isFilled) {
+      iconName = 'star';
+    } else if (isHalf) {
+      iconName = 'star-half-full';
+    }
 
     const starColor = isFilled || isHalf ? Colors.warning500 : Colors.neutral300;
 
     const star = (
-      <Text style={[styles.star, { fontSize: size, color: starColor }]}>
-        {starChar}
-      </Text>
+      <FontAwesome name={iconName} size={size} color={starColor} />
     );
 
     if (interactive && onRatingChange) {

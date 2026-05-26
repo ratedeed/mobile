@@ -6,6 +6,7 @@ import {
   Animated,
   Text,
   ViewStyle,
+  ScrollView,
 } from 'react-native';
 import { Colors, Spacing } from '../../constants/designTokens';
 
@@ -73,16 +74,21 @@ const PullToRefresh: React.FC<PullToRefreshProps> = ({
 
   return (
     <View style={[styles.container, style]}>
-      <RefreshControl
-        refreshing={refreshing}
-        onRefresh={handleRefresh}
-        tintColor={tintColor}
-        colors={[tintColor]}
-        progressBackgroundColor={Colors.neutral50}
-        title={!refreshing ? title : undefined}
+      <ScrollView
+        contentContainerStyle={{ flexGrow: 1 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={tintColor}
+            colors={[tintColor]}
+            progressBackgroundColor={Colors.neutral50}
+            title={!refreshing ? title : undefined}
+          />
+        }
       >
         {children}
-      </RefreshControl>
+      </ScrollView>
       
       {showFeedback && showSuccess && (
         <Animated.View

@@ -2,7 +2,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../config';
 import io, { Socket } from 'socket.io-client';
-// @ts-expect-error firebaseConfig is a JS module
 import { auth } from '../firebaseConfig';
 import { Auth } from 'firebase/auth';
 import { jwtDecode } from 'jwt-decode';
@@ -52,12 +51,17 @@ export const getAuthHeaders = async (externalToken?: string): Promise<Record<str
 let isRefreshing = false;
 let refreshPromise: Promise<any> | null = null;
 let onAuthInvalidated: (() => void) | null = null;
+let onTokenUpdated: ((token: string) => void) | null = null;
 
 export const setAuthInvalidatedCallback = (callback: () => void) => {
   onAuthInvalidated = callback;
 };
 
-const refreshTokenIfNeeded = async (): Promise<void> => {
+export const setAuthTokenUpdatedCallback = (callback: (token: string) => void) => {
+  onTokenUpdated = callback;
+};
+
+export const refreshTokenIfNeeded = async (): Promise<void> => {
   const rt = await getSecureItem('refresh_token');
   if (!rt) return;
 
@@ -77,21 +81,24 @@ const refreshTokenIfNeeded = async (): Promise<void> => {
       });
       if (response.ok) {
         const data = await response.json();
-        if (data.token) await setSecureItem('auth_token', data.token);
+        if (data.token) {
+          await setSecureItem('auth_token', data.token);
+          if (onTokenUpdated) onTokenUpdated(data.token);
+        }
         if (data.refreshToken) await setSecureItem('refresh_token', data.refreshToken);
-      } else {
+      } else if (response.status === 400 || response.status === 401 || response.status === 403) {
         if (onAuthInvalidated) onAuthInvalidated();
         await removeSecureItem('auth_token');
         await removeSecureItem('refresh_token');
         await AsyncStorage.removeItem(USER_DATA_KEY);
-        firebaseAuth.signOut();
+        firebaseAuth.signOut().catch(() => {});
+        throw new Error(`Auth invalidated: status ${response.status}`);
+      } else {
+        throw new Error(`Token refresh failed with server status ${response.status}`);
       }
-    } catch {
-      if (onAuthInvalidated) onAuthInvalidated();
-      await removeSecureItem('auth_token');
-      await removeSecureItem('refresh_token');
-      await AsyncStorage.removeItem(USER_DATA_KEY);
-      firebaseAuth.signOut();
+    } catch (err: any) {
+      // Do not clear credentials on network timeouts or 5xx server issues
+      throw err;
     } finally {
       isRefreshing = false;
       refreshPromise = null;
@@ -357,8 +364,9 @@ export const backendLoginFirebase = async (idToken: string, email: string): Prom
 };
 
 export const syncEmailVerificationStatus = async (idToken: string, email: string, isVerified: boolean): Promise<any> => {
-  const headers = { 'Authorization': `Bearer ${idToken}` };
-  return post(`${API_BASE}/users/verify-email`, { email, isVerified, firebaseUid: firebaseAuth.currentUser?.uid }, headers);
+  // NOTE: The backend automatically syncs the email verification status during the login endpoint.
+  // We return a resolved promise immediately to avoid breaking the client flow due to a 404 on this route.
+  return { success: true, message: 'Synced on login' };
 };
 
 // ==========================================
@@ -430,7 +438,7 @@ export const requestVerification = async (data: { licenseNumber: string; license
 let socket: Socket | null = null;
 let isInitializingSocket = false;
 let currentSocketUserId: string | null = null;
-let pendingListeners: Array<{ event: string; callback: Function }> = [];
+let activeListeners: Array<{ event: string; callback: Function }> = [];
 
 let appStateSubscription: any = null;
 
@@ -462,14 +470,18 @@ export const initializeSocket = async () => {
   isInitializingSocket = true;
 
   try {
+    try {
+      await refreshTokenIfNeeded();
+    } catch {}
     const token = await getSecureItem('auth_token');
 
     socket = io(API_BASE_URL, {
       transports: ['websocket', 'polling'],
       auth: token ? { token } : undefined,
       reconnection: true,
-      reconnectionAttempts: 5,
+      reconnectionAttempts: Infinity,
       reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
       timeout: 20000,
     });
 
@@ -478,9 +490,7 @@ export const initializeSocket = async () => {
       if (currentSocketUserId) {
         socket?.emit('register', currentSocketUserId);
       }
-      const listeners = [...pendingListeners];
-      pendingListeners = [];
-      listeners.forEach(({ event, callback }) => {
+      activeListeners.forEach(({ event, callback }) => {
         socket?.off(event, callback as any);
         socket?.on(event, callback as any);
       });
@@ -540,100 +550,76 @@ export const joinConversationSocket = async (conversationId: string) => {
   }
 };
 
+const addActiveListener = (event: string, callback: Function) => {
+  activeListeners = activeListeners.filter(l => l.callback !== callback || l.event !== event);
+  activeListeners.push({ event, callback });
+  if (socket) {
+    socket.off(event, callback as any);
+    socket.on(event, callback as any);
+  }
+};
+
+const removeActiveListener = (event: string, callback?: Function) => {
+  if (callback) {
+    if (socket) socket.off(event, callback as any);
+    activeListeners = activeListeners.filter(l => l.callback !== callback || l.event !== event);
+  } else {
+    if (socket) socket.removeAllListeners(event);
+    activeListeners = activeListeners.filter(l => l.event !== event);
+  }
+};
+
 export const leaveConversationSocket = (conversationId: string) => {
   socket?.emit("leaveConversation", conversationId);
 };
+
 export const onNewMessage = (callback: (message: any) => void) => {
   if (!callback) {
-    socket?.removeAllListeners("newMessage");
+    removeActiveListener("newMessage");
     return;
   }
-  if (socket?.connected) {
-    socket.off("newMessage", callback);
-    socket.on("newMessage", callback);
-  } else {
-    pendingListeners.push({ event: "newMessage", callback });
-  }
+  addActiveListener("newMessage", callback);
 };
 
 export const offNewMessage = (callback?: (message: any) => void) => {
-  if (callback) {
-    socket?.off("newMessage", callback);
-    pendingListeners = pendingListeners.filter(p => p.callback !== callback);
-  } else {
-    socket?.removeAllListeners("newMessage");
-    pendingListeners = pendingListeners.filter(p => p.event !== "newMessage");
-  }
+  removeActiveListener("newMessage", callback);
 };
 
-
 export const onMessageRead = (callback: (data: any) => void) => {
-  if (!socket) return;
-  socket.off("messageRead", callback);
-  socket.on("messageRead", callback);
+  addActiveListener("messageRead", callback);
 };
 
 export const offMessageRead = (callback?: (data: any) => void) => {
-  if (callback) {
-    socket?.off("messageRead", callback);
-  } else {
-    socket?.removeAllListeners("messageRead");
-  }
+  removeActiveListener("messageRead", callback);
 };
 
-
 export const onTyping = (callback: (data: any) => void) => {
-  if (!socket) return;
-  socket.off("typing", callback);
-  socket.on("typing", callback);
+  addActiveListener("typing", callback);
 };
 
 export const offTyping = (callback?: (data: any) => void) => {
-  if (callback) {
-    socket?.off("typing", callback);
-  } else {
-    socket?.removeAllListeners("typing");
-  }
+  removeActiveListener("typing", callback);
 };
 
-
 export const onUserOnlineStatus = (callback: (data: any) => void) => {
-  if (!socket) return;
-  socket.off("userOnlineStatus", callback);
-  socket.on("userOnlineStatus", callback);
+  addActiveListener("userOnlineStatus", callback);
 };
 
 export const offUserOnlineStatus = (callback?: (data: any) => void) => {
-  if (callback) {
-    socket?.off("userOnlineStatus", callback);
-  } else {
-    socket?.removeAllListeners("userOnlineStatus");
-  }
+  removeActiveListener("userOnlineStatus", callback);
 };
 
 export const onNewNotification = (callback: (notification: any) => void) => {
   if (!callback) {
-    socket?.removeAllListeners("newNotification");
+    removeActiveListener("newNotification");
     return;
   }
-  if (socket?.connected) {
-    socket.off("newNotification", callback);
-    socket.on("newNotification", callback);
-  } else {
-    pendingListeners.push({ event: "newNotification", callback });
-  }
+  addActiveListener("newNotification", callback);
 };
 
 export const offNewNotification = (callback?: (notification: any) => void) => {
-  if (callback) {
-    socket?.off("newNotification", callback);
-    pendingListeners = pendingListeners.filter(p => p.callback !== callback);
-  } else {
-    socket?.removeAllListeners("newNotification");
-    pendingListeners = pendingListeners.filter(p => p.event !== "newNotification");
-  }
+  removeActiveListener("newNotification", callback);
 };
-
 
 export const emitTyping = (conversationId: string, userId: string, isTyping: boolean) => {
   if (socket?.connected) {
@@ -647,7 +633,7 @@ export const disconnectSocket = () => {
     socket = null;
   }
   currentSocketUserId = null;
-  pendingListeners = [];
+  activeListeners = [];
 };
 
 export const emitMessageRead = (messageId: string, readerId: string, conversationId: string) => {
@@ -718,7 +704,7 @@ export const likePost = async (postId: string): Promise<void> => {
 
 export const unlikePost = async (postId: string): Promise<void> => {
   const authHeaders = await getAuthHeaders();
-  return put(`${API_BASE}/posts/${postId}/unlike`, {}, authHeaders);
+  return put(`${API_BASE}/posts/${postId}/like`, {}, authHeaders);
 };
 
 export const commentOnPost = async (postId: string, commentData: any): Promise<PostComment> => {
@@ -844,7 +830,7 @@ export const createQuote = async (quoteData: any): Promise<Quote> => {
 
 export const getContractorLeads = async (): Promise<Lead[]> => {
   const authHeaders = await getAuthHeaders();
-  return get(`${API_BASE}/leads/contractor`, authHeaders);
+  return get(`${API_BASE}/leads`, authHeaders);
 };
 
 export const getContractorQuotes = async (): Promise<Quote[]> => {

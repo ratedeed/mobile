@@ -8,12 +8,15 @@ import {
   Alert,
   StyleSheet,
   useColorScheme,
+  Image,
 } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useNotifications } from '../context/NotificationsContext';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { SkeletonLoader } from '../components/common/SkeletonLoader';
 import { EmptyState } from '../components/common/EmptyState';
+import { SvgImage } from '../components/common/SvgImage';
+import { getProfileImageUrl, isSvgUrl, isRealImageUrl } from '../utils/avatarUtils';
 import { Colors, Shadows, Spacing, Radii, FontSizes, FontWeights } from '../constants/designTokens';
 
 type NotificationItem = {
@@ -121,6 +124,19 @@ const createStyles = (isDark: boolean) => StyleSheet.create({
     justifyContent: 'center',
     marginRight: Spacing.sm + 2,
     marginTop: 1,
+  },
+  avatarCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    overflow: 'hidden',
+    marginRight: Spacing.sm + 2,
+    marginTop: 1,
+  },
+  avatarImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
   },
   cardBody: {
     flex: 1,
@@ -271,6 +287,9 @@ const NotificationsScreen: React.FC = () => {
 
   const renderNotification = ({ item }: { item: NotificationItem }) => {
     const icon = getNotificationIcon(item.type, item.message);
+    const hasSenderAvatar = !!(item.sender && item.sender.profilePicture && isRealImageUrl(item.sender.profilePicture));
+    const avatarUrl = hasSenderAvatar ? item.sender.profilePicture : '';
+
     return (
       <Pressable
         onPress={() => handleNotificationPress(item)}
@@ -286,9 +305,19 @@ const NotificationsScreen: React.FC = () => {
         }}
         style={[styles.card, !item.read && styles.cardUnread]}
       >
-        <View style={[styles.iconCircle, { backgroundColor: icon.bg }]}>
-          <FontAwesome5 name={icon.name as any} size={15} color={icon.color} />
-        </View>
+        {hasSenderAvatar ? (
+          <View style={styles.avatarCircle}>
+            {isSvgUrl(avatarUrl) ? (
+              <SvgImage uri={avatarUrl} width={40} height={40} />
+            ) : (
+              <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
+            )}
+          </View>
+        ) : (
+          <View style={[styles.iconCircle, { backgroundColor: icon.bg }]}>
+            <FontAwesome5 name={icon.name as any} size={15} color={icon.color} />
+          </View>
+        )}
 
         <View style={styles.cardBody}>
           <Text

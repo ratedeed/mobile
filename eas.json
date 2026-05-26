@@ -28,7 +28,7 @@
         "SENTRY_ORG": "ratedeed",
         "SENTRY_PROJECT": "ratedeed-mobile",
         "SENTRY_URL": "https://us.sentry.io/",
-        "SENTRY_DISABLE_AUTO_UPLOAD": "true",
+        "SENTRY_DISABLE_AUTO_UPLOAD": "false",
         "SENTRY_ALLOW_FAILURE": "true"
       }
     }

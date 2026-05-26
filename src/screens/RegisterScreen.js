@@ -56,16 +56,18 @@ const RegisterScreen = () => {
         await updateBackendToken(backendResponse.token, backendResponse.emailVerified, userData);
         Toast.show({ type: 'success', text1: 'Success', text2: 'Signed in with Apple!' });
 
-        if (userData.role === 'contractor') {
-          navigation.reset({
-            index: 0,
-            routes: [{ name: 'Main' }, { name: 'ContractorDashboard' }],
-          });
-        } else if (navigation.canGoBack()) {
-          navigation.goBack();
-        } else {
-          navigation.navigate('Main');
-        }
+        setTimeout(() => {
+          if (userData.role === 'contractor') {
+            navigation.reset({
+              index: 0,
+              routes: [{ name: 'Main' }, { name: 'ContractorDashboard' }],
+            });
+          } else if (navigation.canGoBack()) {
+            navigation.goBack();
+          } else {
+            navigation.navigate('Main');
+          }
+        }, 100);
       } else {
         setApiError('Apple Sign-In failed. Please try again.');
       }
@@ -80,7 +82,10 @@ const RegisterScreen = () => {
   };
 
   const handleRegister = async () => {
-    if (!firstName || !lastName || !email || !password) {
+    const trimmedFirstName = firstName.trim();
+    const trimmedLastName = lastName.trim();
+    const trimmedEmail = email.trim();
+    if (!trimmedFirstName || !trimmedLastName || !trimmedEmail || !password) {
       Toast.show({ type: 'error', text1: 'Error', text2: 'Please fill in all required fields.' });
       return;
     }
@@ -89,17 +94,17 @@ const RegisterScreen = () => {
     setLoading(true);
     let userCreated = null;
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(auth, trimmedEmail, password);
       userCreated = userCredential.user;
       await sendEmailVerification(userCreated);
       await AsyncStorage.removeItem('userInfo');
       await AsyncStorage.removeItem('ratedeed-user-data');
       await register({
-        firstName,
-        lastName,
-        email,
+        firstName: trimmedFirstName,
+        lastName: trimmedLastName,
+        email: trimmedEmail,
         firebaseUid: userCreated.uid,
-        ...(zipCode ? { zipCode } : {}),
+        ...(zipCode ? { zipCode: zipCode.trim() } : {}),
       });
       await auth.signOut();
 
@@ -177,6 +182,16 @@ const RegisterScreen = () => {
               onChangeText={setFirstName}
               autoCapitalize="words"
               autoComplete="given-name"
+              editable={!loading}
+              className="flex-1 border border-neutral-300 dark:border-neutral-700 rounded-xl px-4 py-3 text-sm bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-50"
+              placeholderTextColor={isDark ? "#9ca3af" : "#a3a3a3"}
+            />
+            <TextInput
+              placeholder="Last name"
+              value={lastName}
+              onChangeText={setLastName}
+              autoCapitalize="words"
+              autoComplete="family-name"
               editable={!loading}
               className="flex-1 border border-neutral-300 dark:border-neutral-700 rounded-xl px-4 py-3 text-sm bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-50"
               placeholderTextColor={isDark ? "#9ca3af" : "#a3a3a3"}

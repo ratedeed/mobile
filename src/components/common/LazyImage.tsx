@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Image,
@@ -12,7 +12,7 @@ import { Colors, Spacing, Radii } from '../../constants/designTokens';
 
 interface LazyImageProps {
   uri: string;
-  style?: object;
+  style?: any;
   placeholderSource?: number;
   blurRadius?: number;
   aspectRatio?: number;
@@ -34,6 +34,12 @@ const LazyImage: React.FC<LazyImageProps> = ({
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    setLoaded(false);
+    setError(false);
+    fadeAnim.setValue(0);
+  }, [uri]);
 
   const handleLoad = () => {
     setLoaded(true);

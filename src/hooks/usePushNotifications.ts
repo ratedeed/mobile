@@ -1,14 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
-import {
-  getMessaging,
-  getToken,
-  onMessage,
-  onTokenRefresh,
-  requestPermission,
-  AuthorizationStatus,
-} from '@react-native-firebase/messaging';
+import messaging, { AuthorizationStatus } from '@react-native-firebase/messaging';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 
 import { useAuth } from '../context/AuthContext';
@@ -32,11 +25,9 @@ export const usePushNotifications = () => {
   const [notification, setNotification] = useState<Notifications.Notification | undefined>();
 
   useEffect(() => {
-    const messaging = getMessaging();
-
     const initPush = async () => {
       try {
-        const authStatus = await requestPermission(messaging);
+        const authStatus = await messaging().requestPermission();
         const enabled =
           authStatus === AuthorizationStatus.AUTHORIZED ||
           authStatus === AuthorizationStatus.PROVISIONAL;
@@ -54,8 +45,7 @@ export const usePushNotifications = () => {
           let apnsToken: string | null = null;
           for (let i = 0; i < 10; i++) {
             try {
-              const { getAPNSToken } = require('@react-native-firebase/messaging');
-              apnsToken = await getAPNSToken(messaging);
+              apnsToken = await messaging().getAPNSToken();
             } catch {}
             if (apnsToken) {
               if (__DEV__) {
@@ -73,7 +63,7 @@ export const usePushNotifications = () => {
           }
         }
 
-        const fcmToken = await getToken(messaging);
+        const fcmToken = await messaging().getToken();
         if (__DEV__) {
           console.log('[Push] FCM token:', fcmToken?.substring(0, 20) + '...');
         }
@@ -95,8 +85,7 @@ export const usePushNotifications = () => {
   }, [isAuthenticated, expoPushToken]);
 
   useEffect(() => {
-    const messaging = getMessaging();
-    const unsubscribe = onTokenRefresh(messaging, token => {
+    const unsubscribe = messaging().onTokenRefresh(token => {
       if (__DEV__) {
         console.log('[Push] FCM token refreshed:', token?.substring(0, 20) + '...');
       }
@@ -106,8 +95,7 @@ export const usePushNotifications = () => {
   }, []);
 
   useEffect(() => {
-    const messaging = getMessaging();
-    const unsubscribe = onMessage(messaging, async remoteMessage => {
+    const unsubscribe = messaging().onMessage(async remoteMessage => {
       const data = remoteMessage.data || {};
       if (__DEV__) {
         console.log('[Push] Foreground message:', remoteMessage);

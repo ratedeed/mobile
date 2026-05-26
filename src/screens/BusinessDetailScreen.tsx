@@ -22,7 +22,7 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import HapticFeedback from '../utils/haptics';
 import { SvgImage } from '../components/common/SvgImage';
 import * as ImagePicker from 'expo-image-picker';
-import { fetchContractorDetails, fetchContractorPosts, createLead, fetchContractorReviews, extractId, browseContractors, post as apiPost, submitClaim } from '../api';
+import { fetchContractorDetails, fetchContractorPosts, createLead, fetchContractorReviews, extractId, browseContractors, post as apiPost, submitClaim, getContractorBySlug } from '../api';
 import { API_BASE_URL } from '../config';
 import { uploadToCloudinary, CLOUDINARY_FOLDERS } from '../utils/cloudinary';
 import { getCoverImageUrl, getProfileImageUrl, isSvgUrl } from '../utils/avatarUtils';
@@ -140,7 +140,7 @@ const BusinessDetailScreen: React.FC = () => {
     setClaimError(null);
     try {
       const cloudinaryUrl = await uploadToCloudinary(claimDocumentFile, CLOUDINARY_FOLDERS.LICENSES);
-      await submitClaim(id, cloudinaryUrl);
+      await submitClaim(contractor?._id || id, cloudinaryUrl);
       Alert.alert('Claim Submitted', 'Your claim request has been submitted. Our team will review it within 1-3 business days.');
       setShowClaimModal(false);
       setClaimDocumentFile(null);
@@ -154,7 +154,14 @@ const BusinessDetailScreen: React.FC = () => {
   const loadContractorDetails = async () => {
     try {
       if (isMounted.current) setLoading(true);
-      const data = await fetchContractorDetails(id);
+      let data;
+      if (params.id) {
+        data = await fetchContractorDetails(params.id);
+      } else if (params.slug) {
+        data = await getContractorBySlug(params.slug);
+      } else {
+        data = await fetchContractorDetails(id);
+      }
       
       if (!isMounted.current) return;
       setContractor(data);

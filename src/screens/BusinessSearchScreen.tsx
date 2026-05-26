@@ -9,11 +9,11 @@ import {
   TextInput,
   RefreshControl,
   Text,
-  SafeAreaView,
   KeyboardAvoidingView,
   Platform,
   useColorScheme,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { FontAwesome5 } from '@expo/vector-icons';
@@ -122,7 +122,7 @@ const ListingCard = ({
           </Text>
           <View className="flex-row items-center shrink-0" style={{ gap: 2 }}>
             <FontAwesome5 name="star" solid size={12} color="#eab308" />
-            <Text className="text-xs font-bold text-slate-600">{(listing.averageRating || 0).toFixed(2)}</Text>
+            <Text className="text-xs font-bold text-slate-600 dark:text-neutral-300">{(listing.averageRating || 0).toFixed(2)}</Text>
           </View>
         </View>
         {location ? (
@@ -152,6 +152,7 @@ const BusinessSearchScreen: React.FC = () => {
   const navigation = useNavigation<BusinessSearchScreenNavigationProp>();
   const route = useRoute<BusinessSearchScreenRouteProp>();
   const { query, searchType, name: routeName } = route.params || {};
+  const insets = useSafeAreaInsets();
 
   const [searchZip, setSearchZip] = useState(query || '');
   const [searchName, setSearchName] = useState(routeName || '');
@@ -177,18 +178,20 @@ const BusinessSearchScreen: React.FC = () => {
     return () => clearTimeout(timer);
   }, [searchZip, searchName]);
 
-  const fetchContractors = useCallback(async () => {
+  const fetchContractors = useCallback(async (zipOverride?: string, nameOverride?: string) => {
     try {
       setLoading(true);
 
       const filters: any = { page: 1, limit: 500, sortBy: 'rating' };
+      const zip = zipOverride !== undefined ? zipOverride : debouncedZip;
+      const name = nameOverride !== undefined ? nameOverride : debouncedName;
 
-      if (debouncedZip) {
-        filters.zipCode = debouncedZip;
+      if (zip) {
+        filters.zipCode = zip;
       }
       
-      if (debouncedName) {
-        filters.name = debouncedName;
+      if (name) {
+        filters.name = name;
       }
 
       if (activeCategory !== 'all') {
@@ -202,7 +205,7 @@ const BusinessSearchScreen: React.FC = () => {
       setContractors(list);
       
       // Handle nearby label
-      if (debouncedZip && data?.isExpanded) {
+      if (zip && data?.isExpanded) {
         if (data.expansionTier === 2) setNearbyLabel('Showing nearby cities');
         else if (data.expansionTier === 3) setNearbyLabel('Showing nearby cities & region');
       } else {
@@ -219,6 +222,12 @@ const BusinessSearchScreen: React.FC = () => {
       setRefreshing(false);
     }
   }, [debouncedZip, debouncedName, activeCategory]);
+
+  const handleSearchSubmit = () => {
+    setDebouncedZip(searchZip);
+    setDebouncedName(searchName);
+    fetchContractors(searchZip, searchName);
+  };
 
   useEffect(() => {
     fetchContractors();
@@ -248,7 +257,7 @@ const BusinessSearchScreen: React.FC = () => {
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1 bg-white dark:bg-neutral-950">
-      <SafeAreaView className="flex-1 bg-white dark:bg-neutral-950">
+      <View style={{ flex: 1, paddingTop: insets.top, paddingBottom: insets.bottom }} className="bg-white dark:bg-neutral-950">
       {/* Search Header */}
       <View className="bg-white dark:bg-neutral-950 border-b border-neutral-200 dark:border-neutral-700 px-4 py-3">
         <View className="flex-row items-center" style={{ gap: 8 }}>
@@ -262,8 +271,12 @@ const BusinessSearchScreen: React.FC = () => {
             <FontAwesome5 name="map-marker-alt" size={14} color={isDark ? '#737373' : '#a3a3a3'} style={{ position: 'absolute', left: 12, top: 13, zIndex: 1 }} />
             <TextInput
               value={searchZip}
-              onChangeText={text => { setSearchZip(text); setActiveCategory('all'); }}
-              onSubmitEditing={() => fetchContractors()}
+              onChangeText={text => { 
+                const sanitized = text.replace(/[^0-9]/g, '');
+                setSearchZip(sanitized); 
+                setActiveCategory('all'); 
+              }}
+              onSubmitEditing={handleSearchSubmit}
               placeholder="Zip code"
               placeholderTextColor="#a3a3a3"
               keyboardType="numeric"
@@ -287,7 +300,7 @@ const BusinessSearchScreen: React.FC = () => {
             <TextInput
               value={searchName}
               onChangeText={text => { setSearchName(text); setActiveCategory('all'); }}
-              onSubmitEditing={() => fetchContractors()}
+              onSubmitEditing={handleSearchSubmit}
               placeholder="Contractor name..."
               placeholderTextColor="#a3a3a3"
               className="bg-neutral-100 dark:bg-neutral-900 dark:text-neutral-50 rounded-full pl-10 pr-9 py-2.5 text-sm"
@@ -381,7 +394,7 @@ const BusinessSearchScreen: React.FC = () => {
           <Text className="text-neutral-500 dark:text-neutral-400 text-sm mt-3">Enter a zip code or contractor name to search</Text>
         </View>
       )}
-      </SafeAreaView>
+      </View>
     </KeyboardAvoidingView>
   );
 };

@@ -189,13 +189,15 @@ const LoginScreen = () => {
         await updateBackendToken(backendResponse.token, backendResponse.emailVerified, userData);
         Toast.show({ type: 'success', text1: 'Success', text2: 'Signed in with Apple!' });
 
-        if (userData.role === 'contractor') {
-          await redirectContractor();
-        } else if (navigation.canGoBack()) {
-          navigation.goBack();
-        } else {
-          navigation.navigate('Main');
-        }
+        setTimeout(async () => {
+          if (userData.role === 'contractor') {
+            await redirectContractor();
+          } else if (navigation.canGoBack()) {
+            navigation.goBack();
+          } else {
+            navigation.navigate('Main');
+          }
+        }, 100);
       } else {
         setApiError('Apple Sign-In failed. Please try again.');
       }

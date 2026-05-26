@@ -20,6 +20,8 @@ interface CardProps {
   contentStyle?: StyleProp<ViewStyle>;
 }
 
+const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
+
 const Card: React.FC<CardProps> = ({
   children,
   variant = 'elevated',
@@ -73,7 +75,7 @@ const Card: React.FC<CardProps> = ({
 
   if (pressable && onPress) {
     return (
-      <TouchableOpacity
+      <AnimatedTouchableOpacity
         style={containerStyle}
         onPress={onPress}
         activeOpacity={0.95}
@@ -81,7 +83,7 @@ const Card: React.FC<CardProps> = ({
         onPressOut={handlePressOut}
       >
         <View style={contentStyle}>{children}</View>
-      </TouchableOpacity>
+      </AnimatedTouchableOpacity>
     );
   }
 

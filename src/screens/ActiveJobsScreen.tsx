@@ -267,7 +267,7 @@ export default function ActiveJobsScreen() {
                         <Text className="text-sm font-bold text-neutral-900 dark:text-neutral-50" numberOfLines={1}>{contractorName}</Text>
                         <Text className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">{quote.projectTitle || 'Home Project'}</Text>
                       </View>
-                      <Text className="text-sm font-bold text-neutral-900 dark:text-neutral-50">${(quote.totalAmount || quote.quoteTotal || 0).toLocaleString()}</Text>
+                      <Text className="text-sm font-bold text-neutral-900 dark:text-neutral-50">${((quote.totalAmount || quote.quoteTotal || 0) / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
                     </View>
 
                     <View className="flex-row items-center justify-between mt-3">
@@ -282,6 +282,7 @@ export default function ActiveJobsScreen() {
                       <Pressable
                         onPress={() => navigation.navigate('ReviewScreen', {
                           quoteId: quote._id,
+                          jobId: quote.jobId || quote._id,
                           contractorId: quote.contractorId?._id || quote.contractorId?.id || quote.contractorId,
                           contractorName: quote.contractorId?.companyName || quote.contractorId?.businessName || 'Contractor',
                         })}
@@ -297,7 +298,7 @@ export default function ActiveJobsScreen() {
                     {quote.status.toLowerCase() === 'pending_user_approval' && !quote.jobId && (
                       <View className="flex-row mt-3" style={{ gap: 8 }}>
                         <Pressable
-                          onPress={() => handleAcceptQuote(quote._id)}
+                          onPress={() => navigation.navigate('QuoteReview', { quoteId: quote._id })}
                           className="flex-1 py-2 rounded-lg bg-emerald-600 flex-row items-center justify-center"
                           style={{ gap: 4 }}
                         >

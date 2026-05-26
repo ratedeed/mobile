@@ -28,6 +28,8 @@ interface ButtonProps extends TouchableOpacityProps {
   rightIcon?: React.ReactNode;
 }
 
+const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
+
 const Button: React.FC<ButtonProps> = ({
   title,
   onPress,
@@ -118,7 +120,7 @@ const Button: React.FC<ButtonProps> = ({
   };
 
   return (
-    <TouchableOpacity
+    <AnimatedTouchableOpacity
       style={[
         styles.base,
         getVariantStyle(),
@@ -153,7 +155,7 @@ const Button: React.FC<ButtonProps> = ({
           {rightIcon && <View style={styles.rightIconContainer}>{rightIcon}</View>}
         </>
       )}
-    </TouchableOpacity>
+    </AnimatedTouchableOpacity>
   );
 };
 

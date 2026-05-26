@@ -47,7 +47,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
       Animated.timing(cancelAnimation, {
         toValue: 1,
         duration: 200,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }).start();
     }
     onFocus?.();
@@ -59,7 +59,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
       Animated.timing(cancelAnimation, {
         toValue: 0,
         duration: 200,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }).start();
     }
     onBlur?.();
@@ -90,7 +90,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
     Animated.timing(cancelAnimation, {
       toValue: 0,
       duration: 200,
-      useNativeDriver: true,
+      useNativeDriver: false,
     }).start();
     onCancel?.();
   };

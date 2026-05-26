@@ -5,8 +5,8 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./icon.png",
-    "newArchEnabled": true,
-    "userInterfaceStyle": "light",
+    "newArchEnabled": false,
+    "userInterfaceStyle": "automatic",
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
@@ -61,7 +61,7 @@
           "organization": "ratedeed",
           "project": "ratedeed-mobile",
           "setCommits": false,
-          "uploadSourceMaps": false
+          "uploadSourceMaps": true
         }
       ],
       [

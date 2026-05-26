@@ -1,5 +1,4 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-// @ts-expect-error firebaseConfig is a JS module
 import { auth as authModule } from '../firebaseConfig';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, verifyBeforeUpdateEmail } from 'firebase/auth';
 import { changePassword as apiChangePassword, deleteAccount } from '../utils/apiClient';
@@ -187,6 +186,7 @@ const ProfileScreen: React.FC = () => {
   const { logout, firebaseUser: authUser, isAuthenticated } = useAuth();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const isSocialUser = !auth.currentUser || auth.currentUser.providerData.some(p => p.providerId !== 'password');
 
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -308,6 +308,7 @@ const ProfileScreen: React.FC = () => {
 
   const handleChangeEmail = async () => {
     setEmailMessage(null);
+    if (isSocialUser) { setEmailMessage({ type: 'error', text: 'Email changes are managed by your identity provider.' }); return; }
     if (!emailNew || !emailPassword) { setEmailMessage({ type: 'error', text: 'New email and current password required.' }); return; }
     setEmailSaving(true);
     try {
@@ -326,6 +327,7 @@ const ProfileScreen: React.FC = () => {
 
   const handleChangePassword = async () => {
     setPwMessage(null);
+    if (isSocialUser) { setPwMessage({ type: 'error', text: 'Password changes are managed by your identity provider.' }); return; }
     if (!currentPassword || !newPassword || !confirmPassword) { setPwMessage({ type: 'error', text: 'All fields required.' }); return; }
     if (newPassword.length < 8) { setPwMessage({ type: 'error', text: 'Minimum 8 characters.' }); return; }
     if (newPassword !== confirmPassword) { setPwMessage({ type: 'error', text: 'Passwords do not match.' }); return; }
@@ -571,21 +573,25 @@ const ProfileScreen: React.FC = () => {
       </SettingsSheet>
 
       <SettingsSheet title="Privacy & Security" onClose={closeSheet} visible={activeSheet === 'privacy'}>
-        <Pressable onPress={() => { closeSheet(); setTimeout(() => setActiveSheet('change-password'), 350); }} className="flex-row items-center justify-between py-4 active:opacity-60">
-          <View className="flex-1 mr-4">
-            <Text className="text-[15px] font-medium text-neutral-900 dark:text-neutral-50">Change Password</Text>
-            <Text className="text-[13px] text-neutral-400 dark:text-neutral-500 mt-0.5">Update your account password</Text>
-          </View>
-          <FontAwesome5 name="chevron-right" size={12} color="#c4c4c4" />
-        </Pressable>
-        <Pressable onPress={() => { closeSheet(); setTimeout(() => setActiveSheet('change-email'), 350); }} className="flex-row items-center justify-between py-4 active:opacity-60">
-          <View className="flex-1 mr-4">
-            <Text className="text-[15px] font-medium text-neutral-900 dark:text-neutral-50">Change Email</Text>
-            <Text className="text-[13px] text-neutral-400 dark:text-neutral-500 mt-0.5">Update your email address</Text>
-          </View>
-          <FontAwesome5 name="chevron-right" size={12} color="#c4c4c4" />
-        </Pressable>
-        <View className="pt-5 mt-2 border-t border-neutral-100 dark:border-neutral-800">
+        {!isSocialUser && (
+          <Pressable onPress={() => { closeSheet(); setTimeout(() => setActiveSheet('change-password'), 350); }} className="flex-row items-center justify-between py-4 active:opacity-60">
+            <View className="flex-1 mr-4">
+              <Text className="text-[15px] font-medium text-neutral-900 dark:text-neutral-50">Change Password</Text>
+              <Text className="text-[13px] text-neutral-400 dark:text-neutral-500 mt-0.5">Update your account password</Text>
+            </View>
+            <FontAwesome5 name="chevron-right" size={12} color="#c4c4c4" />
+          </Pressable>
+        )}
+        {!isSocialUser && (
+          <Pressable onPress={() => { closeSheet(); setTimeout(() => setActiveSheet('change-email'), 350); }} className="flex-row items-center justify-between py-4 active:opacity-60">
+            <View className="flex-1 mr-4">
+              <Text className="text-[15px] font-medium text-neutral-900 dark:text-neutral-50">Change Email</Text>
+              <Text className="text-[13px] text-neutral-400 dark:text-neutral-500 mt-0.5">Update your email address</Text>
+            </View>
+            <FontAwesome5 name="chevron-right" size={12} color="#c4c4c4" />
+          </Pressable>
+        )}
+        <View className={`pt-5 mt-2 ${!isSocialUser ? 'border-t border-neutral-100 dark:border-neutral-800' : ''}`}>
           <SectionLabel>Data &amp; Privacy</SectionLabel>
           <Pressable onPress={() => { closeSheet(); setTimeout(() => { setActiveSheet('blocked-users'); loadBlockedUsers(); }, 350); }} className="flex-row items-center justify-between py-4 active:opacity-60">
             <View className="flex-1 mr-4">
