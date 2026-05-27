@@ -349,7 +349,8 @@ const MessagesScreen = () => {
   const messagesRef = useRef();
   const selectedConvRef = useRef();
   selectedConvRef.current = selectedConversation;
-  const typingTimeoutRef = useRef(null);
+  const myTypingTimeoutRef = useRef(null);
+  const otherTypingTimeoutRef = useRef(null);
   const lastTypingEmit = useRef(0);
 
   // ─── Keyboard visibility listener ──────────────────────────────────────────
@@ -359,6 +360,15 @@ const MessagesScreen = () => {
     return () => {
       show.remove();
       hide.remove();
+    };
+  }, []);
+
+  // Clean up outgoing typing timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (myTypingTimeoutRef.current) {
+        clearTimeout(myTypingTimeoutRef.current);
+      }
     };
   }, []);
 
@@ -417,8 +427,8 @@ const MessagesScreen = () => {
     const handleTyping = ({ conversationId, userId: typerId }) => {
       if (selectedConvRef.current?.conversationId === conversationId && !myIds.has(resolveId(typerId))) {
         setIsOtherTyping(true);
-        clearTimeout(typingTimeoutRef.current);
-        typingTimeoutRef.current = setTimeout(() => setIsOtherTyping(false), TYPING_TIMEOUT);
+        clearTimeout(otherTypingTimeoutRef.current);
+        otherTypingTimeoutRef.current = setTimeout(() => setIsOtherTyping(false), TYPING_TIMEOUT);
       }
     };
 
@@ -435,7 +445,7 @@ const MessagesScreen = () => {
       offTyping(handleTyping);
       offUserOnlineStatus(handleStatus);
       leaveConversationSocket(selectedConvRef.current?._id);
-      clearTimeout(typingTimeoutRef.current);
+      clearTimeout(otherTypingTimeoutRef.current);
     };
   }, [currentUserId, myIds, isMessageFromMe]);
 
@@ -642,6 +652,17 @@ const MessagesScreen = () => {
   const handleSendMessage = async () => {
     if ((!newMessage.trim() && !pendingAttachment) || !selectedConversation || !currentUserId) return;
     HapticFeedback.medium();
+
+    // Stop typing indicator
+    if (myTypingTimeoutRef.current) {
+      clearTimeout(myTypingTimeoutRef.current);
+      myTypingTimeoutRef.current = null;
+    }
+    const stopCId = selectedConversation.conversationId || selectedConversation._id;
+    const stopTargetId = resolveId(selectedConversation.otherParticipant);
+    emitTyping(stopCId, currentUserId, false, stopTargetId);
+    lastTypingEmit.current = 0;
+
     try {
       let cId = selectedConversation.conversationId || selectedConversation._id;
       let targetId = resolveId(selectedConversation.otherParticipant);
@@ -697,8 +718,32 @@ const MessagesScreen = () => {
     setNewMessage(text);
     const cId = selectedConversation?.conversationId;
     if (cId && !cId.startsWith("temp-")) {
+      if (!text.trim()) {
+        if (myTypingTimeoutRef.current) {
+          clearTimeout(myTypingTimeoutRef.current);
+          myTypingTimeoutRef.current = null;
+        }
+        const recipientId = resolveId(selectedConversation?.otherParticipant);
+        emitTyping(cId, currentUserId, false, recipientId);
+        lastTypingEmit.current = 0;
+        return;
+      }
+
       const now = Date.now();
-      if (now - lastTypingEmit.current > 2000) { emitTyping(cId, currentUserId, true); lastTypingEmit.current = now; }
+      const recipientId = resolveId(selectedConversation?.otherParticipant);
+      if (now - lastTypingEmit.current > 3000) {
+        emitTyping(cId, currentUserId, true, recipientId);
+        lastTypingEmit.current = now;
+      }
+
+      if (myTypingTimeoutRef.current) {
+        clearTimeout(myTypingTimeoutRef.current);
+      }
+      myTypingTimeoutRef.current = setTimeout(() => {
+        emitTyping(cId, currentUserId, false, recipientId);
+        myTypingTimeoutRef.current = null;
+        lastTypingEmit.current = 0; // reset throttle on stop
+      }, 2000);
     }
   }, [selectedConversation, currentUserId]);
 

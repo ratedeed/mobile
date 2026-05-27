@@ -100,6 +100,7 @@ function StatusBadge({ status }: { status: string }) {
     accepted: { label: 'Accepted', bg: 'bg-emerald-100 dark:bg-emerald-900/40', text: 'text-emerald-800 dark:text-emerald-300' },
     rejected: { label: 'Rejected', bg: 'bg-indigo-100 dark:bg-indigo-900/40', text: 'text-indigo-800 dark:text-indigo-300' },
     funded_in_progress: { label: 'In Progress', bg: 'bg-indigo-100 dark:bg-indigo-900/40', text: 'text-indigo-800 dark:text-indigo-300' },
+    partially_funded: { label: 'Partially Funded', bg: 'bg-amber-100 dark:bg-amber-900/40', text: 'text-amber-800 dark:text-amber-300' },
     awaiting_payment: { label: 'Awaiting Payment', bg: 'bg-amber-100 dark:bg-amber-900/40', text: 'text-amber-800 dark:text-amber-300' },
     completed_pending_release: { label: 'Pending Release', bg: 'bg-blue-100 dark:bg-blue-900/40', text: 'text-blue-800 dark:text-blue-300' },
     completed_paid: { label: 'Completed', bg: 'bg-emerald-100 dark:bg-emerald-900/40', text: 'text-emerald-800 dark:text-emerald-300' },
@@ -115,6 +116,7 @@ function StatusBadge({ status }: { status: string }) {
 
 // ---- Star Rating ----
 function StarRating({ rating, size = 12 }: { rating: number; size?: number }) {
+  const isDark = useColorScheme() === 'dark';
   return (
     <View className="flex-row items-center" style={{ gap: 1 }}>
       {[1, 2, 3, 4, 5].map(i => (
@@ -123,7 +125,7 @@ function StarRating({ rating, size = 12 }: { rating: number; size?: number }) {
           name="star"
           solid={i <= Math.round(rating)}
           size={size}
-          color={i <= Math.round(rating) ? '#eab308' : '#d4d4d4'}
+          color={i <= Math.round(rating) ? '#eab308' : (isDark ? '#404040' : '#d4d4d4')}
         />
       ))}
     </View>
@@ -661,9 +663,9 @@ const ContractorDashboardScreen: React.FC = () => {
   };
 
   // ---- Computed values ----
-  const totalEarnings = jobs.filter(j => ['completed_paid', 'funded_in_progress'].includes(j.status)).reduce((sum, j) => sum + (j.totalAmount || j.amount || 0), 0);
-  const pendingEscrow = jobs.filter(j => ['funded_in_progress', 'completed_pending_release'].includes(j.status)).reduce((sum, j) => sum + (j.totalAmount || j.amount || 0), 0);
-  const activeJobsCount = jobs.filter(j => ['funded_in_progress', 'awaiting_payment'].includes(j.status)).length;
+  const totalEarnings = jobs.filter(j => ['completed_paid', 'funded_in_progress', 'partially_funded'].includes(j.status)).reduce((sum, j) => sum + (j.totalAmount || j.amount || 0), 0);
+  const pendingEscrow = jobs.filter(j => ['funded_in_progress', 'partially_funded', 'completed_pending_release'].includes(j.status)).reduce((sum, j) => sum + (j.totalAmount || j.amount || 0), 0);
+  const activeJobsCount = jobs.filter(j => ['funded_in_progress', 'partially_funded', 'awaiting_payment'].includes(j.status)).length;
   const avgRating = reviews.length > 0 ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length : 0;
   const ratingBreakdown = [5, 4, 3, 2, 1].map(stars => ({
     stars,

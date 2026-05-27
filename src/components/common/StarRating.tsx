@@ -5,6 +5,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   ViewStyle,
+  useColorScheme,
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { Colors, Spacing } from '../../constants/designTokens';
@@ -28,19 +29,23 @@ const StarRating: React.FC<StarRatingProps> = ({
   showLabel = false,
   style,
 }) => {
+  const isDark = useColorScheme() === 'dark';
+
   const renderStar = (index: number) => {
     const starNumber = index + 1;
     const isFilled = starNumber <= Math.floor(rating);
     const isHalf = starNumber === Math.ceil(rating) && rating % 1 !== 0;
 
-    let iconName: 'star' | 'star-half-full' | 'star-o' = 'star-o';
+    let iconName: 'star' | 'star-half-o' | 'star-o' = 'star-o';
     if (isFilled) {
       iconName = 'star';
     } else if (isHalf) {
-      iconName = 'star-half-full';
+      iconName = 'star-half-o';
     }
 
-    const starColor = isFilled || isHalf ? Colors.warning500 : Colors.neutral300;
+    const starColor = isFilled || isHalf 
+      ? Colors.warning500 
+      : (isDark ? Colors.neutral700 : Colors.neutral300);
 
     const star = (
       <FontAwesome name={iconName} size={size} color={starColor} />
@@ -52,6 +57,7 @@ const StarRating: React.FC<StarRatingProps> = ({
           key={index}
           onPress={() => onRatingChange(starNumber)}
           style={styles.starButton}
+          activeOpacity={0.7}
         >
           {star}
         </TouchableOpacity>
@@ -71,7 +77,15 @@ const StarRating: React.FC<StarRatingProps> = ({
         {Array.from({ length: maxStars }, (_, i) => renderStar(i))}
       </View>
       {showLabel && (
-        <Text style={[styles.label, { fontSize: size * 0.7 }]}>
+        <Text 
+          style={[
+            styles.label, 
+            { 
+              fontSize: size * 0.7,
+              color: isDark ? Colors.neutral300 : Colors.neutral600 
+            }
+          ]}
+        >
           {rating.toFixed(1)}
         </Text>
       )}
@@ -90,12 +104,8 @@ const styles = StyleSheet.create({
   starButton: {
     marginRight: 2,
   },
-  star: {
-    fontWeight: '400',
-  },
   label: {
     marginLeft: Spacing.sm,
-    color: Colors.neutral600,
     fontWeight: '500',
   },
 });

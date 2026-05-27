@@ -61,7 +61,8 @@ const LoginScreen = () => {
   }, []);
 
   const handleLogin = async () => {
-    if (!email || !password) {
+    const trimmedEmail = email.trim().toLowerCase();
+    if (!trimmedEmail || !password) {
       Toast.show({ type: 'error', text1: 'Error', text2: 'Please enter both email and password.' });
       return;
     }
@@ -69,7 +70,7 @@ const LoginScreen = () => {
     setApiError(null);
     setLoading(true);
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, trimmedEmail, password);
       const user = userCredential.user;
 
       await user.reload();
@@ -89,7 +90,7 @@ const LoginScreen = () => {
       const idToken = await reloadedUser.getIdToken();
 
       try {
-        const backendResponse = await backendLoginFirebase(idToken, email);
+        const backendResponse = await backendLoginFirebase(idToken, trimmedEmail);
         if (backendResponse?.token) {
           const { token, refreshToken, ...userData } = backendResponse;
           await updateBackendToken(backendResponse.token, backendResponse.emailVerified, userData);

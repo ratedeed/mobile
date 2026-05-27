@@ -62,6 +62,8 @@ const AnimatedGradientText = ({ text }: { text: string }) => {
   );
 };
 
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
 let hasShownEscrowBanner = false;
 
 export const EscrowTrustBanner = () => {
@@ -178,7 +180,7 @@ export const EscrowTrustBanner = () => {
   return (
     <>
       {/* Backdrop — tap anywhere to dismiss */}
-      <Pressable style={styles.overlay} onPress={dismiss} />
+      <AnimatedPressable style={[styles.overlay, { opacity: opacityAnim }]} onPress={dismiss} />
 
       {/* Banner wrapper — lets touches pass through to backdrop except on the banner itself */}
       <View style={styles.container} pointerEvents="box-none">

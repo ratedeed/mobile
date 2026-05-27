@@ -153,7 +153,7 @@ export default function EarningsScreen() {
                 Available Balance
               </Text>
             </View>
-            <View className="bg-emerald-50 dark:bg-emerald-900/200/20 px-2.5 py-1 rounded-full">
+            <View className="bg-emerald-50 dark:bg-emerald-950/20 px-2.5 py-1 rounded-full">
               <Text className="text-[10px] font-bold text-emerald-400">Available</Text>
             </View>
           </View>
@@ -167,7 +167,7 @@ export default function EarningsScreen() {
           <View className="flex-1 bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 p-4">
             <View className="flex-row items-center" style={{ gap: 4 }}>
               <FontAwesome5 name="clock" size={12} color="#d97706" />
-              <Text className="text-xs text-neutral-500 dark:text-neutral-400 dark:text-neutral-500 font-medium">Pending</Text>
+              <Text className="text-xs text-neutral-500 dark:text-neutral-400 font-medium">Pending</Text>
             </View>
             <Text className="text-xl font-bold text-neutral-900 dark:text-white mt-1">
               {formatCurrency(pendingPayouts)}
@@ -176,7 +176,7 @@ export default function EarningsScreen() {
           <View className="flex-1 bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 p-4">
             <View className="flex-row items-center" style={{ gap: 4 }}>
               <FontAwesome5 name="chart-line" size={12} color="#059669" />
-              <Text className="text-xs text-neutral-500 dark:text-neutral-400 dark:text-neutral-500 font-medium">Total Earned</Text>
+              <Text className="text-xs text-neutral-500 dark:text-neutral-400 font-medium">Total Earned</Text>
             </View>
             <Text className="text-xl font-bold text-neutral-900 dark:text-white mt-1">
               {formatCurrency(totalEarned)}
@@ -256,7 +256,7 @@ export default function EarningsScreen() {
                     {/* Amount */}
                     <Text
                       className="text-sm font-bold"
-                      style={{ color: isPositive ? '#059669' : '#171717' }}
+                      style={{ color: isPositive ? '#059669' : (isDark ? '#f5f5f5' : '#171717') }}
                     >
                       {isPositive ? '+' : '-'}{formatCurrency(amount)}
                     </Text>

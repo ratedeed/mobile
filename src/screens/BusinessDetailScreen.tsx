@@ -546,7 +546,7 @@ const BusinessDetailScreen: React.FC = () => {
             <View className="flex-row items-center flex-wrap mt-1" style={{ gap: 8 }}>
               <View className="flex-row items-center" style={{ gap: 4 }}>
                 <FontAwesome5 name="star" solid size={14} color="#eab308" />
-                <Text className="text-sm font-semibold text-slate-600">{avgRating.toFixed(2)}</Text>
+                <Text className="text-sm font-semibold text-slate-600 dark:text-neutral-300">{avgRating.toFixed(2)}</Text>
                 <Text className="text-sm text-neutral-500 dark:text-neutral-400">({reviewCount} reviews)</Text>
               </View>
               {!!c.isVerified && (
@@ -877,7 +877,7 @@ const BusinessDetailScreen: React.FC = () => {
                         </View>
                         <View className="flex-row items-center" style={{ gap: 2 }}>
                           <FontAwesome5 name="star" solid size={10} color="#eab308" />
-                          <Text className="text-xs font-bold">{review.rating}</Text>
+                          <Text className="text-xs font-bold text-neutral-900 dark:text-neutral-50">{review.rating}</Text>
                         </View>
                       </View>
                       <Text className="text-sm text-neutral-600 dark:text-neutral-400 leading-5">{review.comment}</Text>

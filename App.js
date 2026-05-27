@@ -12,7 +12,7 @@ import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { ContractorProvider } from './src/context/ContractorContext';
 import { NotificationsProvider } from './src/context/NotificationsContext';
 import { StripeProvider } from '@stripe/stripe-react-native';
-import { registerSocket, startAppStateListener } from './src/utils/apiClient';
+import { registerSocket, startAppStateListener, startNetworkStatusListener, stopNetworkStatusListener, stopAppStateListener } from './src/utils/apiClient';
 import ErrorBoundary from './src/components/ErrorBoundary';
 import { usePushNotifications } from './src/hooks/usePushNotifications';
 import { EscrowTrustBanner } from './src/components/EscrowTrustBanner';
@@ -97,6 +97,11 @@ function AppNavigator() {
 
   useEffect(() => {
     startAppStateListener();
+    startNetworkStatusListener();
+    return () => {
+      stopAppStateListener();
+      stopNetworkStatusListener();
+    };
   }, []);
 
   usePushNotifications(); // Initialize push notification listeners inside NavigationContainer

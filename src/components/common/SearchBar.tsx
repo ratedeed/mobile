@@ -105,7 +105,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
 
   const cancelWidth = cancelAnimation.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, 70],
+    outputRange: [0, 75],
   });
 
   return (
@@ -135,8 +135,8 @@ const SearchBar: React.FC<SearchBarProps> = ({
 
       {showCancelButton && (
         <Animated.View style={[styles.cancelContainer, { width: cancelWidth }]}>
-          <TouchableOpacity onPress={handleCancel}>
-            <Text style={styles.cancelText}>Cancel</Text>
+          <TouchableOpacity onPress={handleCancel} style={{ width: 75 }} activeOpacity={0.7}>
+            <Text style={styles.cancelText} numberOfLines={1}>Cancel</Text>
           </TouchableOpacity>
         </Animated.View>
       )}

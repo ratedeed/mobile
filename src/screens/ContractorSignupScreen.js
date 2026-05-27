@@ -135,7 +135,7 @@ const ContractorSignupScreen = () => {
     setBusinessAddress(item.display_name);
     setAddressSuggestions([]);
     if (item.address?.postcode) {
-      const zip = item.address.postcode.split('-')[0];
+      const zip = item.address.postcode.split('-')[0].trim();
       if (/^\d{5}$/.test(zip) && !zipCodes.includes(zip)) {
         setZipCodes([...zipCodes, zip]);
       }
@@ -221,7 +221,8 @@ const ContractorSignupScreen = () => {
     setLoading(true);
     let userCreated = null;
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const trimmedEmail = email.trim().toLowerCase();
+      const userCredential = await createUserWithEmailAndPassword(auth, trimmedEmail, password);
       userCreated = userCredential.user;
       await sendEmailVerification(userCreated);
 

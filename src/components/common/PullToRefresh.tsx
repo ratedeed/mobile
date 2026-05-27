@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import {
   RefreshControl,
   View,
@@ -7,10 +7,11 @@ import {
   Text,
   ViewStyle,
   ScrollView,
+  ScrollViewProps,
 } from 'react-native';
 import { Colors, Spacing } from '../../constants/designTokens';
 
-interface PullToRefreshProps {
+interface PullToRefreshProps extends Omit<ScrollViewProps, 'refreshControl' | 'style'> {
   refreshing: boolean;
   onRefresh: () => void;
   children: React.ReactNode;
@@ -19,6 +20,7 @@ interface PullToRefreshProps {
   title?: string;
   showFeedback?: boolean;
   successDuration?: number;
+  useScrollView?: boolean;
 }
 
 const PullToRefresh: React.FC<PullToRefreshProps> = ({
@@ -30,65 +32,86 @@ const PullToRefresh: React.FC<PullToRefreshProps> = ({
   title = 'Pull to refresh',
   showFeedback = true,
   successDuration = 1500,
+  useScrollView = true,
+  ...scrollViewProps
 }) => {
   const [showSuccess, setShowSuccess] = useState(false);
   const successScale = useRef(new Animated.Value(0)).current;
   const successOpacity = useRef(new Animated.Value(0)).current;
+  const prevRefreshing = useRef(refreshing);
 
-  const handleRefresh = async () => {
-    await onRefresh();
-    
-    if (showFeedback) {
-      setShowSuccess(true);
-      Animated.parallel([
-        Animated.sequence([
-          Animated.spring(successScale, {
-            toValue: 1,
-            useNativeDriver: true,
-            friction: 6,
-            tension: 40,
-          }),
-          Animated.delay(successDuration - 600),
-          Animated.timing(successScale, {
-            toValue: 0,
-            duration: 200,
-            useNativeDriver: true,
-          }),
-        ]),
-        Animated.sequence([
-          Animated.timing(successOpacity, {
-            toValue: 1,
-            duration: 200,
-            useNativeDriver: true,
-          }),
-          Animated.delay(successDuration - 400),
-          Animated.timing(successOpacity, {
-            toValue: 0,
-            duration: 200,
-            useNativeDriver: true,
-          }),
-        ]),
-      ]).start(() => setShowSuccess(false));
+  const triggerSuccessAnimation = () => {
+    setShowSuccess(true);
+    successScale.setValue(0);
+    successOpacity.setValue(0);
+
+    Animated.parallel([
+      Animated.sequence([
+        Animated.spring(successScale, {
+          toValue: 1,
+          useNativeDriver: true,
+          friction: 6,
+          tension: 40,
+        }),
+        Animated.delay(successDuration - 600),
+        Animated.timing(successScale, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]),
+      Animated.sequence([
+        Animated.timing(successOpacity, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.delay(successDuration - 400),
+        Animated.timing(successOpacity, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]),
+    ]).start(() => setShowSuccess(false));
+  };
+
+  useEffect(() => {
+    if (prevRefreshing.current && !refreshing) {
+      if (showFeedback) {
+        triggerSuccessAnimation();
+      }
     }
+    prevRefreshing.current = refreshing;
+  }, [refreshing, showFeedback]);
+
+  const handleRefresh = () => {
+    onRefresh();
   };
 
   return (
     <View style={[styles.container, style]}>
-      <ScrollView
-        contentContainerStyle={{ flexGrow: 1 }}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            tintColor={tintColor}
-            colors={[tintColor]}
-            progressBackgroundColor={Colors.neutral50}
-            title={!refreshing ? title : undefined}
-          />
-        }
-      >
-        {children}
-      </ScrollView>
+      {useScrollView ? (
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={tintColor}
+              colors={[tintColor]}
+              progressBackgroundColor={Colors.neutral50}
+              title={!refreshing ? title : undefined}
+            />
+          }
+          {...scrollViewProps}
+        >
+          {children}
+        </ScrollView>
+      ) : (
+        children
+      )}
       
       {showFeedback && showSuccess && (
         <Animated.View
@@ -112,6 +135,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
   successContainer: {
     position: 'absolute',
     top: Spacing.xl,
@@ -127,6 +156,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 4,
+    zIndex: 9999,
   },
   successIcon: {
     color: Colors.neutral50,

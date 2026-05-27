@@ -84,9 +84,16 @@ const RegisterScreen = () => {
   const handleRegister = async () => {
     const trimmedFirstName = firstName.trim();
     const trimmedLastName = lastName.trim();
-    const trimmedEmail = email.trim();
+    const trimmedEmail = email.trim().toLowerCase();
+    const trimmedZip = zipCode.trim();
+
     if (!trimmedFirstName || !trimmedLastName || !trimmedEmail || !password) {
       Toast.show({ type: 'error', text1: 'Error', text2: 'Please fill in all required fields.' });
+      return;
+    }
+
+    if (trimmedZip && !/^\d{5}$/.test(trimmedZip)) {
+      Toast.show({ type: 'error', text1: 'Error', text2: 'Please enter a valid 5-digit ZIP code.' });
       return;
     }
 
@@ -104,7 +111,7 @@ const RegisterScreen = () => {
         lastName: trimmedLastName,
         email: trimmedEmail,
         firebaseUid: userCreated.uid,
-        ...(zipCode ? { zipCode: zipCode.trim() } : {}),
+        ...(trimmedZip ? { zipCode: trimmedZip } : {}),
       });
       await auth.signOut();
 

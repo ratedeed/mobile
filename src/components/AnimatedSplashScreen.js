@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, Animated, Easing, StyleSheet, useColorScheme } from 'react-native';
+import { View, Text, Animated, Easing, StyleSheet } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import { FontAwesome5 } from '@expo/vector-icons';
+import { useColorScheme } from 'nativewind';
 
 const SPLASH_COLOR = '#ffffff'; 
 const LOGO_COLOR = '#4F46E5'; // Indigo-600
@@ -10,7 +11,7 @@ const LOGO_COLOR = '#4F46E5'; // Indigo-600
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 const AnimatedSplashScreen = ({ onComplete, minDuration = 2800 }) => {
-  const colorScheme = useColorScheme();
+  const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
   const splashBgColor = isDark ? '#171717' : '#ffffff';
 

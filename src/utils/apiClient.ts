@@ -6,6 +6,7 @@ import { auth } from '../firebaseConfig';
 import { Auth } from 'firebase/auth';
 import { jwtDecode } from 'jwt-decode';
 import { AppState } from 'react-native';
+import NetInfo from '@react-native-community/netinfo';
 import { getSecureItem, setSecureItem, removeSecureItem } from './secureStore';
 
 // @ts-ignore - firebaseConfig is a JS module
@@ -441,6 +442,8 @@ let currentSocketUserId: string | null = null;
 let activeListeners: Array<{ event: string; callback: Function }> = [];
 
 let appStateSubscription: any = null;
+let netInfoSubscription: (() => void) | null = null;
+let lastKnownIsConnected: boolean | null = null;
 
 export const startAppStateListener = () => {
   if (appStateSubscription) return;
@@ -462,6 +465,46 @@ export const stopAppStateListener = () => {
   if (appStateSubscription) {
     appStateSubscription.remove();
     appStateSubscription = null;
+  }
+};
+
+export const startNetworkStatusListener = () => {
+  if (netInfoSubscription) return;
+
+  netInfoSubscription = NetInfo.addEventListener((state) => {
+    const isConnected = state.isConnected ?? false;
+
+    // Transition from offline to online
+    if (isConnected && lastKnownIsConnected === false) {
+      if (socket && (socket.disconnected || !socket.connected)) {
+        (async () => {
+          try {
+            await refreshTokenIfNeeded();
+            const token = await getSecureItem('auth_token');
+            if (socket) {
+              socket.auth = token ? { token } : {};
+              socket.connect();
+              if (currentSocketUserId) {
+                socket.emit('register', currentSocketUserId);
+              }
+            }
+          } catch (err) {
+            if (__DEV__) {
+              console.warn('Socket network transition reconnection failed:', err);
+            }
+          }
+        })();
+      }
+    }
+
+    lastKnownIsConnected = isConnected;
+  });
+};
+
+export const stopNetworkStatusListener = () => {
+  if (netInfoSubscription) {
+    netInfoSubscription();
+    netInfoSubscription = null;
   }
 };
 
@@ -496,8 +539,31 @@ export const initializeSocket = async () => {
       });
     });
 
-    socket.on('connect_error', () => {
+    socket.on('connect_error', async (err: any) => {
       isInitializingSocket = false;
+
+      // Check if it is an authentication or handshake error
+      const isAuthError = err && (
+        err.message?.toLowerCase().includes('auth') ||
+        err.message?.toLowerCase().includes('token') ||
+        err.message?.toLowerCase().includes('unauthorized') ||
+        err.message?.toLowerCase().includes('jwt')
+      );
+
+      if (isAuthError) {
+        try {
+          await refreshTokenIfNeeded();
+          const freshToken = await getSecureItem('auth_token');
+          if (socket && freshToken) {
+            socket.auth = { token: freshToken };
+            socket.connect();
+          }
+        } catch (refreshErr) {
+          if (__DEV__) {
+            console.warn('Socket authentication recovery failed:', refreshErr);
+          }
+        }
+      }
     });
 
     socket.on('disconnect', (reason) => {
@@ -621,9 +687,9 @@ export const offNewNotification = (callback?: (notification: any) => void) => {
   removeActiveListener("newNotification", callback);
 };
 
-export const emitTyping = (conversationId: string, userId: string, isTyping: boolean) => {
+export const emitTyping = (conversationId: string, userId: string, isTyping: boolean, recipientId?: string) => {
   if (socket?.connected) {
-    socket.emit('typing', { conversationId, userId, isTyping });
+    socket.emit('typing', { conversationId, userId, isTyping, recipientId });
   }
 };
 

@@ -16,6 +16,7 @@ const getStatusBadge = (status: string) => {
   if (s.includes('progress')) return { label: 'In Progress', color: '#7c3aed', bg: '#ede9fe' };
   if (s.includes('complete')) return { label: 'Completed', color: '#4b5563', bg: '#f3f4f6' };
   if (s.includes('pay')) return { label: 'Payment Pending', color: '#c2410c', bg: '#ffedd5' };
+  if (s.includes('partial')) return { label: 'Partially Funded', color: '#b45309', bg: '#fef3c7' };
   if (s.includes('quote') || s === 'quoted') return { label: 'Quote Ready', color: '#1d4ed8', bg: '#dbeafe' };
   if (s === 'declined') return { label: 'Declined', color: '#6b7280', bg: '#f3f4f6' };
   if (s === 'disputed') return { label: 'Disputed', color: '#be123c', bg: '#ffe4e6' };
@@ -343,11 +344,11 @@ export default function ActiveJobsScreen() {
                       </View>
                     )}
 
-                    {(quote.status.toLowerCase() === 'awaiting_payment' || quote.status.toLowerCase() === 'funded_in_progress' || quote.status.toLowerCase() === 'quoted' || quote.status.toLowerCase() === 'pending_user_approval') && (
+                    {(quote.status.toLowerCase() === 'awaiting_payment' || quote.status.toLowerCase() === 'funded_in_progress' || quote.status.toLowerCase() === 'partially_funded' || quote.status.toLowerCase() === 'quoted' || quote.status.toLowerCase() === 'pending_user_approval') && (
                       <Pressable
                         onPress={() => Alert.alert(
                           'Cancel Job',
-                          quote.status.toLowerCase() === 'funded_in_progress'
+                          ['funded_in_progress', 'partially_funded'].includes(quote.status.toLowerCase())
                             ? 'This will cancel the job and refund your payment from escrow. Continue?'
                             : 'This will cancel the job. Continue?',
                           [
