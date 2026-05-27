@@ -23,6 +23,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColorScheme } from "nativewind";
 import ImageLightbox from "../components/ImageLightbox";
 import * as ImagePicker from "expo-image-picker";
+import { requestPhotoLibraryPermission } from "../utils/permissions";
 import {
   fetchConversations,
   fetchMessages,
@@ -221,6 +222,7 @@ const ReportModal = ({ visible, onClose, userName, onReport }) => {
   const [submitting, setSubmitting] = useState(false);
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
+  const insets = useSafeAreaInsets();
 
   const handleSubmit = async () => {
     if (!selected) return;
@@ -231,7 +233,10 @@ const ReportModal = ({ visible, onClose, userName, onReport }) => {
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
       <View className="flex-1 bg-white dark:bg-neutral-950">
-        <View className="px-5 pt-14 pb-4 border-b border-neutral-100 dark:border-neutral-800 flex-row items-center justify-between">
+        <View
+          style={{ paddingTop: Platform.OS === 'android' ? (insets.top || 16) : 12 }}
+          className="px-5 pb-4 border-b border-neutral-100 dark:border-neutral-800 flex-row items-center justify-between"
+        >
           <Text className="text-lg font-bold text-neutral-900 dark:text-white">Report</Text>
           <Pressable onPress={onClose} className="p-1"><FontAwesome5 name="times" size={18} color={isDark ? "#a3a3a3" : "#737373"} /></Pressable>
         </View>
@@ -253,7 +258,10 @@ const ReportModal = ({ visible, onClose, userName, onReport }) => {
           )}
         </ScrollView>
         {selected && (
-          <View className="px-5 pb-10 pt-3 border-t border-neutral-100 dark:border-neutral-800">
+          <View
+            style={{ paddingBottom: Math.max(insets.bottom, 12) }}
+            className="px-5 pt-3 border-t border-neutral-100 dark:border-neutral-800"
+          >
             <Pressable onPress={handleSubmit} disabled={submitting} className={`py-4 rounded-xl items-center ${submitting ? "bg-red-300 dark:bg-red-900/40" : "bg-red-500"}`}>
               {submitting ? <ActivityIndicator size="small" color="white" /> : <Text className="text-white font-bold text-[15px]">Submit Report</Text>}
             </Pressable>
@@ -749,14 +757,21 @@ const MessagesScreen = () => {
 
   const pickImage = async () => {
     HapticFeedback.selection();
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.7, base64: true });
-    if (result.canceled) return;
-    const asset = result.assets[0];
-    if (asset.fileSize && asset.fileSize > 5 * 1024 * 1024) {
-      Alert.alert("File too large", "Please choose an image under 5MB.");
-      return;
+    const hasPermission = await requestPhotoLibraryPermission();
+    if (!hasPermission) return;
+
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.7, base64: true });
+      if (result.canceled) return;
+      const asset = result.assets[0];
+      if (asset.fileSize && asset.fileSize > 5 * 1024 * 1024) {
+        Alert.alert("File too large", "Please choose an image under 5MB.");
+        return;
+      }
+      setPendingAttachment(asset);
+    } catch (err) {
+      Alert.alert("Error", err?.message || "Failed to select image");
     }
-    setPendingAttachment(asset);
   };
 
   const handleReport = async (category, details) => {

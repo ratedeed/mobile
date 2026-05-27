@@ -138,7 +138,7 @@ export const handleResponse = async (response: Response, retryFn?: () => Promise
 export const get = async (url: string, headers: Record<string, string> = {}): Promise<any> => {
   const makeRequest = async () => {
     const currentHeaders = { ...headers };
-    if (!currentHeaders['Authorization']) {
+    if (!currentHeaders['Authorization'] || currentHeaders['Authorization'].startsWith('Bearer ')) {
       const authH = await getAuthHeaders();
       Object.assign(currentHeaders, authH);
     }
@@ -151,7 +151,7 @@ export const get = async (url: string, headers: Record<string, string> = {}): Pr
 export const post = async (url: string, data: any, headers: Record<string, string> = {}): Promise<any> => {
   const makeRequest = async () => {
     const currentHeaders: Record<string, string> = { 'Content-Type': 'application/json', ...headers };
-    if (!currentHeaders['Authorization']) {
+    if (!currentHeaders['Authorization'] || currentHeaders['Authorization'].startsWith('Bearer ')) {
       const authH = await getAuthHeaders();
       Object.assign(currentHeaders, authH);
     }
@@ -168,7 +168,7 @@ export const post = async (url: string, data: any, headers: Record<string, strin
 export const put = async (url: string, data: any, headers: Record<string, string> = {}): Promise<any> => {
   const makeRequest = async () => {
     const currentHeaders: Record<string, string> = { 'Content-Type': 'application/json', ...headers };
-    if (!currentHeaders['Authorization']) {
+    if (!currentHeaders['Authorization'] || currentHeaders['Authorization'].startsWith('Bearer ')) {
       const authH = await getAuthHeaders();
       Object.assign(currentHeaders, authH);
     }
@@ -181,7 +181,7 @@ export const put = async (url: string, data: any, headers: Record<string, string
 export const del = async (url: string, headers: Record<string, string> = {}): Promise<any> => {
   const makeRequest = async () => {
     const currentHeaders = { ...headers };
-    if (!currentHeaders['Authorization']) {
+    if (!currentHeaders['Authorization'] || currentHeaders['Authorization'].startsWith('Bearer ')) {
       const authH = await getAuthHeaders();
       Object.assign(currentHeaders, authH);
     }
@@ -438,6 +438,7 @@ export const requestVerification = async (data: { licenseNumber: string; license
 
 let socket: Socket | null = null;
 let isInitializingSocket = false;
+let isDisconnecting = false;
 let currentSocketUserId: string | null = null;
 let activeListeners: Array<{ event: string; callback: Function }> = [];
 
@@ -510,13 +511,25 @@ export const stopNetworkStatusListener = () => {
 
 export const initializeSocket = async () => {
   if (socket?.connected || isInitializingSocket) return;
+  isDisconnecting = false;
   isInitializingSocket = true;
 
   try {
     try {
       await refreshTokenIfNeeded();
     } catch {}
+
+    if (isDisconnecting) {
+      isInitializingSocket = false;
+      return;
+    }
+
     const token = await getSecureItem('auth_token');
+
+    if (isDisconnecting) {
+      isInitializingSocket = false;
+      return;
+    }
 
     socket = io(API_BASE_URL, {
       transports: ['websocket', 'polling'],
@@ -694,6 +707,7 @@ export const emitTyping = (conversationId: string, userId: string, isTyping: boo
 };
 
 export const disconnectSocket = () => {
+  isDisconnecting = true;
   if (socket) {
     socket.disconnect();
     socket = null;

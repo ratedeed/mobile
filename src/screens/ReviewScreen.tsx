@@ -35,6 +35,7 @@ export default function ReviewScreen() {
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async () => {
+    if (submitting) return;
     if (rating === 0) {
       Alert.alert('Required', 'Please select a star rating.');
       return;

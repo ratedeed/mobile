@@ -19,6 +19,7 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import { getContractorProfile, updateContractorProfile, requestVerification } from '../api';
 import { uploadToCloudinary, CLOUDINARY_FOLDERS } from '../utils/cloudinary';
 import { useAuth } from '../context/AuthContext';
+import { requestPhotoLibraryPermission } from '../utils/permissions';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const isSmallScreen = SCREEN_WIDTH < 768;
@@ -309,6 +310,9 @@ export default function ContractorEditProfileModal({ visible, onClose, onProfile
   const isVerified = profileData?.isVerified || false;
 
   const handleImageSelect = async (type: 'profile' | 'banner' | 'license' | 'portfolio', portfolioIndex?: number) => {
+    const hasPermission = await requestPhotoLibraryPermission();
+    if (!hasPermission) return;
+
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
@@ -332,8 +336,8 @@ export default function ContractorEditProfileModal({ visible, onClose, onProfile
           setPortfolio(updated);
         }
       }
-    } catch {
-      /* non-critical */
+    } catch (err: any) {
+      Alert.alert('Error', err?.message || 'Failed to select image');
     }
   };
 
@@ -788,9 +792,15 @@ export default function ContractorEditProfileModal({ visible, onClose, onProfile
                           />
                           <TouchableOpacity
                             onPress={() => {
-                              if (zipInput.trim().length === 5 && !zipCodes.includes(zipInput.trim())) {
-                                setZipCodes([...zipCodes, zipInput.trim()]);
-                                setZipInput('');
+                              const trimmedZip = zipInput.trim();
+                              if (!trimmedZip) return;
+                              if (/^\d{5}$/.test(trimmedZip)) {
+                                if (!zipCodes.includes(trimmedZip)) {
+                                  setZipCodes([...zipCodes, trimmedZip]);
+                                  setZipInput('');
+                                }
+                              } else {
+                                Alert.alert('Invalid ZIP', 'Please enter a valid 5-digit numeric ZIP code.');
                               }
                             }}
                             style={{

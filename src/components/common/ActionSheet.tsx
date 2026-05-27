@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { Colors, Spacing, Radii } from '../../constants/designTokens';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface ActionSheetOption {
   label: string;
@@ -38,6 +39,7 @@ const ActionSheet: React.FC<ActionSheetProps> = ({
   options,
   cancelLabel = 'Cancel',
 }) => {
+  const insets = useSafeAreaInsets();
   const translateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
 
@@ -95,7 +97,7 @@ const ActionSheet: React.FC<ActionSheetProps> = ({
         <Animated.View
           style={[
             styles.sheet,
-            { transform: [{ translateY }] },
+            { transform: [{ translateY }], paddingBottom: Math.max(insets.bottom, Spacing.sm) },
           ]}
         >
           <View style={styles.optionsContainer}>

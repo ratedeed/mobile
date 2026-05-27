@@ -92,17 +92,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setBackendToken(activeToken);
 
           let decodedId = null;
+          let decodedRole = null;
+          let decodedEmailVerified = null;
           try {
             const decodedToken: any = jwtDecode(activeToken);
             decodedId = decodedToken.id || decodedToken._id;
+            decodedRole = decodedToken.role;
+            decodedEmailVerified = decodedToken.emailVerified;
           } catch {}
 
           const userData = await loadUserData();
+          const finalRole = decodedRole || userData?.role || null;
+          const finalEmailVerified = decodedEmailVerified !== undefined && decodedEmailVerified !== null ? decodedEmailVerified : (userData?.emailVerified || false);
+
           setUserId(userData?._id || userData?.id || decodedId || null);
-          setIsEmailVerified(userData?.emailVerified || false);
-          setUserRole(userData?.role || null);
+          setIsEmailVerified(finalEmailVerified);
+          setUserRole(finalRole as UserRole);
           if (userData?.firstName) {
             setFirebaseUser({ email: userData.email });
+          }
+
+          if (userData && (userData.role !== finalRole || userData.emailVerified !== finalEmailVerified)) {
+            await saveUserData({
+              ...userData,
+              role: finalRole,
+              emailVerified: finalEmailVerified,
+            });
           }
 
           syncFavoritesWithServer();
@@ -148,8 +163,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       logout();
     });
     const { setAuthTokenUpdatedCallback } = require('../utils/apiClient');
-    setAuthTokenUpdatedCallback((newToken: string) => {
+    setAuthTokenUpdatedCallback(async (newToken: string) => {
       setBackendToken(newToken);
+      try {
+        const decodedToken: any = jwtDecode(newToken);
+        const decodedId = decodedToken.id || decodedToken._id;
+        const decodedRole = decodedToken.role;
+        const decodedEmailVerified = decodedToken.emailVerified;
+
+        if (decodedId) setUserId(decodedId);
+        if (decodedRole) setUserRole(decodedRole as UserRole);
+        if (decodedEmailVerified !== undefined && decodedEmailVerified !== null) {
+          setIsEmailVerified(decodedEmailVerified);
+        }
+
+        const current = await loadUserData();
+        if (current) {
+          const updated = {
+            ...current,
+            role: decodedRole || current.role,
+            emailVerified: decodedEmailVerified !== undefined && decodedEmailVerified !== null ? decodedEmailVerified : current.emailVerified,
+          };
+          await saveUserData(updated);
+        }
+      } catch (err) {
+        if (__DEV__) console.warn('Syncing token claims failed:', err);
+      }
     });
   }, [logout]);
 

@@ -24,6 +24,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as ImagePicker from "expo-image-picker";
 import { uploadToCloudinary, CLOUDINARY_FOLDERS } from "../utils/cloudinary";
+import { requestPhotoLibraryPermission } from '../utils/permissions';
 
 import { getUserProfile, updateUserProfile, getBlockedUsers, unblockUser } from '../api';
 import { useAuth } from '../context/AuthContext';
@@ -284,6 +285,9 @@ const ProfileScreen: React.FC = () => {
   const onRefresh = useCallback(() => { setRefreshing(true); loadProfile(); }, [loadProfile]);
 
   const handleUpdateProfilePic = async () => {
+    const hasPermission = await requestPhotoLibraryPermission();
+    if (!hasPermission) return;
+
     try {
       const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.8 });
       if (!result.canceled && result.assets?.length > 0) {

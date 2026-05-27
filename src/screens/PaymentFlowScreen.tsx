@@ -40,6 +40,7 @@ export default function PaymentFlowScreen() {
   }, [isPlatformPaySupported]);
 
   const handleApplePay = async () => {
+    if (paying) return;
     if (Platform.OS !== 'ios') {
       Alert.alert('Apple Pay', 'Apple Pay is only available on iOS devices.');
       return;
@@ -54,7 +55,7 @@ export default function PaymentFlowScreen() {
       const { clientSecret } = response;
 
       const { paymentIntent, error } = await confirmPlatformPayPayment(
-        clientSecret,
+         clientSecret,
         {
           applePay: {
             cartItems: [
@@ -83,6 +84,7 @@ export default function PaymentFlowScreen() {
   };
 
   const handlePayment = async () => {
+    if (paying) return;
     try {
       setPaying(true);
       const { url } = await createCheckoutSession(quoteId);
@@ -106,6 +108,7 @@ export default function PaymentFlowScreen() {
   };
 
   const verifyPaymentStatus = async () => {
+    if (paying) return;
     try {
       setPaying(true);
       const quote = await getQuote(quoteId);

@@ -19,6 +19,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { updateContractorProfile, getStripeConnectUrl } from '../api';
 import { uploadToCloudinary, CLOUDINARY_FOLDERS } from '../utils/cloudinary';
 import { Linking } from 'react-native';
+import { requestPhotoLibraryPermission } from '../utils/permissions';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -62,33 +63,47 @@ export default function ContractorOnboardingScreen() {
   const progress = ((currentStep + 1) / STEPS.length) * 100;
 
   const pickImage = async (type: 'profile' | 'banner') => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: type === 'banner' ? [16, 7] : [1, 1],
-      quality: 0.8,
-      base64: true,
-    });
-    if (!result.canceled && result.assets && result.assets.length > 0) {
-      const uri = result.assets[0].uri;
-      if (type === 'profile') setProfilePictureUri(uri);
-      else setBannerImageUri(uri);
+    const hasPermission = await requestPhotoLibraryPermission();
+    if (!hasPermission) return;
+
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: type === 'banner' ? [16, 7] : [1, 1],
+        quality: 0.8,
+        base64: true,
+      });
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const uri = result.assets[0].uri;
+        if (type === 'profile') setProfilePictureUri(uri);
+        else setBannerImageUri(uri);
+      }
+    } catch (err: any) {
+      Alert.alert('Error', err?.message || 'Failed to select image');
     }
   };
 
   const pickPortfolioImage = async (index: number) => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
-    if (!result.canceled && result.assets[0]) {
-      setPortfolioItems(prev => {
-        const updated = [...prev];
-        updated[index] = { ...updated[index], localUri: result.assets[0].uri, name: updated[index].name || `Project ${index + 1}` };
-        return updated;
+    const hasPermission = await requestPhotoLibraryPermission();
+    if (!hasPermission) return;
+
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
       });
+      if (!result.canceled && result.assets[0]) {
+        setPortfolioItems(prev => {
+          const updated = [...prev];
+          updated[index] = { ...updated[index], localUri: result.assets[0].uri, name: updated[index].name || `Project ${index + 1}` };
+          return updated;
+        });
+      }
+    } catch (err: any) {
+      Alert.alert('Error', err?.message || 'Failed to select image');
     }
   };
 

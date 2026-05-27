@@ -18,6 +18,8 @@ import { SvgImage } from '../common/SvgImage';
 import { getProfileImageUrl, isSvgUrl } from '../../utils/avatarUtils';
 import * as ImagePicker from 'expo-image-picker';
 import { uploadToCloudinary, CLOUDINARY_FOLDERS } from '../../utils/cloudinary';
+import { requestPhotoLibraryPermission } from '../../utils/permissions';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const CATEGORIES = ['Plumbers', 'Electricians', 'Painters', 'Landscapers', 'HVAC', 'Roofers', 'Carpenters', 'Cleaners', 'Handymen', 'Home Builders'];
 
@@ -100,7 +102,15 @@ export default function QuoteCreationSheet({
   };
 
   const updateLineItem = (index: number, field: 'description' | 'amount', value: string) => {
-    setLineItems(prev => prev.map((item, i) => i === index ? { ...item, [field]: value } : item));
+    let finalValue = value;
+    if (field === 'amount') {
+      finalValue = value.replace(/[^0-9.]/g, '');
+      const parts = finalValue.split('.');
+      if (parts.length > 2) {
+        finalValue = parts[0] + '.' + parts.slice(1).join('');
+      }
+    }
+    setLineItems(prev => prev.map((item, i) => i === index ? { ...item, [field]: finalValue } : item));
   };
 
   const total = lineItems.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
@@ -165,6 +175,9 @@ export default function QuoteCreationSheet({
   };
 
   const handleAddPhoto = async () => {
+    const hasPermission = await requestPhotoLibraryPermission();
+    if (!hasPermission) return;
+
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
@@ -252,6 +265,7 @@ export default function QuoteCreationSheet({
     }
   };
 
+  const insets = useSafeAreaInsets();
   const avatarUrl = recipientPicture
     ? isSvgUrl(recipientPicture)
       ? recipientPicture
@@ -262,7 +276,10 @@ export default function QuoteCreationSheet({
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1 bg-white dark:bg-neutral-950">
         {/* Header */}
-        <View className="flex-row items-center justify-between px-4 py-3 border-b border-neutral-200 dark:border-neutral-800">
+        <View
+          style={{ paddingTop: Platform.OS === 'android' ? (insets.top || 16) : 12 }}
+          className="flex-row items-center justify-between px-4 pb-3 border-b border-neutral-200 dark:border-neutral-800"
+        >
           <View className="flex-row items-center" style={{ gap: 8 }}>
             <View className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 items-center justify-center">
               <FontAwesome5 name="tag" size={13} color="#4F46E5" />
@@ -597,7 +614,10 @@ export default function QuoteCreationSheet({
         </ScrollView>
 
         {/* Footer Actions */}
-        <View className="flex-row border-t border-neutral-200 dark:border-neutral-800 px-5 py-3" style={{ gap: 10 }}>
+        <View
+          style={{ paddingBottom: Math.max(insets.bottom, 12), gap: 10 }}
+          className="flex-row border-t border-neutral-200 dark:border-neutral-800 px-5 pt-3"
+        >
           <Pressable
             onPress={onClose}
             className="flex-1 py-3.5 rounded-xl border border-neutral-300 dark:border-neutral-600 items-center justify-center"

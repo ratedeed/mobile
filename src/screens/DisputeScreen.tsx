@@ -17,6 +17,7 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { raiseDispute } from '../api';
 import { uploadToCloudinary, CLOUDINARY_FOLDERS } from '../utils/cloudinary';
+import { requestPhotoLibraryPermission } from '../utils/permissions';
 
 const CATEGORIES = [
   { key: 'work_quality', label: 'Work Quality', icon: 'star-half-alt' },
@@ -50,6 +51,9 @@ export default function DisputeScreen() {
       Alert.alert('Limit Reached', `You can upload up to ${MAX_PHOTOS} photos.`);
       return;
     }
+
+    const hasPermission = await requestPhotoLibraryPermission();
+    if (!hasPermission) return;
 
     try {
       const result = await ImagePicker.launchImageLibraryAsync({

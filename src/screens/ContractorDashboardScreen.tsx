@@ -47,6 +47,7 @@ import { uploadToCloudinary, CLOUDINARY_FOLDERS } from '../utils/cloudinary';
 import { getCoverImageUrl, getProfileImageUrl, isSvgUrl } from '../utils/avatarUtils';
 import { SvgImage } from '../components/common/SvgImage';
 import { useAuth } from '../context/AuthContext';
+import { requestPhotoLibraryPermission } from '../utils/permissions';
 
 const TABS = [
   { key: 'posts', label: 'Posts' },
@@ -284,6 +285,9 @@ const ContractorDashboardScreen: React.FC = () => {
   };
 
   const handleLicenseDocSelect = async () => {
+    const hasPermission = await requestPhotoLibraryPermission();
+    if (!hasPermission) return;
+
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
@@ -297,8 +301,8 @@ const ContractorDashboardScreen: React.FC = () => {
         return;
       }
       setLicenseDocUri(`data:image/jpeg;base64,${asset.base64}`);
-    } catch {
-      /* non-critical */
+    } catch (err: any) {
+      Alert.alert('Error', err?.message || 'Failed to select image');
     }
   };
 
@@ -339,6 +343,9 @@ const ContractorDashboardScreen: React.FC = () => {
   };
 
   const pickFromLibrary = async (): Promise<string | null> => {
+    const hasPermission = await requestPhotoLibraryPermission();
+    if (!hasPermission) return null;
+
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
@@ -346,7 +353,10 @@ const ContractorDashboardScreen: React.FC = () => {
       });
       if (result.canceled || !result.assets?.length) return null;
       return result.assets[0].uri;
-    } catch { return null; }
+    } catch (err: any) {
+      Alert.alert('Error', err?.message || 'Failed to select image');
+      return null;
+    }
   };
 
   // Portfolio API helpers (backend endpoints)
@@ -1764,18 +1774,28 @@ const ContractorDashboardScreen: React.FC = () => {
                       className="flex-1 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm text-neutral-900 dark:text-white"
                       onSubmitEditing={() => {
                         const val = newZip.trim();
-                        if (val && !editableData.zipCodes.includes(val)) {
-                          setEditableData(p => ({ ...p, zipCodes: [...p.zipCodes, val] }));
-                          setNewZip('');
+                        if (!val) return;
+                        if (/^\d{5}$/.test(val)) {
+                          if (!editableData.zipCodes.includes(val)) {
+                            setEditableData(p => ({ ...p, zipCodes: [...p.zipCodes, val] }));
+                            setNewZip('');
+                          }
+                        } else {
+                          Alert.alert('Invalid ZIP', 'Please enter a valid 5-digit numeric ZIP code.');
                         }
                       }}
                     />
                     <Pressable 
                       onPress={() => {
                         const val = newZip.trim();
-                        if (val && !editableData.zipCodes.includes(val)) {
-                          setEditableData(p => ({ ...p, zipCodes: [...p.zipCodes, val] }));
-                          setNewZip('');
+                        if (!val) return;
+                        if (/^\d{5}$/.test(val)) {
+                          if (!editableData.zipCodes.includes(val)) {
+                            setEditableData(p => ({ ...p, zipCodes: [...p.zipCodes, val] }));
+                            setNewZip('');
+                          }
+                        } else {
+                          Alert.alert('Invalid ZIP', 'Please enter a valid 5-digit numeric ZIP code.');
                         }
                       }}
                       className="bg-indigo-600 w-11 h-11 rounded-xl items-center justify-center shadow-sm shadow-indigo-200"

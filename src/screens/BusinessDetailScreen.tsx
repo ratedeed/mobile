@@ -25,6 +25,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { fetchContractorDetails, fetchContractorPosts, createLead, fetchContractorReviews, extractId, browseContractors, post as apiPost, submitClaim, getContractorBySlug } from '../api';
 import { API_BASE_URL } from '../config';
 import { uploadToCloudinary, CLOUDINARY_FOLDERS } from '../utils/cloudinary';
+import { requestPhotoLibraryPermission } from '../utils/permissions';
 import { getCoverImageUrl, getProfileImageUrl, isSvgUrl } from '../utils/avatarUtils';
 import { isFavorite, addFavorite, removeFavorite } from '../utils/favoritesStore';
 import { VerifiedBadge } from '../components/common/VerifiedBadge';
@@ -109,6 +110,9 @@ const BusinessDetailScreen: React.FC = () => {
   const { isAuthenticated } = useAuth();
 
   const handleClaimDocumentPick = async () => {
+    const hasPermission = await requestPhotoLibraryPermission();
+    if (!hasPermission) return;
+
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],

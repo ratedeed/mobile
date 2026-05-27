@@ -22,6 +22,7 @@ import { getContractorProfile, updateContractorProfile, requestVerification } fr
 import { VerifiedBadge } from '../components/common/VerifiedBadge';
 import { uploadToCloudinary, CLOUDINARY_FOLDERS } from '../utils/cloudinary';
 import { useAuth } from '../context/AuthContext';
+import { requestPhotoLibraryPermission } from '../utils/permissions';
 
 type EditSection = 'about' | 'services' | 'portfolio' | 'posts' | 'verification' | null;
 
@@ -172,6 +173,9 @@ export default function ContractorEditProfileScreen() {
   const isVerified = profileData?.isVerified || false;
 
   const handleImageSelect = async (type: 'profile' | 'banner') => {
+    const hasPermission = await requestPhotoLibraryPermission();
+    if (!hasPermission) return;
+
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
@@ -187,12 +191,15 @@ export default function ContractorEditProfileScreen() {
           setBannerPicUri(result.assets[0].uri);
         }
       }
-    } catch (err) {
-      // console.error('Failed to pick image:', err);
+    } catch (err: any) {
+      Alert.alert('Error', err?.message || 'Failed to pick image');
     }
   };
 
   const handleLicenseDocSelect = async () => {
+    const hasPermission = await requestPhotoLibraryPermission();
+    if (!hasPermission) return;
+
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
@@ -201,8 +208,8 @@ export default function ContractorEditProfileScreen() {
       if (!result.canceled && result.assets && result.assets.length > 0) {
         setLicenseDocUri(result.assets[0].uri);
       }
-    } catch (err) {
-      // console.error('Failed to pick license doc:', err);
+    } catch (err: any) {
+      Alert.alert('Error', err?.message || 'Failed to pick document');
     }
   };
 

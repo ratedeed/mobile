@@ -110,7 +110,7 @@ export default function QuoteReviewScreen() {
 
   // Acceptance requires payment — go straight to payment flow
   const handleAccept = async () => {
-    if (!quoteId) return;
+    if (!quoteId || actionLoading) return;
     setActionLoading('accept');
     try {
       (navigation as any).navigate('PaymentFlow', {
@@ -127,7 +127,7 @@ export default function QuoteReviewScreen() {
   };
 
   const handleReject = async () => {
-    if (!quoteId) return;
+    if (!quoteId || actionLoading) return;
     setActionLoading('reject');
     try {
       await updateQuoteStatus(quoteId, 'rejected');
