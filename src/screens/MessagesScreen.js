@@ -72,6 +72,16 @@ const REPORT_CATEGORIES = [
 
 const TYPING_TIMEOUT = 3000;
 
+const isImageAttachment = (url) => {
+  if (!url) return false;
+  return (
+    /\.(jpg|jpeg|png|gif|webp)$/i.test(url) ||
+    url.startsWith("file://") ||
+    url.startsWith("content://") ||
+    url.startsWith("data:image/")
+  );
+};
+
 // ─── Bulletproof ID Helpers ───────────────────────────────────────────────────
 const resolveId = (obj) => {
   if (!obj) return "";
@@ -401,7 +411,13 @@ const MessagesScreen = () => {
   // ─── Socket setup ──────────────────────────────────────────────────────────
   useEffect(() => {
     if (!currentUserId) return;
-    registerSocket(currentUserId);
+    (async () => {
+      try {
+        await registerSocket(currentUserId);
+      } catch (err) {
+        if (__DEV__) console.warn('registerSocket failed:', err);
+      }
+    })();
 
     const handleNewMessage = (msg) => {
       const senderId = resolveId(msg.senderId || msg.sender);
@@ -461,8 +477,20 @@ const MessagesScreen = () => {
   useEffect(() => {
     const cId = selectedConversation?.conversationId;
     if (cId && !cId.startsWith("temp-")) {
-      joinConversationSocket(cId);
-      return () => leaveConversationSocket(cId);
+      (async () => {
+        try {
+          await joinConversationSocket(cId);
+        } catch (err) {
+          if (__DEV__) console.warn('joinConversationSocket failed:', err);
+        }
+      })();
+      return () => {
+        (async () => {
+          try {
+            await leaveConversationSocket(cId);
+          } catch {}
+        })();
+      };
     }
   }, [selectedConversation?.conversationId]);
 
@@ -690,37 +718,126 @@ const MessagesScreen = () => {
         }
       }
 
-      let attachmentUrl;
-      if (pendingAttachment) {
-        setIsUploading(true);
+      // Capture inputs and attachment
+      const messageText = newMessage.trim();
+      const attachment = pendingAttachment;
+      const tempId = `temp-${Date.now()}-${Math.random()}`;
+
+      // Reset inputs immediately for responsive UX
+      setNewMessage("");
+      setPendingAttachment(null);
+
+      // Create optimistic message (matching web terminology: _isOptimistic, _failed)
+      const optimisticMsg = {
+        _id: tempId,
+        conversationId: cId,
+        senderId: currentUserId,
+        recipientId: targetId,
+        messageText: messageText || null,
+        attachmentUrl: attachment ? attachment.uri : null,
+        read: false,
+        createdAt: new Date().toISOString(),
+        _isOptimistic: true,
+        _failed: false,
+        __isLocalSent: true,
+      };
+
+      // Add to messages list
+      setMessages((prev) => {
+        if (prev.some((m) => m._id === tempId)) return prev;
+        return [...prev, optimisticMsg].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+      });
+
+      // Update conversations list lastMessage
+      setConversations((prev) => {
+        const convo = prev[cId] || { conversationId: cId, _id: cId, participants: [], messages: [], lastMessage: null, unreadCount: 0, otherParticipant: selectedConversation.otherParticipant };
+        return { ...prev, [cId]: { ...convo, lastMessage: optimisticMsg } };
+      });
+
+      // Launch async message sender
+      (async () => {
+        let attachmentUrl = null;
         try {
-          let uploadUri = pendingAttachment.uri;
-          if (pendingAttachment.base64) {
-            const mime = pendingAttachment.mimeType || 'image/jpeg';
-            uploadUri = `data:${mime};base64,${pendingAttachment.base64}`;
+          if (attachment) {
+            setIsUploading(true);
+            let uploadUri = attachment.uri;
+            if (attachment.base64) {
+              const mime = attachment.mimeType || 'image/jpeg';
+              uploadUri = `data:${mime};base64,${attachment.base64}`;
+            }
+            attachmentUrl = await uploadToCloudinary(uploadUri, CLOUDINARY_FOLDERS.CHAT);
+            setIsUploading(false);
           }
-          attachmentUrl = await uploadToCloudinary(uploadUri, CLOUDINARY_FOLDERS.CHAT);
-        } catch (e) { Alert.alert("Upload Error", "Failed to upload attachment"); setIsUploading(false); return; }
+
+          const sent = await sendMessage(cId, targetId, messageText, attachmentUrl);
+          sent.__isLocalSent = true;
+          sent._isOptimistic = false;
+          sent._failed = false;
+
+          // Replace optimistic message with actual sent message
+          setMessages((prev) => {
+            return prev.map((m) => (m._id === tempId ? sent : m)).sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+          });
+
+          setConversations((prev) => {
+            const convo = prev[sent.conversationId] || { conversationId: sent.conversationId, _id: sent.conversationId, participants: [], messages: [], lastMessage: null, unreadCount: 0, otherParticipant: selectedConversation.otherParticipant };
+            return { ...prev, [sent.conversationId]: { ...convo, lastMessage: sent } };
+          });
+        } catch (e) {
+          console.error("Failed to send message optimistically:", e);
+          setIsUploading(false);
+          // Mark optimistic message as failed
+          setMessages((prev) => {
+            return prev.map((m) => (m._id === tempId ? { ...m, _failed: true } : m));
+          });
+        }
+      })();
+
+    } catch (e) {
+      Alert.alert("Error", e?.message || 'Failed to send message.');
+    }
+  };
+
+  // ─── Retry message ──────────────────────────────────────────────────────────
+  const handleRetryMessage = useCallback(async (tempId, messageText, attachmentUri) => {
+    // Set status back to sending, failed to false
+    setMessages((prev) =>
+      prev.map((m) => (m._id === tempId ? { ...m, _isOptimistic: true, _failed: false } : m))
+    );
+
+    let cId = selectedConversation.conversationId || selectedConversation._id;
+    let targetId = resolveId(selectedConversation.otherParticipant);
+
+    try {
+      let attachmentUrl = attachmentUri;
+      if (attachmentUri && !attachmentUri.startsWith("http")) {
+        setIsUploading(true);
+        attachmentUrl = await uploadToCloudinary(attachmentUri, CLOUDINARY_FOLDERS.CHAT);
         setIsUploading(false);
       }
 
-      const sent = await sendMessage(cId, targetId, newMessage, attachmentUrl);
+      const sent = await sendMessage(cId, targetId, messageText, attachmentUrl);
       sent.__isLocalSent = true;
+      sent._isOptimistic = false;
+      sent._failed = false;
 
-      setNewMessage("");
-      setPendingAttachment(null);
+      // Replace optimistic message with actual sent message
+      setMessages((prev) => {
+        return prev.map((m) => (m._id === tempId ? sent : m)).sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+      });
 
       setConversations((prev) => {
         const convo = prev[sent.conversationId] || { conversationId: sent.conversationId, _id: sent.conversationId, participants: [], messages: [], lastMessage: null, unreadCount: 0, otherParticipant: selectedConversation.otherParticipant };
         return { ...prev, [sent.conversationId]: { ...convo, lastMessage: sent } };
       });
-
-      setMessages((prev) => {
-        if (prev.some((m) => m._id === sent._id)) return prev;
-        return [...prev, sent].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-      });
-    } catch (e) { Alert.alert("Error", e?.message || 'Failed to send message.'); }
-  };
+    } catch (err) {
+      console.error("Retry send failed:", err);
+      setIsUploading(false);
+      setMessages((prev) =>
+        prev.map((m) => (m._id === tempId ? { ...m, _isOptimistic: true, _failed: true } : m))
+      );
+    }
+  }, [selectedConversation, currentUserId]);
 
   const handleTextChange = useCallback((text) => {
     setNewMessage(text);
@@ -862,10 +979,10 @@ const MessagesScreen = () => {
           ) : !isMe ? (
             <View className="w-8 mr-2" />
           ) : null}
-          <View className={`${(msg.type === "quote" || msg.quoteId) && msg.quote ? "w-[92%]" : "max-w-[78%]"} ${isMe ? "items-end" : "items-start"}`}>
+          <View className={`${(msg.type === "quote" || msg.quoteId) && msg.quote ? (isMe ? "w-[90%]" : "w-[82%]") : "max-w-[78%]"} ${isMe ? "items-end" : "items-start"}`}>
             {(msg.type === "quote" || msg.quoteId) && msg.quote ? (
               <>
-                <View className="w-full bg-white dark:bg-neutral-800 rounded-2xl border border-neutral-200 dark:border-neutral-700 overflow-hidden" style={{ shadowColor: "#000", shadowOpacity: isDark ? 0 : 0.06, shadowRadius: 8, shadowOffset: { height: 2 }, elevation: isDark ? 0 : 2 }}>
+                <View className="w-full bg-white dark:bg-neutral-800 rounded-2xl border border-neutral-200 dark:border-neutral-700 overflow-hidden" style={[{ shadowColor: "#000", shadowOpacity: isDark ? 0 : 0.06, shadowRadius: 8, shadowOffset: { height: 2 }, elevation: isDark ? 0 : 2 }, msg._isOptimistic && !msg._failed ? { opacity: 0.6 } : undefined]}>
                   {msg.quote.status && msg.quote.status !== 'pending' && msg.quote.status !== 'pending_user_approval' && (
                     <View className={`px-4 py-2 flex-row items-center border-b ${msg.quote.status === 'accepted' || msg.quote.status === 'funded_in_progress' ? (isDark ? 'bg-emerald-900/40 border-emerald-800' : 'bg-emerald-50 border-emerald-100') : msg.quote.status === 'rejected' || msg.quote.status === 'declined' ? (isDark ? 'bg-red-900/40 border-red-800' : 'bg-red-50 border-red-100') : (isDark ? 'bg-amber-900/40 border-amber-800' : 'bg-amber-50 border-amber-100')}`}>
                       <FontAwesome5 name={msg.quote.status === 'accepted' || msg.quote.status === 'funded_in_progress' ? 'check-circle' : msg.quote.status === 'rejected' || msg.quote.status === 'declined' ? 'times-circle' : 'clock'} size={12} color={msg.quote.status === 'accepted' || msg.quote.status === 'funded_in_progress' ? (isDark ? '#6ee7b7' : '#059669') : msg.quote.status === 'rejected' || msg.quote.status === 'declined' ? (isDark ? '#fca5a5' : '#dc2626') : (isDark ? '#fcd34d' : '#d97706')} />
@@ -969,23 +1086,63 @@ const MessagesScreen = () => {
                     </Pressable>
                   </View>
                 </View>
-                {msg.isLastInGroup && <View className={`flex-row items-center mt-1.5 px-1 ${isMe ? "justify-end" : "justify-start"}`} style={{ gap: 4 }}><Text className="text-[10px] text-neutral-400 font-medium">{msg.timeStr}</Text>{isMe && <FontAwesome5 name={msg.read ? "check-double" : "check"} size={9} color={msg.read ? "#10b981" : "#c4b5fd"} solid={msg.read} />}</View>}
+                {(msg.isLastInGroup || msg._isOptimistic || msg._failed) && (
+                  <View className={`flex-row items-center mt-1.5 px-1 ${isMe ? "justify-end" : "justify-start"}`} style={{ gap: 4 }}>
+                    {msg._failed && (
+                      <View className="flex-row items-center mr-1" style={{ gap: 4 }}>
+                        <FontAwesome5 name="exclamation-circle" size={10} color="#ef4444" />
+                        <Text className="text-[10px] text-red-500 font-semibold">Failed</Text>
+                        <Pressable onPress={() => handleRetryMessage(msg._id, msg.messageText, msg.attachmentUrl)}>
+                          <Text className="text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold underline">Retry</Text>
+                        </Pressable>
+                      </View>
+                    )}
+                    {msg._isOptimistic && !msg._failed && (
+                      <View className="flex-row items-center mr-1" style={{ gap: 4 }}>
+                        <ActivityIndicator size="small" color="#9ca3af" style={{ transform: [{ scale: 0.6 }] }} />
+                        <Text className="text-[10px] text-neutral-400 font-medium">Sending...</Text>
+                      </View>
+                    )}
+                    <Text className="text-[10px] text-neutral-400 font-medium">{msg.timeStr || (msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "")}</Text>
+                    {isMe && !msg._isOptimistic && !msg._failed && <FontAwesome5 name={msg.read ? "check-double" : "check"} size={9} color={msg.read ? "#10b981" : "#c4b5fd"} solid={msg.read} />}
+                  </View>
+                )}
               </>
             ) : (
               <>
-                <View className={`px-[14px] py-[10px] ${isMe ? `bg-indigo-600 ${msg.isFirstInGroup ? "rounded-2xl rounded-tr-md" : "rounded-2xl"}` : `bg-white dark:bg-neutral-800 ${msg.isFirstInGroup ? "rounded-2xl rounded-tl-md" : "rounded-2xl"}`}`} style={!isMe ? { shadowColor: isDark ? "transparent" : "#000", shadowOpacity: isDark ? 0 : 0.04, shadowRadius: 8, shadowOffset: { height: 1 }, elevation: isDark ? 0 : 1 } : undefined}>
-                  {msg.attachmentUrl && /\.(jpg|jpeg|png|gif|webp)$/i.test(msg.attachmentUrl) && <Pressable onPress={() => { setActiveImage(msg.attachmentUrl); setLightboxVisible(true); }} className="mb-1.5 -mx-[2px] -mt-[2px] overflow-hidden" style={{ borderRadius: msg.isFirstInGroup ? 14 : 16 }}><Image source={{ uri: msg.attachmentUrl }} style={{ width: 240, height: 180 }} resizeMode="cover" /></Pressable>}
-                  {msg.attachmentUrl && !/\.(jpg|jpeg|png|gif|webp)$/i.test(msg.attachmentUrl) && <Pressable onPress={() => Linking.openURL(msg.attachmentUrl)} className={`flex-row items-center p-2.5 rounded-xl mb-1.5 border ${isMe ? "bg-white/10 border-white/20" : "bg-neutral-50 dark:bg-neutral-700 border-neutral-200 dark:border-neutral-600"}`}><FontAwesome5 name="file-alt" size={14} color={isMe ? "white" : (isDark ? "#a3a3a3" : "#737373")} /><Text className={`text-[12px] ml-2 font-semibold ${isMe ? "text-white" : "text-neutral-600 dark:text-neutral-300"}`}>View Attachment</Text></Pressable>}
+                <View className={`px-[14px] py-[10px] ${isMe ? `bg-indigo-600 ${msg.isFirstInGroup ? "rounded-2xl rounded-tr-md" : "rounded-2xl"}` : `bg-white dark:bg-neutral-800 ${msg.isFirstInGroup ? "rounded-2xl rounded-tl-md" : "rounded-2xl"}`}`} style={[!isMe ? { shadowColor: isDark ? "transparent" : "#000", shadowOpacity: isDark ? 0 : 0.04, shadowRadius: 8, shadowOffset: { height: 1 }, elevation: isDark ? 0 : 1 } : undefined, msg._isOptimistic && !msg._failed ? { opacity: 0.6 } : undefined]}>
+                  {msg.attachmentUrl && isImageAttachment(msg.attachmentUrl) && <Pressable onPress={() => { setActiveImage(msg.attachmentUrl); setLightboxVisible(true); }} className="mb-1.5 -mx-[2px] -mt-[2px] overflow-hidden" style={{ borderRadius: msg.isFirstInGroup ? 14 : 16 }}><Image source={{ uri: msg.attachmentUrl }} style={{ width: 240, height: 180 }} resizeMode="cover" /></Pressable>}
+                  {msg.attachmentUrl && !isImageAttachment(msg.attachmentUrl) && <Pressable onPress={() => Linking.openURL(msg.attachmentUrl)} className={`flex-row items-center p-2.5 rounded-xl mb-1.5 border ${isMe ? "bg-white/10 border-white/20" : "bg-neutral-50 dark:bg-neutral-700 border-neutral-200 dark:border-neutral-600"}`}><FontAwesome5 name="file-alt" size={14} color={isMe ? "white" : (isDark ? "#a3a3a3" : "#737373")} /><Text className={`text-[12px] ml-2 font-semibold ${isMe ? "text-white" : "text-neutral-600 dark:text-neutral-300"}`}>View Attachment</Text></Pressable>}
                   {msg.messageText ? <Text className={`text-[15px] leading-[22px] ${isMe ? "text-white" : "text-neutral-800 dark:text-neutral-100"}`}>{msg.messageText}</Text> : null}
                 </View>
-                {msg.isLastInGroup && <View className={`flex-row items-center mt-1 px-1 ${isMe ? "justify-end" : "justify-start"}`} style={{ gap: 4 }}><Text className="text-[10px] text-neutral-400 font-medium">{msg.timeStr}</Text>{isMe && <FontAwesome5 name={msg.read ? "check-double" : "check"} size={9} color={msg.read ? "#10b981" : "#c4b5fd"} solid={msg.read} />}</View>}
+                {(msg.isLastInGroup || msg._isOptimistic || msg._failed) && (
+                  <View className={`flex-row items-center mt-1 px-1 ${isMe ? "justify-end" : "justify-start"}`} style={{ gap: 4 }}>
+                    {msg._failed && (
+                      <View className="flex-row items-center mr-1" style={{ gap: 4 }}>
+                        <FontAwesome5 name="exclamation-circle" size={10} color="#ef4444" />
+                        <Text className="text-[10px] text-red-500 font-semibold">Failed</Text>
+                        <Pressable onPress={() => handleRetryMessage(msg._id, msg.messageText, msg.attachmentUrl)}>
+                          <Text className="text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold underline">Retry</Text>
+                        </Pressable>
+                      </View>
+                    )}
+                    {msg._isOptimistic && !msg._failed && (
+                      <View className="flex-row items-center mr-1" style={{ gap: 4 }}>
+                        <ActivityIndicator size="small" color="#9ca3af" style={{ transform: [{ scale: 0.6 }] }} />
+                        <Text className="text-[10px] text-neutral-400 font-medium">Sending...</Text>
+                      </View>
+                    )}
+                    <Text className="text-[10px] text-neutral-400 font-medium">{msg.timeStr || (msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "")}</Text>
+                    {isMe && !msg._isOptimistic && !msg._failed && <FontAwesome5 name={msg.read ? "check-double" : "check"} size={9} color={msg.read ? "#10b981" : "#c4b5fd"} solid={msg.read} />}
+                  </View>
+                )}
               </>
             )}
           </View>
         </View>
       </View>
     );
-  }, [chatAvatar, chatName, isDark, navigation, setActiveImage, setLightboxVisible]);
+  }, [chatAvatar, chatName, isDark, navigation, setActiveImage, setLightboxVisible, handleRetryMessage]);
 
   const filteredConversations = useMemo(() => {
     return Object.values(conversations)

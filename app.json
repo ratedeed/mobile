@@ -5,10 +5,10 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./icon.png",
-    "newArchEnabled": false,
-    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/splash.png",
+      "image": "./assets/blank-splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -25,7 +25,7 @@
       },
       "googleServicesFile": "./GoogleService-Info.plist",
       "splash": {
-        "image": "./assets/splash.png",
+        "image": "./assets/blank-splash.png",
         "resizeMode": "contain",
         "backgroundColor": "#ffffff"
       }
@@ -40,7 +40,7 @@
       "package": "com.ratedeed.app",
       "googleServicesFile": "./google-services.json",
       "splash": {
-        "image": "./assets/splash.png",
+        "image": "./assets/blank-splash.png",
         "resizeMode": "contain",
         "backgroundColor": "#ffffff"
       },
@@ -106,7 +106,8 @@
           "userTrackingPermission": "Allow RateDeed to use your data to provide a better, more personalized experience and for analytics."
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "@sentry/react-native"
     ],
     "scheme": "ratedeed",
     "extra": {

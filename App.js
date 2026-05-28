@@ -12,7 +12,13 @@ import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { ContractorProvider } from './src/context/ContractorContext';
 import { NotificationsProvider } from './src/context/NotificationsContext';
 import { StripeProvider } from '@stripe/stripe-react-native';
-import { registerSocket, startAppStateListener, startNetworkStatusListener, stopNetworkStatusListener, stopAppStateListener } from './src/utils/apiClient';
+import {
+  registerSocket,
+  startAppStateListener,
+  startNetworkStatusListener,
+  stopNetworkStatusListener,
+  stopAppStateListener,
+} from './src/utils/apiClient';
 import ErrorBoundary from './src/components/ErrorBoundary';
 import { usePushNotifications } from './src/hooks/usePushNotifications';
 import { EscrowTrustBanner } from './src/components/EscrowTrustBanner';
@@ -21,19 +27,18 @@ import { OfflineBanner } from './src/components/common/OfflineBanner';
 import * as Sentry from '@sentry/react-native';
 import Constants from 'expo-constants';
 import { requestTrackingPermissionsAsync } from 'expo-tracking-transparency';
+import * as Linking from 'expo-linking';
 
-const STRIPE_PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+const STRIPE_PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || 'pk_test_51TFxmH2K3vS58g5IdspNfgGbJGLkpqxlVSPpBQa2cp2nRWaAPz3RxPfgl4ozCOxsfj4xLc9oshL0xnSeNGduOXNT00Lv4ycEhh';
 
-if (__DEV__ && !STRIPE_PUBLISHABLE_KEY) {
-  console.warn('STRIPE_PUBLISHABLE_KEY is not set. Payments will not work.');
+if (__DEV__ && !process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
+  console.warn('STRIPE_PUBLISHABLE_KEY is not set. Using safe fallback to prevent SDK crash.');
 }
 
 Sentry.init({
   dsn: Constants.expoConfig?.extra?.sentryDsn || '',
   debug: false,
 });
-
-import * as Linking from 'expo-linking';
 
 const linking = {
   prefixes: ['ratedeed://', 'https://ratedeed.com'],
@@ -74,15 +79,7 @@ const linking = {
 
 function AppNavigator() {
   const { isAuthenticated } = useAuth();
-  const { colorScheme, setColorScheme } = useColorScheme();
-
-  useEffect(() => {
-    AsyncStorage.getItem('theme_preference').then((pref) => {
-      if (pref === 'dark' || pref === 'light') {
-        setColorScheme(pref);
-      }
-    });
-  }, [setColorScheme]);
+  const { colorScheme } = useColorScheme();
 
   useEffect(() => {
     (async () => {
@@ -143,21 +140,38 @@ function AppContent() {
 
 function App() {
   const [splashComplete, setSplashComplete] = React.useState(false);
+  const [themeLoaded, setThemeLoaded] = React.useState(false);
   const { isConnected } = useNetworkStatus();
+  const { setColorScheme } = useColorScheme();
+
+  useEffect(() => {
+    AsyncStorage.getItem('theme_preference').then((pref) => {
+      if (pref === 'dark' || pref === 'light') {
+        setColorScheme(pref);
+      } else {
+        setColorScheme('light');
+      }
+      setThemeLoaded(true);
+    });
+  }, [setColorScheme]);
+
+  if (!themeLoaded) {
+    // Keep showing the native splash screen until we've decided light/dark
+    return null;
+  }
 
   return (
     <SafeAreaProvider>
       <ErrorBoundary>
-        <StripeProvider
-          publishableKey={STRIPE_PUBLISHABLE_KEY || ''}
-          merchantIdentifier="merchant.com.ratedeed.app"
-        >
+        <StripeProvider publishableKey={STRIPE_PUBLISHABLE_KEY || ''} merchantIdentifier="merchant.com.ratedeed.app">
           <AuthProvider>
             <NotificationsProvider>
               <ContractorProvider>
                 <AppContent />
                 <OfflineBanner isVisible={!isConnected} />
-                {!splashComplete && <AnimatedSplashScreen onComplete={() => setSplashComplete(true)} minDuration={1500} />}
+                {!splashComplete && (
+                  <AnimatedSplashScreen onComplete={() => setSplashComplete(true)} minDuration={1500} />
+                )}
               </ContractorProvider>
             </NotificationsProvider>
           </AuthProvider>

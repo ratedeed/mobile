@@ -1,12 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  RefreshControl,
-  ActivityIndicator,
-  Pressable,
-} from 'react-native';
+import { View, Text, ScrollView, RefreshControl, ActivityIndicator, Pressable, FlatList } from 'react-native';
 import { useColorScheme } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
@@ -30,10 +23,13 @@ interface EarningsData {
 }
 
 function formatCurrency(amount: number) {
-  return '$' + Number(amount).toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
+  return (
+    '$' +
+    Number(amount).toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })
+  );
 }
 
 function formatDate(dateStr: string) {
@@ -124,28 +120,59 @@ export default function EarningsScreen() {
   const totalEarned = (earnings?.totalEarned || 0) / 100;
   const transactions: Transaction[] = earnings?.transactions || [];
 
-  return (
-    <View className="flex-1 bg-neutral-50 dark:bg-neutral-800">
-      {/* Header */}
-      <View className="bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-700 px-4 py-3 flex-row items-center">
-        <Pressable
-          onPress={() => navigation.goBack()}
-          className="w-8 h-8 items-center justify-center"
-        >
-          <FontAwesome5 name="chevron-left" size={18} color={isDark ? "#ffffff" : "#171717"} />
-        </Pressable>
-        <Text className="flex-1 text-sm font-bold text-neutral-900 dark:text-white text-center">Earnings</Text>
-        <View className="w-8" />
-      </View>
+  const renderTransaction = useCallback(
+    ({ item }: { item: Transaction }) => {
+      const iconColor = getTransactionColor(item.type);
+      const isPositive = item.type === 'payment' || item.type === 'refund';
+      const amount = item.amount / 100;
 
-      <ScrollView
-        className="flex-1"
-        showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        contentContainerStyle={{ paddingVertical: 24 }}
-      >
+      return (
+        <View
+          className="bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 p-4 flex-row items-center mb-2.5"
+          style={{ gap: 12 }}
+        >
+          {/* Icon */}
+          <View
+            className="w-10 h-10 rounded-lg items-center justify-center"
+            style={{ backgroundColor: `${iconColor}15` }}
+          >
+            <FontAwesome5 name={getTransactionIcon(item.type) as any} size={14} color={iconColor} />
+          </View>
+
+          {/* Details */}
+          <View className="flex-1">
+            <Text className="text-sm font-semibold text-neutral-900 dark:text-white">
+              {item.jobTitle || item.description || item.type.charAt(0).toUpperCase() + item.type.slice(1)}
+            </Text>
+            <View className="flex-row items-center mt-1" style={{ gap: 6 }}>
+              <Text className="text-xs text-neutral-400 dark:text-neutral-500">{formatDate(item.createdAt)}</Text>
+              {item.status && (
+                <View className="bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded-full">
+                  <Text className="text-[10px] font-medium text-neutral-600 dark:text-neutral-300">{item.status}</Text>
+                </View>
+              )}
+            </View>
+          </View>
+
+          {/* Amount */}
+          <Text
+            className="text-sm font-bold"
+            style={{ color: isPositive ? '#059669' : isDark ? '#f5f5f5' : '#171717' }}
+          >
+            {isPositive ? '+' : '-'}
+            {formatCurrency(amount)}
+          </Text>
+        </View>
+      );
+    },
+    [isDark]
+  );
+
+  const renderHeader = useCallback(
+    () => (
+      <View className="py-6">
         {/* Available Balance Card */}
-        <View className="mx-4 bg-neutral-900 rounded-2xl p-6 mb-4">
+        <View className="bg-neutral-900 rounded-2xl p-6 mb-4">
           <View className="flex-row items-center justify-between mb-4">
             <View className="flex-row items-center" style={{ gap: 8 }}>
               <FontAwesome5 name="wallet" size={16} color="#a3a3a3" />
@@ -157,13 +184,11 @@ export default function EarningsScreen() {
               <Text className="text-[10px] font-bold text-emerald-400">Available</Text>
             </View>
           </View>
-          <Text className="text-4xl font-bold text-white">
-            {formatCurrency(availableBalance)}
-          </Text>
+          <Text className="text-4xl font-bold text-white">{formatCurrency(availableBalance)}</Text>
         </View>
 
         {/* Stats Row */}
-        <View className="mx-4 flex-row mb-6" style={{ gap: 8 }}>
+        <View className="flex-row mb-6" style={{ gap: 8 }}>
           <View className="flex-1 bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 p-4">
             <View className="flex-row items-center" style={{ gap: 4 }}>
               <FontAwesome5 name="clock" size={12} color="#d97706" />
@@ -185,90 +210,62 @@ export default function EarningsScreen() {
         </View>
 
         {/* Platform Fee Note */}
-        <View className="mx-4 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 rounded-xl p-4 flex-row mb-6" style={{ gap: 12 }}>
+        <View
+          className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 rounded-xl p-4 flex-row mb-6"
+          style={{ gap: 12 }}
+        >
           <FontAwesome5 name="info-circle" size={16} color="#4F46E5" />
           <View className="flex-1">
             <Text className="text-sm font-semibold text-indigo-900">Platform Fee</Text>
             <Text className="text-xs text-indigo-700 dark:text-indigo-300 mt-1 leading-4">
-              A 5% platform fee is deducted from each payment to cover payment processing, escrow protection, and platform maintenance.
+              A 5% platform fee is deducted from each payment to cover payment processing, escrow protection, and
+              platform maintenance.
             </Text>
           </View>
         </View>
 
-        {/* Transaction History */}
-        <View className="mx-4">
-          <Text className="text-base font-bold text-neutral-900 dark:text-white mb-3">Transaction History</Text>
+        {/* Transaction History Header */}
+        <Text className="text-base font-bold text-neutral-900 dark:text-white mb-3">Transaction History</Text>
+      </View>
+    ),
+    [availableBalance, pendingPayouts, totalEarned]
+  );
 
-          {transactions.length === 0 ? (
-            <View className="bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 p-8 items-center">
-              <FontAwesome5 name="receipt" size={32} color="#d4d4d4" />
-              <Text className="text-sm font-semibold text-neutral-600 dark:text-neutral-300 mt-3">
-                No transactions yet
-              </Text>
-              <Text className="text-xs text-neutral-400 dark:text-neutral-500 mt-1 text-center">
-                Your payment history will appear here as you complete jobs
-              </Text>
-            </View>
-          ) : (
-            <View style={{ gap: 10 }}>
-              {transactions.map((txn) => {
-                const iconColor = getTransactionColor(txn.type);
-                const isPositive = txn.type === 'payment' || txn.type === 'refund';
-                const amount = txn.amount / 100;
+  const renderEmpty = useCallback(
+    () => (
+      <View className="bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 p-8 items-center my-6">
+        <FontAwesome5 name="receipt" size={32} color="#d4d4d4" />
+        <Text className="text-sm font-semibold text-neutral-600 dark:text-neutral-300 mt-3">No transactions yet</Text>
+        <Text className="text-xs text-neutral-400 dark:text-neutral-500 mt-1 text-center">
+          Your payment history will appear here as you complete jobs
+        </Text>
+      </View>
+    ),
+    []
+  );
 
-                return (
-                  <View
-                    key={txn._id}
-                    className="bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 p-4 flex-row items-center"
-                    style={{ gap: 12 }}
-                  >
-                    {/* Icon */}
-                    <View
-                      className="w-10 h-10 rounded-lg items-center justify-center"
-                      style={{ backgroundColor: `${iconColor}15` }}
-                    >
-                      <FontAwesome5
-                        name={getTransactionIcon(txn.type) as any}
-                        size={14}
-                        color={iconColor}
-                      />
-                    </View>
+  return (
+    <View className="flex-1 bg-neutral-50 dark:bg-neutral-800">
+      {/* Header */}
+      <View className="bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-700 px-4 py-3 flex-row items-center">
+        <Pressable onPress={() => navigation.goBack()} className="w-8 h-8 items-center justify-center">
+          <FontAwesome5 name="chevron-left" size={18} color={isDark ? '#ffffff' : '#171717'} />
+        </Pressable>
+        <Text className="flex-1 text-sm font-bold text-neutral-900 dark:text-white text-center">Earnings</Text>
+        <View className="w-8" />
+      </View>
 
-                    {/* Details */}
-                    <View className="flex-1">
-                      <Text className="text-sm font-semibold text-neutral-900 dark:text-white">
-                        {txn.jobTitle || txn.description || txn.type.charAt(0).toUpperCase() + txn.type.slice(1)}
-                      </Text>
-                      <View className="flex-row items-center mt-1" style={{ gap: 6 }}>
-                        <Text className="text-xs text-neutral-400 dark:text-neutral-500">
-                          {formatDate(txn.createdAt)}
-                        </Text>
-                        {txn.status && (
-                          <View className="bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded-full">
-                            <Text className="text-[10px] font-medium text-neutral-600 dark:text-neutral-300">
-                              {txn.status}
-                            </Text>
-                          </View>
-                        )}
-                      </View>
-                    </View>
-
-                    {/* Amount */}
-                    <Text
-                      className="text-sm font-bold"
-                      style={{ color: isPositive ? '#059669' : (isDark ? '#f5f5f5' : '#171717') }}
-                    >
-                      {isPositive ? '+' : '-'}{formatCurrency(amount)}
-                    </Text>
-                  </View>
-                );
-              })}
-            </View>
-          )}
-        </View>
-
-        <View className="h-10" />
-      </ScrollView>
+      <FlatList
+        data={transactions}
+        renderItem={renderTransaction}
+        keyExtractor={(item) => item._id}
+        ListHeaderComponent={renderHeader}
+        ListEmptyComponent={renderEmpty}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        showsVerticalScrollIndicator={false}
+        className="flex-1"
+      />
     </View>
   );
 }

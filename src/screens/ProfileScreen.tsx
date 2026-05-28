@@ -28,6 +28,7 @@ import { requestPhotoLibraryPermission } from '../utils/permissions';
 
 import { getUserProfile, updateUserProfile, getBlockedUsers, unblockUser } from '../api';
 import { useAuth } from '../context/AuthContext';
+import * as Sentry from '@sentry/react-native';
 import { User } from '../types';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { SvgImage } from '../components/common/SvgImage';
@@ -249,7 +250,9 @@ const ProfileScreen: React.FC = () => {
     try {
       const users = await getBlockedUsers();
       if (Array.isArray(users)) setBlockedUsers(users);
-    } catch { /* */ } finally { setLoadingBlocked(false); }
+    } catch (err) {
+      Sentry.captureException(err);
+    } finally { setLoadingBlocked(false); }
   }, []);
 
   const handleUnblock = async (userId: string) => {
@@ -257,7 +260,8 @@ const ProfileScreen: React.FC = () => {
       await unblockUser(userId);
       setBlockedUsers((prev) => prev.filter((u) => u._id !== userId && u.id !== userId));
       Alert.alert('Unblocked', 'User has been unblocked.');
-    } catch {
+    } catch (err) {
+      Sentry.captureException(err);
       Alert.alert('Error', 'Failed to unblock user.');
     }
   };
@@ -273,7 +277,9 @@ const ProfileScreen: React.FC = () => {
         email: userData.email || '',
         zipCode: userData.zipCode || '',
       });
-    } catch { /* */ } finally {
+    } catch (err) {
+      Sentry.captureException(err);
+    } finally {
       if (isMounted.current) { setLoading(false); setRefreshing(false); }
     }
   }, []);
@@ -354,7 +360,9 @@ const ProfileScreen: React.FC = () => {
       const updatedUser = await updateUserProfile({ zipCode: newZip });
       setUser(updatedUser);
       setEditData(prev => ({ ...prev, zipCode: newZip }));
-    } catch {}
+    } catch (err) {
+      Sentry.captureException(err);
+    }
   };
 
   const handleLogout = () => {

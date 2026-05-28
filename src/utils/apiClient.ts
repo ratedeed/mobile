@@ -135,6 +135,21 @@ export const handleResponse = async (response: Response, retryFn?: () => Promise
   }
 };
 
+const executeRequest = async (makeRequestFn: () => Promise<Response>): Promise<Response> => {
+  try {
+    const netState = await NetInfo.fetch();
+    if (netState.isConnected === false) {
+      throw new Error('No internet connection. Please check your network status.');
+    }
+    return await makeRequestFn();
+  } catch (err: any) {
+    if (err.message && err.message.includes('No internet connection')) {
+      throw err;
+    }
+    throw new Error('Network request failed. Please check your internet connection and try again.');
+  }
+};
+
 export const get = async (url: string, headers: Record<string, string> = {}): Promise<any> => {
   const makeRequest = async () => {
     const currentHeaders = { ...headers };
@@ -144,7 +159,7 @@ export const get = async (url: string, headers: Record<string, string> = {}): Pr
     }
     return fetch(url, { method: 'GET', headers: currentHeaders });
   };
-  const response = await makeRequest();
+  const response = await executeRequest(makeRequest);
   return handleResponse(response, makeRequest);
 };
 
@@ -161,7 +176,7 @@ export const post = async (url: string, data: any, headers: Record<string, strin
       body: JSON.stringify(data),
     });
   };
-  const response = await makeRequest();
+  const response = await executeRequest(makeRequest);
   return handleResponse(response, makeRequest);
 };
 
@@ -174,7 +189,7 @@ export const put = async (url: string, data: any, headers: Record<string, string
     }
     return fetch(url, { method: 'PUT', headers: currentHeaders, body: JSON.stringify(data) });
   };
-  const response = await makeRequest();
+  const response = await executeRequest(makeRequest);
   return handleResponse(response, makeRequest);
 };
 
@@ -187,7 +202,7 @@ export const del = async (url: string, headers: Record<string, string> = {}): Pr
     }
     return fetch(url, { method: 'DELETE', headers: currentHeaders });
   };
-  const response = await makeRequest();
+  const response = await executeRequest(makeRequest);
   return handleResponse(response, makeRequest);
 };
 

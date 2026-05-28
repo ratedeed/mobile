@@ -208,15 +208,17 @@ export default function QuoteCreationSheet({
         uploadedPhotoUrls = await Promise.all(
           photos.map(uri => uploadToCloudinary(uri, CLOUDINARY_FOLDERS.CHAT))
         );
+        // Cache uploaded Cloudinary URLs in state to prevent re-uploads if downstream API fails
+        setPhotos(uploadedPhotoUrls);
       }
 
-      // 2. Format line items
+      // 2. Format line items (send in dollars as backend multiplies by 100 internally)
       const validItems = lineItems
         .filter(item => item.description.trim() && item.amount.trim() && parseFloat(item.amount) > 0)
         .map(item => ({
           label: item.description.trim(),
           description: item.description.trim(),
-          amount: Math.round((parseFloat(item.amount) || 0) * 100),
+          amount: parseFloat(item.amount) || 0,
         }));
 
       await createQuoteFromChat({

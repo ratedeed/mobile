@@ -61,13 +61,5 @@ target 'RateDeed' do
       :mac_catalyst_enabled => false,
       :ccache_enabled => ccache_enabled?(podfile_properties),
     )
-
-    # Xcode 16 / iOS 18 workaround: SwiftUICore cannot be linked directly
-    installer.pods_project.targets.each do |target|
-      target.build_configurations.each do |config|
-        config.build_settings['OTHER_LDFLAGS'] ||= ['$(inherited)']
-        config.build_settings['OTHER_LDFLAGS'] << '-Wl,-weak_framework,SwiftUICore'
-      end
-    end
   end
 end

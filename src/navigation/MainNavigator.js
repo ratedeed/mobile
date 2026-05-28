@@ -44,8 +44,32 @@ import Typography from '../components/common/Typography';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationsContext';
 
+import ErrorBoundary from '../components/ErrorBoundary';
+
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
+
+// Local ErrorBoundary Wrappers for Fragile Screens
+const SafeHomeScreen = (props) => (
+  <ErrorBoundary>
+    <HomeScreen {...props} />
+  </ErrorBoundary>
+);
+const SafeMessagesScreen = (props) => (
+  <ErrorBoundary>
+    <MessagesScreen {...props} />
+  </ErrorBoundary>
+);
+const SafeBusinessDetailScreen = (props) => (
+  <ErrorBoundary>
+    <BusinessDetailScreen {...props} />
+  </ErrorBoundary>
+);
+const SafeJobDetailScreen = (props) => (
+  <ErrorBoundary>
+    <JobDetailScreen {...props} />
+  </ErrorBoundary>
+);
 
 // ---- Custom Center Tab Button ----
 const JobsTabBarButton = ({ onPress }) => (
@@ -143,7 +167,7 @@ function MainTabNavigator() {
     >
       <Tab.Screen
         name="Explore"
-        component={HomeScreen}
+        component={SafeHomeScreen}
         options={({ navigation }) => ({
           title: 'Explore',
           headerShown: true,
@@ -213,7 +237,7 @@ function MainTabNavigator() {
       />
       <Tab.Screen
         name="Messages"
-        component={MessagesScreen}
+        component={SafeMessagesScreen}
         options={{ 
           title: 'Messages',
           tabBarBadge: unreadMessagesCount > 0 ? unreadMessagesCount : undefined,
@@ -277,7 +301,7 @@ export default function MainNavigator() {
   return (
     <Stack.Navigator screenOptions={dynamicScreenOptions}>
       <Stack.Screen name="Main" component={MainTabNavigator} options={{ headerShown: false }} />
-      <Stack.Screen name="BusinessDetail" component={BusinessDetailScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="BusinessDetail" component={SafeBusinessDetailScreen} options={{ headerShown: false }} />
       {isAuthenticated && (userRole === 'contractor' || userRole === 'admin') ? (
         <>
           <Stack.Screen name="ContractorDashboard" component={ContractorDashboardScreen} options={{ title: '' }} />
@@ -287,13 +311,13 @@ export default function MainNavigator() {
         </>
       ) : null}
       <Stack.Screen name="Notifications" component={NotificationsScreen} />
-      <Stack.Screen name="ChatScreen" component={MessagesScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="ChatScreen" component={SafeMessagesScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ActiveJobs" component={ActiveJobsScreen} options={{ title: '', headerShown: false }} />
       <Stack.Screen name="PaymentFlow" component={PaymentFlowScreen} options={{ title: '', headerShown: false }} />
       <Stack.Screen name="ReviewScreen" component={ReviewScreen} options={{ title: 'Leave a Review' }} />
       <Stack.Screen name="DisputeScreen" component={DisputeScreen} options={{ title: 'File a Dispute' }} />
       <Stack.Screen name="ChangeOrderScreen" component={ChangeOrderScreen} options={{ title: 'Change Order' }} />
-      <Stack.Screen name="JobDetail" component={JobDetailScreen} options={{ title: '', headerShown: false }} />
+      <Stack.Screen name="JobDetail" component={SafeJobDetailScreen} options={{ title: '', headerShown: false }} />
       <Stack.Screen name="BusinessSearch" component={BusinessSearchScreen} options={{ title: '', headerShown: false }} />
       <Stack.Screen name="QuoteReview" component={QuoteReviewScreen} options={{ title: 'Review Quote' }} />
       <Stack.Screen name="VerifyEmailChange" component={VerifyEmailChangeScreen} options={{ title: 'Verify Email', headerShown: false }} />

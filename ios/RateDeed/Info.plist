@@ -60,7 +60,7 @@
     <key>NSUserTrackingUsageDescription</key>
     <string>Allow RateDeed to use your data to provide a better, more personalized experience and for analytics.</string>
     <key>RCTNewArchEnabled</key>
-    <false/>
+    <true/>
     <key>UIBackgroundModes</key>
     <array>
       <string>fetch</string>
@@ -89,7 +89,7 @@
       <string>UIInterfaceOrientationLandscapeRight</string>
     </array>
     <key>UIUserInterfaceStyle</key>
-    <string>Automatic</string>
+    <string>Light</string>
     <key>UIViewControllerBasedStatusBarAppearance</key>
     <false/>
   </dict>

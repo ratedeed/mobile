@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Pressable, ScrollView, ActivityIndicator, Alert, Platform, StyleSheet, useColorScheme } from 'react-native';
+import { View, Text, Pressable, ScrollView, ActivityIndicator, Alert, Platform, StyleSheet, useColorScheme, AppState } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -38,6 +38,17 @@ export default function PaymentFlowScreen() {
       checkApplePay();
     }
   }, [isPlatformPaySupported]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (nextAppState === 'active' && currentStep === 0) {
+        verifyPaymentStatus();
+      }
+    });
+    return () => {
+      subscription.remove();
+    };
+  }, [currentStep]);
 
   const handleApplePay = async () => {
     if (paying) return;
@@ -87,21 +98,43 @@ export default function PaymentFlowScreen() {
     if (paying) return;
     try {
       setPaying(true);
-      const { url } = await createCheckoutSession(quoteId);
-      
-      const result = await WebBrowser.openAuthSessionAsync(url, 'ratedeed://profile');
-      
-      if (result.type === 'success' && result.url?.includes('job_funded=true')) {
-        setCurrentStep(2);
-      } else if (result.type === 'success' && result.url?.includes('job_canceled=true')) {
-        Alert.alert('Canceled', 'The payment process was canceled.');
-      } else if (result.type === 'cancel' || result.type === 'dismiss') {
-        Alert.alert('Payment Incomplete', 'The payment window was closed before completing the transaction.');
-      } else if (result.type === 'locked') {
-        Alert.alert('Browser Locked', 'Please unlock your browser or try again.');
+      const response = await createPaymentIntent(quoteId);
+      if (!response?.clientSecret) {
+        Alert.alert('Payment Error', 'Could not initialize secure payment session.');
+        return;
       }
-    } catch (err) {
-      Alert.alert('Error', 'Failed to initiate secure payment. Please try again.');
+      const { clientSecret } = response;
+      
+      const { error } = await initPaymentSheet({
+        paymentIntentClientSecret: clientSecret,
+        merchantDisplayName: 'Ratedeed',
+        applePay: {
+          merchantCountryCode: 'US',
+        },
+        googlePay: {
+          merchantCountryCode: 'US',
+          testEnv: true,
+        },
+        defaultBillingDetails: {
+          // Pre-filled billing details can go here
+        }
+      });
+
+      if (error) {
+        Alert.alert('Stripe Error', error.message || 'Failed to initialize payment sheet.');
+        return;
+      }
+
+      const { error: presentError } = await presentPaymentSheet();
+      if (presentError) {
+        if (presentError.code !== 'Canceled') {
+          Alert.alert('Payment Failed', presentError.message);
+        }
+      } else {
+        setCurrentStep(2); // Payment Success!
+      }
+    } catch (err: any) {
+      Alert.alert('Error', err?.message || 'Failed to initiate secure payment. Please try again.');
     } finally {
       setPaying(false);
     }

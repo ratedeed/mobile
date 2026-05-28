@@ -48,6 +48,7 @@ import { getCoverImageUrl, getProfileImageUrl, isSvgUrl } from '../utils/avatarU
 import { SvgImage } from '../components/common/SvgImage';
 import { useAuth } from '../context/AuthContext';
 import { requestPhotoLibraryPermission } from '../utils/permissions';
+import { EmptyState } from '../components/common/EmptyState';
 
 const TABS = [
   { key: 'posts', label: 'Posts' },
@@ -133,25 +134,7 @@ function StarRating({ rating, size = 12 }: { rating: number; size?: number }) {
   );
 }
 
-// ---- Empty State ----
-function EmptyState({ icon, title, message }: { icon: string; title: string; message: string }) {
-  const iconName: Record<string, string> = {
-    'post': 'file-alt',
-    'briefcase': 'briefcase',
-    'portfolio': 'folder-open',
-    'star': 'star',
-    'users': 'users',
-    'receipt': 'receipt',
-    'dollar': 'dollar-sign',
-  };
-  return (
-    <View className="bg-white dark:bg-neutral-900 dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-700 dark:border-neutral-700 p-8 items-center">
-      <FontAwesome5 name={iconName[icon] || icon} size={32} color="#d4d4d4" />
-      <Text className="text-sm font-semibold text-neutral-600 dark:text-neutral-300 dark:text-neutral-300 mt-3">{title}</Text>
-      <Text className="text-xs text-neutral-400 dark:text-neutral-500 dark:text-neutral-500 dark:text-neutral-400 dark:text-neutral-500 mt-1 text-center">{message}</Text>
-    </View>
-  );
-}
+
 
 // ---- Bottom Sheet ----
 function Sheet({ visible, onClose, title, children }: { visible: boolean; onClose: () => void; title: string; children: React.ReactNode }) {

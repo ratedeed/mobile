@@ -11,6 +11,7 @@ import {
   Platform,
   ActivityIndicator,
   useColorScheme,
+  FlatList,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -19,6 +20,7 @@ import HapticFeedback from '../utils/haptics';
 import { SvgImage } from '../components/common/SvgImage';
 import { CategoryIcon } from '../components/common/CategoryIcon';
 import { VerifiedBadge } from '../components/common/VerifiedBadge';
+import { Skeleton } from '../components/common/SkeletonLoader';
 import { browseContractors } from '../utils/apiClient';
 import { Contractor, RootStackParamList } from '../types';
 import { getCoverImageUrl, isSvgUrl } from '../utils/avatarUtils';
@@ -85,12 +87,23 @@ const ListingCard = ({
   const location = deriveLocation(listing);
   const price = derivePrice(listing);
   const rawImage = listing.bannerUrl || listing.bannerImage || listing.imageUrl || listing.profilePicture || '';
-  const coverImage = getCoverImageUrl(listing.companyName || listing.businessName || 'Contractor', rawImage, listing.category, 400, 400);
+  const coverImage = getCoverImageUrl(
+    listing.companyName || listing.businessName || 'Contractor',
+    rawImage,
+    listing.category,
+    400,
+    400
+  );
   const serviceZips = listing.zipCodesCovered || [];
   const distance = listing.distance;
 
   return (
-    <Pressable className="mb-4" onPress={onPress} accessibilityLabel={`View ${listing.companyName || listing.businessName || 'contractor'} details`} accessibilityRole="button">
+    <Pressable
+      className="mb-4"
+      onPress={onPress}
+      accessibilityLabel={`View ${listing.companyName || listing.businessName || 'contractor'} details`}
+      accessibilityRole="button"
+    >
       {/* Image Container */}
       <View className="relative rounded-xl overflow-hidden bg-neutral-100 dark:bg-neutral-900 aspect-square">
         {isSvgUrl(coverImage) ? (
@@ -98,11 +111,7 @@ const ListingCard = ({
             <SvgImage uri={coverImage} width="100%" height="100%" />
           </View>
         ) : coverImage ? (
-          <Image
-            source={{ uri: coverImage }}
-            className="absolute inset-0 w-full h-full"
-            resizeMode="cover"
-          />
+          <Image source={{ uri: coverImage }} className="absolute inset-0 w-full h-full" resizeMode="cover" />
         ) : null}
         {/* Verified Badge */}
         {listing.isVerified && (
@@ -130,7 +139,10 @@ const ListingCard = ({
       {/* Card Info */}
       <View className="mt-2">
         <View className="flex-row items-start justify-between" style={{ gap: 4 }}>
-          <Text className="text-[14px] font-bold text-neutral-900 dark:text-neutral-50 leading-tight flex-1" numberOfLines={1}>
+          <Text
+            className="text-[14px] font-bold text-neutral-900 dark:text-neutral-50 leading-tight flex-1"
+            numberOfLines={1}
+          >
             {listing.companyName || listing.businessName || 'Company'}
           </Text>
           <View className="flex-row items-center shrink-0" style={{ gap: 2 }}>
@@ -208,9 +220,13 @@ const HomeScreen = () => {
   useFocusEffect(
     useCallback(() => {
       const syncFavorites = async () => {
-        const favs = await getFavorites();
-        if (mountedRef.current) {
-          setFavorites(new Set(favs));
+        try {
+          const favs = await getFavorites();
+          if (mountedRef.current) {
+            setFavorites(new Set(favs));
+          }
+        } catch (e) {
+          if (__DEV__) console.warn('syncFavorites failed:', e);
         }
       };
       syncFavorites();
@@ -248,14 +264,14 @@ const HomeScreen = () => {
 
       if (mountedRef.current) {
         if (append) {
-          setAllContractors(prev => [...prev, ...list]);
+          setAllContractors((prev) => [...prev, ...list]);
         } else {
           setAllContractors(list);
         }
-        
+
         setPage(pageNum);
         setHasMore(pageNum < (result?.pages || 1));
-        
+
         // Handle nearby label based on backend expansion flags
         if (zip && result.isExpanded) {
           if (result.expansionTier === 2) {
@@ -315,8 +331,8 @@ const HomeScreen = () => {
     }
     HapticFeedback.medium();
     const isFav = favorites.has(id);
-    
-    setFavorites(prev => {
+
+    setFavorites((prev) => {
       const n = new Set(prev);
       if (isFav) n.delete(id);
       else n.add(id);
@@ -330,7 +346,7 @@ const HomeScreen = () => {
         await addFavorite(id);
       }
     } catch {
-      setFavorites(prev => {
+      setFavorites((prev) => {
         const n = new Set(prev);
         if (isFav) n.add(id);
         else n.delete(id);
@@ -354,42 +370,24 @@ const HomeScreen = () => {
     }
   }, [loadingMore, hasMore, loading, page, searchZip, loadContractors]);
 
-  const handleScroll = useCallback(({ nativeEvent }: any) => {
-    const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
-    const paddingToBottom = 200;
-    if (layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom) {
-      handleLoadMore();
-    }
-  }, [handleLoadMore]);
+  const renderContractorCard = useCallback(
+    ({ item }: { item: any }) => (
+      <View className="w-[48%] mb-4">
+        <ListingCard
+          listing={item}
+          isFavorite={favorites.has(item._id)}
+          onToggleFavorite={() => toggleFav(item._id)}
+          detectedZip={ipZipCode}
+          onPress={() => handleContractorPress(item)}
+        />
+      </View>
+    ),
+    [favorites, ipZipCode, handleContractorPress, toggleFav]
+  );
 
-  const filtered = useMemo(() => {
-    let list = allContractors;
-    // Filter by name search
-    if (searchName.trim()) {
-      const q = searchName.toLowerCase().trim();
-      list = list.filter(c =>
-        (c.companyName || c.businessName || '').toLowerCase().includes(q)
-      );
-    }
-    // Filter by category
-    if (activeCategory !== 'all') {
-      const cat = CATEGORIES.find(c => c.id === activeCategory);
-      list = list.filter(c =>
-        matchesCategory(c, activeCategory, cat?.label || '')
-      );
-    }
-    return list;
-  }, [allContractors, activeCategory, searchName]);
-
-  return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1 bg-white dark:bg-neutral-950">
-      <ScrollView
-        className="flex-1"
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        showsVerticalScrollIndicator={false}
-        onScroll={handleScroll}
-        scrollEventThrottle={400}
-      >
+  const renderHeader = useCallback(
+    () => (
+      <View>
         {/* Search Bar */}
         <View className="px-4 pt-1 pb-1 w-full max-w-7xl mx-auto">
           <View className="flex-row items-center bg-neutral-100 dark:bg-neutral-900 rounded-full" style={{ gap: 0 }}>
@@ -407,7 +405,12 @@ const HomeScreen = () => {
                 maxLength={10}
               />
               {searchZip ? (
-                <Pressable onPress={() => setSearchZip('')} className="mr-3 w-11 h-11 items-center justify-center" accessibilityLabel="Clear zip code" accessibilityRole="button">
+                <Pressable
+                  onPress={() => setSearchZip('')}
+                  className="mr-3 w-11 h-11 items-center justify-center"
+                  accessibilityLabel="Clear zip code"
+                  accessibilityRole="button"
+                >
                   <FontAwesome5 name="times-circle" size={14} color="#a3a3a3" />
                 </Pressable>
               ) : null}
@@ -426,7 +429,12 @@ const HomeScreen = () => {
                 onSubmitEditing={() => loadContractors(searchZip || null)}
               />
               {searchName ? (
-                <Pressable onPress={() => setSearchName('')} className="mr-3 w-11 h-11 items-center justify-center" accessibilityLabel="Clear search" accessibilityRole="button">
+                <Pressable
+                  onPress={() => setSearchName('')}
+                  className="mr-3 w-11 h-11 items-center justify-center"
+                  accessibilityLabel="Clear search"
+                  accessibilityRole="button"
+                >
                   <FontAwesome5 name="times-circle" size={14} color="#a3a3a3" />
                 </Pressable>
               ) : null}
@@ -434,7 +442,6 @@ const HomeScreen = () => {
             {/* Search Button */}
             <Pressable
               onPress={() => {
-                // Refetch contractors with the entered zip (same as web)
                 loadContractors(searchZip || null);
               }}
               className="bg-indigo-600 rounded-full p-2.5 mr-1.5 shrink-0"
@@ -458,135 +465,230 @@ const HomeScreen = () => {
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ alignItems: 'center', gap: 16, paddingHorizontal: 16, paddingRight: 100, paddingVertical: 12 }}
+            contentContainerStyle={{
+              alignItems: 'center',
+              gap: 16,
+              paddingHorizontal: 16,
+              paddingRight: 100,
+              paddingVertical: 12,
+            }}
           >
             {CATEGORIES.map((cat, i) => (
-              <CategoryIcon 
+              <CategoryIcon
                 key={cat.id}
-                name={cat.icon} 
-                active={activeCategory === cat.id} 
-                size={48} 
+                name={cat.icon}
+                active={activeCategory === cat.id}
+                size={48}
                 label={cat.label}
                 index={i}
-                onClick={() => { HapticFeedback.selection(); setActiveCategory(cat.id); }}
+                onClick={() => {
+                  HapticFeedback.selection();
+                  setActiveCategory(cat.id);
+                }}
               />
             ))}
           </ScrollView>
-
         </View>
 
-        <View className="h-[1px] bg-neutral-200 dark:bg-neutral-800 -mx-4 mt-2" />
+        <View className="h-[1px] bg-neutral-200 dark:bg-neutral-800 -mx-4 mt-2 mb-4" />
 
-        {/* Listings Content */}
-        <View className="px-4 pt-4 pb-24 w-full max-w-7xl mx-auto">
-          {loading ? (
-            /* Loading Skeletons */
-            <View className="flex-row flex-wrap justify-between">
-              {Array.from({ length: 10 }).map((_, i) => (
-                <View key={i} className="w-[48%] mb-4">
-                  <View className="aspect-square bg-neutral-100 dark:bg-neutral-900 rounded-xl" />
-                  <View className="mt-2" style={{ gap: 6 }}>
-                    <View className="h-3.5 bg-neutral-100 dark:bg-neutral-900 rounded w-3/4" />
-                    <View className="h-3 bg-neutral-100 dark:bg-neutral-900 rounded w-1/2" />
-                    <View className="h-3 bg-neutral-100 dark:bg-neutral-900 rounded w-1/3" />
+        {activeCategory === 'all' && (
+          <View className="px-4 pt-4 w-full max-w-7xl mx-auto mb-20">
+            {loading ? (
+              /* Loading Skeletons */
+              <View className="flex-row flex-wrap justify-between">
+                {Array.from({ length: 10 }).map((_, i) => (
+                  <View key={i} className="w-[48%] mb-4">
+                    <Skeleton width="100%" height={150} borderRadius={12} />
+                    <View className="mt-2" style={{ gap: 6 }}>
+                      <Skeleton width="75%" height={14} />
+                      <Skeleton width="50%" height={12} />
+                      <Skeleton width="33%" height={12} />
+                    </View>
                   </View>
-                </View>
-              ))}
-            </View>
-          ) : loadError ? (
-            <View className="items-center justify-center py-20 px-6">
-              <View className="w-16 h-16 bg-red-50 dark:bg-red-900/20 rounded-full items-center justify-center mb-4">
-                <FontAwesome5 name="exclamation-triangle" size={24} color="#ef4444" />
+                ))}
               </View>
-              <Text className="text-lg font-bold text-neutral-900 dark:text-neutral-50">Something went wrong</Text>
-              <Text className="text-sm text-neutral-500 dark:text-neutral-400 mt-1 text-center">Could not load contractors. Pull down to retry.</Text>
-            </View>
-          ) : activeCategory === 'all' ? (
-            /* Bunch by Category View */
-            <View className="flex-col" style={{ gap: 40 }}>
-              {CATEGORIES.filter(cat => cat.id !== 'all').map(cat => {
-                const catContractors = allContractors
-                  .filter(c => matchesCategory(c, cat.id, cat.label))
-                  .slice(0, 8);
+            ) : loadError ? (
+              <View className="items-center justify-center py-20 px-6">
+                <View className="w-16 h-16 bg-red-50 dark:bg-red-900/20 rounded-full items-center justify-center mb-4">
+                  <FontAwesome5 name="exclamation-triangle" size={24} color="#ef4444" />
+                </View>
+                <Text className="text-lg font-bold text-neutral-900 dark:text-neutral-50">Something went wrong</Text>
+                <Text className="text-sm text-neutral-500 dark:text-neutral-400 mt-1 text-center">
+                  Could not load contractors. Pull down to retry.
+                </Text>
+              </View>
+            ) : (
+              /* Bunch by Category View */
+              <View className="flex-col" style={{ gap: 40 }}>
+                {CATEGORIES.filter((cat) => cat.id !== 'all').map((cat) => {
+                  const catContractors = allContractors
+                    .filter((c) => matchesCategory(c, cat.id, cat.label))
+                    .slice(0, 8);
 
-                if (catContractors.length === 0) return null;
+                  if (catContractors.length === 0) return null;
 
-                return (
-                  <View key={cat.id} className="flex-col" style={{ gap: 16 }}>
-                    <View className="flex-row items-center justify-between">
-                      <Text className="text-xl font-bold text-neutral-900 dark:text-neutral-50">{cat.label}</Text>
-                      <Pressable onPress={() => setActiveCategory(cat.id)} className="w-8 h-8 items-center justify-center rounded-full bg-neutral-100 dark:bg-neutral-800">
-                        <FontAwesome5 name="arrow-right" size={12} color={isDark ? '#a3a3a3' : '#6b7280'} />
-                      </Pressable>
+                  return (
+                    <View key={cat.id} className="flex-col" style={{ gap: 16 }}>
+                      <View className="flex-row items-center justify-between">
+                        <Text className="text-xl font-bold text-neutral-900 dark:text-neutral-50">{cat.label}</Text>
+                        <Pressable
+                          onPress={() => setActiveCategory(cat.id)}
+                          className="w-8 h-8 items-center justify-center rounded-full bg-neutral-100 dark:bg-neutral-800"
+                        >
+                          <FontAwesome5 name="arrow-right" size={12} color={isDark ? '#a3a3a3' : '#6b7280'} />
+                        </Pressable>
+                      </View>
+                      <View className="flex-row flex-wrap justify-between">
+                        {catContractors.map((c) => (
+                          <View key={c._id} className="w-[48%]">
+                            <ListingCard
+                              listing={c}
+                              isFavorite={favorites.has(c._id)}
+                              onToggleFavorite={() => toggleFav(c._id)}
+                              detectedZip={ipZipCode}
+                              onPress={() => handleContractorPress(c)}
+                            />
+                          </View>
+                        ))}
+                      </View>
                     </View>
-                    <View className="flex-row flex-wrap justify-between">
-                      {catContractors.map(c => (
-                        <View key={c._id} className="w-[48%]">
-                          <ListingCard
-                            listing={c}
-                            isFavorite={favorites.has(c._id)}
-                            onToggleFavorite={() => toggleFav(c._id)}
-                            detectedZip={ipZipCode}
-                            onPress={() => handleContractorPress(c)}
-                          />
-                        </View>
-                      ))}
-                    </View>
+                  );
+                })}
+                {allContractors.length === 0 && (
+                  <View className="items-center justify-center py-20">
+                    <Text className="text-lg font-medium text-neutral-500 dark:text-neutral-400">
+                      No contractors found
+                    </Text>
+                    <Text className="text-sm text-neutral-400 dark:text-neutral-50 mt-2 text-center">
+                      Try adjusting your location or check back later.
+                    </Text>
                   </View>
-                );
-              })}
-              {allContractors.length === 0 && (
-                <View className="items-center justify-center py-20">
-                  <Text className="text-lg font-medium text-neutral-500 dark:text-neutral-400">No contractors found</Text>
-                  <Text className="text-sm text-neutral-400 dark:text-neutral-500 mt-2 text-center">Try adjusting your location or check back later.</Text>
-                </View>
-              )}
-            </View>
-          ) : filtered.length > 0 ? (
-            /* Specific Category Grid View */
-            <View className="flex-row flex-wrap justify-between">
-              {filtered.map(c => (
-                <View key={c._id} className="w-[48%]">
-                  <ListingCard
-                    listing={c}
-                    isFavorite={favorites.has(c._id)}
-                    onToggleFavorite={() => toggleFav(c._id)}
-                    detectedZip={ipZipCode}
-                    onPress={() => handleContractorPress(c)}
-                  />
-                </View>
-              ))}
-            </View>
-          ) : (
-            <View className="items-center justify-center py-20">
-              <Text className="text-lg font-medium text-neutral-500 dark:text-neutral-400">No contractors found</Text>
-            </View>
-          )}
+                )}
+              </View>
+            )}
+          </View>
+        )}
+      </View>
+    ),
+    [
+      searchZip,
+      searchName,
+      nearbyLabel,
+      activeCategory,
+      CATEGORIES,
+      allContractors,
+      loading,
+      loadError,
+      favorites,
+      ipZipCode,
+      isDark,
+      loadContractors,
+      toggleFav,
+      handleContractorPress,
+    ]
+  );
 
-          {/* Load More */}
-          {allContractors.length > 0 && (
-            <View className="items-center py-6">
-              {loadingMore ? (
-                <View className="flex-row items-center" style={{ gap: 8 }}>
-                  <ActivityIndicator size="small" color={isDark ? '#a3a3a3' : '#737373'} />
-                  <Text className="text-sm text-neutral-500 dark:text-neutral-400">Loading more...</Text>
-                </View>
-              ) : hasMore ? (
-                <Pressable
-                  onPress={handleLoadMore}
-                  className="flex-row items-center px-6 py-3 border border-neutral-200 dark:border-neutral-700 rounded-xl"
-                  style={{ gap: 8 }}
-                >
-                  <FontAwesome5 name="chevron-down" size={14} color={isDark ? '#d4d4d4' : '#171717'} />
-                  <Text className="text-sm font-semibold text-neutral-900 dark:text-neutral-50">Load More</Text>
-                </Pressable>
-              ) : (
-                <Text className="text-xs text-neutral-400 dark:text-neutral-500">No more contractors</Text>
-              )}
+  const renderFooter = useCallback(() => {
+    if (activeCategory === 'all') return null;
+    if (allContractors.length === 0) return null;
+    return (
+      <View className="items-center py-6 mb-20">
+        {loadingMore ? (
+          <View className="flex-row items-center" style={{ gap: 8 }}>
+            <ActivityIndicator size="small" color={isDark ? '#a3a3a3' : '#737373'} />
+            <Text className="text-sm text-neutral-500 dark:text-neutral-400">Loading more...</Text>
+          </View>
+        ) : hasMore ? (
+          <Pressable
+            onPress={handleLoadMore}
+            className="flex-row items-center px-6 py-3 border border-neutral-200 dark:border-neutral-700 rounded-xl"
+            style={{ gap: 8 }}
+          >
+            <FontAwesome5 name="chevron-down" size={14} color={isDark ? '#d4d4d4' : '#171717'} />
+            <Text className="text-sm font-semibold text-neutral-900 dark:text-neutral-50">Load More</Text>
+          </Pressable>
+        ) : (
+          <Text className="text-xs text-neutral-400 dark:text-neutral-500">No more contractors</Text>
+        )}
+      </View>
+    );
+  }, [activeCategory, allContractors.length, loadingMore, hasMore, isDark, handleLoadMore]);
+
+  const renderEmptyList = useCallback(() => {
+    if (activeCategory === 'all') return null;
+    if (loading) {
+      return (
+        <View className="flex-row flex-wrap justify-between px-4">
+          {Array.from({ length: 10 }).map((_, i) => (
+            <View key={i} className="w-[48%] mb-4">
+              <View className="aspect-square bg-neutral-100 dark:bg-neutral-900 rounded-xl" />
+              <View className="mt-2" style={{ gap: 6 }}>
+                <View className="h-3.5 bg-neutral-100 dark:bg-neutral-900 rounded w-3/4" />
+                <View className="h-3 bg-neutral-100 dark:bg-neutral-900 rounded w-1/2" />
+                <View className="h-3 bg-neutral-100 dark:bg-neutral-900 rounded w-1/3" />
+              </View>
             </View>
-          )}
+          ))}
         </View>
-      </ScrollView>
+      );
+    }
+    if (loadError) {
+      return (
+        <View className="items-center justify-center py-20 px-6">
+          <View className="w-16 h-16 bg-red-50 dark:bg-red-900/20 rounded-full items-center justify-center mb-4">
+            <FontAwesome5 name="exclamation-triangle" size={24} color="#ef4444" />
+          </View>
+          <Text className="text-lg font-bold text-neutral-900 dark:text-neutral-50">Something went wrong</Text>
+          <Text className="text-sm text-neutral-500 dark:text-neutral-400 mt-1 text-center">
+            Could not load contractors. Pull down to retry.
+          </Text>
+        </View>
+      );
+    }
+    return (
+      <View className="items-center justify-center py-20">
+        <Text className="text-lg font-medium text-neutral-500 dark:text-neutral-400">No contractors found</Text>
+      </View>
+    );
+  }, [activeCategory, loading, loadError]);
+
+  const filtered = useMemo(() => {
+    let list = allContractors;
+    // Filter by name search
+    if (searchName.trim()) {
+      const q = searchName.toLowerCase().trim();
+      list = list.filter((c) => (c.companyName || c.businessName || '').toLowerCase().includes(q));
+    }
+    // Filter by category
+    if (activeCategory !== 'all') {
+      const cat = CATEGORIES.find((c) => c.id === activeCategory);
+      list = list.filter((c) => matchesCategory(c, activeCategory, cat?.label || ''));
+    }
+    return list;
+  }, [allContractors, activeCategory, searchName]);
+
+  return (
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      className="flex-1 bg-white dark:bg-neutral-950"
+    >
+      <FlatList
+        key={activeCategory === 'all' ? 'single' : 'grid'}
+        data={activeCategory === 'all' ? [] : filtered}
+        renderItem={renderContractorCard}
+        keyExtractor={(item) => item._id}
+        numColumns={activeCategory === 'all' ? 1 : 2}
+        columnWrapperStyle={
+          activeCategory === 'all' ? undefined : { justifyContent: 'space-between', paddingHorizontal: 16 }
+        }
+        ListHeaderComponent={renderHeader}
+        ListFooterComponent={renderFooter}
+        ListEmptyComponent={renderEmptyList}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        showsVerticalScrollIndicator={false}
+        className="flex-1"
+      />
 
       <GuestPrompt
         visible={showGuestPrompt}

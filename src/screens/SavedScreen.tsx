@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { EmptyState } from "../components/common/EmptyState";
+import { EmptyState } from '../components/common/EmptyState';
 
 import {
   View,
@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   useColorScheme,
+  FlatList,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -59,7 +60,7 @@ const SavedScreen = () => {
       setLoadError(false);
       const ids = await getFavorites();
       setSavedIds(ids);
-      
+
       if (ids.length === 0) {
         setAllContractors([]);
         setLoading(false);
@@ -68,7 +69,7 @@ const SavedScreen = () => {
       }
 
       const result: any = await browseContractors({ ids: ids.join(','), limit: 100 });
-      
+
       const list = Array.isArray(result)
         ? result
         : Array.isArray(result?.contractors)
@@ -97,44 +98,102 @@ const SavedScreen = () => {
     loadData();
   }, [loadData]);
 
-  const handleRemove = async (id: string) => {
+  const handleRemove = useCallback(async (id: string) => {
     HapticFeedback.selection();
     await removeFavorite(id);
-    setSavedIds(prev => prev.filter(sid => sid !== id));
-  };
+    setSavedIds((prev) => prev.filter((sid) => sid !== id));
+  }, []);
 
   const savedContractors = useMemo(() => {
     // Robust matching for both _id and id
-    return allContractors.filter(c => {
+    return allContractors.filter((c) => {
       const cid = c._id || (c as any).id;
       return savedIds.includes(cid);
     });
   }, [allContractors, savedIds]);
 
   const availableCategories = useMemo(() => {
-    const catsInSaved = new Set(savedContractors.map(c => c.category?.toLowerCase()).filter(Boolean));
-    return CATEGORIES.filter(cat => cat.id === 'all' || catsInSaved.has(cat.id.toLowerCase()) || catsInSaved.has(cat.label.toLowerCase()));
+    const catsInSaved = new Set(savedContractors.map((c) => c.category?.toLowerCase()).filter(Boolean));
+    return CATEGORIES.filter(
+      (cat) => cat.id === 'all' || catsInSaved.has(cat.id.toLowerCase()) || catsInSaved.has(cat.label.toLowerCase())
+    );
   }, [savedContractors]);
 
   const filtered = useMemo(() => {
     if (activeCategory === 'all') return savedContractors;
-    const cat = CATEGORIES.find(c => c.id === activeCategory);
+    const cat = CATEGORIES.find((c) => c.id === activeCategory);
     const label = cat?.label.toLowerCase();
     const id = cat?.id.toLowerCase();
-    
-    return savedContractors.filter(c => {
+
+    return savedContractors.filter((c) => {
       const cCat = c.category?.toLowerCase() || '';
       return cCat.includes(id || '') || cCat.includes(label || '');
     });
   }, [savedContractors, activeCategory]);
 
+  const renderContractorItem = useCallback(
+    ({ item }: { item: Contractor }) => {
+      const rawImage =
+        (item as any).bannerUrl || item.bannerImage || (item as any).imageUrl || item.profilePicture || '';
+      const coverImage = getCoverImageUrl(
+        item.companyName || item.businessName || 'Contractor',
+        rawImage,
+        item.category,
+        400,
+        400
+      );
+      const contractorId = item._id || (item as any).id;
+
+      return (
+        <Pressable className="w-[48%] mb-6" onPress={() => navigation.navigate('BusinessDetail', { id: contractorId })}>
+          <View className="relative aspect-square rounded-xl overflow-hidden bg-neutral-100 dark:bg-neutral-900">
+            {isSvgUrl(coverImage) ? (
+              <View className="absolute inset-0 w-full h-full">
+                <SvgImage uri={coverImage} width="100%" height="100%" />
+              </View>
+            ) : (
+              <Image source={{ uri: coverImage }} className="absolute inset-0 w-full h-full" resizeMode="cover" />
+            )}
+
+            <Pressable onPress={() => handleRemove(contractorId)} className="absolute top-2 right-2 p-1">
+              <Heart size={24} color="rgba(225,29,72,1)" weight="fill" />
+            </Pressable>
+          </View>
+          <View className="mt-2">
+            <Text
+              className="text-[14px] font-bold text-neutral-900 dark:text-neutral-50 leading-tight"
+              numberOfLines={1}
+            >
+              {item.companyName || item.businessName || 'Company'}
+            </Text>
+            <View className="flex-row items-center mt-0.5" style={{ gap: 4 }}>
+              <Star size={10} color="#eab308" weight="fill" />
+              <Text className="text-xs font-bold text-slate-600 dark:text-slate-400">
+                {(item.averageRating || 0).toFixed(2)}
+              </Text>
+            </View>
+            <Text className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5" numberOfLines={1}>
+              {item.contactInfo?.city || 'Local'}, {item.contactInfo?.state || 'Area'}
+            </Text>
+          </View>
+        </Pressable>
+      );
+    },
+    [navigation, handleRemove]
+  );
+
   if (!isAuthenticated) {
     return (
-      <View className="flex-1 bg-white dark:bg-neutral-950 items-center justify-center px-8" style={{ paddingTop: Math.max(insets.top, 16) }}>
+      <View
+        className="flex-1 bg-white dark:bg-neutral-950 items-center justify-center px-8"
+        style={{ paddingTop: Math.max(insets.top, 16) }}
+      >
         <View className="w-20 h-20 bg-indigo-50 dark:bg-indigo-900/20 rounded-full items-center justify-center mb-6">
           <Heart size={40} color="#4F46E5" weight="fill" />
         </View>
-        <Text className="text-2xl font-bold text-neutral-900 dark:text-neutral-50 mb-2 text-center">Save Contractors</Text>
+        <Text className="text-2xl font-bold text-neutral-900 dark:text-neutral-50 mb-2 text-center">
+          Save Contractors
+        </Text>
         <Text className="text-sm text-neutral-500 dark:text-neutral-400 text-center mb-8 leading-5">
           Sign in to save your favorite contractors and quickly find them later.
         </Text>
@@ -172,7 +231,9 @@ const SavedScreen = () => {
             <Warning size={28} color="#ef4444" weight="bold" />
           </View>
           <Text className="text-lg font-bold text-neutral-900 dark:text-neutral-50">Something went wrong</Text>
-          <Text className="text-sm text-neutral-500 dark:text-neutral-400 mt-1 text-center">Could not load saved contractors. Pull down to retry.</Text>
+          <Text className="text-sm text-neutral-500 dark:text-neutral-400 mt-1 text-center">
+            Could not load saved contractors. Pull down to retry.
+          </Text>
         </View>
       ) : savedContractors.length === 0 ? (
         <View className="flex-1 items-center justify-center px-8">
@@ -180,7 +241,7 @@ const SavedScreen = () => {
             <Heart size={32} color={isDark ? '#525252' : '#d4d4d4'} weight="bold" />
           </View>
           <EmptyState title="No saved contractors" message="Start exploring and save contractors you like." />
-          <Pressable 
+          <Pressable
             onPress={() => navigation.navigate('Explore' as any)}
             className="mt-6 bg-neutral-900 dark:bg-neutral-50 px-8 py-3 rounded-xl"
           >
@@ -198,11 +259,11 @@ const SavedScreen = () => {
               className="py-2"
             >
               {availableCategories.map((cat, i) => (
-                <CategoryIcon 
+                <CategoryIcon
                   key={cat.id}
-                  name={cat.icon} 
-                  active={activeCategory === cat.id} 
-                  size={48} 
+                  name={cat.icon}
+                  active={activeCategory === cat.id}
+                  size={48}
                   label={cat.label}
                   index={i}
                   onClick={() => setActiveCategory(cat.id)}
@@ -211,57 +272,23 @@ const SavedScreen = () => {
             </ScrollView>
           </View>
 
-          <ScrollView 
+          <FlatList
+            data={filtered}
+            renderItem={renderContractorItem}
+            keyExtractor={(item) => item._id || (item as any).id}
+            numColumns={2}
+            columnWrapperStyle={{ justifyContent: 'space-between' }}
+            contentContainerStyle={{ paddingBottom: 80 }}
             className="flex-1 px-4"
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={isDark ? '#ffffff' : '#171717'} />}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor={isDark ? '#ffffff' : '#171717'}
+              />
+            }
             showsVerticalScrollIndicator={false}
-          >
-            <View className="flex-row flex-wrap justify-between pt-2">
-              {filtered.map(contractor => {
-                const rawImage = (contractor as any).bannerUrl || contractor.bannerImage || (contractor as any).imageUrl || contractor.profilePicture || '';
-                const coverImage = getCoverImageUrl(contractor.companyName || contractor.businessName || 'Contractor', rawImage, contractor.category, 400, 400);
-                const contractorId = contractor._id || (contractor as any).id;
-
-                return (
-                  <Pressable 
-                    key={contractorId} 
-                    className="w-[48%] mb-6"
-                    onPress={() => navigation.navigate('BusinessDetail', { id: contractorId })}
-                  >
-                    <View className="relative aspect-square rounded-xl overflow-hidden bg-neutral-100 dark:bg-neutral-900">
-                      {isSvgUrl(coverImage) ? (
-                        <View className="absolute inset-0 w-full h-full">
-                          <SvgImage uri={coverImage} width="100%" height="100%" />
-                        </View>
-                      ) : (
-                        <Image source={{ uri: coverImage }} className="absolute inset-0 w-full h-full" resizeMode="cover" />
-                      )}
-
-                      <Pressable 
-                        onPress={() => handleRemove(contractorId)}
-                        className="absolute top-2 right-2 p-1"
-                      >
-                        <Heart size={24} color="rgba(225,29,72,1)" weight="fill" />
-                      </Pressable>
-                    </View>
-                    <View className="mt-2">
-                      <Text className="text-[14px] font-bold text-neutral-900 dark:text-neutral-50 leading-tight" numberOfLines={1}>
-                        {contractor.companyName || contractor.businessName || 'Company'}
-                      </Text>
-                      <View className="flex-row items-center mt-0.5" style={{ gap: 4 }}>
-                        <Star size={10} color="#eab308" weight="fill" />
-                        <Text className="text-xs font-bold text-slate-600 dark:text-slate-400">{(contractor.averageRating || 0).toFixed(2)}</Text>
-                      </View>
-                      <Text className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5" numberOfLines={1}>
-                        {contractor.contactInfo?.city || 'Local'}, {contractor.contactInfo?.state || 'Area'}
-                      </Text>
-                    </View>
-                  </Pressable>
-                );
-              })}
-            </View>
-            <View className="h-20" />
-          </ScrollView>
+          />
         </View>
       )}
     </View>

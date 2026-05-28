@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import * as Sentry from '@sentry/react-native';
 // ================================================================
 // Cloudinary Upload Utility for React Native
 // ================================================================
@@ -34,51 +35,67 @@ export async function uploadToCloudinary(
   localUri: string,
   folder: string
 ): Promise<string> {
-  // Step 1: Get signed upload parameters from backend
-  const signData = await getCloudinarySignature(folder);
-
-  if (!signData || !signData.signature) {
-    throw new Error('Failed to get upload signature from server. Please try again.');
+  // If the URI is already a Cloudinary/web URL, return it immediately (caching/retry optimization)
+  if (localUri.startsWith('http://') || localUri.startsWith('https://')) {
+    return localUri;
   }
 
-  // Step 2: Upload directly to Cloudinary
-  const formData = new FormData();
+  try {
+    // Step 1: Get signed upload parameters from backend
+    const signData = await getCloudinarySignature(folder);
 
-  if (localUri.startsWith('data:')) {
-    // Data URI (base64) — pass the raw string to Cloudinary
-    formData.append("file", localUri);
-  } else {
-    // File URI — use React Native FormData file object
-    const filename = localUri.split('/').pop() || 'image.jpg';
-    const match = /\.(\w+)$/.exec(filename);
-    const type = match ? `image/${match[1]}` : `image/jpeg`;
-
-    const fileToUpload = {
-      uri: Platform.OS === "android" ? localUri : localUri.replace("file://", ""),
-      name: filename,
-      type: type || "image/jpeg",
-    };
-
-    formData.append("file", fileToUpload as any);
-  }
-
-  formData.append('api_key', String(signData.api_key));
-  formData.append('signature', String(signData.signature));
-  formData.append('timestamp', String(signData.timestamp));
-  formData.append('folder', folder);
-
-  const cloudinaryRes = await fetch(
-    `https://api.cloudinary.com/v1_1/${signData.cloud_name}/image/upload`,
-    {
-      method: 'POST',
-      body: formData,
+    if (!signData || !signData.signature) {
+      throw new Error('Failed to get upload signature from server. Please try again.');
     }
-  );
 
-  if (!cloudinaryRes.ok) {
-    throw new Error('Image upload failed. Please try again.');
+    // Step 2: Upload directly to Cloudinary
+    const formData = new FormData();
+
+    if (localUri.startsWith('data:')) {
+      // Data URI (base64) — pass the raw string to Cloudinary
+      formData.append("file", localUri);
+    } else {
+      // File URI — use React Native FormData file object
+      const filename = localUri.split('/').pop() || 'image.jpg';
+      const match = /\.(\w+)$/.exec(filename);
+      const type = match ? `image/${match[1]}` : `image/jpeg`;
+
+      const fileToUpload = {
+        uri: Platform.OS === "android" ? localUri : localUri.replace("file://", ""),
+        name: filename,
+        type: type || "image/jpeg",
+      };
+
+      formData.append("file", fileToUpload as any);
+    }
+
+    formData.append('api_key', String(signData.api_key));
+    formData.append('signature', String(signData.signature));
+    formData.append('timestamp', String(signData.timestamp));
+    formData.append('folder', folder);
+
+    const cloudinaryRes = await fetch(
+      `https://api.cloudinary.com/v1_1/${signData.cloud_name}/image/upload`,
+      {
+        method: 'POST',
+        body: formData,
+      }
+    );
+
+    if (!cloudinaryRes.ok) {
+      throw new Error('Image upload failed. Please try again.');
+    }
+
+    const data = (await cloudinaryRes.json()) as CloudinaryUploadResult;
+    return data.secure_url;
+  } catch (error) {
+    Sentry.captureException(error, {
+      extra: {
+        folder,
+        localUriLength: localUri ? localUri.length : 0,
+        isDataUri: localUri ? localUri.startsWith('data:') : false,
+      }
+    });
+    throw error;
   }
-
-  const data = (await cloudinaryRes.json()) as CloudinaryUploadResult;
-  return data.secure_url;
 }

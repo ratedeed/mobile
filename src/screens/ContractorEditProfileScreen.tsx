@@ -214,6 +214,20 @@ export default function ContractorEditProfileScreen() {
   };
 
   const handleSave = async () => {
+    if (!companyName.trim()) {
+      Alert.alert('Validation Error', 'Company Name is required.');
+      return;
+    }
+
+    if (serviceArea.trim()) {
+      const zips = serviceArea.split(',').map(s => s.trim()).filter(Boolean);
+      const invalidZip = zips.some(zip => !/^\d{5}$/.test(zip));
+      if (invalidZip) {
+        Alert.alert('Validation Error', 'Please ensure all zip codes in the service area are 5 digits.');
+        return;
+      }
+    }
+
     setSaving(true);
     try {
       let finalProfilePicUrl = profilePicture;
