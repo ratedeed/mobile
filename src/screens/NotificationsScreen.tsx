@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useNotifications } from '../context/NotificationsContext';
+import { useAuth } from '../context/AuthContext';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { SkeletonLoader } from '../components/common/SkeletonLoader';
 import { EmptyState } from '../components/common/EmptyState';
@@ -191,6 +192,7 @@ const NotificationsScreen: React.FC = () => {
     markAllAsRead,
     deleteNotification,
   } = useNotifications();
+  const { userRole } = useAuth();
 
   const [refreshing, setRefreshing] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
@@ -220,7 +222,11 @@ const NotificationsScreen: React.FC = () => {
       const conversationId = item.link.split('/')[2];
       navigation.navigate('ChatScreen', { conversationId });
     } else if (item.link.startsWith('/leads/')) {
-      navigation.navigate('ContractorDashboard');
+      if (userRole === 'contractor' || userRole === 'admin') {
+        navigation.navigate('ContractorDashboard');
+      } else {
+        navigation.navigate('Profile');
+      }
     } else if (item.link.startsWith('/quotes/')) {
       navigation.navigate('Jobs');
     } else if (item.link.startsWith('/jobs/')) {

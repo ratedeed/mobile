@@ -31,8 +31,12 @@ import * as Linking from 'expo-linking';
 
 const STRIPE_PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || 'pk_test_51TFxmH2K3vS58g5IdspNfgGbJGLkpqxlVSPpBQa2cp2nRWaAPz3RxPfgl4ozCOxsfj4xLc9oshL0xnSeNGduOXNT00Lv4ycEhh';
 
-if (__DEV__ && !process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
-  console.warn('STRIPE_PUBLISHABLE_KEY is not set. Using safe fallback to prevent SDK crash.');
+if (!process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
+  if (__DEV__) {
+    console.warn('STRIPE_PUBLISHABLE_KEY is not set. Using safe fallback to prevent SDK crash.');
+  } else {
+    throw new Error('CRITICAL: EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY environment variable is not defined in production build!');
+  }
 }
 
 Sentry.init({
@@ -77,7 +81,7 @@ const linking = {
   },
 };
 
-function AppNavigator() {
+function AppNavigator({ splashComplete }) {
   const { isAuthenticated } = useAuth();
   const { colorScheme } = useColorScheme();
 
@@ -108,12 +112,12 @@ function AppNavigator() {
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
       {/* Always show MainNavigator so guests can browse */}
       <MainNavigator />
-      <EscrowTrustBanner />
+      {splashComplete && <EscrowTrustBanner />}
     </View>
   );
 }
 
-function AppContent() {
+function AppContent({ splashComplete }) {
   const { isAuthenticated, isLoading, userId } = useAuth();
 
   useEffect(() => {
@@ -133,7 +137,7 @@ function AppContent() {
 
   return (
     <NavigationContainer linking={linking}>
-      <AppNavigator />
+      <AppNavigator splashComplete={splashComplete} />
     </NavigationContainer>
   );
 }
@@ -167,7 +171,7 @@ function App() {
           <AuthProvider>
             <NotificationsProvider>
               <ContractorProvider>
-                <AppContent />
+                <AppContent splashComplete={splashComplete} />
                 <OfflineBanner isVisible={!isConnected} />
                 {!splashComplete && (
                   <AnimatedSplashScreen onComplete={() => setSplashComplete(true)} minDuration={1500} />

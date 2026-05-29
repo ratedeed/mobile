@@ -107,13 +107,13 @@ export const EscrowTrustBanner = () => {
     Animated.parallel([
       Animated.timing(slideAnim, {
         toValue: 0,
-        duration: 600,
-        easing: Easing.out(Easing.exp),
+        duration: 1000,
+        easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
       Animated.timing(opacityAnim, {
         toValue: 1,
-        duration: 400,
+        duration: 800,
         useNativeDriver: true,
       }),
     ]).start(() => {
@@ -141,13 +141,13 @@ export const EscrowTrustBanner = () => {
     Animated.parallel([
       Animated.timing(slideAnim, {
         toValue: 300,
-        duration: 350,
-        easing: Easing.in(Easing.exp),
+        duration: 600,
+        easing: Easing.in(Easing.cubic),
         useNativeDriver: true,
       }),
       Animated.timing(opacityAnim, {
         toValue: 0,
-        duration: 300,
+        duration: 500,
         useNativeDriver: true,
       }),
     ]).start(() => {
@@ -171,7 +171,7 @@ export const EscrowTrustBanner = () => {
       timer = setTimeout(() => {
         show();
         hasShownEscrowBanner = true;
-      }, 1000);
+      }, 3300);
     }
 
     const subscription = AppState.addEventListener('change', (nextAppState) => {
@@ -180,7 +180,7 @@ export const EscrowTrustBanner = () => {
         timer = setTimeout(() => {
           show();
           hasShownEscrowBanner = true;
-        }, 1000);
+        }, 3000);
       }
     });
 
@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: 'transparent',
   },
   banner: {
     position: 'absolute',

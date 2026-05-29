@@ -8,14 +8,15 @@
     "newArchEnabled": true,
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/blank-splash.png",
-      "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
     "ios": {
       "buildNumber": "28",
       "supportsTablet": true,
       "bundleIdentifier": "com.ratedeed.app",
+      "associatedDomains": [
+        "applinks:ratedeed.com"
+      ],
       "infoPlist": {
         "UIBackgroundModes": [
           "fetch",
@@ -25,8 +26,6 @@
       },
       "googleServicesFile": "./GoogleService-Info.plist",
       "splash": {
-        "image": "./assets/blank-splash.png",
-        "resizeMode": "contain",
         "backgroundColor": "#ffffff"
       }
     },
@@ -39,9 +38,24 @@
       "edgeToEdgeEnabled": true,
       "package": "com.ratedeed.app",
       "googleServicesFile": "./google-services.json",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "ratedeed.com",
+              "pathPrefix": "/"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ],
       "splash": {
-        "image": "./assets/blank-splash.png",
-        "resizeMode": "contain",
         "backgroundColor": "#ffffff"
       },
       "permissions": [
@@ -106,8 +120,7 @@
           "userTrackingPermission": "Allow RateDeed to use your data to provide a better, more personalized experience and for analytics."
         }
       ],
-      "expo-secure-store",
-      "@sentry/react-native"
+      "expo-secure-store"
     ],
     "scheme": "ratedeed",
     "extra": {

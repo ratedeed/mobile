@@ -9,8 +9,8 @@ export const getSecureItem = async (key: string): Promise<string | null> => {
   try {
     return await SecureStore.getItemAsync(key);
   } catch (error) {
-    console.warn(`SecureStore.getItemAsync failed for key "${key}". Falling back to AsyncStorage:`, error);
-    return await AsyncStorage.getItem(key);
+    console.warn(`SecureStore.getItemAsync failed for key "${key}":`, error);
+    return null;
   }
 };
 
@@ -21,8 +21,8 @@ export const setSecureItem = async (key: string, value: string): Promise<void> =
     try {
       await SecureStore.setItemAsync(key, value);
     } catch (error) {
-      console.warn(`SecureStore.setItemAsync failed for key "${key}". Falling back to AsyncStorage:`, error);
-      await AsyncStorage.setItem(key, value);
+      console.warn(`SecureStore.setItemAsync failed for key "${key}":`, error);
+      throw error;
     }
   }
 };
@@ -34,8 +34,8 @@ export const removeSecureItem = async (key: string): Promise<void> => {
     try {
       await SecureStore.deleteItemAsync(key);
     } catch (error) {
-      console.warn(`SecureStore.deleteItemAsync failed for key "${key}". Falling back to AsyncStorage:`, error);
-      await AsyncStorage.removeItem(key);
+      console.warn(`SecureStore.deleteItemAsync failed for key "${key}":`, error);
+      throw error;
     }
   }
 };

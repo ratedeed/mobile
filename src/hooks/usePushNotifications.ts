@@ -18,7 +18,7 @@ Notifications.setNotificationHandler({
 });
 
 export const usePushNotifications = () => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, userRole } = useAuth();
   const { refreshNotifications } = useNotifications();
   const navigation = useNavigation<NavigationProp<any>>();
   const [expoPushToken, setExpoPushToken] = useState<string | undefined>();
@@ -134,7 +134,11 @@ export const usePushNotifications = () => {
       } else if (data?.type === 'new_review') {
         navigation.navigate('Profile');
       } else if (data?.type === 'new_lead') {
-        navigation.navigate('ContractorDashboard');
+        if (userRole === 'contractor' || userRole === 'admin') {
+          navigation.navigate('ContractorDashboard');
+        } else {
+          navigation.navigate('Profile');
+        }
       }
     });
 
@@ -151,14 +155,18 @@ export const usePushNotifications = () => {
       } else if (data?.type === 'new_review') {
         navigation.navigate('Profile');
       } else if (data?.type === 'new_lead') {
-        navigation.navigate('ContractorDashboard');
+        if (userRole === 'contractor' || userRole === 'admin') {
+          navigation.navigate('ContractorDashboard');
+        } else {
+          navigation.navigate('Profile');
+        }
       }
     };
 
     checkInitialNotification();
 
     return () => { responseListener.remove(); };
-  }, [navigation, isAuthenticated]);
+  }, [navigation, isAuthenticated, userRole]);
 
   return { expoPushToken, notification };
 };
