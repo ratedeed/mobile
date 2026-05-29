@@ -286,20 +286,25 @@ const LoginScreen = () => {
 
           {/* Verification Message */}
           {showVerificationMessage && (
-            <View className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3" style={{ gap: 8 }}>
-              <Text className="text-xs text-amber-800">
-                Your email is not verified. Please check your inbox for a verification link.
-              </Text>
-              <Pressable onPress={handleResendVerification}>
-                <Text className="text-xs font-semibold text-amber-900 underline">
-                  Resend Verification Email
+            <View className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3.5" style={{ gap: 10 }}>
+              <View className="flex-row items-start" style={{ gap: 8 }}>
+                <FontAwesome5 name="envelope" size={15} color="#b45309" style={{ marginTop: 2 }} />
+                <Text className="text-xs text-amber-800 flex-1 leading-normal">
+                  Your email is not verified. Please check your inbox for a verification link.
                 </Text>
-              </Pressable>
-              <Pressable onPress={handleVerifiedCheck}>
-                <Text className="text-xs font-semibold text-amber-900 underline">
-                  I have verified my email
-                </Text>
-              </Pressable>
+              </View>
+              <View className="flex-row items-center" style={{ gap: 16 }}>
+                <Pressable onPress={handleResendVerification}>
+                  <Text className="text-xs font-semibold text-amber-900 underline">
+                    Resend Verification Email
+                  </Text>
+                </Pressable>
+                <Pressable onPress={handleVerifiedCheck}>
+                  <Text className="text-xs font-semibold text-amber-900 underline">
+                    I have verified my email
+                  </Text>
+                </Pressable>
+              </View>
             </View>
           )}
 

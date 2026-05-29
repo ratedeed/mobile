@@ -20,6 +20,7 @@ import { getContractorProfile, updateContractorProfile, requestVerification } fr
 import { uploadToCloudinary, CLOUDINARY_FOLDERS } from '../utils/cloudinary';
 import { useAuth } from '../context/AuthContext';
 import { requestPhotoLibraryPermission } from '../utils/permissions';
+import { VerifiedBadge } from './common/VerifiedBadge';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const isSmallScreen = SCREEN_WIDTH < 768;
@@ -1288,18 +1289,8 @@ export default function ContractorEditProfileModal({ visible, onClose, onProfile
                               alignItems: 'center',
                             }}
                           >
-                            <View
-                              style={{
-                                width: 56,
-                                height: 56,
-                                borderRadius: RADII.full,
-                                backgroundColor: '#E6F4EA',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                marginBottom: 16,
-                              }}
-                            >
-                              <FontAwesome5 name="shield-alt" size={22} color={COLORS.success} solid />
+                            <View style={{ marginBottom: 16 }}>
+                              <VerifiedBadge size={56} animate={true} />
                             </View>
                             <Text
                               style={{

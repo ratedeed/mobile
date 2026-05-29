@@ -102,6 +102,10 @@ export interface Contractor {
   portfolio?: PortfolioItem[];
   posts?: Post[];
   reviewsList?: Review[];
+  insuranceInfo?: string;
+  yearsExperience?: number;
+  responseTimeMinutes?: number;
+  responseTimeSampleSize?: number;
 }
 
 export interface PortfolioItem {

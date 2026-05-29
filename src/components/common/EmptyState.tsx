@@ -17,15 +17,17 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   onAction,
   icon = '📭',
 }) => {
-  const isEmoji = !icon || icon.length <= 2;
+  const isEmoji = icon ? icon.length <= 2 : false;
 
   return (
     <View className="items-center justify-center px-6 py-8">
-      {isEmoji ? (
-        <Text className="text-5xl mb-4">{icon}</Text>
-      ) : (
-        <FontAwesome5 name={icon} size={36} color="#a3a3a3" className="mb-4" />
-      )}
+      {icon ? (
+        isEmoji ? (
+          <Text className="text-5xl mb-4">{icon}</Text>
+        ) : (
+          <FontAwesome5 name={icon} size={36} color="#a3a3a3" className="mb-4" />
+        )
+      ) : null}
       <Text className="text-sm font-semibold text-neutral-900 dark:text-neutral-50 mb-2 text-center">
         {title}
       </Text>

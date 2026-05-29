@@ -92,6 +92,26 @@ const RegisterScreen = () => {
       return;
     }
 
+    if (password.length < 8) {
+      Toast.show({ type: 'error', text1: 'Error', text2: 'Password must be at least 8 characters long.' });
+      return;
+    }
+
+    if (!/[A-Z]/.test(password)) {
+      Toast.show({ type: 'error', text1: 'Error', text2: 'Password must contain at least one uppercase letter.' });
+      return;
+    }
+
+    if (!/[0-9]/.test(password)) {
+      Toast.show({ type: 'error', text1: 'Error', text2: 'Password must contain at least one number.' });
+      return;
+    }
+
+    if (!/[^A-Za-z0-9]/.test(password)) {
+      Toast.show({ type: 'error', text1: 'Error', text2: 'Password must contain at least one special character.' });
+      return;
+    }
+
     if (trimmedZip && !/^\d{5}$/.test(trimmedZip)) {
       Toast.show({ type: 'error', text1: 'Error', text2: 'Please enter a valid 5-digit ZIP code.' });
       return;
@@ -110,6 +130,7 @@ const RegisterScreen = () => {
         firstName: trimmedFirstName,
         lastName: trimmedLastName,
         email: trimmedEmail,
+        password: password,
         firebaseUid: userCreated.uid,
         ...(trimmedZip ? { zipCode: trimmedZip } : {}),
       });
@@ -222,7 +243,7 @@ const RegisterScreen = () => {
           {/* Password */}
           <View className="relative">
             <TextInput
-              placeholder="Password (6+ chars, 1 uppercase, 1 number)"
+              placeholder="Password (8+ chars, 1 uppercase, 1 number, 1 special)"
               value={password}
               onChangeText={setPassword}
               secureTextEntry={!showPassword}

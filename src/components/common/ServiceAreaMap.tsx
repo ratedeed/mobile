@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
-import MapView, { Marker, UrlTile, Polygon } from 'react-native-maps';
+import { View, Text, ActivityIndicator, StyleSheet, Platform } from 'react-native';
+import MapView, { Marker, Polygon, UrlTile } from 'react-native-maps';
 import { FontAwesome5 } from '@expo/vector-icons';
 
 interface ServiceAreaMapProps {
@@ -16,6 +16,7 @@ interface ServiceAreaMapProps {
 interface ZipArea {
   zip: string;
   coords: { latitude: number; longitude: number }[];
+  isPrimary?: boolean;
 }
 
 async function geocodeLocation(query: string): Promise<{ lat: number; lng: number } | null> {
@@ -138,20 +139,44 @@ export default function ServiceAreaMap({
   // Fetch zip code polygons or use zipGeoData
   useEffect(() => {
     if (zipGeoData && zipGeoData.length > 0) {
-      const results: ZipArea[] = zipGeoData
-        .filter((zc: any) => zc && zc.bounds)
-        .map((zc: any) => {
+      const results: ZipArea[] = [];
+      for (const zc of zipGeoData) {
+        if (!zc) continue;
+        
+        // 1. Try exact polygon geojson coordinates
+        if (zc.polygon) {
+          const geom = zc.polygon;
+          if (geom.type === 'Polygon' && geom.coordinates?.[0]) {
+            const coords = geom.coordinates[0].map(([lng, lat]: [number, number]) => ({ latitude: lat, longitude: lng }));
+            if (coords.length >= 3) {
+              results.push({ zip: zc.zip, coords, isPrimary: zc.isPrimary });
+              continue;
+            }
+          } else if (geom.type === 'MultiPolygon' && geom.coordinates?.[0]?.[0]) {
+            const coords = geom.coordinates[0][0].map(([lng, lat]: [number, number]) => ({ latitude: lat, longitude: lng }));
+            if (coords.length >= 3) {
+              results.push({ zip: zc.zip, coords, isPrimary: zc.isPrimary });
+              continue;
+            }
+          }
+        }
+        
+        // 2. Fallback to rectangular bounding box
+        if (zc.bounds) {
           const [sw, ne] = zc.bounds;
-          return {
+          const padding = 0.004; // Add padding similar to web version
+          results.push({
             zip: zc.zip,
+            isPrimary: zc.isPrimary,
             coords: [
-              { latitude: sw[0], longitude: sw[1] },
-              { latitude: sw[0], longitude: ne[1] },
-              { latitude: ne[0], longitude: ne[1] },
-              { latitude: ne[0], longitude: sw[1] }
+              { latitude: sw[0] - padding, longitude: sw[1] - padding },
+              { latitude: sw[0] - padding, longitude: ne[1] + padding },
+              { latitude: ne[0] + padding, longitude: ne[1] + padding },
+              { latitude: ne[0] + padding, longitude: sw[1] - padding }
             ]
-          };
-        });
+          });
+        }
+      }
       setZipAreas(results);
       if (!center && results.length > 0) {
         const avgLat = results[0].coords.reduce((s, c) => s + c.latitude, 0) / results[0].coords.length;
@@ -209,6 +234,8 @@ export default function ServiceAreaMap({
       <MapView
         ref={mapRef}
         style={{ height, width: '100%' }}
+        minZoomLevel={4}
+        maxZoomLevel={13}
         initialRegion={{
           latitude: center.lat,
           longitude: center.lng,
@@ -228,18 +255,18 @@ export default function ServiceAreaMap({
         mapType="none"
       >
         <UrlTile
-          urlTemplate="https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png"
-          maximumZ={19}
+          urlTemplate="https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png"
+          maximumZ={14}
+          minimumZ={4}
           flipY={false}
         />
-
         {zipAreas.map((za) => (
           <Polygon
             key={za.zip}
             coordinates={za.coords}
-            fillColor="rgba(79, 70, 229, 0.2)"
+            fillColor={za.isPrimary ? 'rgba(79, 70, 229, 0.35)' : 'rgba(79, 70, 229, 0.18)'}
             strokeColor="#4F46E5"
-            strokeWidth={1.5}
+            strokeWidth={1}
           />
         ))}
 
@@ -260,22 +287,6 @@ export default function ServiceAreaMap({
           </View>
         </Marker>
       </MapView>
-
-      {zipCodes.length > 0 && (
-        <View className="absolute bottom-2 left-2 bg-white/90 rounded-full px-2.5 py-1 flex-row items-center" style={{ gap: 4, elevation: 2 }}>
-          <FontAwesome5 name="map" size={9} color="#4F46E5" />
-          <Text className="text-[10px] font-medium text-indigo-700">
-            {zipCodes.length} zip codes served
-          </Text>
-        </View>
-      )}
-
-      <View className="absolute top-2 left-2 bg-white/90 rounded-full px-2.5 py-1 flex-row items-center" style={{ gap: 4, elevation: 2 }}>
-        <FontAwesome5 name="map-marker-alt" size={9} color="#4F46E5" />
-        <Text className="text-[10px] font-semibold text-indigo-700" numberOfLines={1}>
-          {businessName}
-        </Text>
-      </View>
     </View>
   );
 }

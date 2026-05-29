@@ -49,6 +49,7 @@ import { SvgImage } from '../components/common/SvgImage';
 import { useAuth } from '../context/AuthContext';
 import { requestPhotoLibraryPermission } from '../utils/permissions';
 import { EmptyState } from '../components/common/EmptyState';
+import { VerifiedBadge } from '../components/common/VerifiedBadge';
 
 const TABS = [
   { key: 'posts', label: 'Posts' },
@@ -1529,8 +1530,8 @@ const ContractorDashboardScreen: React.FC = () => {
               <View className="p-4 border-t border-neutral-100 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800/50" style={{ gap: 16 }}>
                 {licenseStatus === 'approved' ? (
                   <View className="bg-emerald-50 rounded-xl p-4 border border-emerald-100 items-center">
-                    <View className="w-12 h-12 rounded-full bg-emerald-100 items-center justify-center mb-3">
-                      <FontAwesome5 name="shield-alt" size={20} color="#059669" solid />
+                    <View style={{ marginBottom: 12 }}>
+                      <VerifiedBadge size={56} animate={true} />
                     </View>
                     <Text className="text-sm font-bold text-emerald-900 text-center">Identity & License Verified</Text>
                     <Text className="text-[11px] text-emerald-700 text-center mt-1">Your business is verified and the badge is visible on your profile.</Text>

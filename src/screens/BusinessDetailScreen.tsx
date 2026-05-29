@@ -14,6 +14,8 @@ import {
   FlatList,
   Linking,
   useColorScheme,
+  Platform,
+  Modal,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -54,6 +56,18 @@ function formatTime(timeStr: string): string {
   const ampm = hr >= 12 ? 'PM' : 'AM';
   const h12 = hr % 12 || 12;
   return `${h12}:${m} ${ampm}`;
+}
+
+function formatResponseTime(minutes: number, sampleSize: number): string {
+  if (!minutes) return 'New';
+  if (minutes < 60) {
+    return `~${minutes}min`;
+  }
+  const hrs = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  if (mins === 0) return `~${hrs}hr`;
+  if (mins < 30) return `~${hrs}hr`;
+  return `~${hrs}.5hrs`;
 }
 
 function formatRelativeTime(dateStr: string): string {
@@ -544,10 +558,10 @@ const BusinessDetailScreen: React.FC = () => {
         </View>
 
         {/* Content */}
-        <View className="px-4 pb-20">
-          <View className="mt-4">
+        <View className="px-4 pb-20" style={{ overflow: 'visible' }}>
+          <View className="mt-4" style={{ overflow: 'visible' }}>
             <Text className="text-2xl font-bold text-neutral-900 dark:text-neutral-50">{c.companyName || c.businessName || 'Company'}</Text>
-            <View className="flex-row items-center flex-wrap mt-1" style={{ gap: 8 }}>
+            <View className="flex-row items-center flex-wrap mt-1" style={{ gap: 8, overflow: 'visible' }}>
               <View className="flex-row items-center" style={{ gap: 4 }}>
                 <FontAwesome5 name="star" solid size={14} color="#eab308" />
                 <Text className="text-sm font-semibold text-slate-600 dark:text-neutral-300">{avgRating.toFixed(2)}</Text>
@@ -571,24 +585,46 @@ const BusinessDetailScreen: React.FC = () => {
 
 
 
-          {/* Quick Stats */}
-          <View className="flex-row mt-6 py-4 border-y border-neutral-100 dark:border-neutral-800">
-            <View className="flex-1 items-center">
-              <FontAwesome5 name="award" size={18} color={isDark ? '#ffffff' : '#171717'} />
-              <Text className="text-sm font-bold text-neutral-900 dark:text-neutral-50 mt-1">{(c as any).yearsInBusiness || (c as any).yearsExperience || 0}</Text>
-              <Text className="text-[10px] text-neutral-500 dark:text-neutral-400">Years Exp.</Text>
+          {/* Quick Highlights (matching web logic) */}
+          {(((c.yearsExperience || 0) > 0) || 
+            ((c.responseTimeMinutes || 0) > 0) || 
+            !!c.insuranceInfo) && (
+            <View className="py-4 border-y border-neutral-100 dark:border-neutral-800 flex-row flex-wrap" style={{ gap: 20 }}>
+              {(c.yearsExperience || 0) > 0 && (
+                <View className="flex-row items-center" style={{ gap: 12 }}>
+                  <View className="w-10 h-10 rounded-full bg-neutral-100 dark:bg-neutral-800 items-center justify-center">
+                    <FontAwesome5 name="award" size={16} color={isDark ? '#e2e8f0' : '#404040'} />
+                  </View>
+                  <View>
+                    <Text className="text-xs font-bold text-neutral-900 dark:text-neutral-50">{c.yearsExperience} years experience</Text>
+                    <Text className="text-[10px] text-neutral-500 dark:text-neutral-400">In the business</Text>
+                  </View>
+                </View>
+              )}
+              {(c.responseTimeMinutes || 0) > 0 && (
+                <View className="flex-row items-center" style={{ gap: 12 }}>
+                  <View className="w-10 h-10 rounded-full bg-neutral-100 dark:bg-neutral-800 items-center justify-center">
+                    <FontAwesome5 name="clock" size={16} color={isDark ? '#e2e8f0' : '#404040'} />
+                  </View>
+                  <View>
+                    <Text className="text-xs font-bold text-neutral-900 dark:text-neutral-50">Responds {formatResponseTime(c.responseTimeMinutes || 0, c.responseTimeSampleSize || 0)}</Text>
+                    <Text className="text-[10px] text-neutral-500 dark:text-neutral-400">Typical response time</Text>
+                  </View>
+                </View>
+              )}
+              {!!c.insuranceInfo && (
+                <View className="flex-row items-center" style={{ gap: 12 }}>
+                  <View className="w-10 h-10 rounded-full bg-neutral-100 dark:bg-neutral-800 items-center justify-center">
+                    <FontAwesome5 name="shield-alt" size={16} color="#10b981" />
+                  </View>
+                  <View>
+                    <Text className="text-xs font-bold text-neutral-900 dark:text-neutral-50">Insured</Text>
+                    <Text className="text-[10px] text-neutral-500 dark:text-neutral-400">{c.insuranceInfo}</Text>
+                  </View>
+                </View>
+              )}
             </View>
-            <View className="flex-1 items-center">
-              <FontAwesome5 name="star" solid size={18} color={isDark ? '#ffffff' : '#171717'} />
-              <Text className="text-sm font-bold text-neutral-900 dark:text-neutral-50 mt-1">{reviewCount}</Text>
-              <Text className="text-[10px] text-neutral-500 dark:text-neutral-400">Reviews</Text>
-            </View>
-            <View className="flex-1 items-center">
-              <FontAwesome5 name="clock" size={18} color={isDark ? '#ffffff' : '#171717'} />
-              <Text className="text-sm font-bold text-neutral-900 dark:text-neutral-50 mt-1">{(c as any).responseTime || 'N/A'}</Text>
-              <Text className="text-[10px] text-neutral-500 dark:text-neutral-400">Response</Text>
-            </View>
-          </View>
+          )}
 
           {/* Description */}
           {!!c.description && (
@@ -608,47 +644,7 @@ const BusinessDetailScreen: React.FC = () => {
             </View>
           )}
 
-          {/* Top 3 Highlights (Vertical List) */}
-          <View className="py-6 border-b border-neutral-100 dark:border-neutral-800" style={{ gap: 20 }}>
-            {/* Highlight 1: Verified & Licensed */}
-            <View className="flex-row items-start" style={{ gap: 16 }}>
-              <FontAwesome5 name="check-circle" size={24} color={isDark ? '#e2e8f0' : '#171717'} style={{ marginTop: 2 }} />
-              <View className="flex-1">
-                <Text className="text-base font-bold text-neutral-900 dark:text-neutral-50">Verified & Licensed</Text>
-                <Text className="text-sm text-neutral-500 dark:text-neutral-400 mt-1 leading-5">
-                  We've verified this contractor's identity{c.isVerified ? ' and state licenses' : ''} to ensure top-tier quality standards.
-                </Text>
-              </View>
-            </View>
 
-            {/* Highlight 2: Experience / Response */}
-            {(((c as any).yearsInBusiness || (c as any).yearsExperience || 0) > 0 || !!(c as any).responseTime) && (
-              <View className="flex-row items-start" style={{ gap: 16 }}>
-                <FontAwesome5 name="clock" size={24} color={isDark ? '#e2e8f0' : '#171717'} style={{ marginTop: 2 }} />
-                <View className="flex-1">
-                  <Text className="text-base font-bold text-neutral-900 dark:text-neutral-50">
-                    {((c as any).yearsInBusiness || (c as any).yearsExperience || 0) > 0
-                      ? `${(c as any).yearsInBusiness || (c as any).yearsExperience} Years Experience`
-                      : `Fast Response`}
-                  </Text>
-                  <Text className="text-sm text-neutral-500 dark:text-neutral-400 mt-1 leading-5">
-                    A highly experienced professional with a proven track record of timely communication and project delivery.
-                  </Text>
-                </View>
-              </View>
-            )}
-
-            {/* Highlight 3: Escrow Protected */}
-            <View className="flex-row items-start" style={{ gap: 16 }}>
-              <FontAwesome5 name="lock" size={24} color={isDark ? '#e2e8f0' : '#171717'} style={{ marginTop: 2 }} />
-              <View className="flex-1">
-                <Text className="text-base font-bold text-neutral-900 dark:text-neutral-50">Escrow Protected</Text>
-                <Text className="text-sm text-neutral-500 dark:text-neutral-400 mt-1 leading-5">
-                  Your funds are held securely in escrow and only released when you are completely satisfied with the work.
-                </Text>
-              </View>
-            </View>
-          </View>
 
           {/* Services */}
           {services.length > 0 && (
@@ -722,15 +718,25 @@ const BusinessDetailScreen: React.FC = () => {
             const bh = (c as any).businessHours;
             if (!bh || typeof bh !== 'object') return null;
             const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-            const hasAny = days.some(d => bh[d]);
+            const hasAny = days.some(d => bh[d] || bh[d.toLowerCase()]);
             if (!hasAny) return null;
             return (
               <View className="mt-8">
                 <Text className="text-base font-bold text-neutral-900 dark:text-neutral-50 mb-3">Business Hours</Text>
                 <View className="bg-white dark:bg-neutral-900 rounded-xl border border-neutral-100 dark:border-neutral-800 overflow-hidden">
                   {days.map((day) => {
-                    const hours = bh[day];
-                    if (!hours) return null;
+                    const h = bh[day] || bh[day.toLowerCase()];
+                    const isOpen = !!h && h.isOpen !== false;
+                    const startTime = h?.start || h?.open;
+                    const endTime = h?.end || h?.close;
+                    
+                    let hoursText = 'Closed';
+                    if (isOpen && startTime && endTime) {
+                      hoursText = `${formatTime(startTime)} – ${formatTime(endTime)}`;
+                    } else if (typeof h === 'string' && h !== 'Closed') {
+                      hoursText = h.split('-').map((t) => formatTime(t.trim())).join(' – ');
+                    }
+
                     const isToday = day === today;
                     return (
                       <View
@@ -747,7 +753,7 @@ const BusinessDetailScreen: React.FC = () => {
                           <Text className={`text-sm ${isToday ? 'font-bold text-indigo-700 dark:text-indigo-300' : 'text-neutral-700 dark:text-neutral-300'}`}>{day}</Text>
                         </View>
                         <Text className={`text-sm ${isToday ? 'font-semibold text-indigo-600 dark:text-indigo-400' : 'text-neutral-600 dark:text-neutral-400'}`}>
-                          {hours === 'Closed' ? 'Closed' : typeof hours === 'string' ? hours.split('-').map((t: string) => formatTime(t.trim())).join(' – ') : String(hours)}
+                          {hoursText}
                         </Text>
                       </View>
                     );
@@ -787,7 +793,7 @@ const BusinessDetailScreen: React.FC = () => {
                   zipGeoData={(c as any).zipGeoData || []}
                   latitude={lat}
                   longitude={lng}
-                  height={180}
+                  height={220}
                 />
                 {zipCodes.length > 0 && (
                   <View className="flex-row flex-wrap mt-3" style={{ gap: 6 }}>
@@ -1204,6 +1210,94 @@ const BusinessDetailScreen: React.FC = () => {
           />
         </View>
       )}
+
+      {/* Portfolio Gallery Overlay Modal */}
+      <Modal
+        visible={!!galleryProject}
+        transparent={false}
+        animationType="fade"
+        onRequestClose={() => setGalleryProject(null)}
+      >
+        <View className="flex-1 bg-black justify-between">
+          {/* Header */}
+          <View className="flex-row items-center justify-between px-4 py-3 bg-black/80 absolute top-0 left-0 right-0 z-10" style={{ paddingTop: Platform.OS === 'ios' ? 44 : 12 }}>
+            <Pressable onPress={() => setGalleryProject(null)} className="w-8 h-8 items-center justify-center rounded-full bg-white/20">
+              <FontAwesome5 name="times" size={14} color="white" />
+            </Pressable>
+            <View className="items-center">
+              <Text className="text-sm font-semibold text-white truncate max-w-[200px]" numberOfLines={1}>
+                {galleryProject?.name || galleryProject?.title || 'Project'}
+              </Text>
+              <Text className="text-[10px] text-white/60">
+                {(galleryIndex + 1)} / {galleryProject?.images?.length || 0} photos
+              </Text>
+            </View>
+            <View className="w-8" />
+          </View>
+
+          {/* Main Image View */}
+          <View className="flex-1 items-center justify-center p-4">
+            {galleryProject?.images?.[galleryIndex] ? (
+              <Image 
+                source={{ uri: galleryProject.images[galleryIndex] }} 
+                className="w-full h-full" 
+                resizeMode="contain" 
+              />
+            ) : (
+              <View className="w-full h-full items-center justify-center">
+                <FontAwesome5 name="image" size={48} color="rgba(255,255,255,0.3)" />
+              </View>
+            )}
+
+            {/* Navigation Arrows */}
+            {galleryProject?.images?.length > 1 && (
+              <>
+                {galleryIndex > 0 && (
+                  <Pressable 
+                    onPress={() => setGalleryIndex(galleryIndex - 1)} 
+                    className="absolute left-4 w-10 h-10 rounded-full bg-white/20 items-center justify-center"
+                    style={{ top: '50%', marginTop: -20 }}
+                  >
+                    <FontAwesome5 name="chevron-left" size={16} color="white" />
+                  </Pressable>
+                )}
+                {galleryIndex < galleryProject.images.length - 1 && (
+                  <Pressable 
+                    onPress={() => setGalleryIndex(galleryIndex + 1)} 
+                    className="absolute right-4 w-10 h-10 rounded-full bg-white/20 items-center justify-center"
+                    style={{ top: '50%', marginTop: -20 }}
+                  >
+                    <FontAwesome5 name="chevron-right" size={16} color="white" />
+                  </Pressable>
+                )}
+              </>
+            )}
+          </View>
+
+          {/* Thumbnail Strip */}
+          {galleryProject?.images?.length > 1 && (
+            <View className="bg-black/80 py-4">
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ alignItems: 'center', gap: 8, paddingHorizontal: 16 }}
+              >
+                {galleryProject.images.map((img: string, i: number) => (
+                  <Pressable
+                    key={i}
+                    onPress={() => setGalleryIndex(i)}
+                    className={`rounded-lg overflow-hidden ${
+                      i === galleryIndex ? 'border-2 border-white w-14 h-14' : 'w-10 h-10 opacity-50'
+                    }`}
+                  >
+                    <Image source={{ uri: img }} className="w-full h-full" resizeMode="cover" />
+                  </Pressable>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+        </View>
+      </Modal>
 
       <GuestPrompt
         visible={showGuestPrompt}

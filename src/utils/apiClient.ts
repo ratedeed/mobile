@@ -303,6 +303,10 @@ export const normalizeApiContractor = (c: any): Contractor => {
       certifications,
       profilePicture: data.profilePicture || data.imageUrl || '',
       bannerImage: data.bannerImage || data.bannerUrl || data.coverImage || '',
+      insuranceInfo: data.insuranceInfo || '',
+      yearsExperience: data.yearsExperience || 0,
+      responseTimeMinutes: data.responseTimeMinutes || 0,
+      responseTimeSampleSize: data.responseTimeSampleSize || 0,
     };
 
     return normalized as Contractor;
