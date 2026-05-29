@@ -167,15 +167,19 @@ export const EscrowTrustBanner = () => {
     let timer: any;
     
     // Show banner 1 second after launch
-    timer = setTimeout(() => {
-      show();
-    }, 1000);
+    if (!hasShownEscrowBanner) {
+      timer = setTimeout(() => {
+        show();
+        hasShownEscrowBanner = true;
+      }, 1000);
+    }
 
     const subscription = AppState.addEventListener('change', (nextAppState) => {
-      if (nextAppState === 'active') {
+      if (nextAppState === 'active' && !hasShownEscrowBanner) {
         if (timer) clearTimeout(timer);
         timer = setTimeout(() => {
           show();
+          hasShownEscrowBanner = true;
         }, 1000);
       }
     });
@@ -260,10 +264,10 @@ const styles = StyleSheet.create({
     paddingVertical: 28,
     paddingHorizontal: 24,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: -12 },
-    shadowOpacity: 0.12,
-    shadowRadius: 20,
-    elevation: 24,
+    shadowOffset: { width: 0, height: -3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 10,
     maxWidth: 520,
     alignSelf: 'center',
     width: '100%',

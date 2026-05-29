@@ -91,7 +91,7 @@ const ListingCard = ({
   const distance = (listing as any).distance;
 
   return (
-    <Pressable className="mb-4" onPress={onPress}>
+    <Pressable className="mb-4" onPress={onPress} style={{ overflow: 'visible' }}>
       <View className="relative rounded-xl overflow-hidden bg-neutral-100 dark:bg-neutral-900 aspect-square">
         {isSvgUrl(coverImage) ? (
           <View className="absolute inset-0 w-full h-full">
@@ -104,26 +104,31 @@ const ListingCard = ({
             resizeMode="cover"
           />
         ) : null}
-
-        {listing.isVerified && (
-          <View className="absolute top-2 left-2">
-            <VerifiedBadge size="sm" variant="glass" animate={false} />
-          </View>
-        )}
         {/* Favorite heart - hidden until favorites feature is wired on search */}
         {/* <View className="absolute top-2 right-2">
           <FontAwesome5 name="heart" size={24} color="rgba(0,0,0,0.5)" />
         </View> */}
       </View>
+      {listing.isVerified && (
+        <View className="absolute top-2 left-2" style={{ zIndex: 60, overflow: 'visible' }}>
+          <VerifiedBadge size="sm" variant="glass" animate={true} />
+        </View>
+      )}
       <View className="mt-2">
         <View className="flex-row items-start justify-between" style={{ gap: 4 }}>
           <Text className="text-[14px] font-bold text-neutral-900 dark:text-neutral-50 leading-tight flex-1" numberOfLines={1}>
             {listing.companyName || listing.businessName || 'Company'}
           </Text>
-          <View className="flex-row items-center shrink-0" style={{ gap: 2 }}>
-            <FontAwesome5 name="star" solid size={12} color="#eab308" />
-            <Text className="text-xs font-bold text-slate-600 dark:text-neutral-300">{(listing.averageRating || 0).toFixed(2)}</Text>
-          </View>
+          {(listing.reviewCount || 0) > 0 ? (
+            <View className="flex-row items-center shrink-0" style={{ gap: 2 }}>
+              <FontAwesome5 name="star" solid size={12} color="#eab308" />
+              <Text className="text-xs font-bold text-slate-600 dark:text-neutral-300">
+                {(listing.averageRating || 0).toFixed(2)}
+              </Text>
+            </View>
+          ) : (
+            <Text className="text-xs font-bold text-neutral-400 dark:text-neutral-500 shrink-0">New</Text>
+          )}
         </View>
         {location ? (
           <Text className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5" numberOfLines={1}>
@@ -141,6 +146,9 @@ const ListingCard = ({
           <FontAwesome5 name="lock" size={10} color="#16a34a" />
           <Text className="text-[12px] font-semibold text-neutral-700 dark:text-neutral-300">Escrow Protected</Text>
         </View>
+        <Text className="text-xs font-bold text-neutral-900 dark:text-neutral-50 mt-1">
+          {(!price || price === '$0' || price === '$0.00' || price === '0' || price.toLowerCase() === 'n/a' || price.toLowerCase() === 'na') ? 'Contact for Quote' : (/^\d/.test(price.trim()) ? `$${price.trim()} project` : `${price.trim()} project`)}
+        </Text>
       </View>
     </Pressable>
   );
@@ -178,20 +186,52 @@ const BusinessSearchScreen: React.FC = () => {
     return () => clearTimeout(timer);
   }, [searchZip, searchName]);
 
+  // Sync route params (deep links) to screen state
+  useEffect(() => {
+    if (query !== undefined) {
+      setSearchZip(query);
+      setDebouncedZip(query);
+    }
+    if (routeName !== undefined) {
+      setSearchName(routeName);
+      setDebouncedName(routeName);
+    } else {
+      setSearchName('');
+      setDebouncedName('');
+    }
+    if (searchType === 'category') {
+      setActiveCategory(query || 'all');
+    }
+  }, [query, routeName, searchType]);
+
   const fetchContractors = useCallback(async (zipOverride?: string, nameOverride?: string) => {
     try {
+      const zip = (zipOverride !== undefined ? zipOverride : debouncedZip) || '';
+      const name = (nameOverride !== undefined ? nameOverride : debouncedName) || '';
+
+      // 1. If all search fields are empty, clear results and return immediately.
+      if (!zip.trim() && !name.trim() && activeCategory === 'all') {
+        setContractors([]);
+        setTotalResults(0);
+        setLoading(false);
+        setRefreshing(false);
+        return;
+      }
+
+      // 2. If zip code is partially typed (1-4 characters) and name is empty, don't trigger query.
+      if (zip.trim() && zip.trim().length < 5 && !name.trim()) {
+        return;
+      }
+
       setLoading(true);
 
       const filters: any = { page: 1, limit: 500, sortBy: 'rating' };
-      const zip = zipOverride !== undefined ? zipOverride : debouncedZip;
-      const name = nameOverride !== undefined ? nameOverride : debouncedName;
-
-      if (zip) {
-        filters.zipCode = zip;
+      if (zip.trim()) {
+        filters.zipCode = zip.trim();
       }
       
-      if (name) {
-        filters.name = name;
+      if (name.trim()) {
+        filters.name = name.trim();
       }
 
       if (activeCategory !== 'all') {

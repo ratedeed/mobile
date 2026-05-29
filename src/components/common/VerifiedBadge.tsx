@@ -1,4 +1,4 @@
-import React, { useEffect, useId, memo } from 'react';
+import React, { useEffect, memo } from 'react';
 import { Pressable } from 'react-native';
 import Svg, {
   G,
@@ -77,7 +77,6 @@ export const VerifiedBadge = memo(function VerifiedBadge({
   text?: string;
   style?: any;
 }) {
-  const uid = useId().replace(/:/g, '-');
   const progress = useSharedValue(0);
   const floatValue = useSharedValue(0);
 
@@ -337,43 +336,43 @@ export const VerifiedBadge = memo(function VerifiedBadge({
           style={{ overflow: 'visible' }}
         >
           <Defs>
-            <RadialGradient id={'badge-bg-' + uid} cx='50%' cy='50%' r='50%' gradientUnits='userSpaceOnUse'>
+            <RadialGradient id="badge-bg" cx="50%" cy="50%" r="50%">
               <Stop offset='0%' stopColor='#FFFFFF' />
               <Stop offset='60%' stopColor='#F9F6F0' />
               <Stop offset='100%' stopColor='#EAE5D9' />
             </RadialGradient>
-            <LinearGradient id={'gold-grad-' + uid} x1='0' y1='0' x2='1' y2='1'>
+            <LinearGradient id="gold-grad" x1='0' y1='0' x2='1' y2='1'>
               <Stop offset='0%' stopColor='#FFECA8' />
               <Stop offset='25%' stopColor='#D4AF37' />
               <Stop offset='50%' stopColor='#AA7C11' />
               <Stop offset='75%' stopColor='#D4AF37' />
               <Stop offset='100%' stopColor='#8A6308' />
             </LinearGradient>
-            <LinearGradient id={'gold-dark-' + uid} x1='0' y1='0' x2='0' y2='1'>
+            <LinearGradient id="gold-dark" x1='0' y1='0' x2='0' y2='1'>
               <Stop offset='0%' stopColor='#B38B22' />
               <Stop offset='100%' stopColor='#755811' />
             </LinearGradient>
-            <LinearGradient id={'gold-col-' + uid} x1='0' y1='0' x2='1' y2='0'>
+            <LinearGradient id="gold-col" x1='0' y1='0' x2='1' y2='0'>
               <Stop offset='0%' stopColor='#AA7C11' />
               <Stop offset='30%' stopColor='#FCE79A' />
               <Stop offset='70%' stopColor='#D4AF37' />
               <Stop offset='100%' stopColor='#755811' />
             </LinearGradient>
-            <LinearGradient id={'shine-grad-' + uid} x1='0' y1='0' x2='1' y2='0'>
-              <Stop offset='0%' stopColor='#FFFFFF' stopOpacity='0' />
-              <Stop offset='50%' stopColor='#FFFFFF' stopOpacity='0.8' />
-              <Stop offset='100%' stopColor='#FFFFFF' stopOpacity='0' />
+            <LinearGradient id="shine-grad" x1='0' y1='0' x2='1' y2='0'>
+              <Stop offset='0%' stopColor='#FFFFFF' stopOpacity={0} />
+              <Stop offset='50%' stopColor='#FFFFFF' stopOpacity={0.8} />
+              <Stop offset='100%' stopColor='#FFFFFF' stopOpacity={0} />
             </LinearGradient>
-            <ClipPath id={'badge-clip-' + uid}>
+            <ClipPath id="badge-clip">
               <Circle cx='50' cy='50' r='46.5' />
             </ClipPath>
-            <Path id={'text-arc-' + uid} d='M 6,50 A 44,44 0 0,0 94,50' />
+            <Path id="text-arc" d='M 6,50 A 44,44 0 0,0 94,50' />
           </Defs>
 
           <G>
-            <Circle cx='50' cy='50' r={49} fill={'url(#badge-bg-' + uid + ')'} />
-            <Circle cx='50' cy='50' r={46.5} fill='none' stroke={'url(#gold-grad-' + uid + ')'} strokeWidth={strokeW} />
-            {showInner && <Circle cx='50' cy='50' r={44} fill='none' stroke={'url(#gold-grad-' + uid + ')'} strokeWidth={0.5} opacity={0.6} />}
+            <Circle cx='50' cy='50' r={49} fill="url(#badge-bg)" />
+            <Circle cx='50' cy='50' r={46.5} fill='none' stroke="url(#gold-grad)" strokeWidth={strokeW} />
+            {showInner && <Circle cx='50' cy='50' r={44} fill='none' stroke="url(#gold-grad)" strokeWidth={0.5} opacity={0.6} />}
             
             <G>
               {[...Array(48)].map((_, i) => {
@@ -389,15 +388,15 @@ export const VerifiedBadge = memo(function VerifiedBadge({
                     y1={y1}
                     x2={x2}
                     y2={y2}
-                    stroke={`url(#gold-grad-${uid})`}
+                    stroke="url(#gold-grad)"
                     strokeWidth={finalSize < 40 ? 1 : 0.75}
                   />
                 );
               })}
             </G>
 
-            <AnimatedCircle cx='50' cy='50' r={35} fill='none' stroke={'url(#gold-dark-' + uid + ')'} strokeWidth={0.75} animatedProps={irProps} />
-            <AnimatedCircle cx='50' cy='50' r={34.5} fill={'url(#badge-bg-' + uid + ')'} animatedProps={sfProps} />
+            <AnimatedCircle cx='50' cy='50' r={35} fill='none' stroke="url(#gold-dark)" strokeWidth={0.75} animatedProps={irProps} />
+            <AnimatedCircle cx='50' cy='50' r={34.5} fill="url(#badge-bg)" animatedProps={sfProps} />
             
             {showDetails && (
               <AnimatedG animatedProps={textProps}>
@@ -409,38 +408,38 @@ export const VerifiedBadge = memo(function VerifiedBadge({
                   fontFamily="Georgia"
                   textAnchor='middle'
                 >
-                  <TextPath href={'#text-arc-' + uid} startOffset='50%'>✦ RATEDEED · VERIFIED ✦</TextPath>
+                  <TextPath href="#text-arc" startOffset='50%'>✦ RATEDEED · VERIFIED ✦</TextPath>
                 </SvgText>
               </AnimatedG>
             )}
 
             <AnimatedG animatedProps={baseProps}>
-              <Rect x={32} y={62} width={36} height={2.5} rx={0.5} fill={'url(#gold-grad-' + uid + ')'} />
-              <Rect x={29} y={64.5} width={42} height={3} rx={0.5} fill={'url(#gold-dark-' + uid + ')'} />
+              <Rect x={32} y={62} width={36} height={2.5} rx={0.5} fill="url(#gold-grad)" />
+              <Rect x={29} y={64.5} width={42} height={3} rx={0.5} fill="url(#gold-dark)" />
             </AnimatedG>
 
             <AnimatedG animatedProps={col1Props}>
-              <Rect x={35} y={49.5} width={4.5} height={11.5} fill={'url(#gold-col-' + uid + ')'} />
-              <Polygon points='34,48.5 40.5,48.5 39.5,49.5 35,49.5' fill={'url(#gold-grad-' + uid + ')'} />
-              <Polygon points='35,61 39.5,61 40.5,62 34,62' fill={'url(#gold-grad-' + uid + ')'} />
+              <Rect x={35} y={49.5} width={4.5} height={11.5} fill="url(#gold-col)" />
+              <Polygon points='34,48.5 40.5,48.5 39.5,49.5 35,49.5' fill="url(#gold-grad)" />
+              <Polygon points='35,61 39.5,61 40.5,62 34,62' fill="url(#gold-grad)" />
             </AnimatedG>
             <AnimatedG animatedProps={col2Props}>
-              <Rect x={47.75} y={49.5} width={4.5} height={11.5} fill={'url(#gold-col-' + uid + ')'} />
-              <Polygon points='46.75,48.5 53.25,48.5 52.25,49.5 47.75,49.5' fill={'url(#gold-grad-' + uid + ')'} />
-              <Polygon points='47.75,61 52.25,61 53.25,62 46.75,62' fill={'url(#gold-grad-' + uid + ')'} />
+              <Rect x={47.75} y={49.5} width={4.5} height={11.5} fill="url(#gold-col)" />
+              <Polygon points='46.75,48.5 53.25,48.5 52.25,49.5 47.75,49.5' fill="url(#gold-grad)" />
+              <Polygon points='47.75,61 52.25,61 53.25,62 46.75,62' fill="url(#gold-grad)" />
             </AnimatedG>
             <AnimatedG animatedProps={col3Props}>
-              <Rect x={60.5} y={49.5} width={4.5} height={11.5} fill={'url(#gold-col-' + uid + ')'} />
-              <Polygon points='59.5,48.5 66,48.5 65,49.5 60.5,49.5' fill={'url(#gold-grad-' + uid + ')'} />
-              <Polygon points='60.5,61 65,61 66,62 59.5,62' fill={'url(#gold-grad-' + uid + ')'} />
+              <Rect x={60.5} y={49.5} width={4.5} height={11.5} fill="url(#gold-col)" />
+              <Polygon points='59.5,48.5 66,48.5 65,49.5 60.5,49.5' fill="url(#gold-grad)" />
+              <Polygon points='60.5,61 65,61 66,62 59.5,62' fill="url(#gold-grad)" />
             </AnimatedG>
 
             <AnimatedG animatedProps={roofProps}>
-              <Polygon points='50,26 72,44 28,44' fill={'url(#gold-grad-' + uid + ')'} />
-              <Polygon points='50,30 65,42 35,42' fill={'url(#gold-dark-' + uid + ')'} />
-              <Circle cx={50} cy={38} r={2.5} fill={'url(#gold-grad-' + uid + ')'} />
-              <Rect x={28} y={44} width={44} height={3} rx={0.5} fill={'url(#gold-grad-' + uid + ')'} />
-              <Rect x={31} y={47} width={38} height={1.5} fill={'url(#gold-dark-' + uid + ')'} />
+              <Polygon points='50,26 72,44 28,44' fill="url(#gold-grad)" />
+              <Polygon points='50,30 65,42 35,42' fill="url(#gold-dark)" />
+              <Circle cx={50} cy={38} r={2.5} fill="url(#gold-grad)" />
+              <Rect x={28} y={44} width={44} height={3} rx={0.5} fill="url(#gold-grad)" />
+              <Rect x={31} y={47} width={38} height={1.5} fill="url(#gold-dark)" />
             </AnimatedG>
 
             {/* Marble Dust & Sweeping Glint */}
@@ -449,7 +448,7 @@ export const VerifiedBadge = memo(function VerifiedBadge({
                 <AnimatedG animatedProps={dustBaseProps}>
                   <Ellipse cx="29" cy="67" rx="5" ry="2" fill="#FFF" opacity={0.8} />
                   <Ellipse cx="71" cy="67" rx="5" ry="2" fill="#FFF" opacity={0.8} />
-                  <Ellipse cx="50" cy="67" rx="7" ry="2" fill="#FFF" opacity="0.6" />
+                  <Ellipse cx="50" cy="67" rx="7" ry="2" fill="#FFF" opacity={0.6} />
                 </AnimatedG>
                 <AnimatedG animatedProps={dustColProps}>
                   <Ellipse cx="37" cy="62" rx="4" ry="1.5" fill="#FFF" opacity={0.8} />
@@ -457,14 +456,14 @@ export const VerifiedBadge = memo(function VerifiedBadge({
                   <Ellipse cx="63" cy="62" rx="4" ry="1.5" fill="#FFF" opacity="0.8" />
                 </AnimatedG>
                 <AnimatedG animatedProps={dustRoofProps}>
-                  <Ellipse cx="28" cy="44" rx="5" ry="2" fill="#FFF" opacity="0.8" />
+                  <Ellipse cx="28" cy="44" rx="5" ry="2" fill="#FFF" opacity={0.8} />
                   <Ellipse cx="72" cy="44" rx="5" ry="2" fill="#FFF" opacity="0.8" />
                   <Ellipse cx="50" cy="44" rx="6" ry="2.5" fill="#FFF" opacity="0.6" />
                 </AnimatedG>
 
-                <G clipPath={'url(#badge-clip-' + uid + ')'}>
+                <G clipPath="url(#badge-clip)">
                   <AnimatedG animatedProps={shineProps}>
-                    <Rect x='-20' y='-50' width='15' height='200' fill={'url(#shine-grad-' + uid + ')'} transform='rotate(35, 50, 50)' />
+                    <Rect x='-20' y='-50' width='15' height='200' fill="url(#shine-grad)" transform='rotate(35, 50, 50)' />
                     <Rect x='0' y='-50' width='3' height='200' fill='#FFFFFF' opacity={0.9} transform='rotate(35, 50, 50)' />
                   </AnimatedG>
                 </G>

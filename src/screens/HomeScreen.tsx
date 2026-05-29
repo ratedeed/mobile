@@ -103,6 +103,7 @@ const ListingCard = ({
       onPress={onPress}
       accessibilityLabel={`View ${listing.companyName || listing.businessName || 'contractor'} details`}
       accessibilityRole="button"
+      style={{ overflow: 'visible' }}
     >
       {/* Image Container */}
       <View className="relative rounded-xl overflow-hidden bg-neutral-100 dark:bg-neutral-900 aspect-square">
@@ -113,12 +114,6 @@ const ListingCard = ({
         ) : coverImage ? (
           <Image source={{ uri: coverImage }} className="absolute inset-0 w-full h-full" resizeMode="cover" />
         ) : null}
-        {/* Verified Badge */}
-        {listing.isVerified && (
-          <View className="absolute top-2 left-2">
-            <VerifiedBadge size="sm" animate={false} />
-          </View>
-        )}
         {/* Favorite Heart */}
         <Pressable
           onPress={() => onToggleFavorite()}
@@ -135,6 +130,12 @@ const ListingCard = ({
           />
         </Pressable>
       </View>
+      {/* Verified Badge */}
+      {listing.isVerified && (
+        <View className="absolute top-2 left-2" style={{ zIndex: 60, overflow: 'visible' }}>
+          <VerifiedBadge size="sm" animate={true} />
+        </View>
+      )}
 
       {/* Card Info */}
       <View className="mt-2">
@@ -145,12 +146,16 @@ const ListingCard = ({
           >
             {listing.companyName || listing.businessName || 'Company'}
           </Text>
-          <View className="flex-row items-center shrink-0" style={{ gap: 2 }}>
-            <FontAwesome5 name="star" solid size={12} color="#eab308" />
-            <Text className="text-xs font-bold text-slate-600 dark:text-neutral-300">
-              {(listing.averageRating || 0).toFixed(2)}
-            </Text>
-          </View>
+          {(listing.reviewCount || 0) > 0 ? (
+            <View className="flex-row items-center shrink-0" style={{ gap: 2 }}>
+              <FontAwesome5 name="star" solid size={12} color="#eab308" />
+              <Text className="text-xs font-bold text-slate-600 dark:text-neutral-300">
+                {(listing.averageRating || 0).toFixed(2)}
+              </Text>
+            </View>
+          ) : (
+            <Text className="text-xs font-bold text-neutral-400 dark:text-neutral-500 shrink-0">New</Text>
+          )}
         </View>
         {location ? (
           <Text className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5" numberOfLines={1}>

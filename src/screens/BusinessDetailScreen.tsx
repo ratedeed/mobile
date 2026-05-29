@@ -562,11 +562,18 @@ const BusinessDetailScreen: React.FC = () => {
           <View className="mt-4" style={{ overflow: 'visible' }}>
             <Text className="text-2xl font-bold text-neutral-900 dark:text-neutral-50">{c.companyName || c.businessName || 'Company'}</Text>
             <View className="flex-row items-center flex-wrap mt-1" style={{ gap: 8, overflow: 'visible' }}>
-              <View className="flex-row items-center" style={{ gap: 4 }}>
-                <FontAwesome5 name="star" solid size={14} color="#eab308" />
-                <Text className="text-sm font-semibold text-slate-600 dark:text-neutral-300">{avgRating.toFixed(2)}</Text>
-                <Text className="text-sm text-neutral-500 dark:text-neutral-400">({reviewCount} reviews)</Text>
-              </View>
+              {reviewCount > 0 ? (
+                <View className="flex-row items-center" style={{ gap: 4 }}>
+                  <FontAwesome5 name="star" solid size={14} color="#eab308" />
+                  <Text className="text-sm font-semibold text-slate-600 dark:text-neutral-300">{avgRating.toFixed(2)}</Text>
+                  <Text className="text-sm text-neutral-500 dark:text-neutral-400">({reviewCount} reviews)</Text>
+                </View>
+              ) : (
+                <View className="flex-row items-center" style={{ gap: 4 }}>
+                  <FontAwesome5 name="star" size={14} color={isDark ? '#525252' : '#d4d4d4'} />
+                  <Text className="text-sm font-medium text-neutral-500 dark:text-neutral-400">No reviews yet</Text>
+                </View>
+              )}
               {!!c.isVerified && (
                 <VerifiedBadge size="md" />
               )}
@@ -971,9 +978,29 @@ const BusinessDetailScreen: React.FC = () => {
       {/* Sticky Bottom CTA */}
       <View className="absolute bottom-0 left-0 right-0 bg-white/95 dark:bg-neutral-950/95 border-t border-neutral-100 dark:border-neutral-800 px-4 py-4 pb-8 flex-row items-center justify-between shadow-lg">
         <View>
-          <Text className="text-lg font-bold text-neutral-900 dark:text-neutral-50">From {priceMin || 'N/A'}</Text>
-          <Text className="text-[10px] text-neutral-500 uppercase tracking-tighter">Starting Project Price</Text>
-          <Text className="text-[10px] text-neutral-400 mt-0.5">You won't be charged yet</Text>
+          {(!priceMin || priceMin === '$0' || priceMin === '$0.00' || priceMin === '0' || priceMin.toLowerCase() === 'n/a' || priceMin.toLowerCase() === 'na') ? (
+            <Text className="text-base font-bold text-neutral-900 dark:text-neutral-50">Contact for Quote</Text>
+          ) : (
+            <View>
+              <Text className="text-base font-bold text-neutral-900 dark:text-neutral-50">From {priceMin}</Text>
+              <Text className="text-[9px] text-neutral-500 uppercase tracking-tighter">Starting Project Price</Text>
+            </View>
+          )}
+          
+          <View className="flex-row items-center mt-1" style={{ gap: 4 }}>
+            {reviewCount > 0 ? (
+              <>
+                <FontAwesome5 name="star" solid size={10} color="#eab308" />
+                <Text className="text-xs font-semibold text-neutral-900 dark:text-neutral-50">{avgRating.toFixed(2)}</Text>
+                <Text className="text-xs text-neutral-500 dark:text-neutral-400">({reviewCount} reviews)</Text>
+              </>
+            ) : (
+              <>
+                <FontAwesome5 name="star" size={10} color={isDark ? '#525252' : '#d4d4d4'} />
+                <Text className="text-xs text-neutral-500 dark:text-neutral-400">No reviews yet</Text>
+              </>
+            )}
+          </View>
         </View>
         <View className="flex-row items-center" style={{ gap: 8 }}>
           {(c.contactInfo?.phoneNumber || (c as any).phone) && (

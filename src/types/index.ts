@@ -77,6 +77,7 @@ export interface Contractor {
   zipCode?: string;
   serviceArea?: string;
   averageRating?: number;
+  reviewCount?: number;
   numReviews?: number;
   rating?: number;
   reviews?: number;

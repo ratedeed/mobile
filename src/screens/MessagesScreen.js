@@ -982,7 +982,14 @@ const MessagesScreen = () => {
           <View className={`${(msg.type === "quote" || msg.quoteId) && msg.quote ? (isMe ? "w-[90%]" : "w-[82%]") : "max-w-[78%]"} ${isMe ? "items-end" : "items-start"}`}>
             {(msg.type === "quote" || msg.quoteId) && msg.quote ? (
               <>
-                <View className="w-full bg-white dark:bg-neutral-800 rounded-2xl border border-neutral-200 dark:border-neutral-700 overflow-hidden" style={[{ shadowColor: "#000", shadowOpacity: isDark ? 0 : 0.06, shadowRadius: 8, shadowOffset: { height: 2 }, elevation: isDark ? 0 : 2 }, msg._isOptimistic && !msg._failed ? { opacity: 0.6 } : undefined]}>
+                <View className="w-full bg-white dark:bg-neutral-800 rounded-2xl border border-neutral-200 dark:border-neutral-700 overflow-hidden" style={[{ shadowColor: "#000", shadowOpacity: isDark ? 0 : 0.04, shadowRadius: 10, shadowOffset: { height: 3 }, elevation: isDark ? 0 : 3 }, msg._isOptimistic && !msg._failed ? { opacity: 0.6 } : undefined]}>
+                  {/* Beautiful cover image */}
+                  <Image 
+                    source={{ uri: "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&q=80&w=600&h=300" }} 
+                    className="w-full h-36 bg-neutral-100"
+                    resizeMode="cover"
+                  />
+                  
                   {msg.quote.status && msg.quote.status !== 'pending' && msg.quote.status !== 'pending_user_approval' && (
                     <View className={`px-4 py-2 flex-row items-center border-b ${msg.quote.status === 'accepted' || msg.quote.status === 'funded_in_progress' ? (isDark ? 'bg-emerald-900/40 border-emerald-800' : 'bg-emerald-50 border-emerald-100') : msg.quote.status === 'rejected' || msg.quote.status === 'declined' ? (isDark ? 'bg-red-900/40 border-red-800' : 'bg-red-50 border-red-100') : (isDark ? 'bg-amber-900/40 border-amber-800' : 'bg-amber-50 border-amber-100')}`}>
                       <FontAwesome5 name={msg.quote.status === 'accepted' || msg.quote.status === 'funded_in_progress' ? 'check-circle' : msg.quote.status === 'rejected' || msg.quote.status === 'declined' ? 'times-circle' : 'clock'} size={12} color={msg.quote.status === 'accepted' || msg.quote.status === 'funded_in_progress' ? (isDark ? '#6ee7b7' : '#059669') : msg.quote.status === 'rejected' || msg.quote.status === 'declined' ? (isDark ? '#fca5a5' : '#dc2626') : (isDark ? '#fcd34d' : '#d97706')} />
@@ -992,80 +999,67 @@ const MessagesScreen = () => {
                     </View>
                   )}
                   
-                  {/* Contractor row */}
-                  <View className="flex-row p-4 pb-3" style={{ gap: 12 }}>
-                    {isSvgUrl(chatAvatar) ? (
-                      <View className="w-10 h-10 rounded-full overflow-hidden bg-neutral-100 dark:bg-neutral-700"><SvgImage uri={chatAvatar} width="100%" height="100%" /></View>
-                    ) : (
-                      <Image source={{ uri: chatAvatar }} className="w-10 h-10 rounded-full bg-neutral-100 dark:bg-neutral-700" />
-                    )}
-                    <View className="flex-1 min-w-0">
-                      <Text className="text-[14px] font-semibold text-neutral-900 dark:text-white" numberOfLines={1}>{chatName}</Text>
-                      <View className="flex-row items-center mt-0.5" style={{ gap: 4 }}>
+                  {/* Title & Badge Row */}
+                  <View className="p-4 pb-2">
+                    <View className="flex-row items-center justify-between">
+                      <View className="px-2 py-0.5 rounded bg-neutral-100 dark:bg-neutral-700">
+                        <Text className="text-[10px] font-bold text-neutral-800 dark:text-neutral-200 uppercase tracking-wider">{msg.quote.serviceType || msg.quote.category || 'Service'}</Text>
+                      </View>
+                      <View className="flex-row items-center" style={{ gap: 4 }}>
                         <FontAwesome5 name="star" size={10} color="#eab308" solid />
-                        <Text className="text-[12px]" style={{ color: isDark ? '#d4d4d4' : '#737373' }}>{msg.quote.contractor?.averageRating || '5.0'}</Text>
+                        <Text className="text-[12px] font-semibold text-neutral-800 dark:text-neutral-200">{msg.quote.contractor?.averageRating || '5.0'}</Text>
                       </View>
                     </View>
+                    
+                    <Text className="text-[18px] font-bold text-neutral-900 dark:text-white mt-2 leading-[22px]">{msg.quote.projectTitle || msg.quote.projectName || 'Project Quote'}</Text>
+                    
+                    {msg.quote.description && (
+                      <Text className="text-[13px] text-neutral-500 dark:text-neutral-400 mt-1 leading-[18px]">{msg.quote.description}</Text>
+                    )}
                   </View>
-                  
-                  {/* Category + Description */}
-                  <View className="px-4 pb-3">
-                    <View className="flex-row mb-1.5" style={{ gap: 6 }}>
-                      <View className="px-2 py-0.5 rounded-md" style={{ backgroundColor: isDark ? '#1e3a8a' : '#eff6ff' }}><Text className="text-[11px] font-semibold" style={{ color: isDark ? '#93c5fd' : '#1d4ed8' }}>{msg.quote.serviceType || msg.quote.category || 'Service'}</Text></View>
-                      {msg.quote.revisions > 0 && <View className="px-2 py-0.5 rounded-md" style={{ backgroundColor: isDark ? '#581c87' : '#faf5ff' }}><Text className="text-[11px] font-medium" style={{ color: isDark ? '#d8b4fe' : '#7e22ce' }}>Revision #{msg.quote.revisions}</Text></View>}
-                    </View>
-                    <Text className="text-[15px] font-semibold" style={{ color: isDark ? '#ffffff' : '#171717' }}>{msg.quote.description || msg.quote.projectName || 'Project Quote'}</Text>
-                    {msg.quote.description && msg.quote.projectName && msg.quote.description !== msg.quote.projectName && (
-                      <Text className="text-[13px] mt-1 leading-[18px]" style={{ color: isDark ? '#d4d4d4' : '#525252' }}>{msg.quote.description}</Text>
+
+                  {/* Dates & contractor name */}
+                  <View className="px-4 pb-3 flex-row items-center justify-between" style={{ borderBottomWidth: 1, borderBottomColor: isDark ? '#262626' : '#f5f5f5' }}>
+                    <Text className="text-[12px] text-neutral-400 dark:text-neutral-500">Sent by <Text className="font-semibold text-neutral-700 dark:text-neutral-300">{chatName}</Text></Text>
+                    {(msg.quote.estimatedStartDate || msg.quote.estimatedCompletionDate) && (
+                      <View className="flex-row items-center" style={{ gap: 4 }}>
+                        <FontAwesome5 name="calendar" size={11} color={isDark ? "#a3a3a3" : "#737373"} />
+                        <Text className="text-[12px] font-semibold text-neutral-700 dark:text-neutral-300">
+                          {(() => { 
+                            try { 
+                              const start = new Date(msg.quote.estimatedStartDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                              const end = new Date(msg.quote.estimatedCompletionDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                              return `${start} - ${end}`;
+                            } catch { 
+                              return 'TBD'; 
+                            } 
+                          })()}
+                        </Text>
+                      </View>
                     )}
                   </View>
                   
-                  {/* Dates */}
-                  {(msg.quote.estimatedStartDate || msg.quote.estimatedCompletionDate) && (
-                    <View className="px-4 pb-3 flex-row" style={{ gap: 16 }}>
-                      {msg.quote.estimatedStartDate && (
-                        <View className="flex-row items-center" style={{ gap: 6 }}>
-                          <FontAwesome5 name="calendar" size={12} color={isDark ? "#a3a3a3" : "#737373"} />
-                          <Text className="text-[12px] font-medium" style={{ color: isDark ? '#d4d4d4' : '#404040' }}>
-                            {(() => { try { return new Date(msg.quote.estimatedStartDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); } catch { return 'TBD'; } })()}
-                          </Text>
-                        </View>
-                      )}
-                      {msg.quote.estimatedCompletionDate && (
-                        <View className="flex-row items-center" style={{ gap: 6 }}>
-                          <FontAwesome5 name="clock" size={12} color={isDark ? "#a3a3a3" : "#737373"} />
-                          <Text className="text-[12px]" style={{ color: isDark ? '#d4d4d4' : '#737373' }}>
-                            {(() => { try { return new Date(msg.quote.estimatedCompletionDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); } catch { return 'TBD'; } })()}
-                          </Text>
-                        </View>
-                      )}
-                    </View>
-                  )}
-                  
-                  {/* Divider */}
-                  <View className="mx-4 h-px bg-neutral-100 dark:bg-neutral-700" />
-                  
                   {/* Line items */}
-                  <View className="p-4 py-3" style={{ gap: 10 }}>
+                  <View className="p-4 py-3" style={{ gap: 9 }}>
                     {(msg.quote.lineItems || []).length > 0 ? (
                       msg.quote.lineItems.map((item, idx) => (
                         <View key={idx} className="flex-row justify-between">
-                          <Text className="text-[13px] flex-1 mr-3" numberOfLines={1} style={{ color: isDark ? '#d4d4d4' : '#525252' }}>{item.description || item.label || `Item ${idx + 1}`}</Text>
-                          <Text className="text-[13px] font-medium" style={{ color: isDark ? '#ffffff' : '#171717' }}>${((item.amount || 0) / 100).toLocaleString()}</Text>
+                          <Text className="text-[13px] text-neutral-600 dark:text-neutral-300 flex-1 mr-3" numberOfLines={1}>{item.description || item.label || `Item ${idx + 1}`}</Text>
+                          <Text className="text-[13px] font-semibold text-neutral-800 dark:text-neutral-200">${((item.amount || 0) / 100).toLocaleString()}</Text>
                         </View>
                       ))
                     ) : (
                       <View className="flex-row justify-between">
-                        <Text className="text-[13px]" style={{ color: isDark ? '#d4d4d4' : '#525252' }}>Project Cost</Text>
-                        <Text className="text-[13px] font-medium" style={{ color: isDark ? '#ffffff' : '#171717' }}>${(() => { const a = (msg.quote.subtotal || msg.quote.totalAmount || 0) / 100; return Number.isFinite(a) ? a.toLocaleString() : '0'; })()}</Text>
+                        <Text className="text-[13px] text-neutral-600 dark:text-neutral-300">Project Cost</Text>
+                        <Text className="text-[13px] font-semibold text-neutral-800 dark:text-neutral-200">${(() => { const a = (msg.quote.subtotal || msg.quote.totalAmount || 0) / 100; return Number.isFinite(a) ? a.toLocaleString() : '0'; })()}</Text>
                       </View>
                     )}
                     
-                    <View className="h-px bg-neutral-100 dark:bg-neutral-700 my-1" />
+                    <View className="h-px bg-neutral-100 dark:bg-neutral-800 my-1" />
                     
                     <View className="flex-row justify-between items-center">
-                      <Text className="text-[13px] font-semibold" style={{ color: isDark ? '#ffffff' : '#171717' }}>Total</Text>
-                      <Text className="text-[18px] font-bold" style={{ color: isDark ? '#ffffff' : '#171717' }}>${(() => {
+                      <Text className="text-[14px] font-bold text-neutral-900 dark:text-white">Total price</Text>
+                      <Text className="text-[19px] font-extrabold text-neutral-900 dark:text-white">${(() => {
                         const amount = msg.quote.totalAmount != null ? msg.quote.totalAmount / 100 : msg.quote.total != null ? msg.quote.total : 0;
                         return Number.isFinite(amount) ? amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00';
                       })()}</Text>
@@ -1073,16 +1067,16 @@ const MessagesScreen = () => {
                   </View>
                   
                   {/* Escrow notice */}
-                  <View className="mx-4 mb-4 p-3 rounded-xl flex-row items-start" style={{ gap: 8, backgroundColor: isDark ? '#1e3a8a' : '#eff6ff' }}>
-                    <FontAwesome5 name="shield-alt" size={14} color={isDark ? "#60a5fa" : "#2563EB"} style={{ marginTop: 1 }} />
-                    <Text className="text-[11px] flex-1 leading-[16px]" style={{ color: isDark ? '#bfdbfe' : '#1d4ed8' }}>Secure escrow — funds held until you approve the completed work.</Text>
+                  <View className="mx-4 mb-4 p-3 rounded-xl flex-row items-start" style={{ gap: 8, backgroundColor: isDark ? '#1e293b' : '#f8fafc', borderWidth: 1, borderColor: isDark ? '#334155' : '#e2e8f0' }}>
+                    <FontAwesome5 name="shield-alt" size={13} color={isDark ? "#94a3b8" : "#64748b"} style={{ marginTop: 2 }} />
+                    <Text className="text-[11px] flex-1 leading-[16px] text-neutral-500 dark:text-neutral-400">Escrow Protected — Payments are held safely and only released when you verify the work is completed.</Text>
                   </View>
                   
                   {/* Action button */}
                   <View className="px-4 pb-4">
-                    <Pressable onPress={() => navigation.navigate('QuoteReview', { quoteId: msg.quoteId || msg.quote.id || msg.quote._id })} className="py-3 bg-indigo-600 rounded-xl items-center flex-row justify-center" style={{ gap: 6 }} accessibilityLabel="Review quote details" accessibilityRole="button">
-                      <Text className="text-[14px] font-semibold text-white">Review Details</Text>
-                      <FontAwesome5 name="arrow-right" size={12} color="#FFFFFF" />
+                    <Pressable onPress={() => navigation.navigate('QuoteReview', { quoteId: msg.quoteId || msg.quote.id || msg.quote._id })} className="py-3.5 bg-neutral-900 dark:bg-neutral-100 rounded-xl items-center flex-row justify-center" style={{ gap: 6 }} accessibilityLabel="Review quote details" accessibilityRole="button">
+                      <Text className="text-[14px] font-bold text-white dark:text-neutral-900">Review Details</Text>
+                      <FontAwesome5 name="arrow-right" size={11} color={isDark ? "#171717" : "#FFFFFF"} />
                     </Pressable>
                   </View>
                 </View>
@@ -1110,7 +1104,7 @@ const MessagesScreen = () => {
               </>
             ) : (
               <>
-                <View className={`px-[14px] py-[10px] ${isMe ? `bg-indigo-600 ${msg.isFirstInGroup ? "rounded-2xl rounded-tr-md" : "rounded-2xl"}` : `bg-white dark:bg-neutral-800 ${msg.isFirstInGroup ? "rounded-2xl rounded-tl-md" : "rounded-2xl"}`}`} style={[!isMe ? { shadowColor: isDark ? "transparent" : "#000", shadowOpacity: isDark ? 0 : 0.04, shadowRadius: 8, shadowOffset: { height: 1 }, elevation: isDark ? 0 : 1 } : undefined, msg._isOptimistic && !msg._failed ? { opacity: 0.6 } : undefined]}>
+                <View className={`px-[16px] py-[11px] ${isMe ? `bg-neutral-900 ${msg.isFirstInGroup ? "rounded-2xl rounded-tr-md" : "rounded-2xl"}` : `bg-neutral-100 dark:bg-neutral-800 ${msg.isFirstInGroup ? "rounded-2xl rounded-tl-md" : "rounded-2xl"}`}`} style={[!isMe ? { shadowColor: isDark ? "transparent" : "#000", shadowOpacity: isDark ? 0 : 0.02, shadowRadius: 6, shadowOffset: { height: 1 }, elevation: isDark ? 0 : 1 } : undefined, msg._isOptimistic && !msg._failed ? { opacity: 0.6 } : undefined]}>
                   {msg.attachmentUrl && isImageAttachment(msg.attachmentUrl) && <Pressable onPress={() => { setActiveImage(msg.attachmentUrl); setLightboxVisible(true); }} className="mb-1.5 -mx-[2px] -mt-[2px] overflow-hidden" style={{ borderRadius: msg.isFirstInGroup ? 14 : 16 }}><Image source={{ uri: msg.attachmentUrl }} style={{ width: 240, height: 180 }} resizeMode="cover" /></Pressable>}
                   {msg.attachmentUrl && !isImageAttachment(msg.attachmentUrl) && <Pressable onPress={() => Linking.openURL(msg.attachmentUrl)} className={`flex-row items-center p-2.5 rounded-xl mb-1.5 border ${isMe ? "bg-white/10 border-white/20" : "bg-neutral-50 dark:bg-neutral-700 border-neutral-200 dark:border-neutral-600"}`}><FontAwesome5 name="file-alt" size={14} color={isMe ? "white" : (isDark ? "#a3a3a3" : "#737373")} /><Text className={`text-[12px] ml-2 font-semibold ${isMe ? "text-white" : "text-neutral-600 dark:text-neutral-300"}`}>View Attachment</Text></Pressable>}
                   {msg.messageText ? <Text className={`text-[15px] leading-[22px] ${isMe ? "text-white" : "text-neutral-800 dark:text-neutral-100"}`}>{msg.messageText}</Text> : null}
@@ -1247,7 +1241,7 @@ const MessagesScreen = () => {
               renderItem={renderMessageItem}
               keyExtractor={(item, idx) => item._id || `msg-${idx}`}
               className="flex-1 bg-neutral-50/60 dark:bg-neutral-950/60"
-              contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 }}
+              contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 100 }}
               onContentSizeChange={() => messagesRef.current?.scrollToEnd({ animated: false })}
               onScroll={(e) => {
                 const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;

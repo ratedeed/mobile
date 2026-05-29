@@ -43,6 +43,18 @@ const CATEGORIES = [
   { id: 'handyman', label: 'Handymen', icon: 'wrench' },
 ];
 
+function derivePrice(c: Contractor): string | null {
+  if (c.pricing) return c.pricing.split('–')[0]?.trim() || null;
+  if (c.servicesOffered?.length) {
+    const svc = c.servicesOffered[0];
+    if (typeof svc === 'object' && svc !== null) {
+      const range = (svc as any).priceEstimate || (svc as any).priceRange;
+      if (range) return range.split('–')[0]?.trim();
+    }
+  }
+  return null;
+}
+
 const SavedScreen = () => {
   const isDark = useColorScheme() === 'dark';
   const navigation = useNavigation<NavigationProp>();
@@ -143,6 +155,7 @@ const SavedScreen = () => {
         400
       );
       const contractorId = item._id || (item as any).id;
+      const price = derivePrice(item);
 
       return (
         <Pressable className="w-[48%] mb-6" onPress={() => navigation.navigate('BusinessDetail', { id: contractorId })}>
@@ -166,14 +179,21 @@ const SavedScreen = () => {
             >
               {item.companyName || item.businessName || 'Company'}
             </Text>
-            <View className="flex-row items-center mt-0.5" style={{ gap: 4 }}>
-              <Star size={10} color="#eab308" weight="fill" />
-              <Text className="text-xs font-bold text-slate-600 dark:text-slate-400">
-                {(item.averageRating || 0).toFixed(2)}
-              </Text>
-            </View>
+            {(item.reviewCount || 0) > 0 ? (
+              <View className="flex-row items-center mt-0.5" style={{ gap: 4 }}>
+                <Star size={10} color="#eab308" weight="fill" />
+                <Text className="text-xs font-bold text-slate-600 dark:text-neutral-300">
+                  {(item.averageRating || 0).toFixed(2)}
+                </Text>
+              </View>
+            ) : (
+              <Text className="text-xs font-bold text-neutral-400 dark:text-neutral-500 mt-0.5">New</Text>
+            )}
             <Text className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5" numberOfLines={1}>
               {item.contactInfo?.city || 'Local'}, {item.contactInfo?.state || 'Area'}
+            </Text>
+            <Text className="text-xs font-bold text-neutral-900 dark:text-neutral-50 mt-1">
+              {(!price || price === '$0' || price === '$0.00' || price === '0' || price.toLowerCase() === 'n/a' || price.toLowerCase() === 'na') ? 'Contact for Quote' : (/^\d/.test(price.trim()) ? `$${price.trim()} project` : `${price.trim()} project`)}
             </Text>
           </View>
         </Pressable>

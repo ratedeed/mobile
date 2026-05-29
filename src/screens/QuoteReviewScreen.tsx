@@ -305,7 +305,7 @@ export default function QuoteReviewScreen() {
                 <View className="border-t border-neutral-200 dark:border-neutral-700 my-3" />
                 <View className="flex-row justify-between items-center">
                   <Text className="text-base font-bold text-neutral-900 dark:text-white">Total</Text>
-                  <Text className="text-xl font-bold text-neutral-900 dark:text-white">${Number(totalInDollars).toLocaleString()}</Text>
+                  <Text className="text-xl font-bold text-neutral-900 dark:text-white">${Number(totalInDollars).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
                 </View>
               </>
             )}
@@ -414,11 +414,19 @@ export default function QuoteReviewScreen() {
                   ? 'Quote Expired' 
                   : actionLoading === 'accept' 
                     ? 'Accepting...' 
-                    : `Accept & Pay ${Number(totalInDollars).toLocaleString()}`}
+                    : `Accept & Pay $${Number(totalInDollars).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
             </Text>
             {actionLoading !== 'accept' && !isExpired && <FontAwesome5 name="arrow-right" size={12} color="#fff" />}
           </Pressable>
-          {isPending && !isExpired && (<Pressable onPress={() => setShowDeclineConfirm(true)} disabled={actionLoading !== null} className="py-2 items-center"> <Text className="text-sm text-neutral-500 dark:text-neutral-400 dark:text-neutral-500">Decline this quote</Text> </Pressable>)}
+          {isPending && !isExpired && (
+            <Pressable 
+              onPress={() => setShowDeclineConfirm(true)} 
+              disabled={actionLoading !== null} 
+              className="py-2 items-center"
+            >
+              <Text className="text-sm text-neutral-500 dark:text-neutral-400">Decline this quote</Text>
+            </Pressable>
+          )}
         </View>
       )}
 
