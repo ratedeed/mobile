@@ -108,7 +108,7 @@ function AppNavigator() {
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
       {/* Always show MainNavigator so guests can browse */}
       <MainNavigator />
-      {isAuthenticated && <EscrowTrustBanner />}
+      <EscrowTrustBanner />
     </View>
   );
 }

@@ -7,6 +7,7 @@ import {
   Dimensions,
   StyleSheet,
   Easing,
+  AppState,
 } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { Svg, Text as SvgText, Defs, LinearGradient as SvgGradient, Stop, Rect } from 'react-native-svg';
@@ -162,13 +163,28 @@ export const EscrowTrustBanner = () => {
   }, [slideAnim, opacityAnim, text1Opacity, text1Y, text2Opacity, text2Y, text3Opacity, text3Y, hammerRotate]);
 
   useEffect(() => {
-    if (hasShownEscrowBanner) return;
-    const timer = setTimeout(() => {
+    // Initial display on app launch/mount
+    let timer: any;
+    
+    // Show banner 1 second after launch
+    timer = setTimeout(() => {
       show();
-      hasShownEscrowBanner = true;
     }, 1000);
-    return () => clearTimeout(timer);
-  }, [show]);
+
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (nextAppState === 'active') {
+        if (timer) clearTimeout(timer);
+        timer = setTimeout(() => {
+          show();
+        }, 1000);
+      }
+    });
+
+    return () => {
+      clearTimeout(timer);
+      subscription.remove();
+    };
+  }, [show, dismiss]);
 
   if (!visible) return null;
 
