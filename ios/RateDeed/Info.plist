@@ -61,6 +61,8 @@
     <string>Allow RateDeed to use your data to provide a better, more personalized experience and for analytics.</string>
     <key>RCTNewArchEnabled</key>
     <true/>
+    <key>RCTRootViewBackgroundColor</key>
+    <integer>4294967295</integer>
     <key>UIBackgroundModes</key>
     <array>
       <string>fetch</string>

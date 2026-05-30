@@ -7,7 +7,10 @@
     "icon": "./icon.png",
     "newArchEnabled": true,
     "userInterfaceStyle": "light",
+    "backgroundColor": "#ffffff",
     "splash": {
+      "image": "./splash-ratedeed.png",
+      "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
     "ios": {
@@ -26,6 +29,8 @@
       },
       "googleServicesFile": "./GoogleService-Info.plist",
       "splash": {
+        "image": "./splash-ratedeed.png",
+        "resizeMode": "contain",
         "backgroundColor": "#ffffff"
       }
     },
@@ -56,6 +61,8 @@
         }
       ],
       "splash": {
+        "image": "./splash-ratedeed.png",
+        "resizeMode": "contain",
         "backgroundColor": "#ffffff"
       },
       "permissions": [

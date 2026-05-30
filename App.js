@@ -29,7 +29,7 @@ import Constants from 'expo-constants';
 import { requestTrackingPermissionsAsync } from 'expo-tracking-transparency';
 import * as Linking from 'expo-linking';
 
-const STRIPE_PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || 'pk_test_51TFxmH2K3vS58g5IdspNfgGbJGLkpqxlVSPpBQa2cp2nRWaAPz3RxPfgl4ozCOxsfj4xLc9oshL0xnSeNGduOXNT00Lv4ycEhh';
+const STRIPE_PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || (__DEV__ ? 'pk_test_51TFxmH2K3vS58g5IdspNfgGbJGLkpqxlVSPpBQa2cp2nRWaAPz3RxPfgl4ozCOxsfj4xLc9oshL0xnSeNGduOXNT00Lv4ycEhh' : '');
 
 if (!process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
   if (__DEV__) {

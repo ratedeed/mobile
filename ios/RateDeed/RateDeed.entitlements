@@ -8,13 +8,13 @@
     <array>
       <string>Default</string>
     </array>
-    <key>com.apple.developer.in-app-payments</key>
-    <array>
-      <string>merchant.com.ratedeed.app</string>
-    </array>
     <key>com.apple.developer.associated-domains</key>
     <array>
       <string>applinks:ratedeed.com</string>
+    </array>
+    <key>com.apple.developer.in-app-payments</key>
+    <array>
+      <string>merchant.com.ratedeed.app</string>
     </array>
   </dict>
 </plist>

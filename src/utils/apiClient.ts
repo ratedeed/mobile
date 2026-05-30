@@ -1040,7 +1040,8 @@ export const requestEmailChange = async (newEmail: string, currentPassword: stri
 };
 
 export const changePassword = async (currentPassword: string, newPassword: string): Promise<any> => {
-  return put(`${API_BASE}/users/change-password`, { currentPassword, newPassword });
+  const authHeaders = await getAuthHeaders();
+  return put(`${API_BASE}/users/change-password`, { currentPassword, newPassword }, authHeaders);
 };
 
 export const deleteAccount = async (): Promise<any> => {
