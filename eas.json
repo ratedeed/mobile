@@ -5,18 +5,36 @@
   },
   "build": {
     "development": {
+      "autoIncrement": true,
       "developmentClient": true,
       "distribution": "internal",
       "channel": "development",
       "env": {
+        "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyCN-guWJ0r2lqk0kVB8Mjj0eESNVKZ5c7c",
+        "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "rateauth.firebaseapp.com",
+        "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "rateauth",
+        "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "rateauth.firebasestorage.app",
+        "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "946224105580",
+        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:946224105580:web:5e28ef916c44d3b270b049",
+        "EXPO_PUBLIC_API_URL": "https://api.ratedeed.com",
+        "EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY": "pk_test_51TFxmH2K3vS58g5IdspNfgGbJGLkpqxlVSPpBQa2cp2nRWaAPz3RxPfgl4ozCOxsfj4xLc9oshL0xnSeNGduOXNT00Lv4ycEhh",
         "SENTRY_DISABLE_AUTO_UPLOAD": "true",
         "SENTRY_ALLOW_FAILURE": "true"
       }
     },
     "preview": {
+      "autoIncrement": true,
       "distribution": "internal",
       "channel": "preview",
       "env": {
+        "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyCN-guWJ0r2lqk0kVB8Mjj0eESNVKZ5c7c",
+        "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "rateauth.firebaseapp.com",
+        "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "rateauth",
+        "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "rateauth.firebasestorage.app",
+        "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "946224105580",
+        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:946224105580:web:5e28ef916c44d3b270b049",
+        "EXPO_PUBLIC_API_URL": "https://api.ratedeed.com",
+        "EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY": "pk_test_51TFxmH2K3vS58g5IdspNfgGbJGLkpqxlVSPpBQa2cp2nRWaAPz3RxPfgl4ozCOxsfj4xLc9oshL0xnSeNGduOXNT00Lv4ycEhh",
         "SENTRY_DISABLE_AUTO_UPLOAD": "true",
         "SENTRY_ALLOW_FAILURE": "true"
       }
@@ -32,7 +50,7 @@
         "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "946224105580",
         "EXPO_PUBLIC_FIREBASE_APP_ID": "1:946224105580:web:5e28ef916c44d3b270b049",
         "EXPO_PUBLIC_API_URL": "https://api.ratedeed.com",
-        "EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY": "pk_test_51QQgK2B73eD6rU53Ym6kOsz7G7a0sQ1p2sA5rR8eN3wP8v8m2t4o9u0y1x8z7v9w",
+        "EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY": "pk_test_51TFxmH2K3vS58g5IdspNfgGbJGLkpqxlVSPpBQa2cp2nRWaAPz3RxPfgl4ozCOxsfj4xLc9oshL0xnSeNGduOXNT00Lv4ycEhh",
         "SENTRY_ORG": "ratedeed",
         "SENTRY_PROJECT": "ratedeed-mobile",
         "SENTRY_URL": "https://us.sentry.io/",

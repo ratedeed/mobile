@@ -150,11 +150,25 @@ const executeRequest = async (makeRequestFn: () => Promise<Response>): Promise<R
   }
 };
 
+const hasAuthHeader = (headers: Record<string, string>): boolean => {
+  const keys = Object.keys(headers);
+  return keys.some(key => {
+    if (key.toLowerCase() === 'authorization') {
+      const val = headers[key];
+      return val && val !== 'Bearer' && val !== 'Bearer ' && val.trim() !== '';
+    }
+    return false;
+  });
+};
+
 export const get = async (url: string, headers: Record<string, string> = {}): Promise<any> => {
   const makeRequest = async () => {
     const currentHeaders = { ...headers };
-    if (!currentHeaders['Authorization'] || currentHeaders['Authorization'].startsWith('Bearer ')) {
+    if (!hasAuthHeader(currentHeaders)) {
       const authH = await getAuthHeaders();
+      Object.keys(currentHeaders).forEach(k => {
+        if (k.toLowerCase() === 'authorization') delete currentHeaders[k];
+      });
       Object.assign(currentHeaders, authH);
     }
     return fetch(url, { method: 'GET', headers: currentHeaders });
@@ -166,8 +180,11 @@ export const get = async (url: string, headers: Record<string, string> = {}): Pr
 export const post = async (url: string, data: any, headers: Record<string, string> = {}): Promise<any> => {
   const makeRequest = async () => {
     const currentHeaders: Record<string, string> = { 'Content-Type': 'application/json', ...headers };
-    if (!currentHeaders['Authorization'] || currentHeaders['Authorization'].startsWith('Bearer ')) {
+    if (!hasAuthHeader(currentHeaders)) {
       const authH = await getAuthHeaders();
+      Object.keys(currentHeaders).forEach(k => {
+        if (k.toLowerCase() === 'authorization') delete currentHeaders[k];
+      });
       Object.assign(currentHeaders, authH);
     }
     return fetch(url, {
@@ -183,8 +200,11 @@ export const post = async (url: string, data: any, headers: Record<string, strin
 export const put = async (url: string, data: any, headers: Record<string, string> = {}): Promise<any> => {
   const makeRequest = async () => {
     const currentHeaders: Record<string, string> = { 'Content-Type': 'application/json', ...headers };
-    if (!currentHeaders['Authorization'] || currentHeaders['Authorization'].startsWith('Bearer ')) {
+    if (!hasAuthHeader(currentHeaders)) {
       const authH = await getAuthHeaders();
+      Object.keys(currentHeaders).forEach(k => {
+        if (k.toLowerCase() === 'authorization') delete currentHeaders[k];
+      });
       Object.assign(currentHeaders, authH);
     }
     return fetch(url, { method: 'PUT', headers: currentHeaders, body: JSON.stringify(data) });
@@ -196,8 +216,11 @@ export const put = async (url: string, data: any, headers: Record<string, string
 export const del = async (url: string, headers: Record<string, string> = {}): Promise<any> => {
   const makeRequest = async () => {
     const currentHeaders = { ...headers };
-    if (!currentHeaders['Authorization'] || currentHeaders['Authorization'].startsWith('Bearer ')) {
+    if (!hasAuthHeader(currentHeaders)) {
       const authH = await getAuthHeaders();
+      Object.keys(currentHeaders).forEach(k => {
+        if (k.toLowerCase() === 'authorization') delete currentHeaders[k];
+      });
       Object.assign(currentHeaders, authH);
     }
     return fetch(url, { method: 'DELETE', headers: currentHeaders });
@@ -377,7 +400,7 @@ export const backendLoginFirebase = async (idToken: string, email: string): Prom
   if (data && data.token) {
     await setSecureItem('auth_token', data.token);
     if (data.refreshToken) await setSecureItem('refresh_token', data.refreshToken);
-    const { token, refreshToken, ...userData } = data;
+    const { token, refreshToken, socketToken, ...userData } = data;
     await AsyncStorage.setItem(USER_DATA_KEY, JSON.stringify(userData));
   }
   return data;
@@ -1098,9 +1121,7 @@ export const appleSignIn = async (data: { identityToken: string; appleUserIdenti
   if (result && result.token) {
     await setSecureItem('auth_token', result.token);
     if (result.refreshToken) await setSecureItem('refresh_token', result.refreshToken);
-    const userData = { ...result.user };
-    delete userData.token;
-    delete userData.refreshToken;
+    const { token, refreshToken, socketToken, ...userData } = result;
     await AsyncStorage.setItem(USER_DATA_KEY, JSON.stringify(userData));
   }
   return result;

@@ -30,7 +30,7 @@ export default function PaymentFlowScreen() {
   useEffect(() => {
     async function checkApplePay() {
       const supported = await isPlatformPaySupported(
-        Platform.OS === 'android' ? { googlePay: { testEnv: true } } : {}
+        Platform.OS === 'android' ? { googlePay: { testEnv: __DEV__ } } : {}
       );
       setApplePayAvailable(supported);
     }
@@ -113,7 +113,7 @@ export default function PaymentFlowScreen() {
         },
         googlePay: {
           merchantCountryCode: 'US',
-          testEnv: true,
+          testEnv: __DEV__,
         },
         defaultBillingDetails: {
           // Pre-filled billing details can go here

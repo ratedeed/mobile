@@ -302,14 +302,10 @@ export default function MainNavigator() {
     <Stack.Navigator screenOptions={dynamicScreenOptions}>
       <Stack.Screen name="Main" component={MainTabNavigator} options={{ headerShown: false }} />
       <Stack.Screen name="BusinessDetail" component={SafeBusinessDetailScreen} options={{ headerShown: false }} />
-      {isAuthenticated && (userRole === 'contractor' || userRole === 'admin') ? (
-        <>
-          <Stack.Screen name="ContractorDashboard" component={ContractorDashboardScreen} options={{ title: '' }} />
-          <Stack.Screen name="ContractorOnboarding" component={ContractorOnboardingScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="ContractorEditProfile" component={ContractorEditProfileScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="EarningsScreen" component={EarningsScreen} options={{ title: 'Earnings', headerShown: false }} />
-        </>
-      ) : null}
+      <Stack.Screen name="ContractorDashboard" component={ContractorDashboardScreen} options={{ title: '' }} />
+      <Stack.Screen name="ContractorOnboarding" component={ContractorOnboardingScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="ContractorEditProfile" component={ContractorEditProfileScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="EarningsScreen" component={EarningsScreen} options={{ title: 'Earnings', headerShown: false }} />
       <Stack.Screen name="Notifications" component={NotificationsScreen} />
       <Stack.Screen name="ChatScreen" component={SafeMessagesScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ActiveJobs" component={ActiveJobsScreen} options={{ title: '', headerShown: false }} />

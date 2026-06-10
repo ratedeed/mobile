@@ -35,7 +35,7 @@
       </dict>
     </array>
     <key>CFBundleVersion</key>
-    <string>28</string>
+    <string>63</string>
     <key>FirebaseAppDelegateProxyEnabled</key>
     <true/>
     <key>LSMinimumSystemVersion</key>
@@ -55,10 +55,10 @@
     <string>Allow $(PRODUCT_NAME) to access your Face ID biometric data.</string>
     <key>NSMicrophoneUsageDescription</key>
     <string>Allow RateDeed to access your microphone to record voice messages and videos.</string>
-    <key>NSPhotoLibraryUsageDescription</key>
-    <string>Allow RateDeed to access your photos for profile pictures and post images.</string>
     <key>NSUserTrackingUsageDescription</key>
     <string>Allow RateDeed to use your data to provide a better, more personalized experience and for analytics.</string>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>Allow RateDeed to access your photos for profile pictures and post images.</string>
     <key>RCTNewArchEnabled</key>
     <true/>
     <key>RCTRootViewBackgroundColor</key>

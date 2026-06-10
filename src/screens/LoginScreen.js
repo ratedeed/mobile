@@ -34,21 +34,14 @@ const LoginScreen = () => {
   const redirectContractor = async () => {
     try {
       const profile = await getContractorProfile();
-      if (profile && profile.onboardingComplete === true) {
-        navigation.reset({
-          index: 0,
-          routes: [{ name: 'Main' }, { name: 'ContractorDashboard' }],
-        });
-      } else {
-        navigation.reset({
-          index: 0,
-          routes: [{ name: 'Main' }, { name: 'ContractorOnboarding' }],
-        });
-      }
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Main' }, { name: 'ContractorDashboard' }],
+      });
     } catch (err) {
       navigation.reset({
         index: 0,
-        routes: [{ name: 'Main' }, { name: 'ContractorOnboarding' }],
+        routes: [{ name: 'Main' }, { name: 'ContractorDashboard' }],
       });
     }
   };
@@ -92,7 +85,7 @@ const LoginScreen = () => {
       try {
         const backendResponse = await backendLoginFirebase(idToken, trimmedEmail);
         if (backendResponse?.token) {
-          const { token, refreshToken, ...userData } = backendResponse;
+          const userData = backendResponse.user || backendResponse;
           await updateBackendToken(backendResponse.token, backendResponse.emailVerified, userData);
           Toast.show({ type: 'success', text1: 'Success', text2: 'Logged in successfully!' });
           if (userData.role === 'contractor') {
@@ -148,7 +141,7 @@ const LoginScreen = () => {
         setShowVerificationMessage(false);
         const backendResponse = await backendLoginFirebase(idToken, auth.currentUser.email);
         if (backendResponse?.token) {
-          const { token, refreshToken, ...userData } = backendResponse;
+          const userData = backendResponse.user || backendResponse;
           await updateBackendToken(backendResponse.token, backendResponse.emailVerified, userData);
           Toast.show({ type: 'success', text1: 'Success', text2: 'Logged in successfully!' });
           
@@ -186,7 +179,7 @@ const LoginScreen = () => {
       });
 
       if (backendResponse?.token) {
-        const { token, refreshToken, ...userData } = backendResponse;
+        const userData = backendResponse.user || backendResponse;
         await updateBackendToken(backendResponse.token, backendResponse.emailVerified, userData);
         Toast.show({ type: 'success', text1: 'Success', text2: 'Signed in with Apple!' });
 

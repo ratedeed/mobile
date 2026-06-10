@@ -98,6 +98,7 @@ export default function QuoteReviewScreen() {
 
     (async () => {
       try {
+
         const data = await getQuote(quoteId);
         setQuote(data);
       } catch (err: any) {

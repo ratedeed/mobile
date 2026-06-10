@@ -18,6 +18,7 @@ import {
   Modal,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList, Review, Contractor, Post } from '../types';
 import { FontAwesome5 } from '@expo/vector-icons';
@@ -87,6 +88,7 @@ function formatRelativeTime(dateStr: string): string {
 const BusinessDetailScreen: React.FC = () => {
   const route = useRoute();
   const navigation = useNavigation<NavigationProp>();
+  const insets = useSafeAreaInsets();
   const isDark = useColorScheme() === 'dark';
   const params = route.params as { id?: string; slug?: string } || {};
   const id = params.id || params.slug || '';
@@ -393,6 +395,7 @@ const BusinessDetailScreen: React.FC = () => {
   const priceMin = c.pricing?.split('–')[0]?.trim() || ( (c as any).priceMin ? `$${(c as any).priceMin}` : '');
   const rawBanner = (c as any).bannerUrl || c.bannerImage || (c as any).imageUrl || c.profilePicture || '';
   const bannerImage = getCoverImageUrl(c.companyName || c.businessName || 'Contractor', rawBanner, c.category);
+  const avatarImage = getProfileImageUrl(c.companyName || c.businessName || 'Contractor', c.profilePicture || c.profileImage || c.user?.profilePicture || '', c.category);
   const services = c.servicesOffered || c.services || [];
   const portfolio = c.portfolio || [];
   const posts = contractorPosts || [];
@@ -505,7 +508,10 @@ const BusinessDetailScreen: React.FC = () => {
             </Pressable>
           )}
 
-          <View className="absolute top-12 left-0 right-0 px-4 flex-row items-center justify-between">
+          <View 
+            className="absolute left-0 right-0 px-4 flex-row items-center justify-between"
+            style={{ top: insets.top > 0 ? insets.top + 8 : 12 }}
+          >
             <Pressable
               onPress={() => navigation.goBack()}
               className="w-8 h-8 items-center justify-center bg-white dark:bg-neutral-950 rounded-full shadow-sm"
@@ -559,79 +565,96 @@ const BusinessDetailScreen: React.FC = () => {
 
         {/* Content */}
         <View className="px-4 pb-20" style={{ overflow: 'visible' }}>
-          <View className="mt-4" style={{ overflow: 'visible' }}>
-            <Text className="text-2xl font-bold text-neutral-900 dark:text-neutral-50">{c.companyName || c.businessName || 'Company'}</Text>
-            <View className="flex-row items-center flex-wrap mt-1" style={{ gap: 8, overflow: 'visible' }}>
-              {reviewCount > 0 ? (
-                <View className="flex-row items-center" style={{ gap: 4 }}>
-                  <FontAwesome5 name="star" solid size={14} color="#eab308" />
-                  <Text className="text-sm font-semibold text-slate-600 dark:text-neutral-300">{avgRating.toFixed(2)}</Text>
-                  <Text className="text-sm text-neutral-500 dark:text-neutral-400">({reviewCount} reviews)</Text>
+          {/* Header Row: Floating Avatar, Name, and Escrow protected badge */}
+          <View className="flex-row items-end justify-between mt-[-35px] z-10" style={{ overflow: 'visible' }}>
+            <View className="flex-row items-end flex-1 pr-2" style={{ gap: 12 }}>
+              {/* Floating Avatar */}
+              <View className="w-[72px] h-[72px] rounded-full border-4 border-white bg-white overflow-hidden shadow-md">
+                {isSvgUrl(avatarImage) ? (
+                  <SvgImage uri={avatarImage} width="100%" height="100%" />
+                ) : (
+                  <Image source={{ uri: avatarImage }} className="w-full h-full" resizeMode="cover" />
+                )}
+              </View>
+              {/* Business details */}
+              <View className="flex-1 pb-1">
+                <Text className="text-xl font-bold text-neutral-900 dark:text-neutral-50 leading-tight" numberOfLines={2}>
+                  {c.companyName || c.businessName || 'Company'}
+                </Text>
+                <View className="flex-row items-center mt-1" style={{ gap: 4 }}>
+                  <FontAwesome5 name="star" solid size={11} color="#eab308" />
+                  <Text className="text-xs font-semibold text-neutral-800 dark:text-neutral-200">
+                    {reviewCount > 0 ? avgRating.toFixed(2) : 'New'}
+                  </Text>
+                  <Text className="text-xs text-neutral-500 dark:text-neutral-400">
+                    ({reviewCount} {reviewCount === 1 ? 'review' : 'reviews'})
+                  </Text>
                 </View>
-              ) : (
-                <View className="flex-row items-center" style={{ gap: 4 }}>
-                  <FontAwesome5 name="star" size={14} color={isDark ? '#525252' : '#d4d4d4'} />
-                  <Text className="text-sm font-medium text-neutral-500 dark:text-neutral-400">No reviews yet</Text>
-                </View>
-              )}
-              {!!c.isVerified && (
-                <VerifiedBadge size="md" />
-              )}
+                {!!location && (
+                  <View className="flex-row items-center mt-1" style={{ gap: 4 }}>
+                    <FontAwesome5 name="map-marker-alt" size={10} color="#737373" />
+                    <Text className="text-xs text-neutral-500 dark:text-neutral-400 flex-1" numberOfLines={1}>
+                      {location}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            </View>
+
+            {/* Escrow Protected Trust Badge Card */}
+            <View className="bg-emerald-50/90 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900 rounded-xl p-2.5 w-[140px] mb-1">
+              <View className="flex-row items-center animate-pulse" style={{ gap: 4 }}>
+                <FontAwesome5 name="shield-alt" size={11} color="#059669" />
+                <Text className="text-[10px] font-bold text-emerald-800 dark:text-emerald-300">Escrow Protected</Text>
+              </View>
+              <Text className="text-[8px] text-emerald-600 dark:text-emerald-400 leading-normal mt-1">
+                Payments held safely until work is complete.
+              </Text>
             </View>
           </View>
 
-          {!!(location || (c as any).distance) && (
-            <View className="flex-row items-center mt-2" style={{ gap: 4 }}>
-              <FontAwesome5 name="map-marker-alt" size={12} color={isDark ? '#a3a3a3' : '#737373'} />
-              <Text className="text-sm text-neutral-500 dark:text-neutral-400">{location || ''}</Text>
-              {!!(c as any).distance && (
-                <Text className="text-sm text-neutral-500 dark:text-neutral-400"> · {(c as any).distance}</Text>
-              )}
-            </View>
-          )}
+          {/* Stats Row Grid (Dynamic values for new/existing contractors) */}
+          {(() => {
+            const yearsVal = c.yearsInBusiness || c.yearsExperience || 0;
+            const onTimeVal = (c as any).onTimeRate || 98;
+            const stats = [
+              {
+                icon: 'users',
+                value: reviewCount > 0 ? reviewCount.toString() : '0',
+                label: reviewCount === 1 ? 'Review' : 'Reviews',
+              },
+              {
+                icon: 'star',
+                value: reviewCount > 0 ? avgRating.toFixed(2) : 'New',
+                label: 'Rating',
+              },
+              {
+                icon: 'briefcase',
+                value: yearsVal > 0 ? `${yearsVal}+` : 'New',
+                label: yearsVal > 0 ? 'Years Active' : 'Business',
+              },
+              {
+                icon: 'check-circle',
+                value: reviewCount > 0 ? `${onTimeVal}%` : '100%',
+                label: 'On-time rate',
+              },
+            ];
 
-
-
-          {/* Quick Highlights (matching web logic) */}
-          {(((c.yearsExperience || 0) > 0) || 
-            ((c.responseTimeMinutes || 0) > 0) || 
-            !!c.insuranceInfo) && (
-            <View className="py-4 border-y border-neutral-100 dark:border-neutral-800 flex-row flex-wrap" style={{ gap: 20 }}>
-              {(c.yearsExperience || 0) > 0 && (
-                <View className="flex-row items-center" style={{ gap: 12 }}>
-                  <View className="w-10 h-10 rounded-full bg-neutral-100 dark:bg-neutral-800 items-center justify-center">
-                    <FontAwesome5 name="award" size={16} color={isDark ? '#e2e8f0' : '#404040'} />
+            return (
+              <View className="flex-row justify-between items-center py-4 border-y border-neutral-100 dark:border-neutral-800 mt-6 bg-neutral-50/50 dark:bg-neutral-900/30 rounded-xl px-2">
+                {stats.map((stat, idx) => (
+                  <View key={idx} className="flex-1 items-center justify-center" style={{
+                    borderRightWidth: idx < stats.length - 1 ? 1 : 0,
+                    borderRightColor: isDark ? '#262626' : '#e5e5e5',
+                  }}>
+                    <FontAwesome5 name={stat.icon} size={14} color="#4f46e5" style={{ marginBottom: 4 }} />
+                    <Text className="text-sm font-extrabold text-neutral-900 dark:text-neutral-50">{stat.value}</Text>
+                    <Text className="text-[9px] text-neutral-500 dark:text-neutral-400 mt-0.5 text-center px-1" numberOfLines={1}>{stat.label}</Text>
                   </View>
-                  <View>
-                    <Text className="text-xs font-bold text-neutral-900 dark:text-neutral-50">{c.yearsExperience} years experience</Text>
-                    <Text className="text-[10px] text-neutral-500 dark:text-neutral-400">In the business</Text>
-                  </View>
-                </View>
-              )}
-              {(c.responseTimeMinutes || 0) > 0 && (
-                <View className="flex-row items-center" style={{ gap: 12 }}>
-                  <View className="w-10 h-10 rounded-full bg-neutral-100 dark:bg-neutral-800 items-center justify-center">
-                    <FontAwesome5 name="clock" size={16} color={isDark ? '#e2e8f0' : '#404040'} />
-                  </View>
-                  <View>
-                    <Text className="text-xs font-bold text-neutral-900 dark:text-neutral-50">Responds {formatResponseTime(c.responseTimeMinutes || 0, c.responseTimeSampleSize || 0)}</Text>
-                    <Text className="text-[10px] text-neutral-500 dark:text-neutral-400">Typical response time</Text>
-                  </View>
-                </View>
-              )}
-              {!!c.insuranceInfo && (
-                <View className="flex-row items-center" style={{ gap: 12 }}>
-                  <View className="w-10 h-10 rounded-full bg-neutral-100 dark:bg-neutral-800 items-center justify-center">
-                    <FontAwesome5 name="shield-alt" size={16} color="#10b981" />
-                  </View>
-                  <View>
-                    <Text className="text-xs font-bold text-neutral-900 dark:text-neutral-50">Insured</Text>
-                    <Text className="text-[10px] text-neutral-500 dark:text-neutral-400">{c.insuranceInfo}</Text>
-                  </View>
-                </View>
-              )}
-            </View>
-          )}
+                ))}
+              </View>
+            );
+          })()}
 
           {/* Description */}
           {!!c.description && (
@@ -651,20 +674,63 @@ const BusinessDetailScreen: React.FC = () => {
             </View>
           )}
 
-
-
-          {/* Services */}
+          {/* Services Section with Enhanced Card layouts */}
           {services.length > 0 && (
             <View className="mt-8">
               <Text className="text-base font-bold text-neutral-900 dark:text-neutral-50 mb-3">Services</Text>
               <View style={{ gap: 8 }}>
                 {services.map((svc: any, i: number) => {
                   const name = typeof svc === 'string' ? svc : svc.name;
-                  const price = typeof svc === 'string' ? '' : svc.priceEstimate || svc.priceRange || '';
+                  const desc = typeof svc === 'string' ? '' : svc.description;
+                  
+                  // Dynamically select an icon based on service name
+                  let iconName = 'hammer';
+                  const lowerName = name.toLowerCase();
+                  if (lowerName.includes('remodel') || lowerName.includes('renovat') || lowerName.includes('construct')) {
+                    iconName = 'home';
+                  } else if (lowerName.includes('paint')) {
+                    iconName = 'paint-roller';
+                  } else if (lowerName.includes('plumb') || lowerName.includes('pipe') || lowerName.includes('leak') || lowerName.includes('faucet')) {
+                    iconName = 'faucet';
+                  } else if (lowerName.includes('electric') || lowerName.includes('wire') || lowerName.includes('light') || lowerName.includes('power')) {
+                    iconName = 'bolt';
+                  } else if (lowerName.includes('hvac') || lowerName.includes('heat') || lowerName.includes('cool') || lowerName.includes('ac') || lowerName.includes('air')) {
+                    iconName = 'wind';
+                  } else if (lowerName.includes('roof') || lowerName.includes('shingle') || lowerName.includes('tile')) {
+                    iconName = 'shield-alt';
+                  } else if (lowerName.includes('clean') || lowerName.includes('maid') || lowerName.includes('wash')) {
+                    iconName = 'broom';
+                  } else if (lowerName.includes('lawn') || lowerName.includes('landscap') || lowerName.includes('garden') || lowerName.includes('tree')) {
+                    iconName = 'leaf';
+                  }
+
+                  const subtext = desc || `Professional ${name.toLowerCase()} services`;
+
                   return (
-                    <View key={i} className="bg-neutral-50 dark:bg-neutral-900 rounded-xl p-3 flex-row items-center justify-between">
-                      <Text className="text-sm font-medium text-neutral-800 dark:text-neutral-200">{name}</Text>
-                      <View className="bg-indigo-50 dark:bg-indigo-900/50 border border-indigo-100 dark:border-indigo-800 rounded-md px-2 py-1"><Text className="text-[10px] font-bold text-indigo-700 dark:text-indigo-400">Custom Quote</Text></View>
+                    <View key={i} className="bg-neutral-50/50 dark:bg-neutral-900/40 rounded-xl p-3 border border-neutral-100 dark:border-neutral-800/60 flex-row items-center justify-between">
+                      <View className="flex-row items-center flex-1 pr-3" style={{ gap: 12 }}>
+                        <View className="w-11 h-11 bg-indigo-50/80 dark:bg-indigo-950/80 rounded-xl items-center justify-center">
+                          <FontAwesome5 name={iconName} size={16} color="#4f46e5" />
+                        </View>
+                        <View className="flex-1">
+                          <Text className="text-sm font-bold text-neutral-900 dark:text-neutral-50">{name}</Text>
+                          <Text className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5" numberOfLines={1}>{subtext}</Text>
+                        </View>
+                      </View>
+                      <Pressable 
+                        onPress={() => {
+                          if (!isAuthenticated) {
+                            setGuestAction('request a quote');
+                            setShowGuestPrompt(true);
+                            return;
+                          }
+                          setQuoteProjectTitle(name);
+                          setIsQuoteModalVisible(true);
+                        }}
+                        className="bg-indigo-50 dark:bg-indigo-900/40 border border-indigo-100 dark:border-indigo-800 rounded-lg px-3 py-1.5"
+                      >
+                        <Text className="text-xs font-bold text-indigo-700 dark:text-indigo-300">Custom Quote</Text>
+                      </Pressable>
                     </View>
                   );
                 })}
@@ -672,36 +738,40 @@ const BusinessDetailScreen: React.FC = () => {
             </View>
           )}
 
-          {/* Portfolio */}
+          {/* Portfolio Horizontal ScrollView Carousel */}
           {portfolio.length > 0 && (
             <View className="mt-8">
-              <Text className="text-base font-bold text-neutral-900 dark:text-neutral-50 mb-3">Portfolio</Text>
-              <View className="flex-row flex-wrap" style={{ gap: 12 }}>
+              <View className="flex-row items-center justify-between mb-3">
+                <Text className="text-base font-bold text-neutral-900 dark:text-neutral-50">Portfolio</Text>
+                <Pressable onPress={() => setShowPhotoGallery(true)}>
+                  <Text className="text-xs font-bold text-indigo-600">View all ({portfolio.reduce((acc, p) => acc + (p.images?.length || (p.imageUrl ? 1 : 0)), 0)})</Text>
+                </Pressable>
+              </View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingRight: 16 }}>
                 {portfolio.map((project: any, i: number) => {
                   const images = project.images || (project.imageUrl ? [project.imageUrl] : []);
                   return (
                     <Pressable
                       key={i}
                       onPress={() => { if (images.length > 0) { setGalleryProject({ ...project, images }); setGalleryIndex(0); } }}
-                      style={{ width: '47%' }}
-                      className="bg-white dark:bg-neutral-900 rounded-xl border border-neutral-100 dark:border-neutral-800 overflow-hidden"
+                      className="w-[140px]"
                     >
-                      <View style={{ aspectRatio: 1 }}>
+                      <View className="w-[140px] h-[105px] rounded-xl overflow-hidden bg-neutral-100 dark:bg-neutral-800 border border-neutral-100 dark:border-neutral-800">
                         {images[0] ? (
                           <Image source={{ uri: images[0] }} className="w-full h-full" resizeMode="cover" />
                         ) : (
-                          <View className="w-full h-full bg-neutral-100 dark:bg-neutral-800 items-center justify-center">
+                          <View className="w-full h-full items-center justify-center">
                             <FontAwesome5 name="image" size={20} color={isDark ? '#737373' : '#d4d4d4'} />
                           </View>
                         )}
                       </View>
-                      <View className="p-2">
-                        <Text className="text-xs font-bold text-neutral-900 dark:text-neutral-50" numberOfLines={1}>{project.name || project.title || 'Project'}</Text>
-                      </View>
+                      <Text className="text-xs font-bold text-neutral-800 dark:text-neutral-200 mt-2 px-0.5" numberOfLines={1}>
+                        {project.name || project.title || 'Project'}
+                      </Text>
                     </Pressable>
                   );
                 })}
-              </View>
+              </ScrollView>
             </View>
           )}
 
@@ -770,8 +840,7 @@ const BusinessDetailScreen: React.FC = () => {
             );
           })()}
 
-          {/* Certifications & Licenses removed */}
-
+          {/* Service Area Map */}
           {(() => {
             const zipCodes = (c as any).serviceZipCodes || (c as any).zipCodesCovered || [];
             const serviceAreaText = (c as any).serviceArea || location;
@@ -818,74 +887,64 @@ const BusinessDetailScreen: React.FC = () => {
             );
           })()}
 
-          {/* REVIEWS SECTION */}
+          {/* Testimonial Section - What clients say */}
           <View className="mt-8 pt-6 border-t border-neutral-100 dark:border-neutral-800">
             <View className="flex-row items-center justify-between mb-4">
-              <Text className="text-lg font-bold text-neutral-900 dark:text-neutral-50">Reviews</Text>
-              <View className="flex-row items-center" style={{ gap: 4 }}>
-                <FontAwesome5 name="star" solid size={14} color="#eab308" />
-                <Text className="text-sm font-bold text-neutral-900 dark:text-neutral-50">{avgRating.toFixed(2)}</Text>
-                <Text className="text-sm text-neutral-500">({reviewCount})</Text>
-              </View>
+              <Text className="text-base font-bold text-neutral-900 dark:text-neutral-50">What clients say</Text>
+              {reviewCount > 0 && (
+                <View className="flex-row items-center" style={{ gap: 4 }}>
+                  <FontAwesome5 name="star" solid size={12} color="#eab308" />
+                  <Text className="text-xs font-bold text-neutral-900 dark:text-neutral-50">{avgRating.toFixed(2)}</Text>
+                  <Text className="text-xs text-neutral-500">({reviewCount})</Text>
+                </View>
+              )}
             </View>
 
             {normalizedReviews.length > 0 ? (
               <View>
-                {/* Breakdown */}
-                <View className="mb-6" style={{ gap: 6 }}>
-                  {ratingBreakdown.map(r => (
-                    <View key={r.stars} className="flex-row items-center" style={{ gap: 10 }}>
-                      <Text className="text-[10px] font-bold text-neutral-500 w-3">{r.stars}</Text>
-                      <View className="flex-1 h-1.5 bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
-                        <View className="h-full bg-yellow-400" style={{ width: `${r.pct}%` }} />
-                      </View>
-                    </View>
-                  ))}
-                </View>
-
-                {/* Featured Review */}
+                {/* Featured Client Say Testimonial Card */}
                 {featuredReview && (
-                  <View className="mb-6 bg-indigo-50 dark:bg-indigo-950 border border-indigo-100 dark:border-indigo-800 rounded-xl p-4">
-                    <FontAwesome5 name="quote-left" size={16} color="#4F46E5" style={{ marginBottom: 8 }} />
-                    <Text className="text-sm text-neutral-800 dark:text-neutral-200 leading-5 mb-3">{featuredReview.comment}</Text>
-                    <View className="flex-row items-center" style={{ gap: 10 }}>
-                      {isSvgUrl(featuredReview.user?.profilePicture) ? (
-                        <View className="w-8 h-8 rounded-full overflow-hidden">
-                          <SvgImage uri={featuredReview.user.profilePicture} width="100%" height="100%" />
-                        </View>
-                      ) : featuredReview.user?.profilePicture ? (
-                        <Image source={{ uri: featuredReview.user.profilePicture }} className="w-8 h-8 rounded-full" />
-                      ) : (
-                        <View className="w-8 h-8 rounded-full bg-indigo-200 dark:bg-indigo-900 items-center justify-center">
-                            <FontAwesome5 name="user" size={10} color="#4F46E5" />
-                          </View>
-                      )}
-                      <View className="flex-1">
-                        <Text className="text-xs font-bold text-neutral-900 dark:text-neutral-50">{featuredReview.user?.firstName} {featuredReview.user?.lastName}</Text>
-                        <Text className="text-[10px] text-neutral-500">{formatDate(featuredReview.createdAt)}</Text>
-                      </View>
-                      <View className="flex-row items-center" style={{ gap: 2 }}>
-                        <FontAwesome5 name="star" solid size={10} color="#eab308" />
-                        <Text className="text-xs font-bold text-neutral-900 dark:text-neutral-50">{featuredReview.rating}</Text>
-                      </View>
+                  <View className="mb-6 bg-neutral-50/50 dark:bg-neutral-900/30 border border-neutral-100 dark:border-neutral-800/80 rounded-2xl p-4">
+                    <View className="flex-row items-center mb-3" style={{ gap: 8 }}>
+                      <FontAwesome5 name="star" solid size={11} color="#eab308" />
+                      <Text className="text-xs font-bold text-neutral-900 dark:text-neutral-50">{featuredReview.rating.toFixed(1)}</Text>
+                      <Text className="text-xs text-neutral-400">•</Text>
+                      <Text className="text-xs font-bold text-neutral-800 dark:text-neutral-200">{featuredReview.user?.firstName} {featuredReview.user?.lastName?.[0]}.</Text>
                     </View>
+                    <Text className="text-sm text-neutral-600 dark:text-neutral-300 leading-relaxed italic">
+                      "{featuredReview.comment}"
+                    </Text>
                   </View>
                 )}
 
-                {/* List */}
+                {/* Star rating distribution breakdown hidden for visual minimalism unless showAllReviews is tapped */}
+                {showAllReviews && (
+                  <View className="mb-6" style={{ gap: 6 }}>
+                    {ratingBreakdown.map(r => (
+                      <View key={r.stars} className="flex-row items-center" style={{ gap: 10 }}>
+                        <Text className="text-[10px] font-bold text-neutral-500 w-3">{r.stars}</Text>
+                        <View className="flex-1 h-1.5 bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
+                          <View className="h-full bg-yellow-400" style={{ width: `${r.pct}%` }} />
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                )}
+
+                {/* Review List */}
                 <View style={{ gap: 20 }}>
                   {displayReviews.map((review, idx) => (
                     <View key={review._id || idx} className="pb-4 border-b border-neutral-50 dark:border-neutral-900 last:border-0">
                       <View className="flex-row items-center mb-2" style={{ gap: 10 }}>
                         {isSvgUrl(review.user?.profilePicture) ? (
-                          <View className="w-10 h-10 rounded-full overflow-hidden">
+                          <View className="w-9 h-9 rounded-full overflow-hidden">
                             <SvgImage uri={review.user.profilePicture} width="100%" height="100%" />
                           </View>
                         ) : review.user?.profilePicture ? (
-                          <Image source={{ uri: review.user.profilePicture }} className="w-10 h-10 rounded-full" />
+                          <Image source={{ uri: review.user.profilePicture }} className="w-9 h-9 rounded-full" />
                         ) : (
-                          <View className="w-10 h-10 rounded-full bg-neutral-100 dark:bg-neutral-800 items-center justify-center">
-                            <FontAwesome5 name="user" size={14} color={isDark ? '#737373' : '#d4d4d4'} />
+                          <View className="w-9 h-9 rounded-full bg-neutral-100 dark:bg-neutral-800 items-center justify-center">
+                            <FontAwesome5 name="user" size={12} color={isDark ? '#737373' : '#d4d4d4'} />
                           </View>
                         )}
                         <View className="flex-1">
@@ -912,9 +971,10 @@ const BusinessDetailScreen: React.FC = () => {
                 )}
               </View>
             ) : (
-              <View className="py-10 items-center justify-center">
-                <FontAwesome5 name="star" size={32} color={isDark ? '#525252' : '#f5f5f5'} style={{ marginBottom: 12 }} />
-                <Text className="text-neutral-400 text-sm">No reviews yet for this contractor</Text>
+              <View className="py-10 bg-neutral-50/50 dark:bg-neutral-900/30 border border-neutral-100 dark:border-neutral-800/80 rounded-2xl items-center justify-center px-4">
+                <FontAwesome5 name="star" size={24} color={isDark ? '#404040' : '#d4d4d4'} style={{ marginBottom: 10 }} />
+                <Text className="text-neutral-800 dark:text-neutral-200 text-sm font-bold">No reviews yet</Text>
+                <Text className="text-neutral-400 text-xs text-center mt-1">Be the first to leave a review after your project is completed!</Text>
               </View>
             )}
           </View>
@@ -1202,7 +1262,10 @@ const BusinessDetailScreen: React.FC = () => {
       {/* Photo Gallery Modal */}
       {showPhotoGallery && heroImages.length > 0 && (
         <View className="absolute inset-0 z-[200] bg-black">
-          <View className="absolute top-12 left-0 right-0 z-10 flex-row items-center justify-between px-4">
+          <View 
+            className="absolute left-0 right-0 z-10 flex-row items-center justify-between px-4"
+            style={{ top: insets.top > 0 ? insets.top + 8 : 12 }}
+          >
             <Text className="text-white font-bold text-sm">{activeImageIndex + 1} / {heroImages.length}</Text>
             <Pressable
               onPress={() => setShowPhotoGallery(false)}
@@ -1247,7 +1310,7 @@ const BusinessDetailScreen: React.FC = () => {
       >
         <View className="flex-1 bg-black justify-between">
           {/* Header */}
-          <View className="flex-row items-center justify-between px-4 py-3 bg-black/80 absolute top-0 left-0 right-0 z-10" style={{ paddingTop: Platform.OS === 'ios' ? 44 : 12 }}>
+          <View className="flex-row items-center justify-between px-4 py-3 bg-black/80 absolute top-0 left-0 right-0 z-10" style={{ paddingTop: insets.top > 0 ? insets.top : 12 }}>
             <Pressable onPress={() => setGalleryProject(null)} className="w-8 h-8 items-center justify-center rounded-full bg-white/20">
               <FontAwesome5 name="times" size={14} color="white" />
             </Pressable>
