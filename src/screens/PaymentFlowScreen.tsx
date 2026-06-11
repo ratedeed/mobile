@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { createCheckoutSession, createPaymentIntent, getQuote } from '../api';
 import { FontAwesome5 } from '@expo/vector-icons';
-import { useStripe, usePlatformPay, confirmPlatformPayPayment, PlatformPay } from '@stripe/stripe-react-native';
+import { useStripe, usePlatformPay, confirmPlatformPayPayment, PlatformPay, PlatformPayButton } from '@stripe/stripe-react-native';
 
 const STEP_LABELS = ['Review', 'Payment', 'Confirmed'];
 
@@ -225,15 +225,11 @@ export default function PaymentFlowScreen() {
             </View>
 
             {applePayAvailable && (
-              <Pressable
+              <PlatformPayButton
+                type={PlatformPay.ButtonType.Pay}
                 onPress={handleApplePay}
                 style={styles.applePayBtn}
-              >
-                <View style={styles.applePayContent}>
-                  <FontAwesome5 name="apple" size={18} color="#fff" brand solid />
-                  <Text style={styles.applePayText}>Pay</Text>
-                </View>
-              </Pressable>
+              />
             )}
 
             <View style={{ height: 12, alignItems: 'center', justifyContent: 'center' }}>
@@ -328,11 +324,7 @@ export default function PaymentFlowScreen() {
 const styles = StyleSheet.create({
   applePayBtn: {
     width: '100%',
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#000000',
+    height: 48,
     marginTop: 16,
   },
   applePayContent: {
