@@ -404,10 +404,10 @@ const HomeScreen = () => {
                 placeholder="Zip code"
                 placeholderTextColor="#a3a3a3"
                 value={searchZip}
-                onChangeText={setSearchZip}
+                onChangeText={(text) => setSearchZip(text.replace(/[^0-9]/g, ''))}
                 onSubmitEditing={() => loadContractors(searchZip || null)}
                 keyboardType="numeric"
-                maxLength={10}
+                maxLength={5}
               />
               {searchZip ? (
                 <Pressable

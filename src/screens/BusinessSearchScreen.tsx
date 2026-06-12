@@ -313,14 +313,14 @@ const BusinessSearchScreen: React.FC = () => {
               value={searchZip}
               onChangeText={text => { 
                 const sanitized = text.replace(/[^0-9]/g, '');
-                setSearchZip(sanitized); 
+                setSearchZip(sanitized.slice(0, 5)); 
                 setActiveCategory('all'); 
               }}
               onSubmitEditing={handleSearchSubmit}
               placeholder="Zip code"
               placeholderTextColor="#a3a3a3"
               keyboardType="numeric"
-              maxLength={10}
+              maxLength={5}
               className="bg-neutral-100 dark:bg-neutral-900 dark:text-neutral-50 rounded-full pl-10 pr-9 py-2.5 text-sm"
             />
 
