@@ -159,6 +159,25 @@ export default function JobDetailScreen() {
     );
   const handleReleaseFunds = () =>
     handleAction('release payment', () => releaseFunds(jobId), 'Payment released to the contractor!');
+  const handleReleaseMilestone = (milestoneId: string, milestoneName: string) => {
+    Alert.alert(
+      'Release Milestone',
+      `Are you sure you want to release payment for "${milestoneName}" to the contractor? This action cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Release',
+          onPress: () => {
+            handleAction(
+              'release milestone',
+              () => releaseFunds(jobId, milestoneId),
+              `Payment for milestone "${milestoneName}" released!`
+            );
+          }
+        }
+      ]
+    );
+  };
   const handleCancelJob = () => handleAction('cancel this job', () => cancelJob(jobId), 'Job cancelled successfully.');
   const handleAcceptChangeOrder = (coId: string) =>
     handleAction('accept change order', () => acceptChangeOrder(jobId, coId), 'Change order accepted!');
@@ -306,13 +325,29 @@ export default function JobDetailScreen() {
                   </View>
                   {job.milestones &&
                     job.milestones.map((m: any, i: number) => (
-                      <View key={i} className="flex-row justify-between mt-1">
-                        <Text className="text-[11px] text-indigo-700 dark:text-indigo-300">
-                          {m.name} ({m.status || 'pending'})
-                        </Text>
-                        <Text className="text-[11px] font-semibold text-indigo-900 dark:text-indigo-200">
-                          {formatCurrency(m.amount)}
-                        </Text>
+                      <View key={i} className="flex-row items-center justify-between mt-2">
+                        <View className="flex-1 pr-2">
+                          <Text className="text-[12px] font-semibold text-indigo-900 dark:text-indigo-200">
+                            {m.name}
+                          </Text>
+                          <Text className="text-[10px] text-indigo-700 dark:text-indigo-400 capitalize">
+                            Status: {m.status || 'pending'}
+                          </Text>
+                        </View>
+                        <View className="flex-row items-center" style={{ gap: 8 }}>
+                          <Text className="text-[12px] font-bold text-indigo-900 dark:text-indigo-200">
+                            {formatCurrency(m.amount)}
+                          </Text>
+                          {isUser && m.status === 'funded' && (
+                            <Pressable
+                              onPress={() => handleReleaseMilestone(m._id, m.name)}
+                              disabled={actionLoading !== null}
+                              className="px-2.5 py-1.5 bg-indigo-600 rounded-lg"
+                            >
+                              <Text className="text-[10px] font-bold text-white">Release</Text>
+                            </Pressable>
+                          )}
+                        </View>
                       </View>
                     ))}
                 </View>
@@ -526,16 +561,24 @@ export default function JobDetailScreen() {
               {isUser && ['awaiting_payment', 'partially_funded', 'accepted'].includes(job.status) && (
                 <Pressable
                   onPress={() => {
-                    const acceptedChangeOrdersTotal = (job.changeOrders || [])
-                      .filter((co: any) => co.status === 'accepted')
-                      .reduce((sum: number, co: any) => sum + (co.amount || 0), 0);
-                    const adjustedTotal = (job.quote?.totalAmount || job.quote?.total || 0) + acceptedChangeOrdersTotal;
+                    let paymentAmount = 0;
+                    let paymentDescription = job.quote?.description || job.quote?.projectName || 'Project Payment';
+                    if (job.isMilestone && job.milestones && job.milestones.length > 0) {
+                      const nextMilestone = job.milestones.find((m: any) => m.status === 'pending');
+                      if (nextMilestone) {
+                        paymentAmount = nextMilestone.amount;
+                        paymentDescription = `Milestone: ${nextMilestone.name}`;
+                      }
+                    } else {
+                      paymentAmount = Math.max(0, (job.quote?.totalAmount || job.quote?.total || 0) - (job.amountFunded || 0));
+                    }
+
                     navigation.navigate('PaymentFlow', {
                       jobId: job._id,
                       quoteId: job.quote?._id,
-                      totalAmount: adjustedTotal,
+                      totalAmount: paymentAmount,
                       contractorName: contractor.companyName || contractor.businessName || 'Contractor',
-                      description: job.quote?.description || job.quote?.projectName || 'Project Payment',
+                      description: paymentDescription,
                     });
                   }}
                   className="flex-row items-center justify-center py-3.5 bg-indigo-600 rounded-xl"

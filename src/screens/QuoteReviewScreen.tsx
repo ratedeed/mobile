@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
-import { getQuote, updateQuoteStatus, createCheckoutSession } from '../api';
+import { getQuote, updateQuoteStatus } from '../api';
 
 export default function QuoteReviewScreen() {
   const colorScheme = useColorScheme();

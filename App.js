@@ -29,11 +29,11 @@ import Constants from 'expo-constants';
 import { requestTrackingPermissionsAsync } from 'expo-tracking-transparency';
 import * as Linking from 'expo-linking';
 
-const STRIPE_PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || (__DEV__ ? 'pk_test_51TFxmH2K3vS58g5IdspNfgGbJGLkpqxlVSPpBQa2cp2nRWaAPz3RxPfgl4ozCOxsfj4xLc9oshL0xnSeNGduOXNT00Lv4ycEhh' : '');
+const STRIPE_PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
 
 if (!process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
   if (__DEV__) {
-    console.warn('STRIPE_PUBLISHABLE_KEY is not set. Using safe fallback to prevent SDK crash.');
+    console.warn('EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY is not set. Please define it in your local .env file.');
   } else {
     throw new Error('CRITICAL: EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY environment variable is not defined in production build!');
   }

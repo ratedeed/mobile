@@ -975,9 +975,9 @@ export const getContractorJobs = async (): Promise<Job[]> => {
   return get(`${API_BASE}/jobs`, authHeaders);
 };
 
-export const releaseFunds = async (jobId: string): Promise<any> => {
+export const releaseFunds = async (jobId: string, milestoneId?: string): Promise<any> => {
   const authHeaders = await getAuthHeaders();
-  return post(`${API_BASE}/jobs/${jobId}/release`, {}, authHeaders);
+  return post(`${API_BASE}/jobs/${jobId}/release`, { milestoneId }, authHeaders);
 };
 
 export const markJobComplete = async (jobId: string, completionNotes?: string): Promise<any> => {

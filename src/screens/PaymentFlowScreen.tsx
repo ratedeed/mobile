@@ -26,6 +26,7 @@ export default function PaymentFlowScreen() {
   const [currentStep, setCurrentStep] = useState(0);
   const [paying, setPaying] = useState(false);
   const [applePayAvailable, setApplePayAvailable] = useState(false);
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
 
   useEffect(() => {
     async function checkApplePay() {
@@ -58,15 +59,19 @@ export default function PaymentFlowScreen() {
     }
     try {
       setPaying(true);
-      const response = await createPaymentIntent(quoteId);
-      if (!response?.clientSecret) {
-        Alert.alert('Payment Error', 'Could not initialize Apple Pay session.');
-        return;
+      let currentClientSecret = clientSecret;
+      if (!currentClientSecret) {
+        const response = await createPaymentIntent(quoteId);
+        if (!response?.clientSecret) {
+          Alert.alert('Payment Error', 'Could not initialize Apple Pay session.');
+          return;
+        }
+        currentClientSecret = response.clientSecret;
+        setClientSecret(currentClientSecret);
       }
-      const { clientSecret } = response;
 
       const { paymentIntent, error } = await confirmPlatformPayPayment(
-         clientSecret,
+        currentClientSecret,
         {
           applePay: {
             cartItems: [
@@ -98,15 +103,19 @@ export default function PaymentFlowScreen() {
     if (paying) return;
     try {
       setPaying(true);
-      const response = await createPaymentIntent(quoteId);
-      if (!response?.clientSecret) {
-        Alert.alert('Payment Error', 'Could not initialize secure payment session.');
-        return;
+      let currentClientSecret = clientSecret;
+      if (!currentClientSecret) {
+        const response = await createPaymentIntent(quoteId);
+        if (!response?.clientSecret) {
+          Alert.alert('Payment Error', 'Could not initialize secure payment session.');
+          return;
+        }
+        currentClientSecret = response.clientSecret;
+        setClientSecret(currentClientSecret);
       }
-      const { clientSecret } = response;
       
       const { error } = await initPaymentSheet({
-        paymentIntentClientSecret: clientSecret,
+        paymentIntentClientSecret: currentClientSecret,
         merchantDisplayName: 'Ratedeed',
         applePay: {
           merchantCountryCode: 'US',
