@@ -288,6 +288,8 @@ const NotificationsScreen: React.FC = () => {
     if (type === 'new_lead' || m.includes('lead') || m.includes('project')) return { name: 'briefcase', color: '#8b5cf6', bg: isDark ? '#3b0764' : '#ede9fe' };
     if (type === 'job_update') return { name: 'wrench', color: '#f97316', bg: isDark ? '#431407' : '#ffedd5' };
     if (type === 'admin_alert' || type === 'system_update') return { name: 'info-circle', color: '#6366f1', bg: isDark ? '#1e1b4b' : '#eef2ff' };
+    if (type === 'license_approved') return { name: 'shield-alt', color: '#10b981', bg: isDark ? '#064e3b' : '#d1fae5' };
+    if (type === 'license_rejected') return { name: 'exclamation-triangle', color: '#DC2626', bg: isDark ? '#450a0a' : '#fee2e2' };
     return { name: 'bell', color: '#4F46E5', bg: isDark ? '#1e1b4b' : '#eef2ff' };
   };
 

@@ -129,8 +129,16 @@ export default function JobDetailScreen() {
     loadJob();
   }, [loadJob]);
 
-  const handleAction = async (action: string, fn: () => Promise<any>, successMsg: string) => {
-    Alert.alert('Confirm', `Are you sure you want to ${action}?`, [
+  const handleAction = async (
+    action: string,
+    fn: () => Promise<any>,
+    successMsg: string,
+    extraWarning?: string
+  ) => {
+    const body = extraWarning
+      ? `Are you sure you want to ${action}?\n\n${extraWarning}`
+      : `Are you sure you want to ${action}?`;
+    Alert.alert('Confirm', body, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Confirm',
@@ -178,7 +186,15 @@ export default function JobDetailScreen() {
       ]
     );
   };
-  const handleCancelJob = () => handleAction('cancel this job', () => cancelJob(jobId), 'Job cancelled successfully.');
+  const handleCancelJob = () => {
+    // Warn the contractor that cancelling a funded job triggers a refund to the homeowner
+    // and counts against their cancellation record on the public profile.
+    const isFunded = ['funded_in_progress', 'partially_funded'].includes(job?.status);
+    const warning = isContractor && isFunded
+      ? 'The homeowner will be fully refunded. This will count against your cancellation record on your public profile.'
+      : undefined;
+    return handleAction('cancel this job', () => cancelJob(jobId), 'Job cancelled successfully.', warning);
+  };
   const handleAcceptChangeOrder = (coId: string) =>
     handleAction('accept change order', () => acceptChangeOrder(jobId, coId), 'Change order accepted!');
   const handleDeclineChangeOrder = (coId: string) =>
@@ -642,7 +658,7 @@ export default function JobDetailScreen() {
                   <Text className="text-[13px] font-semibold text-red-600 dark:text-red-400">Raise Dispute</Text>
                 </Pressable>
               )}
-              {['awaiting_payment', 'funded_in_progress'].includes(job.status) && (
+              {['awaiting_payment', 'funded_in_progress', 'partially_funded'].includes(job.status) && (
                 <Pressable
                   onPress={handleCancelJob}
                   disabled={actionLoading === 'cancel this job'}

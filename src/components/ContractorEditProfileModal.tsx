@@ -87,6 +87,7 @@ const COLORS = {
   warningBorder: '#FFE082',
   error: '#C13515',
   errorLight: '#FEF2F2',
+  errorBorder: '#FCA5A5',
 };
 
 const RADII = {
@@ -342,6 +343,7 @@ export default function ContractorEditProfileModal({ visible, onClose, onProfile
 
   const licenseStatus = profileData?.licenseStatus || 'not_submitted';
   const isVerified = profileData?.isVerified || false;
+  const verificationNotes = profileData?.verificationNotes || '';
 
   const handleImageSelect = async (type: 'profile' | 'banner' | 'license' | 'portfolio', portfolioIndex?: number) => {
     const hasPermission = await requestPhotoLibraryPermission();
@@ -1380,19 +1382,19 @@ export default function ContractorEditProfileModal({ visible, onClose, onProfile
                             style={{
                               borderRadius: RADII.lg,
                               borderWidth: 1,
-                              borderColor: COLORS.errorBorder || '#FCA5A5',
+                              borderColor: COLORS.errorBorder,
                               padding: 20,
-                              backgroundColor: COLORS.errorLight || '#FEF2F2',
+                              backgroundColor: COLORS.errorLight,
                               marginBottom: 16,
                             }}
                           >
                             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                              <FontAwesome5 name="times-circle" size={18} color={COLORS.error || '#DC2626'} solid />
+                              <FontAwesome5 name="times-circle" size={18} color={COLORS.error} solid />
                               <Text
                                 style={{
                                   fontSize: 15,
                                   fontWeight: '700',
-                                  color: COLORS.error || '#991B1B',
+                                  color: COLORS.error,
                                   marginLeft: 10,
                                 }}
                               >
@@ -1576,7 +1578,7 @@ export default function ContractorEditProfileModal({ visible, onClose, onProfile
                                     color: verifLicenseNumber.trim() && licenseDocUri ? '#fff' : COLORS.textMuted,
                                   }}
                                 >
-                                  Submit for review
+                                  {licenseStatus === 'rejected' ? 'Resubmit for review' : 'Submit for review'}
                                 </Text>
                               )}
                             </TouchableOpacity>
