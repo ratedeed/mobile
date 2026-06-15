@@ -561,6 +561,33 @@ export default function JobDetailScreen() {
               {isUser && ['awaiting_payment', 'partially_funded', 'accepted'].includes(job.status) && (
                 <Pressable
                   onPress={() => {
+                    // 1. Check if the contractor is fully set up on Stripe
+                    if (!contractor || !contractor.stripeAccountId || !contractor.stripeAccountChargesEnabled) {
+                      Alert.alert(
+                        'Payment Not Available',
+                        'This contractor is not fully set up to receive payments yet. Please contact the contractor to verify their Stripe account.'
+                      );
+                      return;
+                    }
+
+                    // 2. Check if the quote is rejected or expired
+                    if (job.quote) {
+                      if (job.quote.status === 'rejected') {
+                        Alert.alert(
+                          'Payment Blocked',
+                          'This quote has been rejected or withdrawn. Payment cannot be processed.'
+                        );
+                        return;
+                      }
+                      if (job.quote.expiresAt && new Date(job.quote.expiresAt) < new Date()) {
+                        Alert.alert(
+                          'Quote Expired',
+                          'This quote has expired. Please request a new quote from the contractor.'
+                        );
+                        return;
+                      }
+                    }
+
                     let paymentAmount = 0;
                     let paymentDescription = job.quote?.description || job.quote?.projectName || 'Project Payment';
                     if (job.isMilestone && job.milestones && job.milestones.length > 0) {

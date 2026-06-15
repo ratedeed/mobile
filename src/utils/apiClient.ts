@@ -1111,7 +1111,7 @@ export const getBlockedUsers = async (): Promise<any[]> => {
 // Apple Pay / Native Payment
 // ==========================================
 
-export const createPaymentIntent = async (quoteId: string): Promise<{ clientSecret: string }> => {
+export const createPaymentIntent = async (quoteId: string): Promise<{ clientSecret: string; amount?: number }> => {
   const authHeaders = await getAuthHeaders();
   return post(`${API_BASE}/stripe/payment-intent`, { quoteId }, authHeaders);
 };

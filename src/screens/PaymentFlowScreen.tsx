@@ -19,7 +19,6 @@ export default function PaymentFlowScreen() {
   const { isPlatformPaySupported } = usePlatformPay();
 
   const quoteId = route.params?.quoteId || '';
-  const quoteTotal = route.params?.totalAmount || 0;
   const contractorName = route.params?.contractorName || 'Contractor';
   const quoteDescription = route.params?.description || '';
 
@@ -27,6 +26,8 @@ export default function PaymentFlowScreen() {
   const [paying, setPaying] = useState(false);
   const [applePayAvailable, setApplePayAvailable] = useState(false);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [paymentAmount, setPaymentAmount] = useState<number>(route.params?.totalAmount || 0);
+  const [loadingPaymentIntent, setLoadingPaymentIntent] = useState(true);
 
   useEffect(() => {
     async function checkApplePay() {
@@ -39,6 +40,30 @@ export default function PaymentFlowScreen() {
       checkApplePay();
     }
   }, [isPlatformPaySupported]);
+
+  useEffect(() => {
+    async function initPayment() {
+      try {
+        setLoadingPaymentIntent(true);
+        const response = await createPaymentIntent(quoteId);
+        if (response?.clientSecret) {
+          setClientSecret(response.clientSecret);
+          if (response.amount !== undefined) {
+            setPaymentAmount(response.amount);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to pre-initialize payment intent:', err);
+      } finally {
+        setLoadingPaymentIntent(false);
+      }
+    }
+    if (quoteId) {
+      initPayment();
+    } else {
+      setLoadingPaymentIntent(false);
+    }
+  }, [quoteId]);
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextAppState) => {
@@ -68,6 +93,9 @@ export default function PaymentFlowScreen() {
         }
         currentClientSecret = response.clientSecret;
         setClientSecret(currentClientSecret);
+        if (response.amount !== undefined) {
+          setPaymentAmount(response.amount);
+        }
       }
 
       const { paymentIntent, error } = await confirmPlatformPayPayment(
@@ -77,7 +105,7 @@ export default function PaymentFlowScreen() {
             cartItems: [
               {
                 label: quoteDescription || 'Project Payment',
-                amount: String((quoteTotal / 100).toFixed(2)),
+                amount: String((paymentAmount / 100).toFixed(2)),
                 paymentType: PlatformPay.PaymentType.Immediate,
               },
             ],
@@ -112,6 +140,9 @@ export default function PaymentFlowScreen() {
         }
         currentClientSecret = response.clientSecret;
         setClientSecret(currentClientSecret);
+        if (response.amount !== undefined) {
+          setPaymentAmount(response.amount);
+        }
       }
       
       const { error } = await initPaymentSheet({
@@ -166,6 +197,15 @@ export default function PaymentFlowScreen() {
     }
   };
 
+  if (loadingPaymentIntent) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: isDark ? '#09090B' : '#ffffff' }}>
+        <ActivityIndicator size="large" color="#4F46E5" />
+        <Text style={{ marginTop: 12, color: isDark ? '#a3a3a3' : '#737373', fontSize: 14, fontWeight: '500' }}>Initializing secure payment...</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={{ flex: 1, backgroundColor: isDark ? '#09090B' : '#ffffff' }}>
       {/* Header */}
@@ -214,13 +254,13 @@ export default function PaymentFlowScreen() {
                   <Text style={{ fontSize: 14, fontWeight: 'bold', color: isDark ? '#ffffff' : '#171717' }}>{contractorName}</Text>
                   <Text style={{ fontSize: 12, color: isDark ? '#a3a3a3' : '#737373' }}>Service Fee Included</Text>
                 </View>
-                <Text style={{ fontSize: 18, fontWeight: 'bold', color: isDark ? '#ffffff' : '#171717' }}>${(quoteTotal / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
+                <Text style={{ fontSize: 18, fontWeight: 'bold', color: isDark ? '#ffffff' : '#171717' }}>${(paymentAmount / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
               </View>
             </View>
 
             <View style={{ backgroundColor: '#171717', borderRadius: 16, padding: 24, alignItems: 'center' }}>
               <Text style={{ fontSize: 12, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: 1 }}>Total Amount</Text>
-              <Text style={{ fontSize: 30, fontWeight: 'bold', color: 'white', marginTop: 4 }}>${(quoteTotal / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
+              <Text style={{ fontSize: 30, fontWeight: 'bold', color: 'white', marginTop: 4 }}>${(paymentAmount / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
             </View>
 
             <View style={{ backgroundColor: '#ecfdf5', borderWidth: 1, borderColor: '#a7f3d0', borderRadius: 16, padding: 16, flexDirection: 'row', gap: 12 }}>
@@ -297,7 +337,7 @@ export default function PaymentFlowScreen() {
               <FontAwesome5 name="check" size={32} color="#10b981" />
             </View>
             <Text style={{ fontSize: 20, fontWeight: 'bold', color: isDark ? '#ffffff' : '#171717' }}>Payment Confirmed!</Text>
-            <Text style={{ fontSize: 30, fontWeight: 'bold', color: isDark ? '#ffffff' : '#171717', marginTop: 8 }}>${(quoteTotal / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
+            <Text style={{ fontSize: 30, fontWeight: 'bold', color: isDark ? '#ffffff' : '#171717', marginTop: 8 }}>${(paymentAmount / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
             <Text style={{ fontSize: 14, color: isDark ? '#a3a3a3' : '#737373' }}>paid to {contractorName}</Text>
 
             <View style={{ backgroundColor: '#ecfdf5', borderWidth: 1, borderColor: '#a7f3d0', borderRadius: 16, padding: 16, flexDirection: 'row', gap: 12, marginTop: 32, width: '100%' }}>

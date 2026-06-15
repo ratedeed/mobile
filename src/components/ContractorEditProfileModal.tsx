@@ -1374,6 +1374,51 @@ export default function ContractorEditProfileModal({ visible, onClose, onProfile
                               We're reviewing your documents. This usually takes 2-3 business days.
                             </Text>
                           </View>
+                        ) : licenseStatus === 'rejected' ? (
+                          /* ── Rejected State ── */
+                          <View
+                            style={{
+                              borderRadius: RADII.lg,
+                              borderWidth: 1,
+                              borderColor: COLORS.errorBorder || '#FCA5A5',
+                              padding: 20,
+                              backgroundColor: COLORS.errorLight || '#FEF2F2',
+                              marginBottom: 16,
+                            }}
+                          >
+                            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                              <FontAwesome5 name="times-circle" size={18} color={COLORS.error || '#DC2626'} solid />
+                              <Text
+                                style={{
+                                  fontSize: 15,
+                                  fontWeight: '700',
+                                  color: COLORS.error || '#991B1B',
+                                  marginLeft: 10,
+                                }}
+                              >
+                                Verification Denied
+                              </Text>
+                            </View>
+                            <Text
+                              style={{
+                                fontSize: 13,
+                                color: '#7F1D1D',
+                                lineHeight: 20,
+                                marginBottom: 8,
+                              }}
+                            >
+                              {verificationNotes || 'Your license verification was not approved. Please review the feedback and resubmit with correct documentation.'}
+                            </Text>
+                            <Text
+                              style={{
+                                fontSize: 12,
+                                color: '#7F1D1D',
+                                fontStyle: 'italic',
+                              }}
+                            >
+                              You can resubmit a new license below.
+                            </Text>
+                          </View>
                         ) : (
                           /* ── Submit Verification ── */
                           <View
