@@ -1,23 +1,25 @@
 // ================================================================
-// Avatar & Banner Utilities — Client-side SVG generation
-// Generates beautiful default avatars and banners
-// as SVG data URIs. No API calls needed.
+// Avatar & Banner Utilities — Dynamic Apple Music Gradients
+// Features: 360° hue distribution, variable sweep directions, 
+// multi-angle generation, anti-banding, and category anchoring.
 // ================================================================
 
-// ---- Types ----
-
 export interface CategoryColors {
-  primary: string;
-  secondary: string;
-  accent: string;
-  gradient: string;
-  light: string;
-  dark: string;
+  c1: string; // 0%
+  c2: string; // 20%
+  c3: string; // 39%
+  c4: string; // 76%
+  c5: string; // 100%
 }
 
 export interface BannerSize {
   width: number;
   height: number;
+}
+
+export interface GradientConfig {
+  colors: CategoryColors;
+  angle: { x1: string; y1: string; x2: string; y2: string };
 }
 
 type CategoryKey =
@@ -29,6 +31,8 @@ type CategoryKey =
   | 'roofers'
   | 'cleaners'
   | 'handyman';
+
+// ---- Category Detection ----
 
 const CATEGORY_KEYWORDS: Record<CategoryKey, string[]> = {
   plumbers: ['plumber', 'plumbing', 'pipe', 'aqua', 'drain', 'water heater', 'sewer', 'hydro'],
@@ -45,409 +49,100 @@ export function detectCategory(category?: string): CategoryKey | null {
   if (!category) return null;
   const lower = category.toLowerCase();
   for (const [key, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
-    for (const kw of keywords) {
-      if (lower.includes(kw)) return key as CategoryKey;
-    }
+    if (keywords.some(kw => lower.includes(kw))) return key as CategoryKey;
   }
   return null;
 }
 
-const COLOR_PALETTES: Record<CategoryKey, CategoryColors> = {
-  plumbers: {
-    primary: '#0ea5e9', secondary: '#0284c7', accent: '#0369a1',
-    gradient: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 50%, #0369a1 100%)',
-    light: '#bae6fd', dark: '#075985',
-  },
-  electricians: {
-    primary: '#f59e0b', secondary: '#d97706', accent: '#b45309',
-    gradient: 'linear-gradient(135deg, #f59e0b 0%, #d97706 50%, #b45309 100%)',
-    light: '#fde68a', dark: '#92400e',
-  },
-  painters: {
-    primary: '#ec4899', secondary: '#db2777', accent: '#be185d',
-    gradient: 'linear-gradient(135deg, #ec4899 0%, #db2777 50%, #be185d 100%)',
-    light: '#fbcfe8', dark: '#9d174d',
-  },
-  landscaping: {
-    primary: '#10b981', secondary: '#059669', accent: '#047857',
-    gradient: 'linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%)',
-    light: '#a7f3d0', dark: '#065f46',
-  },
-  hvac: {
-    primary: '#f97316', secondary: '#ea580c', accent: '#dc2626',
-    gradient: 'linear-gradient(135deg, #f97316 0%, #ea580c 50%, #dc2626 100%)',
-    light: '#fed7aa', dark: '#9a3412',
-  },
-  roofers: {
-    primary: '#78716c', secondary: '#57534e', accent: '#44403c',
-    gradient: 'linear-gradient(135deg, #78716c 0%, #57534e 50%, #44403c 100%)',
-    light: '#d6d3d1', dark: '#292524',
-  },
-  cleaners: {
-    primary: '#06b6d4', secondary: '#0891b2', accent: '#0e7490',
-    gradient: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 50%, #0e7490 100%)',
-    light: '#a5f3fc', dark: '#155e75',
-  },
-  handyman: {
-    primary: '#6366f1', secondary: '#4f46e5', accent: '#4338ca',
-    gradient: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 50%, #4338ca 100%)',
-    light: '#c7d2fe', dark: '#3730a3',
-  },
+// ---- Dynamic Gradient Engine ----
+
+const CATEGORY_HUES: Record<CategoryKey, number> = {
+  plumbers: 200,    // Deep Blue
+  electricians: 35, // Amber/Orange
+  painters: 320,    // Pink/Magenta
+  landscaping: 130, // Green
+  hvac: 350,        // Crimson/Red
+  roofers: 220,     // Slate/Indigo
+  cleaners: 180,    // Cyan/Teal
+  handyman: 260     // Purple/Violet
 };
 
-const DEFAULT_PALETTE: CategoryColors = {
-  primary: '#7c3aed', secondary: '#6d28d9', accent: '#5b21b6',
-  gradient: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 50%, #5b21b6 100%)',
-  light: '#ddd6fe', dark: '#4c1d95',
-};
-
-function simpleHash(str: string): number {
-  let hash = 0;
+// DJB2 Hash function for excellent string randomization
+function hashString(str: string): number {
+  let hash = 5381;
   for (let i = 0; i < str.length; i++) {
-    const ch = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + ch;
-    hash |= 0;
+    hash = ((hash << 5) + hash) + str.charCodeAt(i);
   }
   return Math.abs(hash);
 }
 
-export function getDeterministicColors(seed: string): CategoryColors {
-  const hash = simpleHash(seed || 'default');
-  const hues = [225, 210, 260, 160, 185, 335, 45, 25, 195];
-  const hue = hues[hash % hues.length];
-  const finalHue = (hue + (hash % 20) - 10 + 360) % 360;
-  return {
-    primary: `hsl(${finalHue}, 70%, 50%)`,
-    secondary: `hsl(${(finalHue + 20) % 360}, 75%, 45%)`,
-    accent: `hsl(${(finalHue + 40) % 360}, 80%, 40%)`,
-    gradient: `linear-gradient(135deg, hsl(${finalHue}, 70%, 50%) 0%, hsl(${(finalHue + 30) % 360}, 75%, 45%) 100%)`,
-    light: `hsl(${finalHue}, 80%, 85%)`,
-    dark: `hsl(${finalHue}, 90%, 25%)`,
-  };
-}
-
-export function getCategoryColors(category?: string, seed?: string): CategoryColors {
-  if (seed) return getDeterministicColors(seed);
-  const key = detectCategory(category);
-  if (!key) return DEFAULT_PALETTE;
-  return COLOR_PALETTES[key];
-}
-
-export function getInitials(name: string): string {
-  if (!name || typeof name !== 'string') return '??';
-  const fillerWords = new Set(['the', 'and', 'of', 'in', 'a', 'an', 'for', 'at', 'to', 'with', 'co', 'inc', 'llc']);
-  const words = name
-    .replace(/[^a-zA-Z\s'-]/g, ' ')
-    .split(/\s+/)
-    .filter(w => w.length > 0 && !fillerWords.has(w.toLowerCase()));
-  if (words.length === 0) return '??';
-  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
-  return (words[0][0] + words[words.length - 1][0]).toUpperCase();
-}
-
-const PLACEHOLDER_PATTERNS = [
-  /^\/images\//,
-  /default_profile\.png$/,
-  /\/backend\/uploads\/default/,
-  /^https?:\/\/.*placeholder/,
-  /^https?:\/\/.*stock/,
-  /^https?:\/\/via\.placeholder\.com/,
-  /^data:image\/svg\+xml/,
-  /^$/,
-  /^undefined$/,
-  /^null$/,
+// 6 distinct diagonal/linear angles for visual variety
+const GRADIENT_ANGLES = [
+  { x1: '100%', y1: '100%', x2: '0%', y2: '0%' },
+  { x1: '0%', y1: '100%', x2: '100%', y2: '0%' },
+  { x1: '100%', y1: '0%', x2: '0%', y2: '100%' },
+  { x1: '0%', y1: '0%', x2: '100%', y2: '100%' },
+  { x1: '50%', y1: '0%', x2: '50%', y2: '100%' },
+  { x1: '0%', y1: '50%', x2: '100%', y2: '50%' },
 ];
 
-export function isDefaultAvatar(url: string): boolean {
-  if (!url || typeof url !== 'string') return true;
-  return PLACEHOLDER_PATTERNS.some(pattern => pattern.test(url.trim()));
-}
+export function getGradientConfig(category?: string, seed?: string): GradientConfig {
+  const key = detectCategory(category);
+  // Default to a rich, universal purple/blue if no category is matched
+  const baseHue = key ? CATEGORY_HUES[key] : 240; 
 
-export function isRealImageUrl(url: string): boolean {
-  if (!url || typeof url !== 'string') return false;
-  if (isDefaultAvatar(url)) return false;
-  if (url.includes("generate-banner") || url.includes("generate-avatar")) return false;
+  let startHue = baseHue;
+  let satBase = 75;
+  let lightBase = 55;
+  let angleIndex = 0;
+  let sweepDir = 1;
+  let span = 60; // Default safe span
 
-  const trimmed = url.trim();
-  if (trimmed.startsWith('file://')) return true; // React Native file URIs
-  if (trimmed.startsWith('data:image/')) return true; // Allow data URIs for previews
-  if (trimmed.startsWith('data:')) return false;
-  if (trimmed.startsWith('http') && (trimmed.includes('cloudinary') || trimmed.includes('res.cloudinary'))) return true;
-  if (trimmed.startsWith('http') && (trimmed.includes('placeholder') || trimmed.includes('stock'))) return false;
-  if (trimmed.startsWith('http')) return true;
-  if (trimmed.startsWith('/uploads/') || trimmed.startsWith('/profile/') || trimmed.startsWith('/img/')) return true;
-  
-  if (/\.(png|jpg|jpeg|webp|gif|avif)(\?.*)?$/i.test(trimmed)) {
-    return true;
+  if (seed) {
+    const safeHash = hashString(seed);
+    
+    // Spread the hue +/- 40 degrees from the category base. 
+    // This keeps Plumbers generally "aquatic" and Painters "pink/purple" while ensuring every single card is still unique.
+    const hueShift = (safeHash % 80) - 40; 
+    startHue = (baseHue + hueShift + 360) % 360;
+    
+    // Vary saturation and lightness for distinct, clean moods
+    // Elevated lightness floor (55%+) prevents dark "olive/brown" muddy bands
+    satBase = 75 + (safeHash % 20); // 75% to 95%
+    lightBase = 55 + ((safeHash >> 3) % 10); // 55% to 65%
+    
+    // Pick a random angle layout
+    angleIndex = safeHash % GRADIENT_ANGLES.length;
+    
+    // Vary sweep direction
+    sweepDir = (safeHash % 2 === 0) ? 1 : -1;
+    
+    // Limit span to strictly analogous/split-analogous ranges (45 to 85 degrees).
+    // This mathematically prevents interpolation across opposite sides of the color wheel (which creates mud).
+    span = 45 + ((safeHash >> 5) % 40); 
   }
-  return false;
-}
 
-export function generateAvatarDataUrl(name: string, size: number = 200, category?: string): string {
-  const colors = getCategoryColors(category, name);
-  const initials = getInitials(name);
-  const hash = simpleHash(name || 'default');
-  const uid = `av-${hash}`;
-  const s = size;
-
-  const rng = (seed: number) => {
-    const x = Math.sin(seed) * 10000;
-    return x - Math.floor(x);
+  const h = (offset: number) => (startHue + sweepDir * offset + 360) % 360;
+  
+  return {
+    colors: {
+      // Keeping lightness steadily increasing ensures a luminous, glass-like blend without dark midtones
+      c1: `hsl(${h(0)}, ${satBase}%, ${lightBase}%)`,
+      c2: `hsl(${h(span * 0.25)}, ${Math.max(0, satBase - 5)}%, ${lightBase + 4}%)`,
+      c3: `hsl(${h(span * 0.5)}, ${Math.max(0, satBase - 10)}%, ${lightBase + 8}%)`,
+      c4: `hsl(${h(span * 0.75)}, ${Math.max(0, satBase - 5)}%, ${lightBase + 14}%)`,
+      c5: `hsl(${h(span)}, ${satBase}%, ${lightBase + 20}%)`,
+    },
+    angle: GRADIENT_ANGLES[angleIndex]
   };
-
-  const patternOpacity = 0.06 + rng(hash) * 0.06;
-  const patternType = hash % 3;
-
-  let patternSvg = '';
-  if (patternType === 0) {
-    const cx = (30 + rng(hash + 1) * 40) * s / 100;
-    const cy = (30 + rng(hash + 2) * 40) * s / 100;
-    for (let i = 1; i <= 4; i++) {
-      const r = 10 + i * 8;
-      patternSvg += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="white" stroke-width="0.5" opacity="${patternOpacity * (1 - i * 0.15)}" />`;
-    }
-    for (let i = 0; i < 6; i++) {
-      const dx = (15 + rng(hash + 10 + i) * 70) * s / 100;
-      const dy = (15 + rng(hash + 20 + i) * 70) * s / 100;
-      const dr = 1 + rng(hash + 30 + i) * 2.5;
-      patternSvg += `<circle cx="${dx}" cy="${dy}" r="${dr}" fill="white" opacity="${patternOpacity * 0.8}" />`;
-    }
-  } else if (patternType === 1) {
-    const baseX = (20 + rng(hash + 1) * 30) * s / 100;
-    const baseY = (20 + rng(hash + 2) * 30) * s / 100;
-    const hexR = 12 + rng(hash + 3) * 10;
-    const hexPoints = Array.from({ length: 6 }, (_, i) => {
-      const angle = (Math.PI / 3) * i - Math.PI / 6;
-      return `${baseX + hexR * Math.cos(angle)},${baseY + hexR * Math.sin(angle)}`;
-    }).join(' ');
-    patternSvg += `<polygon points="${hexPoints}" fill="none" stroke="white" stroke-width="0.6" opacity="${patternOpacity}" />`;
-    const hex2R = hexR * 0.55;
-    const hex2X = (65 + rng(hash + 4) * 25) * s / 100;
-    const hex2Y = (60 + rng(hash + 5) * 25) * s / 100;
-    const hex2Points = Array.from({ length: 6 }, (_, i) => {
-      const angle = (Math.PI / 3) * i;
-      return `${hex2X + hex2R * Math.cos(angle)},${hex2Y + hex2R * Math.sin(angle)}`;
-    }).join(' ');
-    patternSvg += `<polygon points="${hex2Points}" fill="none" stroke="white" stroke-width="0.5" opacity="${patternOpacity * 0.7}" />`;
-  } else {
-    for (let i = 0; i < 5; i++) {
-      const x1 = (10 + rng(hash + 10 + i) * 30) * s / 100;
-      const y1 = (5 + i * 22) * s / 100;
-      const x2 = x1 + (15 + rng(hash + 20 + i) * 30) * s / 100;
-      const y2 = y1 + (18 + rng(hash + 30 + i) * 12) * s / 100;
-      patternSvg += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="white" stroke-width="0.5" opacity="${patternOpacity}" stroke-linecap="round" />`;
-    }
-  }
-
-  const fontSize = s * (initials.length > 2 ? 0.22 : 0.3);
-
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${s} ${s}" preserveAspectRatio="xMidYMid slice">
-  <defs>
-    <radialGradient id="${uid}-rg1" cx="30%" cy="25%" r="80%" fx="25%" fy="20%">
-      <stop offset="0%" stop-color="${colors.light}" stop-opacity="0.4" />
-      <stop offset="45%" stop-color="${colors.primary}" />
-      <stop offset="100%" stop-color="${colors.dark}" />
-    </radialGradient>
-    <radialGradient id="${uid}-rg2" cx="70%" cy="75%" r="60%" fx="75%" fy="80%">
-      <stop offset="0%" stop-color="${colors.secondary}" stop-opacity="0.6" />
-      <stop offset="100%" stop-color="${colors.accent}" stop-opacity="0" />
-    </radialGradient>
-    <radialGradient id="${uid}-rg3" cx="35%" cy="30%" r="50%">
-      <stop offset="0%" stop-color="white" stop-opacity="0.12" />
-      <stop offset="100%" stop-color="white" stop-opacity="0" />
-    </radialGradient>
-    <clipPath id="${uid}-clip">
-      <circle cx="${s / 2}" cy="${s / 2}" r="${s / 2}" />
-    </clipPath>
-  </defs>
-  <g clip-path="url(#${uid}-clip)">
-    <rect width="${s}" height="${s}" fill="${colors.accent}" />
-    <rect width="${s}" height="${s}" fill="url(#${uid}-rg1)" />
-    <rect width="${s}" height="${s}" fill="url(#${uid}-rg2)" />
-    <g>${patternSvg}</g>
-    <rect width="${s}" height="${s}" fill="url(#${uid}-rg3)" />
-    <text
-      x="${s / 2}" y="${s * 0.52}"
-      text-anchor="middle"
-      dominant-baseline="central"
-      font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
-      font-size="${fontSize}"
-      font-weight="600"
-      fill="white"
-      letter-spacing="0.02em"
-    >${initials}</text>
-  </g>
-  <circle cx="${s / 2}" cy="${s / 2}" r="${s / 2 - 0.5}" fill="none" stroke="white" stroke-opacity="0.15" stroke-width="1" />
-</svg>`;
-
-  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
-export function generateBannerDataUrl(
-  name: string,
-  category?: string,
-  size: BannerSize | { width: number; height: number } | number = { width: 1600, height: 800 },
-  heightArg?: number
-): string {
-  const colors = getCategoryColors(category, name);
-  const hash = simpleHash(name || 'default');
-  const uid = `bn-${hash}`;
-  
-  let w = 1600;
-  let h = 800;
-  
-  if (typeof size === 'number') {
-    w = size;
-    h = heightArg || 400;
-  } else {
-    w = size.width;
-    h = size.height;
-  }
-
-  const rng = (seed: number) => {
-    const x = Math.sin(seed) * 10000;
-    return x - Math.floor(x);
-  };
-
-  let patterns = '';
-  
-  const angle = 15 + rng(hash) * 30;
-  patterns += `<path d="M${w * 0.4},0 L${w},0 L${w},${h} L${w * 0.1},${h} Z" fill="white" opacity="0.04" />`;
-  patterns += `<path d="M${w * 0.6},0 L${w},0 L${w},${h * 0.7} Z" fill="black" opacity="0.03" />`;
-
-  for (let i = 0; i < 3; i++) {
-    const sw = 20 + rng(hash + i) * 60;
-    const sx = rng(hash + i * 10) * w;
-    patterns += `<rect x="${sx}" y="0" width="${sw}" height="${h}" fill="white" opacity="0.02" transform="skewX(${-angle})" />`;
-  }
-
-  const dotSpacing = 40;
-  let dots = '';
-  for (let x = dotSpacing; x < w; x += dotSpacing) {
-    for (let y = dotSpacing; y < h; y += dotSpacing) {
-      if (rng(hash + x + y) > 0.85) {
-        dots += `<circle cx="${x}" cy="${y}" r="1.5" fill="white" opacity="0.1" />`;
-      }
-    }
-  }
-  patterns += dots;
-
-  const meshColors = [
-    colors.primary,
-    colors.secondary,
-    colors.accent,
-    colors.dark,
-    colors.light
-  ];
-  
-  const color1 = meshColors[hash % meshColors.length];
-  const color2 = meshColors[(hash + 2) % meshColors.length];
-  let displayName = name || 'Ratedeed';
-  
-  if (displayName.includes('-') && !displayName.includes(' ')) {
-    displayName = displayName
-      .replace(/-/g, ' ')
-      .replace(/\b\w/g, c => c.toUpperCase());
-  }
-
-  const categoryLabel = category || '';
-  
-  const charCount = displayName.length;
-  let baseFontSizeMultiplier = 0.075;
-  if (charCount > 20) baseFontSizeMultiplier = 0.06;
-  if (charCount > 30) baseFontSizeMultiplier = 0.045;
-  
-  const titleFontSize = Math.min(w * baseFontSizeMultiplier, h * 0.18, 96);
-  const categoryFontSize = Math.min(w * 0.025, h * 0.08, 32);
-
-  const escapedName = escapeXml(displayName);
-  const escapedCategory = categoryLabel ? escapeXml(categoryLabel) : '';
-
-  const maxLineChars = Math.floor(w / (titleFontSize * 0.55));
-  let nameSvg = '';
-  let hasSecondLine = false;
-  
-  if (escapedName.length > maxLineChars) {
-    const words = escapedName.split(/[\s-]+/);
-    let line1 = '';
-    let line2 = '';
-    let currentLine = 1;
-    
-    for (const word of words) {
-      if (currentLine === 1 && (line1.length + word.length + 1) <= maxLineChars) {
-        line1 += (line1 ? ' ' : '') + word;
-      } else if (currentLine === 1 && line1 === '') {
-        line1 = word;
-        currentLine = 2;
-      } else {
-        currentLine = 2;
-        line2 += (line2 ? ' ' : '') + word;
-      }
-    }
-    
-    if (line2) {
-      hasSecondLine = true;
-      if (line2.length > maxLineChars) line2 = line2.substring(0, maxLineChars - 3) + '...';
-      nameSvg = `
-        <text x="50%" y="${h * 0.42}" text-anchor="middle" dominant-baseline="central" font-family="system-ui, -apple-system, sans-serif" font-size="${titleFontSize}" font-weight="800" fill="white">${line1}</text>
-        <text x="50%" y="${h * 0.42 + titleFontSize * 1.15}" text-anchor="middle" dominant-baseline="central" font-family="system-ui, -apple-system, sans-serif" font-size="${titleFontSize}" font-weight="800" fill="white">${line2}</text>
-      `;
-    } else {
-      nameSvg = `<text x="50%" y="${h * 0.45}" text-anchor="middle" dominant-baseline="central" font-family="system-ui, -apple-system, sans-serif" font-size="${titleFontSize}" font-weight="800" fill="white">${line1}</text>`;
-    }
-  } else {
-    nameSvg = `<text x="50%" y="${h * 0.45}" text-anchor="middle" dominant-baseline="central" font-family="system-ui, -apple-system, sans-serif" font-size="${titleFontSize}" font-weight="800" fill="white">${escapedName}</text>`;
-  }
-
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid slice">
-  <defs>
-    <linearGradient id="${uid}-bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="${colors.primary}" />
-      <stop offset="50%" stop-color="${colors.secondary}" />
-      <stop offset="100%" stop-color="${colors.dark}" />
-    </linearGradient>
-    
-    <radialGradient id="${uid}-mesh1" cx="20%" cy="30%" r="70%">
-      <stop offset="0%" stop-color="${color1}" stop-opacity="0.6" />
-      <stop offset="100%" stop-color="${color1}" stop-opacity="0" />
-    </radialGradient>
-    <radialGradient id="${uid}-mesh2" cx="80%" cy="70%" r="70%">
-      <stop offset="0%" stop-color="${color2}" stop-opacity="0.5" />
-      <stop offset="100%" stop-color="${color2}" stop-opacity="0" />
-    </radialGradient>
-  </defs>
-
-  <rect width="${w}" height="${h}" fill="url(#${uid}-bg)" />
-  <rect width="${w}" height="${h}" fill="url(#${uid}-mesh1)" />
-  <rect width="${w}" height="${h}" fill="url(#${uid}-mesh2)" />
-  
-  <g>${patterns}</g>
-<!-- Text Content -->
-<g>
-  ${nameSvg}
-
-  ${escapedCategory ? `
-  <text
-    x="50%"
-    y="${h * (hasSecondLine ? 0.42 + (titleFontSize / h) * 2.2 : 0.45 + (titleFontSize / h) * 1.2)}"
-    text-anchor="middle"
-    dominant-baseline="central"
-    font-family="system-ui, -apple-system, sans-serif"
-    font-size="${categoryFontSize}"
-    font-weight="500"
-    fill="white"
-    fill-opacity="0.85"
-    letter-spacing="0.1em"
-    text-transform="uppercase"
-  >${escapedCategory}</text>
-  ` : ''}
-</g>
-
-  <rect width="${w}" height="${h}" fill="white" fill-opacity="0.03" />
-</svg>`;
-
-  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+// Backward compatible export
+export function getCategoryColors(category?: string, seed?: string): CategoryColors {
+  return getGradientConfig(category, seed).colors;
 }
+
+// ---- Utilities ----
 
 function escapeXml(str: string): string {
   if (!str) return '';
@@ -459,35 +154,232 @@ function escapeXml(str: string): string {
     .replace(/'/g, '&apos;');
 }
 
-export function getProfileImageUrl(
-  name: string,
-  profilePicture: string,
-  category?: string,
-  size: number = 200,
-): string {
-  if (isRealImageUrl(profilePicture)) return profilePicture;
-  return generateAvatarDataUrl(name, size, category);
+export function getInitials(name: string): string {
+  if (!name || typeof name !== 'string') return '??';
+  const fillerWords = new Set(['the', 'and', 'of', 'in', 'a', 'an', 'for', 'at', 'to', 'with', 'co', 'inc', 'llc']);
+  
+  const words = name
+    .replace(/[^a-zA-Z\s'-]/g, ' ')
+    .split(/[\s-]+/)
+    .filter(w => w.length > 0 && !fillerWords.has(w.toLowerCase()));
+  
+  if (words.length === 0) return '??';
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+  return (words[0][0] + words[words.length - 1][0]).toUpperCase();
 }
 
-export function getCoverImageUrl(
-  name: string,
-  coverImage: string,
-  category?: string,
-  width: number = 1600,
-  height: number = 800
-): string {
-  if (isRealImageUrl(coverImage)) return coverImage;
-  return generateBannerDataUrl(name, category, { width, height });
+// ---- Image URL Validators ----
+
+const DEFAULT_PATTERNS = [
+  /^\/images\//, 
+  /default_profile\.png$/, 
+  /\/backend\/uploads\/default/,
+  /^https?:\/\/.*placeholder/i, 
+  /^https?:\/\/.*stock/i, 
+  /^https?:\/\/via\.placeholder\.com/i,
+  /^data:image\/svg\+xml/i, 
+  /^$/, 
+  /^undefined$/, 
+  /^null$/,
+];
+
+export function isDefaultAvatar(url: string): boolean {
+  if (!url || typeof url !== 'string') return true;
+  const trimmed = url.trim();
+  return DEFAULT_PATTERNS.some(pattern => pattern.test(trimmed));
 }
 
-export function getAvatarUrl(
-  profilePicture: string,
+export function isRealImageUrl(url: string): boolean {
+  if (!url || typeof url !== 'string') return false;
+  if (isDefaultAvatar(url)) return false;
+  if (url.includes("generate-banner") || url.includes("generate-avatar")) return false;
+
+  const trimmed = url.trim();
+  
+  if (trimmed.startsWith('file://') || /^data:image\/(?!svg).+$/i.test(trimmed)) return true; 
+  if (trimmed.startsWith('data:')) return false; 
+  
+  if (trimmed.startsWith('http')) {
+    if (trimmed.includes('placeholder') || trimmed.includes('stock')) return false;
+    return true;
+  }
+  
+  if (trimmed.startsWith('/uploads/') || trimmed.startsWith('/profile/') || trimmed.startsWith('/img/')) return true;
+  if (/\.(png|jpg|jpeg|webp|gif|avif)(\?.*)?$/i.test(trimmed)) return true;
+  
+  return false;
+}
+
+// ---- Caching for Performance ----
+const avatarCache = new Map<string, string>();
+const bannerCache = new Map<string, string>();
+
+// ---- Premium SVG Generators ----
+
+function buildSvgDefs(uid: string, config: GradientConfig): string {
+  const { colors, angle } = config;
+  return `
+    <defs>
+      <linearGradient id="${uid}-grad" x1="${angle.x1}" y1="${angle.y1}" x2="${angle.x2}" y2="${angle.y2}">
+        <stop offset="0%" stop-color="${colors.c1}" />
+        <stop offset="20%" stop-color="${colors.c2}" />
+        <stop offset="39%" stop-color="${colors.c3}" />
+        <stop offset="76%" stop-color="${colors.c4}" />
+        <stop offset="100%" stop-color="${colors.c5}" />
+      </linearGradient>
+      <filter id="${uid}-noise">
+        <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" stitchTiles="stitch"/>
+        <feColorMatrix type="matrix" values="1 0 0 0 0, 0 1 0 0 0, 0 0 1 0 0, 0 0 0 0.05 0" />
+      </filter>
+    </defs>
+  `.trim();
+}
+
+export function generateAvatarDataUrl(name: string, size: number = 200, category?: string): string {
+  const cacheKey = `av-${name}-${size}-${category}`;
+  if (avatarCache.has(cacheKey)) return avatarCache.get(cacheKey)!;
+
+  const config = getGradientConfig(category, name);
+  const initials = getInitials(name);
+  const hash = hashString(name || 'default');
+  const uid = `av-${hash}-${size}`;
+  const s = size;
+
+  const fontSize = s * (initials.length > 2 ? 0.26 : 0.36);
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${s} ${s}" preserveAspectRatio="xMidYMid slice">
+  ${buildSvgDefs(uid, config)}
+  <clipPath id="${uid}-clip"><circle cx="${s / 2}" cy="${s / 2}" r="${s / 2}" /></clipPath>
+  
+  <g clip-path="url(#${uid}-clip)">
+    <rect width="${s}" height="${s}" fill="url(#${uid}-grad)" />
+    <rect width="${s}" height="${s}" filter="url(#${uid}-noise)" pointer-events="none" style="mix-blend-mode: overlay;" />
+    <text x="${s / 2}" y="${s * 0.51}" text-anchor="middle" dominant-baseline="central"
+      font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', sans-serif"
+      font-size="${fontSize}" font-weight="700" fill="#ffffff" letter-spacing="-0.02em"
+      style="text-shadow: 0px 2px 8px rgba(0,0,0,0.15);">
+      ${initials}
+    </text>
+  </g>
+  <circle cx="${s / 2}" cy="${s / 2}" r="${s / 2 - 0.75}" fill="none" stroke="#ffffff" stroke-opacity="0.3" stroke-width="1.5" />
+</svg>`;
+
+  const dataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+  avatarCache.set(cacheKey, dataUrl);
+  return dataUrl;
+}
+
+function wrapText(text: string, maxChars: number): string[] {
+  const words = text.split(/[\s-]+/);
+  const lines: string[] = [];
+  let currentLine = '';
+
+  for (const word of words) {
+    const testLine = currentLine ? `${currentLine} ${word}` : word;
+    if (testLine.length <= maxChars) {
+      currentLine = testLine;
+    } else {
+      if (currentLine) lines.push(currentLine);
+      currentLine = word;
+    }
+  }
+  if (currentLine) lines.push(currentLine);
+
+  if (lines.length > 2) {
+    lines[1] = lines.slice(1).join(' ');
+    if (lines[1].length > maxChars) {
+      lines[1] = lines[1].substring(0, maxChars - 3).trimEnd() + '...';
+    }
+    lines.length = 2;
+  }
+  return lines;
+}
+
+export function generateBannerDataUrl(
   name: string,
   category?: string,
-  size: number = 200,
+  size: BannerSize | number = { width: 1600, height: 800 },
+  heightArg?: number
 ): string {
-  if (isRealImageUrl(profilePicture)) return profilePicture;
-  return generateAvatarDataUrl(name, size, category);
+  const { width: w, height: h } = typeof size === 'number' 
+    ? { width: size, height: heightArg || 400 } 
+    : { width: size.width, height: size.height };
+
+  const cacheKey = `bn-${name}-${category}-${w}x${h}`;
+  if (bannerCache.has(cacheKey)) return bannerCache.get(cacheKey)!;
+
+  const config = getGradientConfig(category, name);
+  const hash = hashString(name || 'default');
+  const uid = `bn-${hash}-${w}x${h}`;
+  
+  let displayName = name || 'Ratedeed';
+  if (displayName.includes('-') && !displayName.includes(' ')) {
+    displayName = displayName.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  const charCount = displayName.length;
+  const fontScale = charCount > 30 ? 0.045 : charCount > 20 ? 0.06 : 0.075;
+  const titleFontSize = Math.min(w * fontScale, h * 0.16, 84);
+  const categoryFontSize = Math.min(w * 0.016, h * 0.035, 20);
+
+  const maxLineChars = Math.floor(w / (titleFontSize * 0.55));
+  const lines = wrapText(displayName, maxLineChars);
+  
+  const lineHeight = titleFontSize * 1.15;
+  const hasCategory = !!category;
+  const titleYOffset = hasCategory ? -(h * 0.03) : 0; 
+  const startY = (h / 2) + titleYOffset - ((lines.length - 1) * lineHeight) / 2;
+
+  const nameSvg = lines.map((line, i) => 
+    `<text x="50%" y="${startY + (i * lineHeight)}" text-anchor="middle" dominant-baseline="central"
+      font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', sans-serif" 
+      font-size="${titleFontSize}" font-weight="800" letter-spacing="-0.02em"
+      fill="#ffffff" style="text-shadow: 0px 4px 16px rgba(0,0,0,0.15);">
+      ${escapeXml(line)}
+    </text>`
+  ).join('\n  ');
+
+  let categorySvg = '';
+  if (hasCategory) {
+    const categoryY = startY + ((lines.length - 1) * lineHeight) + (h * 0.1);
+    categorySvg = `
+  <line x1="${w/2 - 16}" y1="${categoryY - (h * 0.035)}" x2="${w/2 + 16}" y2="${categoryY - (h * 0.035)}" 
+    stroke="rgba(255,255,255,0.4)" stroke-width="2" stroke-linecap="round" />
+  <text x="50%" y="${categoryY}" text-anchor="middle" dominant-baseline="central" 
+    font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', sans-serif" 
+    font-size="${categoryFontSize}" font-weight="700" fill="rgba(255,255,255,0.9)" 
+    letter-spacing="0.2em" style="text-transform: uppercase; text-shadow: 0px 2px 8px rgba(0,0,0,0.1);">
+    ${escapeXml(category!)}
+  </text>`;
+  }
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid slice">
+  ${buildSvgDefs(uid, config)}
+  <rect width="${w}" height="${h}" fill="url(#${uid}-grad)" />
+  <rect width="${w}" height="${h}" filter="url(#${uid}-noise)" pointer-events="none" style="mix-blend-mode: overlay;" />
+  <rect x="1" y="1" width="${w-2}" height="${h-2}" fill="none" stroke="#ffffff" stroke-opacity="0.2" stroke-width="2" rx="4" pointer-events="none" />
+  <g>
+  ${nameSvg}${categorySvg}
+  </g>
+</svg>`;
+
+  const dataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+  bannerCache.set(cacheKey, dataUrl);
+  return dataUrl;
+}
+
+// ---- Public API Helpers ----
+
+export function getProfileImageUrl(name: string, profilePicture: string, category?: string, size: number = 200): string {
+  return isRealImageUrl(profilePicture) ? profilePicture : generateAvatarDataUrl(name, size, category);
+}
+
+export function getCoverImageUrl(name: string, coverImage: string, category?: string, width: number = 1600, height: number = 800): string {
+  return isRealImageUrl(coverImage) ? coverImage : generateBannerDataUrl(name, category, { width, height });
+}
+
+export function getAvatarUrl(profilePicture: string, name: string, category?: string, size: number = 200): string {
+  return getProfileImageUrl(name, profilePicture, category, size);
 }
 
 export function isDefaultImage(url: string): boolean {

@@ -1141,6 +1141,11 @@ export const updateQuoteStatus = async (quoteId: string, status: 'accepted' | 'r
   return put(`${API_BASE}/quotes/${quoteId}/status`, { status }, authHeaders);
 };
 
+export const getPlatformFeePercent = async (): Promise<{ platformFeePercent: number }> => {
+  const authHeaders = await getAuthHeaders();
+  return get(`${API_BASE}/quotes/platform-fee-percent`, authHeaders);
+};
+
 // ==========================================
 // Dispute Resolution
 // ==========================================

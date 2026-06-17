@@ -17,9 +17,10 @@ interface AnalyticsTabProps {
   reviews: any[];
   profile: any;
   loading?: boolean;
+  onViewAllJobs?: () => void;
 }
 
-export default function AnalyticsTab({ jobs, quotes, reviews, profile, loading }: AnalyticsTabProps) {
+export default function AnalyticsTab({ jobs, quotes, reviews, profile, loading, onViewAllJobs }: AnalyticsTabProps) {
   const isDark = useColorScheme() === 'dark';
   const [dateRange, setDateRange] = useState<DateRange>('month');
   const [showDropdown, setShowDropdown] = useState(false);
@@ -442,29 +443,19 @@ export default function AnalyticsTab({ jobs, quotes, reviews, profile, loading }
         </View>
 
         {/* Quick Actions */}
-        <View className="bg-white dark:bg-neutral-900 rounded-xl p-4 border border-neutral-100 dark:border-neutral-700">
-          {/* TODO: Quick Actions not yet implemented */}
-          {/* <Text className="text-sm font-bold text-neutral-900 mb-3">Quick Actions</Text>
-          <View style={{ gap: 8 }}>
-            <TouchableOpacity className="w-full flex-row items-center justify-between bg-neutral-900 rounded-xl px-4 py-3">
-              <View className="flex-row items-center" style={{ gap: 8 }}>
-                <FontAwesome5 name="download" size={13} color="#fff" />
-                <Text className="text-sm font-semibold text-white">Download Report</Text>
-              </View>
-              <FontAwesome5 name="chevron-right" size={12} color="#fff" />
+        {onViewAllJobs && (
+          <View className="bg-white dark:bg-neutral-900 rounded-xl p-4 border border-neutral-100 dark:border-neutral-700">
+            <Text className="text-sm font-bold text-neutral-900 dark:text-white mb-3">Quick Actions</Text>
+            <TouchableOpacity 
+              onPress={onViewAllJobs} 
+              className="w-full flex-row items-center justify-center bg-indigo-600 dark:bg-indigo-500 rounded-xl py-3" 
+              style={{ gap: 8 }}
+            >
+              <FontAwesome5 name="briefcase" size={13} color="#fff" />
+              <Text className="text-sm font-semibold text-white">View All Jobs</Text>
             </TouchableOpacity>
-            <View className="flex-row" style={{ gap: 8 }}>
-              <TouchableOpacity className="flex-1 flex-row items-center justify-center bg-neutral-100 rounded-xl py-3" style={{ gap: 6 }}>
-                <FontAwesome5 name="share-alt" size={12} color="#525252" />
-                <Text className="text-xs font-semibold text-neutral-700">Share Analytics</Text>
-              </TouchableOpacity>
-              <TouchableOpacity className="flex-1 flex-row items-center justify-center bg-neutral-100 rounded-xl py-3" style={{ gap: 6 }}>
-                <FontAwesome5 name="briefcase" size={11} color="#525252" />
-                <Text className="text-xs font-semibold text-neutral-700">View All Jobs</Text>
-              </TouchableOpacity>
-            </View>
-          </View> */}
-        </View>
+          </View>
+        )}
 
       </View>
     </ScrollView>

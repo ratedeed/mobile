@@ -295,7 +295,7 @@ export default function ContractorEditProfileScreen() {
       });
       setVerificationResult({
         success: true,
-        message: 'Verification request submitted! We will review it within 2-3 business days.',
+        message: 'License verification request submitted! Our team will review it.',
       });
       setVerifLicenseNumber('');
       setLicenseDocUri(null);
@@ -447,7 +447,7 @@ export default function ContractorEditProfileScreen() {
                 {licenseStatus === 'pending' && (
                   <View className="bg-amber-50 rounded-xl p-4 border border-amber-100">
                     <Text className="text-sm font-semibold text-amber-800">Reviewing Verification</Text>
-                    <Text className="text-xs text-amber-700 mt-1">Your document is being reviewed. This usually takes 2-3 business days.</Text>
+                    <Text className="text-xs text-amber-700 mt-1">Your document is being reviewed. We will update your status as soon as the review is complete.</Text>
                   </View>
                 )}
 
@@ -729,7 +729,7 @@ export default function ContractorEditProfileScreen() {
                     </View>
                   </View>
                 ))}
-                <TouchableOpacity onPress={() => navigation.navigate('ContractorDashboard')} className="w-full py-3 border-2 border-dashed border-neutral-200 dark:border-neutral-700 rounded-xl items-center flex-row justify-center">
+                <TouchableOpacity onPress={() => navigation.navigate('ContractorDashboard', { openCreatePost: true })} className="w-full py-3 border-2 border-dashed border-neutral-200 dark:border-neutral-700 rounded-xl items-center flex-row justify-center">
                   <FontAwesome5 name="plus" size={12} color={isDark ? '#a3a3a3' : '#737373'} />
                   <Text className="text-sm font-semibold text-neutral-500 dark:text-neutral-400 ml-2">Create New Post</Text>
                 </TouchableOpacity>

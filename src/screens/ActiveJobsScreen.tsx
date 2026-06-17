@@ -344,13 +344,11 @@ export default function ActiveJobsScreen() {
                       </View>
                     )}
 
-                    {(quote.status.toLowerCase() === 'awaiting_payment' || quote.status.toLowerCase() === 'funded_in_progress' || quote.status.toLowerCase() === 'partially_funded' || quote.status.toLowerCase() === 'quoted' || quote.status.toLowerCase() === 'pending_user_approval') && (
+                    {(quote.status.toLowerCase() === 'awaiting_payment' || quote.status.toLowerCase() === 'quoted' || quote.status.toLowerCase() === 'pending_user_approval') && (
                       <Pressable
                         onPress={() => Alert.alert(
                           'Cancel Job',
-                          ['funded_in_progress', 'partially_funded'].includes(quote.status.toLowerCase())
-                            ? 'This will cancel the job and refund your payment from escrow. Continue?'
-                            : 'This will cancel the job. Continue?',
+                          'This will cancel the job. Continue?',
                           [
                             { text: 'Keep Job', style: 'cancel' },
                             { text: 'Cancel Job', style: 'destructive', onPress: () => handleCancel(quote.jobId || quote._id) }

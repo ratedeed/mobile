@@ -161,7 +161,7 @@ const BusinessDetailScreen: React.FC = () => {
     try {
       const cloudinaryUrl = await uploadToCloudinary(claimDocumentFile, CLOUDINARY_FOLDERS.LICENSES);
       await submitClaim(contractor?._id || id, cloudinaryUrl);
-      Alert.alert('Claim Submitted', 'Your claim request has been submitted. Our team will review it within 1-3 business days.');
+      Alert.alert('Claim Submitted', 'Your claim request has been submitted. Our team will review it and notify you.');
       setShowClaimModal(false);
       setClaimDocumentFile(null);
     } catch (err: any) {

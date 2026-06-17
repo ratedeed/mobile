@@ -510,7 +510,7 @@ export default function ContractorEditProfileModal({ visible, onClose, onProfile
       });
       setVerificationResult({
         success: true,
-        message: 'Verification request submitted! We will review it within 2-3 business days.',
+        message: 'License verification request submitted! Our team will review it.',
       });
       setVerifLicenseNumber('');
       setLicenseDocUri(null);
@@ -1373,7 +1373,7 @@ export default function ContractorEditProfileModal({ visible, onClose, onProfile
                                 lineHeight: 20,
                               }}
                             >
-                              We're reviewing your documents. This usually takes 2-3 business days.
+                              We're reviewing your documents. We will update your status as soon as the review is complete.
                             </Text>
                           </View>
                         ) : licenseStatus === 'rejected' ? (

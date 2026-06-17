@@ -318,12 +318,19 @@ export default function JobDetailScreen() {
                   )}
                 </Text>
               </View>
-              <View className="flex-row justify-between py-1">
-                <Text className="text-[12px] text-neutral-500 dark:text-neutral-400">Platform fee (5%)</Text>
-                <Text className="text-[12px] text-neutral-500 dark:text-neutral-400">
-                  {formatCurrency(quote.serviceFee || Math.round((quote.totalAmount || 0) * 0.05))}
-                </Text>
-              </View>
+              {(() => {
+                const subtotalVal = quote.subtotal || quote.lineItems?.reduce((s: number, i: any) => s + (i.amount || 0), 0) || 0;
+                const serviceFeeVal = quote.serviceFee || Math.round((quote.totalAmount || 0) * 0.05);
+                const feePercent = subtotalVal > 0 ? Math.round((serviceFeeVal / subtotalVal) * 100) : 5;
+                return (
+                  <View className="flex-row justify-between py-1">
+                    <Text className="text-[12px] text-neutral-500 dark:text-neutral-400">Platform fee ({feePercent}%)</Text>
+                    <Text className="text-[12px] text-neutral-500 dark:text-neutral-400">
+                      {formatCurrency(serviceFeeVal)}
+                    </Text>
+                  </View>
+                );
+              })()}
               <View className="h-px bg-neutral-200 dark:bg-neutral-700 my-2" />
               <View className="flex-row justify-between">
                 <Text className="text-[14px] font-bold text-neutral-900 dark:text-neutral-50">Total</Text>
@@ -648,6 +655,18 @@ export default function JobDetailScreen() {
                     <Text className="text-[14px] font-bold text-white">Release Payment</Text>
                   </Pressable>
                 )}
+              {isUser && job.status === 'funded_in_progress' && (
+                <View className="flex-row items-center justify-center py-3 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900 rounded-xl" style={{ gap: 8 }}>
+                  <FontAwesome5 name="shield-alt" size={14} color="#059669" />
+                  <Text className="text-[14px] font-semibold text-emerald-800 dark:text-emerald-300">Payment secured in escrow</Text>
+                </View>
+              )}
+              {isContractor && job.status === 'completed_pending_release' && (
+                <View className="flex-row items-center justify-center py-3 bg-neutral-50 dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700" style={{ gap: 8 }}>
+                  <FontAwesome5 name="clock" size={14} color={isDark ? "#a3a3a3" : "#737373"} />
+                  <Text className="text-[14px] font-semibold text-neutral-600 dark:text-neutral-400">Awaiting homeowner approval to release payment</Text>
+                </View>
+              )}
               {isUser && !['disputed', 'cancelled', 'refunded', 'completed_paid'].includes(job.status) && (
                 <Pressable
                   onPress={() => navigation.navigate('DisputeScreen', { jobId: job._id })}
@@ -658,7 +677,7 @@ export default function JobDetailScreen() {
                   <Text className="text-[13px] font-semibold text-red-600 dark:text-red-400">Raise Dispute</Text>
                 </Pressable>
               )}
-              {['awaiting_payment', 'funded_in_progress', 'partially_funded'].includes(job.status) && (
+              {job.status === 'awaiting_payment' && (
                 <Pressable
                   onPress={handleCancelJob}
                   disabled={actionLoading === 'cancel this job'}

@@ -305,7 +305,7 @@ const ContractorDashboardScreen: React.FC = () => {
       });
       setVerificationResult({
         success: true,
-        message: 'Verification request submitted! We will review it within 2-3 business days.',
+        message: 'License verification request submitted! Our team will review it.',
       });
       setLicenseDocUri(null);
       // Refresh contractor data
@@ -336,7 +336,12 @@ const ContractorDashboardScreen: React.FC = () => {
         quality: 0.8,
       });
       if (result.canceled || !result.assets?.length) return null;
-      return result.assets[0].uri;
+      const asset = result.assets[0];
+      if (asset.fileSize && asset.fileSize > 5 * 1024 * 1024) {
+        Alert.alert("File too large", "Please choose an image under 5MB.");
+        return null;
+      }
+      return asset.uri;
     } catch (err: any) {
       Alert.alert('Error', err?.message || 'Failed to select image');
       return null;
@@ -489,7 +494,14 @@ const ContractorDashboardScreen: React.FC = () => {
       Alert.alert('Success', 'Stripe account connected successfully!');
       loadData(); // Refresh status
     }
-  }, [loadData, (route.params as any)?.initialTab, (route.params as any)?.stripe_return]);
+
+    // Handle opening the create post sheet
+    const openCreatePost = (route.params as any)?.openCreatePost;
+    if (openCreatePost) {
+      setShowCreatePost(true);
+      navigation.setParams({ openCreatePost: undefined } as any);
+    }
+  }, [loadData, (route.params as any)?.initialTab, (route.params as any)?.stripe_return, (route.params as any)?.openCreatePost]);
 
 
   useEffect(() => {
@@ -514,23 +526,35 @@ const ContractorDashboardScreen: React.FC = () => {
       setShowCreatePost(false);
       loadData();
       Alert.alert('Success', 'Post created successfully');
-    } catch { Alert.alert('Error', 'Failed to create post'); }
-    finally { setPostSubmitting(false); }
+    } catch (err: any) {
+      console.error(err);
+      Alert.alert('Error', err?.message || 'Failed to create post');
+    } finally {
+      setPostSubmitting(false);
+    }
   };
 
   const handleLikePost = async (postId: string, isLiked: boolean) => {
     try {
       if (isLiked) await unlikePost(postId); else await likePost(postId);
       setPosts(prev => prev.map(p => p._id === postId ? { ...p, likes: isLiked ? p.likes.filter((id: string) => id !== currentUserId) : [...p.likes, currentUserId] } : p));
-    } catch { Alert.alert('Error', 'Failed to update like'); }
+    } catch (err: any) {
+      console.error(err);
+      Alert.alert('Error', err?.message || 'Failed to update like');
+    }
   };
 
   const handleDeletePost = async (postId: string) => {
     Alert.alert('Delete Post', 'Are you sure?', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Delete', style: 'destructive', onPress: async () => {
-      try { await deletePost(postId); setPosts(prev => prev.filter(p => p._id !== postId)); }
-      catch { Alert.alert("Error", "Failed to delete post"); }
+      try {
+        await deletePost(postId);
+        setPosts(prev => prev.filter(p => p._id !== postId));
+      } catch (err: any) {
+        console.error(err);
+        Alert.alert("Error", err?.message || "Failed to delete post");
+      }
     }}]);
   };
 
@@ -576,12 +600,21 @@ const ContractorDashboardScreen: React.FC = () => {
     }
     setPortfolioSubmitting(true);
     try {
-      await addPortfolioItem(portfolioItem);
+      let finalImageUrl = portfolioItem.imageUrl;
+      if (finalImageUrl && finalImageUrl.startsWith('file://')) {
+        finalImageUrl = await uploadToCloudinary(finalImageUrl, CLOUDINARY_FOLDERS.PORTFOLIO);
+      }
+      await addPortfolioItem({
+        ...portfolioItem,
+        imageUrl: finalImageUrl,
+        images: finalImageUrl ? [finalImageUrl] : []
+      });
       setPortfolioItem({ name: '', description: '', imageUrl: '' });
       setShowAddPortfolio(false);
       loadData();
       Alert.alert('Success', 'Portfolio project added');
     } catch (err: any) {
+      console.error(err);
       Alert.alert('Error', err?.message || 'Failed to add portfolio item');
     } finally {
       setPortfolioSubmitting(false);
@@ -1277,6 +1310,7 @@ const ContractorDashboardScreen: React.FC = () => {
               reviews={reviews}
               profile={editableData}
               loading={loading}
+              onViewAllJobs={() => setActiveTab('jobs')}
             />
           )}
 
@@ -1545,7 +1579,7 @@ const ContractorDashboardScreen: React.FC = () => {
                       <FontAwesome5 name="clock" size={20} color="#d97706" solid />
                     </View>
                     <Text className="text-sm font-bold text-amber-900 text-center">Verification Pending</Text>
-                    <Text className="text-[11px] text-amber-700 text-center mt-1">Our team is reviewing your documents. This usually takes 2-3 business days.</Text>
+                    <Text className="text-[11px] text-amber-700 text-center mt-1">Our team is reviewing your documents. We will update your status as soon as the review is complete.</Text>
                   </View>
                 ) : (
                   <>

@@ -13,7 +13,7 @@ import {
   Alert,
 } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
-import { createQuoteFromChat, getStripeAccountStatus } from '../../utils/apiClient';
+import { createQuoteFromChat, getStripeAccountStatus, getPlatformFeePercent } from '../../utils/apiClient';
 import { SvgImage } from '../common/SvgImage';
 import { getProfileImageUrl, isSvgUrl } from '../../utils/avatarUtils';
 import * as ImagePicker from 'expo-image-picker';
@@ -68,6 +68,9 @@ export default function QuoteCreationSheet({
   // Photo Attachments State
   const [photos, setPhotos] = useState<string[]>([]);
 
+  // Fee Percentage State
+  const [feePercent, setFeePercent] = useState(5);
+
   // Dynamic Line Items State
   const [lineItems, setLineItems] = useState<{ description: string; amount: string }[]>([
     { description: 'Labor', amount: '2800' },
@@ -85,6 +88,17 @@ export default function QuoteCreationSheet({
           console.error(e);
         } finally {
           setStripeLoading(false);
+        }
+      })();
+
+      (async () => {
+        try {
+          const res = await getPlatformFeePercent();
+          if (res && res.platformFeePercent !== undefined) {
+            setFeePercent(res.platformFeePercent);
+          }
+        } catch (e) {
+          console.error(e);
         }
       })();
     }
@@ -114,7 +128,7 @@ export default function QuoteCreationSheet({
   };
 
   const total = lineItems.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
-  const platformFee = Math.round(total * 0.05 * 100) / 100;
+  const platformFee = Math.round(total * (feePercent / 100) * 100) / 100;
   const subtotal = total - platformFee;
   const isMilestone = total >= 5000;
 
@@ -550,7 +564,7 @@ export default function QuoteCreationSheet({
                 <Text className="text-[13px] font-bold text-neutral-900 dark:text-neutral-50">${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
               </View>
               <View className="flex-row justify-between">
-                <Text className="text-[12px] text-neutral-500 dark:text-neutral-400">Platform fee (5%)</Text>
+                <Text className="text-[12px] text-neutral-500 dark:text-neutral-400">Platform fee ({feePercent}%)</Text>
                 <Text className="text-[12px] text-neutral-400">${platformFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
               </View>
               <View className="h-[1px] bg-neutral-200 dark:bg-neutral-700 my-1" />

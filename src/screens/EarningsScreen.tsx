@@ -4,6 +4,7 @@ import { useColorScheme } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { getContractorEarnings } from '../api';
+import { getPlatformFeePercent } from '../utils/apiClient';
 
 interface Transaction {
   _id: string;
@@ -77,8 +78,21 @@ export default function EarningsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  const [feePercent, setFeePercent] = useState(5);
+
   const isMounted = useRef(true);
   useEffect(() => {
+    (async () => {
+      try {
+        const res = await getPlatformFeePercent();
+        if (res && res.platformFeePercent !== undefined && isMounted.current) {
+          setFeePercent(res.platformFeePercent);
+        }
+      } catch {
+        // Fallback to 5%
+      }
+    })();
+
     return () => {
       isMounted.current = false;
     };
@@ -218,7 +232,7 @@ export default function EarningsScreen() {
           <View className="flex-1">
             <Text className="text-sm font-semibold text-indigo-900">Platform Fee</Text>
             <Text className="text-xs text-indigo-700 dark:text-indigo-300 mt-1 leading-4">
-              A 5% platform fee is deducted from each payment to cover payment processing, escrow protection, and
+              A {feePercent}% platform fee is deducted from each payment to cover payment processing, escrow protection, and
               platform maintenance.
             </Text>
           </View>
@@ -228,7 +242,7 @@ export default function EarningsScreen() {
         <Text className="text-base font-bold text-neutral-900 dark:text-white mb-3">Transaction History</Text>
       </View>
     ),
-    [availableBalance, pendingPayouts, totalEarned]
+    [availableBalance, pendingPayouts, totalEarned, feePercent]
   );
 
   const renderEmpty = useCallback(

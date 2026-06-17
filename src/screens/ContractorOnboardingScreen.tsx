@@ -481,7 +481,7 @@ export default function ContractorOnboardingScreen() {
                 placeholderTextColor={isDark ? "#9ca3af" : "#a3a3a3"}
                 className="bg-neutral-50 dark:bg-neutral-900 rounded-2xl px-4 py-3 text-sm text-neutral-900 dark:text-white"
               />
-              <Text className="text-[10px] text-neutral-400 dark:text-neutral-500 mt-2">Verification typically takes 1-2 business days.</Text>
+              <Text className="text-[10px] text-neutral-400 dark:text-neutral-500 mt-2">Verification request will be reviewed by our team.</Text>
             </View>
           )}
 

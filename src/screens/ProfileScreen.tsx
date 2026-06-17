@@ -629,7 +629,7 @@ const ProfileScreen: React.FC = () => {
         </View>
         <View className="pt-5 mt-2 border-t border-neutral-100 dark:border-neutral-800">
           <Pressable
-            onPress={() => Alert.alert('Delete Account', 'This will permanently delete your account and all associated data. This cannot be undone.', [
+            onPress={() => Alert.alert('Delete Account', 'This will delete your account and profile. Some records (such as messages and payment history) may be retained for legal and administrative purposes. This action cannot be undone.', [
               { text: 'Cancel', style: 'cancel' },
               { text: 'Delete', style: 'destructive', onPress: async () => { try { await deleteAccount(); await logout(); } catch { Alert.alert('Error', 'Failed to delete account.'); } } },
             ])}
@@ -680,11 +680,6 @@ const ProfileScreen: React.FC = () => {
       </SettingsSheet>
 
       <SettingsSheet title="App Settings" onClose={closeSheet} visible={activeSheet === 'settings'}>
-        <Text className="text-[13px] font-semibold text-neutral-500 dark:text-neutral-400 mb-2">Language</Text>
-        <View className="flex-row items-center justify-between px-4 rounded-xl mb-5 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800" style={{ height: 52 }}>
-          <Text className="text-[15px] text-neutral-900 dark:text-neutral-50">English (US)</Text>
-          <FontAwesome5 name="chevron-down" size={12} color="#a3a3a3" />
-        </View>
         <Text className="text-[13px] font-semibold text-neutral-500 dark:text-neutral-400 mb-2">Default Service Area</Text>
         <StyledInput 
           value={defaultZip} 
@@ -705,14 +700,13 @@ const ProfileScreen: React.FC = () => {
         />
         <View className="border-t border-neutral-100 dark:border-neutral-800 pt-2">
           <DarkModeToggle />
-          <Toggle label="Haptic Feedback" description="Vibrate on button taps and interactions" defaultOn={hapticsEnabled} onValueChange={saveHapticsSetting} />
         </View>
         <View className="pt-5 mt-2 border-t border-neutral-100 dark:border-neutral-800">
           <Text className="text-[12px] text-neutral-300 dark:text-neutral-600">Version 1.0.0 · Build 2026.04</Text>
         </View>
         <View className="pt-4 mt-2 border-t border-neutral-100 dark:border-neutral-800">
           <Pressable
-            onPress={() => Alert.alert('Delete Account', 'This will permanently delete your account and all associated data. This cannot be undone.', [
+            onPress={() => Alert.alert('Delete Account', 'This will delete your account and profile. Some records (such as messages and payment history) may be retained for legal and administrative purposes. This action cannot be undone.', [
               { text: 'Cancel', style: 'cancel' },
               { text: 'Delete', style: 'destructive', onPress: async () => { try { await deleteAccount(); await logout(); } catch { Alert.alert('Error', 'Failed to delete account.'); } } },
             ])}
