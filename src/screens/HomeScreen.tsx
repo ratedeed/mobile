@@ -228,7 +228,11 @@ const HomeScreen = () => {
         try {
           const favs = await getFavorites();
           if (mountedRef.current) {
-            setFavorites(new Set(favs));
+            setFavorites(prev => {
+              if (prev.size !== favs.length) return new Set(favs);
+              const changed = favs.some(f => !prev.has(f));
+              return changed ? new Set(favs) : prev;
+            });
           }
         } catch (e) {
           if (__DEV__) console.warn('syncFavorites failed:', e);

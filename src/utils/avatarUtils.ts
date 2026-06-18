@@ -254,7 +254,7 @@ export function generateAvatarDataUrl(name: string, size: number = 200, category
   <g clip-path="url(#${uid}-clip)">
     <rect width="${s}" height="${s}" fill="url(#${uid}-grad)" />
     <rect width="${s}" height="${s}" filter="url(#${uid}-noise)" pointer-events="none" style="mix-blend-mode: overlay;" />
-    <text x="${s / 2}" y="${s * 0.51}" text-anchor="middle" dominant-baseline="central"
+    <text x="${s / 2}" y="${s / 2}" dy="0.32em" text-anchor="middle"
       font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', sans-serif"
       font-size="${fontSize}" font-weight="700" fill="#ffffff" letter-spacing="-0.02em"
       style="text-shadow: 0px 2px 8px rgba(0,0,0,0.15);">
@@ -331,7 +331,7 @@ export function generateBannerDataUrl(
   const startY = (h / 2) + titleYOffset - ((lines.length - 1) * lineHeight) / 2;
 
   const nameSvg = lines.map((line, i) => 
-    `<text x="50%" y="${startY + (i * lineHeight)}" text-anchor="middle" dominant-baseline="central"
+    `<text x="50%" y="${startY + (i * lineHeight)}" dy="0.32em" text-anchor="middle"
       font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', sans-serif" 
       font-size="${titleFontSize}" font-weight="800" letter-spacing="-0.02em"
       fill="#ffffff" style="text-shadow: 0px 4px 16px rgba(0,0,0,0.15);">
@@ -345,7 +345,7 @@ export function generateBannerDataUrl(
     categorySvg = `
   <line x1="${w/2 - 16}" y1="${categoryY - (h * 0.035)}" x2="${w/2 + 16}" y2="${categoryY - (h * 0.035)}" 
     stroke="rgba(255,255,255,0.4)" stroke-width="2" stroke-linecap="round" />
-  <text x="50%" y="${categoryY}" text-anchor="middle" dominant-baseline="central" 
+  <text x="50%" y="${categoryY}" dy="0.32em" text-anchor="middle" 
     font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', sans-serif" 
     font-size="${categoryFontSize}" font-weight="700" fill="rgba(255,255,255,0.9)" 
     letter-spacing="0.2em" style="text-transform: uppercase; text-shadow: 0px 2px 8px rgba(0,0,0,0.1);">

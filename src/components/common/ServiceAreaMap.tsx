@@ -205,7 +205,7 @@ export default function ServiceAreaMap({
       }
     })();
     return () => { cancelled = true; };
-  }, [zipCodes.join(','), zipGeoData]);
+  }, [zipCodes.join(','), JSON.stringify(zipGeoData || [])]);
 
   // Zoom to show all areas once polygons are loaded
   useEffect(() => {
@@ -252,14 +252,8 @@ export default function ServiceAreaMap({
         showsBuildings={false}
         showsIndoors={false}
         toolbarEnabled={false}
-        mapType="none"
+        mapType={Platform.OS === 'ios' ? 'mutedStandard' : 'standard'}
       >
-        <UrlTile
-          urlTemplate="https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png"
-          maximumZ={14}
-          minimumZ={4}
-          flipY={false}
-        />
         {zipAreas.map((za) => (
           <Polygon
             key={za.zip}

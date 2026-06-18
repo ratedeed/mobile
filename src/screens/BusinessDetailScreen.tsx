@@ -597,43 +597,41 @@ const BusinessDetailScreen: React.FC = () => {
         {/* Content */}
         <View className="px-4 pb-20" style={{ overflow: 'visible' }}>
           {/* Header Row: Floating Avatar, Name, and Escrow protected badge */}
-          <View className="flex-row items-end justify-between mt-[-35px] z-10" style={{ overflow: 'visible' }}>
-            <View className="flex-row items-end flex-1 pr-2" style={{ gap: 12 }}>
-              {/* Floating Avatar */}
-              <View className="w-[72px] h-[72px] rounded-full border-4 border-white bg-white overflow-hidden shadow-md">
-                {isSvgUrl(avatarImage) ? (
-                  <SvgImage uri={avatarImage} width="100%" height="100%" />
-                ) : (
-                  <Image source={{ uri: avatarImage }} className="w-full h-full" resizeMode="cover" />
-                )}
-              </View>
-              {/* Business details */}
-              <View className="flex-1 pb-1">
-                <Text className="text-xl font-bold text-neutral-900 dark:text-neutral-50 leading-tight" numberOfLines={2}>
-                  {c.companyName || c.businessName || 'Company'}
+          <View className="relative flex-row items-start justify-between z-10 mt-3 min-h-[50px]" style={{ overflow: 'visible' }}>
+            {/* Floating Avatar */}
+            <View className="absolute left-0 top-[-36px] w-[72px] h-[72px] rounded-full border-4 border-white bg-white overflow-hidden shadow-md z-20">
+              {isSvgUrl(avatarImage) ? (
+                <SvgImage uri={avatarImage} width="100%" height="100%" />
+              ) : (
+                <Image source={{ uri: avatarImage }} className="w-full h-full" resizeMode="cover" />
+              )}
+            </View>
+            {/* Business details */}
+            <View className="flex-1 pl-[84px] pr-2">
+              <Text className="text-xl font-bold text-neutral-900 dark:text-neutral-50 leading-tight" numberOfLines={2}>
+                {c.companyName || c.businessName || 'Company'}
+              </Text>
+              <View className="flex-row items-center mt-1" style={{ gap: 4 }}>
+                <FontAwesome5 name="star" solid size={11} color="#eab308" />
+                <Text className="text-xs font-semibold text-neutral-800 dark:text-neutral-200">
+                  {reviewCount > 0 ? avgRating.toFixed(2) : 'New'}
                 </Text>
+                <Text className="text-xs text-neutral-500 dark:text-neutral-400">
+                  ({reviewCount} {reviewCount === 1 ? 'review' : 'reviews'})
+                </Text>
+              </View>
+              {!!location && (
                 <View className="flex-row items-center mt-1" style={{ gap: 4 }}>
-                  <FontAwesome5 name="star" solid size={11} color="#eab308" />
-                  <Text className="text-xs font-semibold text-neutral-800 dark:text-neutral-200">
-                    {reviewCount > 0 ? avgRating.toFixed(2) : 'New'}
-                  </Text>
-                  <Text className="text-xs text-neutral-500 dark:text-neutral-400">
-                    ({reviewCount} {reviewCount === 1 ? 'review' : 'reviews'})
+                  <FontAwesome5 name="map-marker-alt" size={10} color="#737373" />
+                  <Text className="text-xs text-neutral-500 dark:text-neutral-400 flex-1" numberOfLines={1}>
+                    {location}
                   </Text>
                 </View>
-                {!!location && (
-                  <View className="flex-row items-center mt-1" style={{ gap: 4 }}>
-                    <FontAwesome5 name="map-marker-alt" size={10} color="#737373" />
-                    <Text className="text-xs text-neutral-500 dark:text-neutral-400 flex-1" numberOfLines={1}>
-                      {location}
-                    </Text>
-                  </View>
-                )}
-              </View>
+              )}
             </View>
 
             {/* Escrow Protected Trust Badge Card */}
-            <View className="bg-emerald-50/90 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900 rounded-xl p-2.5 w-[140px] mb-1">
+            <View className="bg-emerald-50/90 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900 rounded-xl p-2.5 w-[140px]">
               <View className="flex-row items-center animate-pulse" style={{ gap: 4 }}>
                 <FontAwesome5 name="shield-alt" size={11} color="#059669" />
                 <Text className="text-[10px] font-bold text-emerald-800 dark:text-emerald-300">Escrow Protected</Text>
