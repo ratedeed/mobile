@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { createStackNavigator, CardStyleInterpolators } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { FontAwesome5 } from '@expo/vector-icons';
-import { Image, View, TouchableOpacity, Text as RNText } from 'react-native';
+import { Image, View, TouchableOpacity, Text as RNText, Alert } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { useColorScheme } from 'nativewind';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { 
@@ -262,6 +263,37 @@ export default function MainNavigator() {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
   const { userRole, isAuthenticated } = useAuth();
+  const navigation = useNavigation();
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      const currentRoute = navigation.getCurrentRoute();
+      if (currentRoute) {
+        const protectedScreens = [
+          'ContractorDashboard',
+          'ContractorOnboarding',
+          'ContractorEditProfile',
+          'EarningsScreen',
+          'PaymentFlow',
+          'ReviewScreen',
+          'DisputeScreen',
+          'ChangeOrderScreen'
+        ];
+        if (protectedScreens.includes(currentRoute.name)) {
+          Alert.alert(
+            'Session Expired',
+            'Your session has expired or you have been signed out. Please sign in again.',
+            [{ text: 'OK', onPress: () => {
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'Main' }],
+              });
+            }}]
+          );
+        }
+      }
+    }
+  }, [isAuthenticated, navigation]);
 
   const dynamicScreenOptions = {
     headerStyle: {

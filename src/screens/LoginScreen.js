@@ -34,10 +34,17 @@ const LoginScreen = () => {
   const redirectContractor = async () => {
     try {
       const profile = await getContractorProfile();
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'Main' }, { name: 'ContractorDashboard' }],
-      });
+      if (profile && profile.onboardingComplete === false) {
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Main' }, { name: 'ContractorOnboarding' }],
+        });
+      } else {
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Main' }, { name: 'ContractorDashboard' }],
+        });
+      }
     } catch (err) {
       navigation.reset({
         index: 0,

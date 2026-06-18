@@ -114,11 +114,23 @@ export default function QuoteReviewScreen() {
     if (!quoteId || actionLoading) return;
     setActionLoading('accept');
     try {
+      const firstMilestone = quote?.isMilestone && quote?.milestones?.length
+        ? quote.milestones.find((m: any) => m.status === 'pending' || !m.status) || quote.milestones[0]
+        : null;
+
+      const amountToPay = firstMilestone ? firstMilestone.amount : (quote?.totalAmount || 0);
+      const paymentDescription = firstMilestone
+        ? `Milestone 1 of ${quote.milestones.length}: ${firstMilestone.name}`
+        : (quote?.description || 'Home Project');
+
       (navigation as any).navigate('PaymentFlow', {
         quoteId,
-        totalAmount: quote?.totalAmount || 0,
+        totalAmount: amountToPay,
         contractorName: quote?.contractor?.companyName || quote?.contractor?.businessName || 'Contractor',
-        description: quote?.description || 'Home Project',
+        description: paymentDescription,
+        isMilestone: quote?.isMilestone || false,
+        milestoneName: firstMilestone?.name,
+        totalMilestonesCount: quote?.milestones?.length || 0,
       });
     } catch (err: any) {
       Alert.alert('Error', err?.message || 'Failed to initiate payment.');

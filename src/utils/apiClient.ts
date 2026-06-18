@@ -387,7 +387,7 @@ export const verifyEmailBackend = async (email: string): Promise<any> => {
 };
 
 export const forgotPassword = async (email: string): Promise<any> => {
-  return post(`${API_BASE}/auth/forgot-password/`, { email });
+  return post(`${API_BASE}/users/forgot-password`, { email });
 };
 
 export const contractorSignup = async (data: any): Promise<any> => {

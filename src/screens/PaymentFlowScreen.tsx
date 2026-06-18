@@ -28,6 +28,15 @@ export default function PaymentFlowScreen() {
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [paymentAmount, setPaymentAmount] = useState<number>(route.params?.totalAmount || 0);
   const [loadingPaymentIntent, setLoadingPaymentIntent] = useState(true);
+  const [verifying, setVerifying] = useState(false);
+  const isMounted = React.useRef(true);
+
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     async function checkApplePay() {
@@ -65,16 +74,79 @@ export default function PaymentFlowScreen() {
     }
   }, [quoteId]);
 
+  const [isPolling, setIsPolling] = useState(false);
+
+  const startPollingPaymentStatus = async (showLoadingIndicator = true) => {
+    if (isPolling) return;
+    setIsPolling(true);
+    if (showLoadingIndicator) {
+      setVerifying(true);
+    }
+    
+    let attempts = 0;
+    const maxAttempts = 12; // Poll for up to 24 seconds
+    const interval = 2000; // 2 seconds
+    
+    const runPoll = async () => {
+      if (!isMounted.current) {
+        setIsPolling(false);
+        return;
+      }
+      try {
+        const quote = await getQuote(quoteId);
+        if (!isMounted.current) {
+          setIsPolling(false);
+          return;
+        }
+        if (quote && (quote.status === 'accepted' || quote.status === 'paid' || (quote.jobId && quote.jobStatus && quote.jobStatus !== 'awaiting_payment'))) {
+          setVerifying(false);
+          setIsPolling(false);
+          setCurrentStep(2);
+          return;
+        }
+      } catch (e) {
+        console.error('Polling payment status error:', e);
+      }
+      
+      attempts++;
+      if (attempts < maxAttempts) {
+        if (isMounted.current) {
+          setTimeout(runPoll, interval);
+        } else {
+          setIsPolling(false);
+        }
+      } else {
+        if (isMounted.current) {
+          setVerifying(false);
+          setIsPolling(false);
+          if (showLoadingIndicator) {
+            Alert.alert(
+              'Verification Timeout',
+              'We could not automatically confirm your payment status yet. If the money has been deducted, your job status will update shortly. You can also manually check status using the "Verify Payment Status" button.',
+              [{ text: 'OK' }]
+            );
+          }
+        } else {
+          setIsPolling(false);
+        }
+      }
+    };
+
+    setTimeout(runPoll, 1000); // start after 1 second
+  };
+
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextAppState) => {
       if (nextAppState === 'active' && currentStep === 0) {
-        verifyPaymentStatus();
+        // Start polling silently when returning to the app
+        startPollingPaymentStatus(false);
       }
     });
     return () => {
       subscription.remove();
     };
-  }, [currentStep]);
+  }, [currentStep, quoteId]);
+
 
   const handleApplePay = async () => {
     if (paying) return;
@@ -117,8 +189,8 @@ export default function PaymentFlowScreen() {
 
       if (error) {
         Alert.alert('Payment Failed', error.message || 'Apple Pay could not be completed.');
-      } else if (paymentIntent?.status === 'Succeeded') {
-        setCurrentStep(2);
+      } else if (paymentIntent?.status?.toLowerCase() === 'succeeded') {
+        startPollingPaymentStatus(true);
       }
     } catch (err: any) {
       Alert.alert('Error', err?.message || 'Apple Pay failed to initialize.');
@@ -171,7 +243,7 @@ export default function PaymentFlowScreen() {
           Alert.alert('Payment Failed', presentError.message);
         }
       } else {
-        setCurrentStep(2); // Payment Success!
+        startPollingPaymentStatus(true);
       }
     } catch (err: any) {
       Alert.alert('Error', err?.message || 'Failed to initiate secure payment. Please try again.');
@@ -180,22 +252,37 @@ export default function PaymentFlowScreen() {
     }
   };
 
-  const verifyPaymentStatus = async () => {
+  const verifyPaymentStatus = async (silent?: boolean) => {
+    const isSilent = silent === true;
     if (paying) return;
     try {
       setPaying(true);
       const quote = await getQuote(quoteId);
-      if (quote && (quote.status === 'accepted' || quote.status === 'paid' || quote.jobId)) {
+      if (quote && (quote.status === 'accepted' || quote.status === 'paid' || (quote.jobId && quote.jobStatus && quote.jobStatus !== 'awaiting_payment'))) {
         setCurrentStep(2);
-      } else {
+      } else if (!isSilent) {
         Alert.alert('Payment Not Confirmed', 'We could not confirm your payment yet. If you just paid, please wait a moment and try again.');
       }
     } catch (e) {
-      Alert.alert('Error', 'Could not verify payment status.');
+      if (!isSilent) {
+        Alert.alert('Error', 'Could not verify payment status.');
+      }
     } finally {
       setPaying(false);
     }
   };
+
+  if (verifying) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: isDark ? '#09090B' : '#ffffff', padding: 24 }}>
+        <ActivityIndicator size="large" color="#4F46E5" />
+        <Text style={{ marginTop: 16, color: isDark ? '#ffffff' : '#171717', fontSize: 18, fontWeight: 'bold', textAlign: 'center' }}>Confirming Payment...</Text>
+        <Text style={{ marginTop: 8, color: isDark ? '#a3a3a3' : '#737373', fontSize: 14, textAlign: 'center', lineHeight: 20 }}>
+          Please wait while we verify your transaction status. This should only take a few seconds.
+        </Text>
+      </View>
+    );
+  }
 
   if (loadingPaymentIntent) {
     return (
@@ -258,6 +345,15 @@ export default function PaymentFlowScreen() {
               </View>
             </View>
 
+            {route.params?.isMilestone && (
+              <View style={{ backgroundColor: isDark ? '#1e1b4b' : '#f5f3ff', borderWidth: 1, borderColor: isDark ? '#312e81' : '#ddd6fe', borderRadius: 16, padding: 16 }}>
+                <Text style={{ fontSize: 11, fontWeight: 'bold', color: '#6366f1', textTransform: 'uppercase', letterSpacing: 0.5 }}>Milestone Escrow Payment</Text>
+                <Text style={{ fontSize: 13, fontWeight: 'bold', color: isDark ? '#ffffff' : '#1f2937', marginTop: 4 }}>
+                  {quoteDescription}
+                </Text>
+              </View>
+            )}
+
             <View style={{ backgroundColor: '#171717', borderRadius: 16, padding: 24, alignItems: 'center' }}>
               <Text style={{ fontSize: 12, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: 1 }}>Total Amount</Text>
               <Text style={{ fontSize: 30, fontWeight: 'bold', color: 'white', marginTop: 4 }}>${(paymentAmount / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
@@ -310,15 +406,21 @@ export default function PaymentFlowScreen() {
             </Pressable>
             
             <Pressable
-              onPress={verifyPaymentStatus}
-              disabled={paying}
+              onPress={() => startPollingPaymentStatus(true)}
+              disabled={paying || isPolling}
               style={{
                 width: '100%', paddingVertical: 14, borderRadius: 12, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, marginTop: 12,
-                backgroundColor: paying ? '#f5f5f5' : '#f4f4f5', borderWidth: 1, borderColor: '#e4e4e7'
+                backgroundColor: (paying || isPolling) ? '#f5f5f5' : '#f4f4f5', borderWidth: 1, borderColor: '#e4e4e7'
               }}
             >
-              <FontAwesome5 name="sync" size={12} color={isDark ? '#a3a3a3' : '#737373'} />
-              <Text style={{ fontSize: 14, fontWeight: '600', color: isDark ? '#a3a3a3' : '#52525b' }}>Verify Payment Status</Text>
+              {paying || isPolling ? (
+                <ActivityIndicator size="small" color={isDark ? '#a3a3a3' : '#737373'} />
+              ) : (
+                <FontAwesome5 name="sync" size={12} color={isDark ? '#a3a3a3' : '#737373'} />
+              )}
+              <Text style={{ fontSize: 14, fontWeight: '600', color: isDark ? '#a3a3a3' : '#52525b' }}>
+                {paying || isPolling ? 'Verifying...' : 'Verify Payment Status'}
+              </Text>
             </Pressable>
             
             <View style={{ alignItems: 'center', marginTop: 16 }}>

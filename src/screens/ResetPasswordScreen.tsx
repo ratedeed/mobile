@@ -12,18 +12,13 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
-import { confirmPasswordReset, Auth } from 'firebase/auth';
-// @ts-ignore
-import { auth } from '../firebaseConfig';
-
-// @ts-ignore
-const firebaseAuth: Auth = auth as unknown as Auth;
+import { resetPassword } from '../utils/apiClient';
 
 export default function ResetPasswordScreen() {
   const isDark = useColorScheme() === 'dark';
   const navigation = useNavigation();
   const route = useRoute();
-  const { oobCode } = (route.params || {}) as { oobCode?: string };
+  const token = (route.params as any)?.token || (route.params as any)?.oobCode;
 
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -31,14 +26,14 @@ export default function ResetPasswordScreen() {
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!oobCode) {
+    if (!token) {
       setStatus('error');
-      setMessage('Missing password reset code. Please request a new link.');
+      setMessage('Missing password reset token. Please request a new link.');
     }
-  }, [oobCode]);
+  }, [token]);
 
   const handleReset = async () => {
-    if (!oobCode) return;
+    if (!token) return;
 
     if (newPassword !== confirmPassword) {
       setStatus('error');
@@ -56,23 +51,15 @@ export default function ResetPasswordScreen() {
     setMessage(null);
 
     try {
-      await confirmPasswordReset(firebaseAuth, oobCode, newPassword);
+      await resetPassword(token, newPassword);
       setStatus('success');
       setMessage('Password reset successfully!');
       setTimeout(() => {
         navigation.navigate('Login' as never);
       }, 2000);
     } catch (error: any) {
-      let errorMessage = 'Error resetting password. Please try again.';
-      if (error.code === 'auth/expired-action-code') {
-        errorMessage = 'The password reset link has expired. Please request a new one.';
-      } else if (error.code === 'auth/invalid-action-code') {
-        errorMessage = 'The password reset link is invalid. Please check the link or request a new one.';
-      } else if (error.code === 'auth/user-disabled') {
-        errorMessage = 'Your account has been disabled.';
-      }
       setStatus('error');
-      setMessage(errorMessage);
+      setMessage(error?.message || 'Error resetting password. Please try again.');
     }
   };
 

@@ -120,11 +120,16 @@ export default function ActiveJobsScreen() {
 
   const filteredQuotes = useMemo(() => {
     const sorted = [...quotes].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    switch (activeTab) {
-      case 'active': return sorted.filter(q => !['completed', 'declined', 'cancelled'].includes(q.status.toLowerCase()));
-      case 'completed': return sorted.filter(q => q.status.toLowerCase() === 'completed');
-      default: return sorted;
-    }
+    return sorted.filter(q => {
+      const displayStatus = (q.jobStatus || q.status || '').toLowerCase();
+      if (activeTab === 'active') {
+        return !['completed', 'completed_paid', 'completed_pending_release', 'rejected', 'declined', 'cancelled', 'refunded'].includes(displayStatus);
+      }
+      if (activeTab === 'completed') {
+        return ['completed', 'completed_paid', 'completed_pending_release'].includes(displayStatus);
+      }
+      return true;
+    });
   }, [quotes, activeTab]);
 
   if (!isAuthenticated) {
@@ -231,7 +236,8 @@ export default function ActiveJobsScreen() {
           </View>
         ) : (
           filteredQuotes.map(quote => {
-            const badge = getStatusBadge(quote.status);
+            const displayStatus = (quote.jobStatus || quote.status || '').toLowerCase();
+            const badge = getStatusBadge(displayStatus);
             const contractor = quote.contractorId || {};
             if (!contractor._id && !contractor.id) return null; // Skip if no contractor data
             const contractorName = contractor.companyName || contractor.businessName || 'Contractor';
@@ -279,7 +285,7 @@ export default function ActiveJobsScreen() {
                       <Text className="text-[11px] text-neutral-400 dark:text-neutral-500 font-medium">{formatDate(quote.createdAt)}</Text>
                     </View>
 
-                    {quote.status.toLowerCase() === 'completed' && !quote.hasReview && (
+                    {['completed', 'completed_paid'].includes(displayStatus) && !quote.hasReview && (
                       <Pressable
                         onPress={() => navigation.navigate('ReviewScreen', {
                           quoteId: quote._id,
@@ -296,7 +302,7 @@ export default function ActiveJobsScreen() {
                       </Pressable>
                     )}
 
-                    {quote.status.toLowerCase() === 'pending_user_approval' && !quote.jobId && (
+                    {displayStatus === 'pending_user_approval' && !quote.jobId && (
                       <View className="flex-row mt-3" style={{ gap: 8 }}>
                         <Pressable
                           onPress={() => navigation.navigate('QuoteReview', { quoteId: quote._id })}
@@ -324,7 +330,7 @@ export default function ActiveJobsScreen() {
                       </View>
                     )}
 
-                    {quote.status.toLowerCase() === 'disputed' && (
+                    {displayStatus === 'disputed' && (
                       <View className="mt-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-3" style={{ gap: 6 }}>
                         <Text className="text-xs font-semibold text-red-800 dark:text-red-300">Dispute Under Review</Text>
                         <Text className="text-xs text-red-600 dark:text-red-400 leading-4">Our team is reviewing your dispute. You can cancel the dispute to resume the job, or wait for an admin to resolve it.</Text>
@@ -344,16 +350,22 @@ export default function ActiveJobsScreen() {
                       </View>
                     )}
 
-                    {(quote.status.toLowerCase() === 'awaiting_payment' || quote.status.toLowerCase() === 'quoted' || quote.status.toLowerCase() === 'pending_user_approval') && (
+                    {['awaiting_payment', 'quoted', 'pending_user_approval', 'funded_in_progress', 'partially_funded'].includes(displayStatus) && (
                       <Pressable
-                        onPress={() => Alert.alert(
-                          'Cancel Job',
-                          'This will cancel the job. Continue?',
-                          [
-                            { text: 'Keep Job', style: 'cancel' },
-                            { text: 'Cancel Job', style: 'destructive', onPress: () => handleCancel(quote.jobId || quote._id) }
-                          ]
-                        )}
+                        onPress={() => {
+                          const isFunded = ['funded_in_progress', 'partially_funded'].includes(displayStatus);
+                          const msg = isFunded
+                            ? 'This will cancel the job and refund your payment from escrow. Continue?'
+                            : 'This will cancel the job. Continue?';
+                          Alert.alert(
+                            'Cancel Job',
+                            msg,
+                            [
+                              { text: 'Keep Job', style: 'cancel' },
+                              { text: 'Cancel Job', style: 'destructive', onPress: () => handleCancel(quote.jobId || quote._id) }
+                            ]
+                          );
+                        }}
                         className="flex-row items-center mt-3"
                         style={{ gap: 6 }}
                       >
@@ -362,14 +374,14 @@ export default function ActiveJobsScreen() {
                       </Pressable>
                     )}
 
-                    {quote.status.toLowerCase() === 'refunded' && (
+                    {displayStatus === 'refunded' && (
                       <View className="flex-row items-center mt-3" style={{ gap: 6 }}>
                         <FontAwesome5 name="undo" size={12} color="#c2410c" />
                         <Text className="text-xs font-semibold text-orange-600">Refund Processed</Text>
                       </View>
                     )}
 
-                    {quote.status.toLowerCase() === 'cancelled' && (
+                    {displayStatus === 'cancelled' && (
                       <View className="flex-row items-center mt-3" style={{ gap: 6 }}>
                         <FontAwesome5 name="ban" size={12} color="#b91c1c" />
                         <Text className="text-xs font-semibold text-red-600">Job Cancelled</Text>

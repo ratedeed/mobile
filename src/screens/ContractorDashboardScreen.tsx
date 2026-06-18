@@ -233,8 +233,8 @@ const ContractorDashboardScreen: React.FC = () => {
   const [avatarUrl, setAvatarUrl] = useState('');
   const [contractorName, setContractorName] = useState('');
   const [licenseStatus, setLicenseStatus] = useState<string>('not_submitted');
-  const [onboardingComplete, setOnboardingComplete] = useState(true);
-  const [bannerDismissed, setBannerDismissed] = useState(true);
+  const [onboardingComplete, setOnboardingComplete] = useState(false);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
 
   const [imageLoading, setImageLoading] = useState(false);
   const [isStripeConnecting, setIsStripeConnecting] = useState(false);
@@ -690,7 +690,7 @@ const ContractorDashboardScreen: React.FC = () => {
   };
 
   // ---- Computed values ----
-  const totalEarnings = jobs.filter(j => ['completed_paid', 'funded_in_progress', 'partially_funded'].includes(j.status)).reduce((sum, j) => sum + (j.totalAmount || j.amount || 0), 0);
+  const totalEarnings = jobs.filter(j => j.status === 'completed_paid').reduce((sum, j) => sum + (j.totalAmount || j.amount || 0), 0);
   const pendingEscrow = jobs.filter(j => ['funded_in_progress', 'partially_funded', 'completed_pending_release'].includes(j.status)).reduce((sum, j) => sum + (j.totalAmount || j.amount || 0), 0);
   const activeJobsCount = jobs.filter(j => ['funded_in_progress', 'partially_funded', 'awaiting_payment'].includes(j.status)).length;
   const avgRating = reviews.length > 0 ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length : 0;
@@ -1232,7 +1232,7 @@ const ContractorDashboardScreen: React.FC = () => {
                           <View className="flex-row justify-between items-start">
                             <View>
                               <Text className="text-sm font-semibold text-neutral-900 dark:text-white">{lead.projectTitle || 'New Inquiry'}</Text>
-                              <Text className="text-xs text-neutral-500 dark:text-neutral-400 dark:text-neutral-500 mt-0.5">
+                              <Text className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
                                 From: {lead.user ? `${lead.user.firstName || ''} ${lead.user.lastName || ''}`.trim() : 'Homeowner'}
                               </Text>
                             </View>
@@ -1241,6 +1241,47 @@ const ContractorDashboardScreen: React.FC = () => {
                           {lead.description && (
                             <Text className="text-sm text-neutral-600 dark:text-neutral-300 mt-2">{lead.description}</Text>
                           )}
+                          <View className="flex-row mt-3 border-t border-neutral-100 dark:border-neutral-800 pt-3" style={{ gap: 8 }}>
+                            <Pressable
+                              onPress={() => {
+                                const recipientId = lead.user?._id;
+                                const recipientName = lead.user ? `${lead.user.firstName || ''} ${lead.user.lastName || ''}`.trim() : 'Homeowner';
+                                if (recipientId) {
+                                  navigation.navigate('ChatScreen', {
+                                    recipientId,
+                                    recipientName,
+                                  } as any);
+                                } else {
+                                  Alert.alert('Error', 'User ID is not available.');
+                                }
+                              }}
+                              className="flex-1 flex-row justify-center items-center py-2 bg-neutral-100 dark:bg-neutral-800 rounded-lg"
+                              style={{ gap: 6 }}
+                            >
+                              <FontAwesome5 name="comment" size={12} color={isDark ? '#d4d4d4' : '#525252'} />
+                              <Text className="text-[12px] font-semibold text-neutral-700 dark:text-neutral-300">Message</Text>
+                            </Pressable>
+                            <Pressable
+                              onPress={() => {
+                                const recipientId = lead.user?._id;
+                                const recipientName = lead.user ? `${lead.user.firstName || ''} ${lead.user.lastName || ''}`.trim() : 'Homeowner';
+                                if (recipientId) {
+                                  navigation.navigate('ChatScreen', {
+                                    recipientId,
+                                    recipientName,
+                                    openQuoteSheet: true,
+                                  } as any);
+                                } else {
+                                  Alert.alert('Error', 'User ID is not available.');
+                                }
+                              }}
+                              className="flex-1 flex-row justify-center items-center py-2 bg-indigo-600 rounded-lg"
+                              style={{ gap: 6 }}
+                            >
+                              <FontAwesome5 name="file-invoice-dollar" size={12} color="#ffffff" />
+                              <Text className="text-[12px] font-semibold text-white">Create Quote</Text>
+                            </Pressable>
+                          </View>
                         </View>
                       ))}
                     </View>

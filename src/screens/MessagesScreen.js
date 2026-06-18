@@ -617,6 +617,14 @@ const MessagesScreen = () => {
     }
   }, [conversationId, conversations, selectedConversation]);
 
+  // Auto-open Quote creation sheet if requested via route params
+  useEffect(() => {
+    if (route.params?.openQuoteSheet && selectedConversation && userRole === 'contractor') {
+      setShowQuoteSheet(true);
+      navigation.setParams({ openQuoteSheet: undefined });
+    }
+  }, [route.params?.openQuoteSheet, selectedConversation, userRole, navigation]);
+
   // ─── Load messages ─────────────────────────────────────────────────────────
   const loadMessages = useCallback(async (conversationId) => {
     if (!conversationId) return;

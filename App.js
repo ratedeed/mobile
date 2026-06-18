@@ -77,6 +77,10 @@ const linking = {
       ContractorDashboard: 'contractor-dashboard',
       VerifyEmailChange: 'verify-email-change',
       ResetPassword: 'reset-password',
+      JobDetail: 'jobs/:jobId',
+      PaymentFlow: 'payment/:quoteId',
+      DisputeScreen: 'dispute/:jobId',
+      ReviewScreen: 'review/:jobId',
     },
   },
 };

@@ -218,23 +218,69 @@ const NotificationsScreen: React.FC = () => {
       await toggleRead(item._id);
     }
     if (!item.link) return;
-    if (item.link.startsWith('/messages/')) {
-      const conversationId = item.link.split('/')[2];
+
+    let path = item.link;
+    if (path.startsWith('http')) {
+      try {
+        const urlObj = new URL(path);
+        path = urlObj.pathname + urlObj.search;
+      } catch (e) {
+        path = path.replace(/^https?:\/\/[^\/]+/, '');
+      }
+    }
+
+    if (path.startsWith('/messages/')) {
+      const conversationId = path.split('/')[2];
       navigation.navigate('ChatScreen', { conversationId });
-    } else if (item.link.startsWith('/leads/')) {
+    } else if (path.startsWith('/messages')) {
+      navigation.navigate('Messages');
+    } else if (path.startsWith('/leads/')) {
       if (userRole === 'contractor' || userRole === 'admin') {
         navigation.navigate('ContractorDashboard');
       } else {
         navigation.navigate('Profile');
       }
-    } else if (item.link.startsWith('/quotes/')) {
+    } else if (path.startsWith('/quotes/')) {
       navigation.navigate('Jobs');
-    } else if (item.link.startsWith('/jobs/')) {
+    } else if (path.startsWith('/jobs/')) {
+      const jobId = path.split('/')[2];
+      if (jobId) {
+        navigation.navigate('JobDetail', { jobId });
+      } else {
+        navigation.navigate('Jobs');
+      }
+    } else if (path.startsWith('/jobs')) {
       navigation.navigate('Jobs');
-    } else if (item.link.startsWith('/quote-review')) {
-      const quoteId = item.link.match(/[?&]quoteId=([^&]+)/)?.[1];
+    } else if (path.startsWith('/quote-review')) {
+      const quoteId = path.match(/[?&]quoteId=([^&]+)/)?.[1];
       if (quoteId) {
         navigation.navigate('QuoteReview', { quoteId });
+      }
+    } else if (path.startsWith('/contractor-dashboard')) {
+      if (userRole === 'contractor' || userRole === 'admin') {
+        navigation.navigate('ContractorDashboard');
+      } else {
+        navigation.navigate('Profile');
+      }
+    } else if (path.startsWith('/detail/')) {
+      const slug = path.split('/')[2];
+      if (slug) {
+        navigation.navigate('BusinessDetail', { slug });
+      }
+    } else if (path.startsWith('/payment/')) {
+      const quoteId = path.split('/')[2];
+      if (quoteId) {
+        navigation.navigate('PaymentFlow', { quoteId });
+      }
+    } else if (path.startsWith('/dispute/')) {
+      const jobId = path.split('/')[2];
+      if (jobId) {
+        navigation.navigate('DisputeScreen', { jobId });
+      }
+    } else if (path.startsWith('/review/')) {
+      const jobId = path.split('/')[2];
+      if (jobId) {
+        navigation.navigate('ReviewScreen', { jobId });
       }
     }
   };

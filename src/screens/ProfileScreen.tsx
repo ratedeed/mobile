@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { auth as authModule } from '../firebaseConfig';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, verifyBeforeUpdateEmail } from 'firebase/auth';
-import { changePassword as apiChangePassword, deleteAccount } from '../utils/apiClient';
+import { changePassword as apiChangePassword, deleteAccount, requestEmailChange } from '../utils/apiClient';
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
@@ -324,8 +324,8 @@ const ProfileScreen: React.FC = () => {
     try {
       if (!auth.currentUser) throw new Error('You must be logged in.');
       await reauthenticateWithCredential(auth.currentUser, EmailAuthProvider.credential(user?.email || '', emailPassword));
-      await verifyBeforeUpdateEmail(auth.currentUser, emailNew.trim());
-      setEmailMessage({ type: 'success', text: 'Verification email sent. Please check your inbox, then log out and back in.' });
+      await requestEmailChange(emailNew.trim(), emailPassword);
+      setEmailMessage({ type: 'success', text: 'Verification email sent. Please check your inbox and tap the link to complete the change.' });
       setTimeout(() => { setActiveSheet(null); setEmailNew(''); setEmailPassword(''); }, 5000);
     } catch (err: any) {
       if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') setEmailMessage({ type: 'error', text: 'Current password is incorrect.' });

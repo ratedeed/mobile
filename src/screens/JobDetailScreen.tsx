@@ -11,8 +11,9 @@ import {
   Linking,
   TextInput,
   KeyboardAvoidingView,
+  Image,
 } from 'react-native';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColorScheme } from 'nativewind';
 import { FontAwesome5 } from '@expo/vector-icons';
@@ -25,8 +26,12 @@ import {
   createChangeOrder,
   acceptChangeOrder,
   declineChangeOrder,
+  uploadProgressPhoto,
 } from '../utils/apiClient';
 import { useAuth } from '../context/AuthContext';
+import * as ImagePicker from 'expo-image-picker';
+import { uploadToCloudinary, CLOUDINARY_FOLDERS } from '../utils/cloudinary';
+import { requestPhotoLibraryPermission } from '../utils/permissions';
 
 type RootStackParamList = {
   JobDetail: { jobId: string };
@@ -120,9 +125,52 @@ export default function JobDetailScreen() {
     }
   }, [jobId]);
 
-  useEffect(() => {
-    loadJob();
-  }, [loadJob]);
+  useFocusEffect(
+    useCallback(() => {
+      loadJob();
+    }, [loadJob])
+  );
+
+  const [uploadProgressPhotoLoading, setUploadProgressPhotoLoading] = useState(false);
+
+  const handleUploadProgressPhoto = async () => {
+    const hasPermission = await requestPhotoLibraryPermission();
+    if (!hasPermission) {
+      Alert.alert('Permission Denied', 'Please grant photo library access to upload a progress photo.');
+      return;
+    }
+
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        quality: 0.8,
+        allowsMultipleSelection: false,
+      });
+
+      if (result.canceled || !result.assets?.length) return;
+      const asset = result.assets[0];
+
+      if (asset.fileSize && asset.fileSize > 5 * 1024 * 1024) {
+        Alert.alert('File too large', 'Please choose an image under 5MB.');
+        return;
+      }
+
+      setUploadProgressPhotoLoading(true);
+      const cloudinaryUrl = await uploadToCloudinary(asset.uri, CLOUDINARY_FOLDERS.CHAT);
+      
+      if (!cloudinaryUrl) {
+        throw new Error('Upload failed — no URL returned from server');
+      }
+
+      await uploadProgressPhoto(jobId, cloudinaryUrl);
+      Alert.alert('Success', 'Progress photo uploaded successfully!');
+      loadJob();
+    } catch (err: any) {
+      Alert.alert('Error', err?.message || 'Failed to upload progress photo');
+    } finally {
+      setUploadProgressPhotoLoading(false);
+    }
+  };
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -187,12 +235,15 @@ export default function JobDetailScreen() {
     );
   };
   const handleCancelJob = () => {
-    // Warn the contractor that cancelling a funded job triggers a refund to the homeowner
-    // and counts against their cancellation record on the public profile.
     const isFunded = ['funded_in_progress', 'partially_funded'].includes(job?.status);
-    const warning = isContractor && isFunded
-      ? 'The homeowner will be fully refunded. This will count against your cancellation record on your public profile.'
-      : undefined;
+    let warning = undefined;
+    if (isFunded) {
+      if (isContractor) {
+        warning = 'The homeowner will be fully refunded. This will count against your cancellation record on your public profile.';
+      } else {
+        warning = 'This will cancel the job and refund your payment from escrow.';
+      }
+    }
     return handleAction('cancel this job', () => cancelJob(jobId), 'Job cancelled successfully.', warning);
   };
   const handleAcceptChangeOrder = (coId: string) =>
@@ -466,18 +517,41 @@ export default function JobDetailScreen() {
             </View>
           )}
 
-          {job.progressPhotos && job.progressPhotos.length > 0 && (
+          {((job.progressPhotos && job.progressPhotos.length > 0) || isContractor) && (
             <View className="p-4 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
-              <Text className="text-[14px] font-bold text-neutral-900 dark:text-neutral-50 mb-3">Progress Photos</Text>
-              <View className="flex-row flex-wrap" style={{ gap: 8 }}>
-                {job.progressPhotos.map((url: string, i: number) => (
-                  <Pressable key={i} onPress={() => Linking.openURL(url)}>
-                    <View className="w-20 h-20 rounded-lg bg-neutral-200 dark:bg-neutral-700 items-center justify-center overflow-hidden">
-                      <FontAwesome5 name="image" size={20} color="#9ca3af" />
-                    </View>
+              <View className="flex-row justify-between items-center mb-3">
+                <Text className="text-[14px] font-bold text-neutral-900 dark:text-neutral-50">Progress Photos</Text>
+                {isContractor && (
+                  <Pressable
+                    onPress={handleUploadProgressPhoto}
+                    disabled={uploadProgressPhotoLoading}
+                    className="flex-row items-center bg-indigo-50 dark:bg-indigo-950/40 px-3 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-900"
+                    style={{ gap: 6 }}
+                  >
+                    {uploadProgressPhotoLoading ? (
+                      <ActivityIndicator size="small" color="#4F46E5" />
+                    ) : (
+                      <>
+                        <FontAwesome5 name="camera" size={12} color="#4F46E5" />
+                        <Text className="text-[12px] font-semibold text-indigo-600 dark:text-indigo-400">Upload</Text>
+                      </>
+                    )}
                   </Pressable>
-                ))}
+                )}
               </View>
+              {job.progressPhotos && job.progressPhotos.length > 0 ? (
+                <View className="flex-row flex-wrap" style={{ gap: 8 }}>
+                  {job.progressPhotos.map((url: string, i: number) => (
+                    <Pressable key={i} onPress={() => Linking.openURL(url)}>
+                      <View className="w-20 h-20 rounded-lg bg-neutral-100 dark:bg-neutral-800 items-center justify-center overflow-hidden border border-neutral-200 dark:border-neutral-700">
+                        <Image source={{ uri: url }} style={{ width: '100%', height: '100%', resizeMode: 'cover' }} />
+                      </View>
+                    </Pressable>
+                  ))}
+                </View>
+              ) : (
+                <Text className="text-[13px] text-neutral-400 dark:text-neutral-500">No progress photos uploaded yet.</Text>
+              )}
             </View>
           )}
 
@@ -677,7 +751,22 @@ export default function JobDetailScreen() {
                   <Text className="text-[13px] font-semibold text-red-600 dark:text-red-400">Raise Dispute</Text>
                 </Pressable>
               )}
-              {job.status === 'awaiting_payment' && (
+              {isUser && job.status === 'completed_paid' && !job.hasReview && (
+                <Pressable
+                  onPress={() => navigation.navigate('ReviewScreen', {
+                    quoteId: job.quote?._id || job.quote,
+                    jobId: job._id,
+                    contractorId: contractor._id || contractor.id || contractor,
+                    contractorName: contractor.companyName || contractor.businessName || 'Contractor',
+                  })}
+                  className="flex-row items-center justify-center py-3.5 bg-amber-500 rounded-xl"
+                  style={{ gap: 8 }}
+                >
+                  <FontAwesome5 name="star" size={14} color="#fff" />
+                  <Text className="text-[14px] font-bold text-white">Leave a Review</Text>
+                </Pressable>
+              )}
+              {['awaiting_payment', 'funded_in_progress', 'partially_funded'].includes(job.status) && (
                 <Pressable
                   onPress={handleCancelJob}
                   disabled={actionLoading === 'cancel this job'}
