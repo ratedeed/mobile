@@ -56,6 +56,7 @@ export interface Contractor {
   bannerImage?: string;
   coverImage?: string;
   bannerUrl?: string;
+  bannerImages?: string[];
   imageUrl?: string;
   licenseDocumentUrl?: string;
   category?: string;

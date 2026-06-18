@@ -230,6 +230,7 @@ const ContractorDashboardScreen: React.FC = () => {
   const addressSearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [hours, setHours] = useState<Record<string, { open: string; close: string; isOpen: boolean }>>({});
   const [bannerUrl, setBannerUrl] = useState('');
+  const [bannerPics, setBannerPics] = useState<string[]>([]);
   const [avatarUrl, setAvatarUrl] = useState('');
   const [contractorName, setContractorName] = useState('');
   const [licenseStatus, setLicenseStatus] = useState<string>('not_submitted');
@@ -437,6 +438,7 @@ const ContractorDashboardScreen: React.FC = () => {
       setPortfolio(normalizedPortfolio);
       setContractorName(name);
       setBannerUrl(getCoverImageUrl(name, rawBanner, cat));
+      setBannerPics(profile.bannerImages || (rawBanner ? [rawBanner] : []));
       setAvatarUrl(getProfileImageUrl(name, rawAvatar, cat));
 
       setEditableData({
@@ -569,7 +571,13 @@ const ContractorDashboardScreen: React.FC = () => {
       
       const updateData: any = {};
       if (type === "avatar") updateData.profilePicture = uploadedUrl;
-      else { updateData.bannerImage = uploadedUrl; updateData.bannerUrl = uploadedUrl; }
+      else {
+        updateData.bannerImage = uploadedUrl;
+        updateData.bannerUrl = uploadedUrl;
+        const newBanners = [uploadedUrl, ...bannerPics.filter(x => x !== uploadedUrl)].slice(0, 5);
+        updateData.bannerImages = newBanners;
+        setBannerPics(newBanners);
+      }
       const result = await updateContractorProfile(updateData);
       if (result && result.user) updateUser(result.user);
       loadData();
@@ -676,6 +684,9 @@ const ContractorDashboardScreen: React.FC = () => {
         },
         phone: editableData.phone || undefined,
         businessAddress: editableData.address || undefined,
+        bannerImages: bannerPics,
+        bannerImage: bannerPics[0] || "",
+        bannerUrl: bannerPics[0] || "",
       };
       const result = await updateContractorProfile(updateData);
       if (result && result.user) updateUser(result.user);
@@ -1540,44 +1551,103 @@ const ContractorDashboardScreen: React.FC = () => {
       <Sheet visible={showEditProfile} onClose={() => setShowEditProfile(false)} title="Edit Profile">
         {/* Banner & Avatar Preview */}
         <View className="mb-6">
-          <View className="h-32 w-full bg-neutral-200 rounded-xl overflow-hidden relative">
-            {bannerUrl ? (
-              <Image source={{ uri: bannerUrl }} className="w-full h-full" resizeMode="cover" />
-            ) : (
-              <View className="absolute inset-0 bg-neutral-300" />
-            )}
-            <View className="absolute inset-0 bg-black/20 items-center justify-center">
-              <View style={{ gap: 6 }} className="items-center">
-                <Pressable
-                  onPress={() => handleUpdateImage("banner")}
-                  className="bg-white dark:bg-neutral-900/90 px-4 py-2 rounded-xl flex-row items-center"
-                  style={{ gap: 8 }}
-                >
-                  <FontAwesome5 name="camera" size={14} color={isDark ? "#a3a3a3" : "#404040"} />
-                  <Text className="text-xs font-bold text-neutral-800 dark:text-neutral-100">Change Cover</Text>
-                </Pressable>
-                <Text className="text-[10px] text-white/70 font-medium">Recommended: 1200 × 400 pixels</Text>
-              </View>
-            </View>
+          <View className="flex-row items-center justify-between mb-2 px-1">
+            <Text className="text-sm font-bold text-neutral-800 dark:text-neutral-200">Banner Images ({bannerPics.length}/5)</Text>
+            <Text className="text-[10px] text-neutral-500 italic">Recommended: 1200 × 400</Text>
           </View>
           
-          <View className="flex-row items-end px-4 -mt-8" style={{ gap: 12 }}>
-            <View className="w-20 h-20 rounded-2xl border-4 border-white overflow-hidden bg-neutral-200 shadow-sm relative">
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row mb-4 px-1" style={{ minHeight: 96 }}>
+            {bannerPics.map((pic, idx) => (
+              <View key={`${pic}-${idx}`} className="w-36 h-24 mr-3 bg-neutral-200 dark:bg-neutral-800 rounded-xl overflow-hidden relative border border-neutral-300 dark:border-neutral-700 shadow-sm">
+                <Image source={{ uri: pic }} className="w-full h-full" resizeMode="cover" />
+                
+                {/* Delete/Remove button */}
+                <Pressable 
+                  onPress={() => {
+                    const newPics = bannerPics.filter((_, i) => i !== idx);
+                    setBannerPics(newPics);
+                    setBannerUrl(newPics[0] || '');
+                  }}
+                  className="absolute top-1 right-1 w-6 h-6 bg-red-500 rounded-full items-center justify-center shadow"
+                  style={{ zIndex: 10 }}
+                >
+                  <FontAwesome5 name="trash-alt" size={10} color="#fff" />
+                </Pressable>
+
+                {/* Status indicator: Primary or Make Primary button */}
+                {idx === 0 ? (
+                  <View className="absolute bottom-1 left-1 bg-indigo-600 px-1.5 py-0.5 rounded shadow-sm" style={{ zIndex: 10 }}>
+                    <Text className="text-[8px] font-bold text-white uppercase tracking-wider">Primary</Text>
+                  </View>
+                ) : (
+                  <Pressable 
+                    onPress={() => {
+                      const newPics = [...bannerPics];
+                      const [removed] = newPics.splice(idx, 1);
+                      newPics.unshift(removed);
+                      setBannerPics(newPics);
+                      setBannerUrl(removed);
+                    }}
+                    className="absolute bottom-1 left-1 bg-white/95 dark:bg-neutral-900/95 px-1.5 py-0.5 rounded shadow-sm flex-row items-center"
+                    style={{ gap: 2, zIndex: 10 }}
+                  >
+                    <FontAwesome5 name="star" size={8} color="#eab308" />
+                    <Text className="text-[8px] font-bold text-neutral-800 dark:text-neutral-200">Make Primary</Text>
+                  </Pressable>
+                )}
+              </View>
+            ))}
+
+            {bannerPics.length < 5 && (
+              <Pressable 
+                onPress={async () => {
+                  try {
+                    const uri = await pickFromLibrary();
+                    if (!uri) return;
+                    setImageLoading(true);
+                    const uploadedUrl = await uploadToCloudinary(uri, CLOUDINARY_FOLDERS.CONTRACTOR_BANNER);
+                    setBannerPics(prev => {
+                      const newPics = [...prev, uploadedUrl];
+                      if (prev.length === 0) setBannerUrl(uploadedUrl);
+                      return newPics;
+                    });
+                  } catch (err: any) {
+                    Alert.alert("Error", err?.message || "Upload failed");
+                  } finally {
+                    setImageLoading(false);
+                  }
+                }}
+                className="w-36 h-24 border-2 border-dashed border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 rounded-xl items-center justify-center mr-3"
+              >
+                {imageLoading ? (
+                  <ActivityIndicator size="small" color="#4F46E5" />
+                ) : (
+                  <>
+                    <FontAwesome5 name="plus" size={14} color="#a3a3a3" />
+                    <Text className="text-[10px] text-neutral-500 dark:text-neutral-400 mt-1 font-semibold">Add Banner</Text>
+                  </>
+                )}
+              </Pressable>
+            )}
+          </ScrollView>
+          
+          <View className="flex-row items-end px-4 mt-2" style={{ gap: 12 }}>
+            <View className="w-16 h-16 rounded-2xl border-4 border-white dark:border-neutral-950 overflow-hidden bg-neutral-200 shadow-sm relative">
               {avatarUrl ? (
                 <Image source={{ uri: avatarUrl }} className="w-full h-full" resizeMode="cover" />
               ) : (
-                <FontAwesome5 name="user" size={24} color="#a3a3a3" style={{ position: "absolute", top: 24, left: 24 }} />
+                <FontAwesome5 name="user" size={20} color="#a3a3a3" style={{ position: "absolute", top: 18, left: 18 }} />
               )}
               <Pressable 
                 onPress={() => handleUpdateImage("avatar")}
                 className="absolute inset-0 bg-black/20 items-center justify-center"
               >
-                <FontAwesome5 name="camera" size={12} color="#fff" />
+                <FontAwesome5 name="camera" size={10} color="#fff" />
               </Pressable>
             </View>
-            <View className="pb-2">
+            <View className="pb-1">
               <Text className="text-base font-bold text-neutral-900 dark:text-white">{contractorName || "Your Business"}</Text>
-              <Text className="text-xs text-neutral-500 dark:text-neutral-400 dark:text-neutral-500">Profile Preview</Text>
+              <Text className="text-xs text-neutral-500 dark:text-neutral-400">Profile Preview</Text>
             </View>
           </View>
         </View>

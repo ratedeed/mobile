@@ -118,6 +118,7 @@ const BusinessDetailScreen: React.FC = () => {
   const [claimError, setClaimError] = useState<string | null>(null);
   const [descExpanded, setDescExpanded] = useState(false);
   const [showBackToTop, setShowBackToTop] = useState(false);
+  const [scrollY, setScrollY] = useState(0);
   const [showPhotoGallery, setShowPhotoGallery] = useState(false);
   const [showGuestPrompt, setShowGuestPrompt] = useState(false);
   const [guestAction, setGuestAction] = useState('do that');
@@ -400,8 +401,12 @@ const BusinessDetailScreen: React.FC = () => {
   const portfolio = c.portfolio || [];
   const posts = contractorPosts || [];
 
+  const rawBanners = Array.isArray(c.bannerImages) && c.bannerImages.length > 0
+    ? c.bannerImages.map((img: string) => getCoverImageUrl(c.companyName || c.businessName || 'Contractor', img, c.category))
+    : [bannerImage];
+
   const heroImages = [
-    bannerImage,
+    ...rawBanners,
     ...(portfolio || []).flatMap((p: any) => p.images || (p.imageUrl ? [p.imageUrl] : [])).slice(0, 7)
   ].filter(img => typeof img === 'string' && img.length > 0);
 
@@ -424,12 +429,92 @@ const BusinessDetailScreen: React.FC = () => {
 
   return (
     <View className="flex-1 bg-white dark:bg-neutral-950">
+      {/* Floating Sticky Header */}
+      <View 
+        className="absolute left-0 right-0 z-50 flex-row items-center justify-between px-4 pb-3"
+        style={{ 
+          top: 0,
+          paddingTop: insets.top > 0 ? insets.top + 8 : 12,
+          backgroundColor: scrollY > 100 
+            ? (isDark ? 'rgba(23, 23, 23, 0.95)' : 'rgba(255, 255, 255, 0.95)') 
+            : 'transparent',
+          borderBottomWidth: scrollY > 100 ? 1 : 0,
+          borderBottomColor: isDark ? '#262626' : '#e5e5e5',
+        }}
+      >
+        <Pressable
+          onPress={() => navigation.goBack()}
+          className="w-8 h-8 items-center justify-center bg-white dark:bg-neutral-950 rounded-full shadow-sm"
+        >
+          <FontAwesome5 name="chevron-left" size={16} color={isDark ? "#ffffff" : "#171717"} />
+        </Pressable>
+
+        <View className="flex-1 px-3">
+          {scrollY > 100 && (
+            <Text className="text-sm font-bold text-neutral-900 dark:text-neutral-50 text-center" numberOfLines={1}>
+              {c.companyName || c.businessName || 'Contractor'}
+            </Text>
+          )}
+        </View>
+
+        <View className="flex-row" style={{ gap: 8 }}>
+          <Pressable
+            onPress={() => {
+              const recipientUserId = extractId(c.user) || c._id || id;
+              if (recipientUserId) {
+                navigation.navigate('ChatScreen', {
+                  recipientId: recipientUserId,
+                  recipientName: c.companyName || c.businessName || 'Contractor',
+                } as any);
+              }
+            }}
+            className="w-8 h-8 items-center justify-center bg-white/90 dark:bg-neutral-800/90 rounded-full shadow-sm"
+          >
+            <FontAwesome5 name="comment" size={14} color={isDark ? "#ffffff" : "#171717"} />
+          </Pressable>
+          <Pressable
+            onPress={handleShare}
+            className="w-8 h-8 items-center justify-center bg-white dark:bg-neutral-950 rounded-full shadow-sm"
+          >
+            <FontAwesome5 name="share-alt" size={14} color={isDark ? "#ffffff" : "#171717"} />
+          </Pressable>
+          <Pressable
+            onPress={toggleFavorite}
+            className="w-8 h-8 items-center justify-center bg-white dark:bg-neutral-950 rounded-full shadow-sm"
+          >
+            <FontAwesome5 name="heart" solid={isSaved} size={14} color={isSaved ? '#f43f5e' : (isDark ? '#ffffff' : '#171717')} />
+          </Pressable>
+          {isAuthenticated && (
+            <Pressable
+              onPress={() => {
+                setShowReportDialog(true);
+              }}
+              className="w-8 h-8 items-center justify-center bg-white dark:bg-neutral-950 rounded-full shadow-sm"
+            >
+              <FontAwesome5 name="flag" size={14} color={isDark ? '#ffffff' : '#737373'} />
+            </Pressable>
+          )}
+          {(!(contractor?.isVerified) && !contractor?.user) && (
+            <Pressable
+              onPress={() => setShowClaimModal(true)}
+              className="w-8 h-8 items-center justify-center bg-white dark:bg-neutral-950 rounded-full shadow-sm"
+            >
+              <FontAwesome5 name="shield-alt" size={14} color="#4F46E5" />
+            </Pressable>
+          )}
+        </View>
+      </View>
+
       <ScrollView
         ref={scrollViewRef}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ flexGrow: 1 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        onScroll={(e) => setShowBackToTop(e.nativeEvent.contentOffset.y > 400)}
+        onScroll={(e) => {
+          const y = e.nativeEvent.contentOffset.y;
+          setScrollY(y);
+          setShowBackToTop(y > 400);
+        }}
         scrollEventThrottle={16}
       >
         {/* Hero Carousel */}
@@ -507,60 +592,6 @@ const BusinessDetailScreen: React.FC = () => {
               <Text className="text-[10px] font-bold text-white">Show all photos</Text>
             </Pressable>
           )}
-
-          <View 
-            className="absolute left-0 right-0 px-4 flex-row items-center justify-between"
-            style={{ top: insets.top > 0 ? insets.top + 8 : 12 }}
-          >
-            <Pressable
-              onPress={() => navigation.goBack()}
-              className="w-8 h-8 items-center justify-center bg-white dark:bg-neutral-950 rounded-full shadow-sm"
-            >
-              <FontAwesome5 name="chevron-left" size={16} color={isDark ? "#ffffff" : "#171717"} />
-            </Pressable>
-            <View className="flex-row" style={{ gap: 8 }}>
-              <Pressable
-                onPress={() => {
-                  const recipientUserId = extractId(c.user) || c._id || id;
-                  if (recipientUserId) {
-                    navigation.navigate('ChatScreen', {
-                      recipientId: recipientUserId,
-                      recipientName: c.companyName || c.businessName || 'Contractor',
-                    } as any);
-                  }
-                }}
-                className="w-8 h-8 items-center justify-center bg-white/90 dark:bg-neutral-800/90 rounded-full shadow-sm"
-              >
-                <FontAwesome5 name="comment" size={14} color={isDark ? "#ffffff" : "#171717"} />
-              </Pressable>
-              <Pressable
-                onPress={handleShare}
-                className="w-8 h-8 items-center justify-center bg-white dark:bg-neutral-950 rounded-full shadow-sm"
-              >
-                <FontAwesome5 name="share-alt" size={14} color={isDark ? "#ffffff" : "#171717"} />
-              </Pressable>
-              <Pressable
-                onPress={toggleFavorite}
-                className="w-8 h-8 items-center justify-center bg-white dark:bg-neutral-950 rounded-full shadow-sm"
-              >
-                <FontAwesome5 name="heart" solid={isSaved} size={14} color={isSaved ? '#f43f5e' : (isDark ? '#ffffff' : '#171717')} />
-              </Pressable>
-              <Pressable
-                onPress={() => setShowReportDialog(true)}
-                className="w-8 h-8 items-center justify-center bg-white dark:bg-neutral-950 rounded-full shadow-sm"
-              >
-                <FontAwesome5 name="flag" size={14} color={isDark ? '#ffffff' : '#737373'} />
-              </Pressable>
-              {(!(contractor?.isVerified) && !contractor?.user) && (
-                <Pressable
-                  onPress={() => setShowClaimModal(true)}
-                  className="w-8 h-8 items-center justify-center bg-white dark:bg-neutral-950 rounded-full shadow-sm"
-                >
-                  <FontAwesome5 name="shield-alt" size={14} color="#4F46E5" />
-                </Pressable>
-              )}
-            </View>
-          </View>
         </View>
 
         {/* Content */}
@@ -1038,14 +1069,38 @@ const BusinessDetailScreen: React.FC = () => {
       {/* Sticky Bottom CTA */}
       <View className="absolute bottom-0 left-0 right-0 bg-white/95 dark:bg-neutral-950/95 border-t border-neutral-100 dark:border-neutral-800 px-4 py-4 pb-8 flex-row items-center justify-between shadow-lg">
         <View>
-          {(!priceMin || priceMin === '$0' || priceMin === '$0.00' || priceMin === '0' || priceMin.toLowerCase() === 'n/a' || priceMin.toLowerCase() === 'na') ? (
-            <Text className="text-base font-bold text-neutral-900 dark:text-neutral-50">Contact for Quote</Text>
-          ) : (
-            <View>
-              <Text className="text-base font-bold text-neutral-900 dark:text-neutral-50">From {priceMin}</Text>
-              <Text className="text-[9px] text-neutral-500 uppercase tracking-tighter">Starting Project Price</Text>
-            </View>
-          )}
+          {(() => {
+            const clean = priceMin.trim();
+            if (!clean || clean === '$0' || clean === '$0.00' || clean === '0' || clean.toLowerCase() === 'n/a' || clean.toLowerCase() === 'na') {
+              return <Text className="text-base font-bold text-neutral-900 dark:text-neutral-50">Contact for Quote</Text>;
+            }
+            if (/^\$+$/.test(clean)) {
+              return (
+                <View>
+                  <Text className="text-base font-bold text-neutral-900 dark:text-neutral-50">Contact for Quote</Text>
+                  <Text className="text-[9px] text-neutral-500 uppercase tracking-tighter">Price level: {clean}</Text>
+                </View>
+              );
+            }
+            if (!/\d/.test(clean)) {
+              return (
+                <View>
+                  <Text className="text-base font-bold text-neutral-900 dark:text-neutral-50">{clean}</Text>
+                  <Text className="text-[9px] text-neutral-500 uppercase tracking-tighter">Pricing Info</Text>
+                </View>
+              );
+            }
+            const formattedPrice = clean.startsWith('$') ? clean : `$${clean}`;
+            const subText = clean.toLowerCase().includes('/hr') || clean.toLowerCase().includes('hr') || clean.toLowerCase().includes('hour')
+              ? 'Starting Rate' 
+              : 'Starting Project Price';
+            return (
+              <View>
+                <Text className="text-base font-bold text-neutral-900 dark:text-neutral-50">From {formattedPrice}</Text>
+                <Text className="text-[9px] text-neutral-500 uppercase tracking-tighter">{subText}</Text>
+              </View>
+            );
+          })()}
           
           <View className="flex-row items-center mt-1" style={{ gap: 4 }}>
             {reviewCount > 0 ? (

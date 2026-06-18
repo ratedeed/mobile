@@ -69,6 +69,7 @@ export default function ContractorEditProfileScreen() {
   // Local files to upload
   const [profilePicUri, setProfilePicUri] = useState<string | null>(null);
   const [bannerPicUri, setBannerPicUri] = useState<string | null>(null);
+  const [bannerPics, setBannerPics] = useState<string[]>([]);
 
   // Services state
   const [services, setServices] = useState<ServiceItem[]>([]);
@@ -130,7 +131,9 @@ export default function ContractorEditProfileScreen() {
       setCategory(data.category || '');
       setLocation((data as any).businessAddress || (data as any).address || '');
       setProfilePicture(data.profilePicture || (data as any).imageUrl || '');
-      setCoverImage(data.bannerImage || (data as any).bannerUrl || '');
+      const bannerUrl = data.bannerImage || (data as any).bannerUrl || '';
+      setCoverImage(bannerUrl);
+      setBannerPics(data.bannerImages || (bannerUrl ? [bannerUrl] : []));
 
       if (Array.isArray(data.servicesOffered)) {
         setServices(data.servicesOffered.map((s: any) => ({
@@ -251,6 +254,7 @@ export default function ContractorEditProfileScreen() {
         profilePicture: finalProfilePicUrl || undefined,
         bannerUrl: finalCoverImageUrl || undefined,
         bannerImage: finalCoverImageUrl || undefined,
+        bannerImages: bannerPics,
         servicesOffered: services.map(s => ({
           name: s.name || undefined,
           description: s.description || undefined,
@@ -379,17 +383,96 @@ export default function ContractorEditProfileScreen() {
       </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 100 }} showsVerticalScrollIndicator={false} onScrollBeginDrag={() => setAddressSuggestions([])} keyboardShouldPersistTaps="handled">
-        {/* Cover Image */}
-        <View className="relative w-full aspect-video bg-neutral-200 dark:bg-neutral-800">
-          <Image source={{ uri: bannerPicUri || coverImage || 'https://via.placeholder.com/1200x400' }} className="w-full h-full" resizeMode="cover" />
-          <View className="absolute inset-0 bg-black/30 items-center justify-center">
-            <TouchableOpacity onPress={() => handleImageSelect('banner')} className="bg-white dark:bg-neutral-900 rounded-2xl px-5 py-3 shadow-sm items-center">
-              <View className="flex-row items-center">
-                <FontAwesome5 name="camera" size={14} color={isDark ? "#a3a3a3" : "#404040"} />
-                <Text className="text-sm font-semibold text-neutral-900 dark:text-white ml-2">Change Cover</Text>
-              </View>
-            </TouchableOpacity>
+        {/* Cover Images Scrollable Editor */}
+        <View className="bg-neutral-50 dark:bg-neutral-900 py-4 px-4 border-b border-neutral-200 dark:border-neutral-800">
+          <View className="flex-row items-center justify-between mb-2 px-1">
+            <Text className="text-sm font-bold text-neutral-800 dark:text-neutral-200">Banner Images ({bannerPics.length}/5)</Text>
+            <Text className="text-[10px] text-neutral-500 italic">Recommended: 1200 × 400</Text>
           </View>
+          
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row mb-2 px-1" style={{ minHeight: 96 }}>
+            {bannerPics.map((pic, idx) => (
+              <View key={`${pic}-${idx}`} className="w-36 h-24 mr-3 bg-neutral-200 dark:bg-neutral-800 rounded-xl overflow-hidden relative border border-neutral-300 dark:border-neutral-700 shadow-sm">
+                <Image source={{ uri: pic }} className="w-full h-full" resizeMode="cover" />
+                
+                {/* Delete/Remove button */}
+                <TouchableOpacity 
+                  onPress={() => {
+                    const newPics = bannerPics.filter((_, i) => i !== idx);
+                    setBannerPics(newPics);
+                    setCoverImage(newPics[0] || '');
+                  }}
+                  className="absolute top-1 right-1 w-6 h-6 bg-red-500 rounded-full items-center justify-center shadow"
+                  style={{ zIndex: 10 }}
+                >
+                  <FontAwesome5 name="trash-alt" size={10} color="#fff" />
+                </TouchableOpacity>
+
+                {/* Status indicator: Primary or Make Primary button */}
+                {idx === 0 ? (
+                  <View className="absolute bottom-1 left-1 bg-indigo-600 px-1.5 py-0.5 rounded shadow-sm" style={{ zIndex: 10 }}>
+                    <Text className="text-[8px] font-bold text-white uppercase tracking-wider">Primary</Text>
+                  </View>
+                ) : (
+                  <TouchableOpacity 
+                    onPress={() => {
+                      const newPics = [...bannerPics];
+                      const [removed] = newPics.splice(idx, 1);
+                      newPics.unshift(removed);
+                      setBannerPics(newPics);
+                      setCoverImage(removed);
+                    }}
+                    className="absolute bottom-1 left-1 bg-white/95 dark:bg-neutral-900/95 px-1.5 py-0.5 rounded shadow-sm flex-row items-center"
+                    style={{ gap: 2, zIndex: 10 }}
+                  >
+                    <FontAwesome5 name="star" size={8} color="#eab308" />
+                    <Text className="text-[8px] font-bold text-neutral-800 dark:text-neutral-200">Make Primary</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            ))}
+
+            {bannerPics.length < 5 && (
+              <TouchableOpacity 
+                onPress={async () => {
+                  const hasPermission = await requestPhotoLibraryPermission();
+                  if (!hasPermission) return;
+                  try {
+                    const result = await ImagePicker.launchImageLibraryAsync({
+                      mediaTypes: ['images'],
+                      allowsEditing: true,
+                      aspect: [16, 9],
+                      quality: 0.7,
+                    });
+
+                    if (!result.canceled && result.assets && result.assets.length > 0) {
+                      setSaving(true);
+                      const uploadedUrl = await uploadToCloudinary(result.assets[0].uri, CLOUDINARY_FOLDERS.CONTRACTOR_BANNER);
+                      setBannerPics(prev => {
+                        const newPics = [...prev, uploadedUrl];
+                        if (prev.length === 0) setCoverImage(uploadedUrl);
+                        return newPics;
+                      });
+                    }
+                  } catch (err: any) {
+                    Alert.alert("Error", err?.message || "Upload failed");
+                  } finally {
+                    setSaving(false);
+                  }
+                }}
+                className="w-36 h-24 border-2 border-dashed border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 rounded-xl items-center justify-center mr-3"
+              >
+                {saving ? (
+                  <ActivityIndicator size="small" color="#4F46E5" />
+                ) : (
+                  <>
+                    <FontAwesome5 name="plus" size={14} color="#a3a3a3" />
+                    <Text className="text-[10px] text-neutral-500 dark:text-neutral-400 mt-1 font-semibold">Add Banner</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            )}
+          </ScrollView>
         </View>
 
         {/* Profile Info */}

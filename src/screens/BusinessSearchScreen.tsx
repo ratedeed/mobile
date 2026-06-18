@@ -147,7 +147,23 @@ const ListingCard = ({
           <Text className="text-[12px] font-semibold text-neutral-700 dark:text-neutral-300">Escrow Protected</Text>
         </View>
         <Text className="text-xs font-bold text-neutral-900 dark:text-neutral-50 mt-1">
-          {(!price || price === '$0' || price === '$0.00' || price === '0' || price.toLowerCase() === 'n/a' || price.toLowerCase() === 'na') ? 'Contact for Quote' : (/^\d/.test(price.trim()) ? `$${price.trim()} project` : `${price.trim()} project`)}
+          {(() => {
+            const clean = (price || '').trim();
+            if (!clean || clean === '$0' || clean === '$0.00' || clean === '0' || clean.toLowerCase() === 'n/a' || clean.toLowerCase() === 'na') {
+              return 'Contact for Quote';
+            }
+            if (/^\$+$/.test(clean)) {
+              return `Price level: ${clean}`;
+            }
+            if (!/\d/.test(clean)) {
+              return clean;
+            }
+            const formattedPrice = clean.startsWith('$') ? clean : `$${clean}`;
+            if (clean.toLowerCase().includes('/hr') || clean.toLowerCase().includes('hr') || clean.toLowerCase().includes('hour')) {
+              return `${formattedPrice} starting rate`;
+            }
+            return `${formattedPrice} project`;
+          })()}
         </Text>
       </View>
     </Pressable>
