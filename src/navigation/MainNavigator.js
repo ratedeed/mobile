@@ -71,6 +71,26 @@ const SafeJobDetailScreen = (props) => (
     <JobDetailScreen {...props} />
   </ErrorBoundary>
 );
+const SafePaymentFlowScreen = (props) => (
+  <ErrorBoundary>
+    <PaymentFlowScreen {...props} />
+  </ErrorBoundary>
+);
+const SafeReviewScreen = (props) => (
+  <ErrorBoundary>
+    <ReviewScreen {...props} />
+  </ErrorBoundary>
+);
+const SafeDisputeScreen = (props) => (
+  <ErrorBoundary>
+    <DisputeScreen {...props} />
+  </ErrorBoundary>
+);
+const SafeQuoteReviewScreen = (props) => (
+  <ErrorBoundary>
+    <QuoteReviewScreen {...props} />
+  </ErrorBoundary>
+);
 
 // ---- Custom Center Tab Button ----
 const JobsTabBarButton = ({ onPress }) => (
@@ -341,13 +361,13 @@ export default function MainNavigator() {
       <Stack.Screen name="Notifications" component={NotificationsScreen} />
       <Stack.Screen name="ChatScreen" component={SafeMessagesScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ActiveJobs" component={ActiveJobsScreen} options={{ title: '', headerShown: false }} />
-      <Stack.Screen name="PaymentFlow" component={PaymentFlowScreen} options={{ title: '', headerShown: false }} />
-      <Stack.Screen name="ReviewScreen" component={ReviewScreen} options={{ title: 'Leave a Review' }} />
-      <Stack.Screen name="DisputeScreen" component={DisputeScreen} options={{ title: 'File a Dispute' }} />
+      <Stack.Screen name="PaymentFlow" component={SafePaymentFlowScreen} options={{ title: '', headerShown: false }} />
+      <Stack.Screen name="ReviewScreen" component={SafeReviewScreen} options={{ title: 'Leave a Review' }} />
+      <Stack.Screen name="DisputeScreen" component={SafeDisputeScreen} options={{ title: 'File a Dispute' }} />
       <Stack.Screen name="ChangeOrderScreen" component={ChangeOrderScreen} options={{ title: 'Change Order' }} />
       <Stack.Screen name="JobDetail" component={SafeJobDetailScreen} options={{ title: '', headerShown: false }} />
       <Stack.Screen name="BusinessSearch" component={BusinessSearchScreen} options={{ title: '', headerShown: false }} />
-      <Stack.Screen name="QuoteReview" component={QuoteReviewScreen} options={{ title: 'Review Quote' }} />
+      <Stack.Screen name="QuoteReview" component={SafeQuoteReviewScreen} options={{ title: 'Review Quote' }} />
       <Stack.Screen name="VerifyEmailChange" component={VerifyEmailChangeScreen} options={{ title: 'Verify Email', headerShown: false }} />
       <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} options={{ title: 'Set New Password', headerShown: false }} />
       {/* Auth screens available within Main stack for guest browsing flow */}
