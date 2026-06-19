@@ -88,45 +88,30 @@ const GRADIENT_ANGLES = [
 
 export function getGradientConfig(category?: string, seed?: string): GradientConfig {
   const key = detectCategory(category);
-  // Default to a rich, universal purple/blue if no category is matched
-  const baseHue = key ? CATEGORY_HUES[key] : 240; 
+  const baseHue = key ? CATEGORY_HUES[key] : 240;
 
   let startHue = baseHue;
   let satBase = 75;
   let lightBase = 55;
   let angleIndex = 0;
   let sweepDir = 1;
-  let span = 60; // Default safe span
+  let span = 60;
 
   if (seed) {
     const safeHash = hashString(seed);
-    
-    // Spread the hue +/- 40 degrees from the category base. 
-    // This keeps Plumbers generally "aquatic" and Painters "pink/purple" while ensuring every single card is still unique.
-    const hueShift = (safeHash % 80) - 40; 
+    const hueShift = (safeHash % 80) - 40;
     startHue = (baseHue + hueShift + 360) % 360;
-    
-    // Vary saturation and lightness for distinct, clean moods
-    // Elevated lightness floor (55%+) prevents dark "olive/brown" muddy bands
-    satBase = 75 + (safeHash % 20); // 75% to 95%
-    lightBase = 55 + ((safeHash >> 3) % 10); // 55% to 65%
-    
-    // Pick a random angle layout
+    satBase = 75 + (safeHash % 20);
+    lightBase = 55 + ((safeHash >> 3) % 10);
     angleIndex = safeHash % GRADIENT_ANGLES.length;
-    
-    // Vary sweep direction
     sweepDir = (safeHash % 2 === 0) ? 1 : -1;
-    
-    // Limit span to strictly analogous/split-analogous ranges (45 to 85 degrees).
-    // This mathematically prevents interpolation across opposite sides of the color wheel (which creates mud).
-    span = 45 + ((safeHash >> 5) % 40); 
+    span = 45 + ((safeHash >> 5) % 40);
   }
 
   const h = (offset: number) => (startHue + sweepDir * offset + 360) % 360;
-  
+
   return {
     colors: {
-      // Keeping lightness steadily increasing ensures a luminous, glass-like blend without dark midtones
       c1: `hsl(${h(0)}, ${satBase}%, ${lightBase}%)`,
       c2: `hsl(${h(span * 0.25)}, ${Math.max(0, satBase - 5)}%, ${lightBase + 4}%)`,
       c3: `hsl(${h(span * 0.5)}, ${Math.max(0, satBase - 10)}%, ${lightBase + 8}%)`,
@@ -137,7 +122,6 @@ export function getGradientConfig(category?: string, seed?: string): GradientCon
   };
 }
 
-// Backward compatible export
 export function getCategoryColors(category?: string, seed?: string): CategoryColors {
   return getGradientConfig(category, seed).colors;
 }
@@ -157,12 +141,12 @@ function escapeXml(str: string): string {
 export function getInitials(name: string): string {
   if (!name || typeof name !== 'string') return '??';
   const fillerWords = new Set(['the', 'and', 'of', 'in', 'a', 'an', 'for', 'at', 'to', 'with', 'co', 'inc', 'llc']);
-  
+
   const words = name
     .replace(/[^a-zA-Z\s'-]/g, ' ')
     .split(/[\s-]+/)
     .filter(w => w.length > 0 && !fillerWords.has(w.toLowerCase()));
-  
+
   if (words.length === 0) return '??';
   if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
   return (words[0][0] + words[words.length - 1][0]).toUpperCase();
@@ -171,15 +155,15 @@ export function getInitials(name: string): string {
 // ---- Image URL Validators ----
 
 const DEFAULT_PATTERNS = [
-  /^\/images\//, 
-  /default_profile\.png$/, 
+  /^\/images\//,
+  /default_profile\.png$/,
   /\/backend\/uploads\/default/,
-  /^https?:\/\/.*placeholder/i, 
-  /^https?:\/\/.*stock/i, 
+  /^https?:\/\/.*placeholder/i,
+  /^https?:\/\/.*stock/i,
   /^https?:\/\/via\.placeholder\.com/i,
-  /^data:image\/svg\+xml/i, 
-  /^$/, 
-  /^undefined$/, 
+  /^data:image\/svg\+xml/i,
+  /^$/,
+  /^undefined$/,
   /^null$/,
 ];
 
@@ -195,18 +179,18 @@ export function isRealImageUrl(url: string): boolean {
   if (url.includes("generate-banner") || url.includes("generate-avatar")) return false;
 
   const trimmed = url.trim();
-  
-  if (trimmed.startsWith('file://') || /^data:image\/(?!svg).+$/i.test(trimmed)) return true; 
-  if (trimmed.startsWith('data:')) return false; 
-  
+
+  if (trimmed.startsWith('file://') || /^data:image\/(?!svg).+$/i.test(trimmed)) return true;
+  if (trimmed.startsWith('data:')) return false;
+
   if (trimmed.startsWith('http')) {
     if (trimmed.includes('placeholder') || trimmed.includes('stock')) return false;
     return true;
   }
-  
+
   if (trimmed.startsWith('/uploads/') || trimmed.startsWith('/profile/') || trimmed.startsWith('/img/')) return true;
   if (/\.(png|jpg|jpeg|webp|gif|avif)(\?.*)?$/i.test(trimmed)) return true;
-  
+
   return false;
 }
 
@@ -221,10 +205,10 @@ function buildSvgDefs(uid: string, config: GradientConfig): string {
   return `
     <defs>
       <linearGradient id="${uid}-grad" x1="${angle.x1}" y1="${angle.y1}" x2="${angle.x2}" y2="${angle.y2}">
-        <stop offset="0%" stop-color="${colors.c1}" />
-        <stop offset="20%" stop-color="${colors.c2}" />
-        <stop offset="39%" stop-color="${colors.c3}" />
-        <stop offset="76%" stop-color="${colors.c4}" />
+        <stop offset="0%"   stop-color="${colors.c1}" />
+        <stop offset="20%"  stop-color="${colors.c2}" />
+        <stop offset="39%"  stop-color="${colors.c3}" />
+        <stop offset="76%"  stop-color="${colors.c4}" />
         <stop offset="100%" stop-color="${colors.c5}" />
       </linearGradient>
       <filter id="${uid}-noise">
@@ -235,6 +219,9 @@ function buildSvgDefs(uid: string, config: GradientConfig): string {
   `.trim();
 }
 
+// ─── FIX 1: Avatar — dy-based vertical centering + letter-spacing fix ─────────
+// Removed letter-spacing which causes alignment shifts on centered text elements.
+// Replaced dominant-baseline with a dynamic unitless pixel dy offset to ensure consistent rendering across Android/iOS.
 export function generateAvatarDataUrl(name: string, size: number = 200, category?: string): string {
   const cacheKey = `av-${name}-${size}-${category}`;
   if (avatarCache.has(cacheKey)) return avatarCache.get(cacheKey)!;
@@ -246,20 +233,15 @@ export function generateAvatarDataUrl(name: string, size: number = 200, category
   const s = size;
 
   const fontSize = s * (initials.length > 2 ? 0.26 : 0.36);
+  const dyVal = fontSize * 0.35; // mathematically centers capitals on the baseline
 
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${s} ${s}" preserveAspectRatio="xMidYMid slice">
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${s}" height="${s}" viewBox="0 0 ${s} ${s}" preserveAspectRatio="xMidYMid slice">
   ${buildSvgDefs(uid, config)}
   <clipPath id="${uid}-clip"><circle cx="${s / 2}" cy="${s / 2}" r="${s / 2}" /></clipPath>
-  
   <g clip-path="url(#${uid}-clip)">
     <rect width="${s}" height="${s}" fill="url(#${uid}-grad)" />
-    <rect width="${s}" height="${s}" filter="url(#${uid}-noise)" pointer-events="none" style="mix-blend-mode: overlay;" />
-    <text x="${s / 2}" y="${s / 2}" dy="0.32em" text-anchor="middle"
-      font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', sans-serif"
-      font-size="${fontSize}" font-weight="700" fill="#ffffff" letter-spacing="-0.02em"
-      style="text-shadow: 0px 2px 8px rgba(0,0,0,0.15);">
-      ${initials}
-    </text>
+    <rect width="${s}" height="${s}" filter="url(#${uid}-noise)" pointer-events="none" />
+    <text x="${s / 2}" y="${s / 2}" dy="${dyVal}" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', sans-serif" font-size="${fontSize}" font-weight="700" fill="#ffffff">${initials}</text>
   </g>
   <circle cx="${s / 2}" cy="${s / 2}" r="${s / 2 - 0.75}" fill="none" stroke="#ffffff" stroke-opacity="0.3" stroke-width="1.5" />
 </svg>`;
@@ -295,23 +277,39 @@ function wrapText(text: string, maxChars: number): string[] {
   return lines;
 }
 
+// ─── FIX 2: Banner — group centering + verticalBias for mobile nav overlap ────
+//
+// WHY verticalBias EXISTS:
+//   On mobile, the back-button / action-button row is overlaid transparently
+//   on the top of the banner. That nav area is roughly 25–30 % of the banner
+//   height. Centering at 50 % of the SVG puts the text too close to those
+//   buttons. verticalBias shifts the group's center downward as a fraction of
+//   the banner height so the text sits in the visual middle of the *empty*
+//   gradient space below the nav row.
+//
+//   Recommended value for a typical mobile profile header:  0.10 – 0.13
+//   Default (0) keeps the old geometric center for web / non-overlay contexts.
+//
 export function generateBannerDataUrl(
   name: string,
   category?: string,
   size: BannerSize | number = { width: 1600, height: 800 },
-  heightArg?: number
+  heightArg?: number,
+  // ↓ NEW: fraction of banner height to shift the text block downward.
+  //        Pass ~0.12 for mobile layouts where a nav bar is overlaid at top.
+  verticalBias: number = 0
 ): string {
-  const { width: w, height: h } = typeof size === 'number' 
-    ? { width: size, height: heightArg || 400 } 
+  const { width: w, height: h } = typeof size === 'number'
+    ? { width: size, height: heightArg || 400 }
     : { width: size.width, height: size.height };
 
-  const cacheKey = `bn-${name}-${category}-${w}x${h}`;
+  const cacheKey = `bn-${name}-${category}-${w}x${h}-${verticalBias}`;
   if (bannerCache.has(cacheKey)) return bannerCache.get(cacheKey)!;
 
   const config = getGradientConfig(category, name);
   const hash = hashString(name || 'default');
   const uid = `bn-${hash}-${w}x${h}`;
-  
+
   let displayName = name || 'Ratedeed';
   if (displayName.includes('-') && !displayName.includes(' ')) {
     displayName = displayName.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
@@ -324,39 +322,51 @@ export function generateBannerDataUrl(
 
   const maxLineChars = Math.floor(w / (titleFontSize * 0.55));
   const lines = wrapText(displayName, maxLineChars);
-  
+
   const lineHeight = titleFontSize * 1.15;
   const hasCategory = !!category;
-  const titleYOffset = hasCategory ? -(h * 0.03) : 0; 
-  const startY = (h / 2) + titleYOffset - ((lines.length - 1) * lineHeight) / 2;
 
-  const nameSvg = lines.map((line, i) => 
-    `<text x="50%" y="${startY + (i * lineHeight)}" dy="0.32em" text-anchor="middle"
-      font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', sans-serif" 
-      font-size="${titleFontSize}" font-weight="800" letter-spacing="-0.02em"
-      fill="#ffffff" style="text-shadow: 0px 4px 16px rgba(0,0,0,0.15);">
-      ${escapeXml(line)}
-    </text>`
+  // Total visual height of all elements stacked:
+  //   titleBlockHeight  = height of all title lines
+  //   separatorGap      = space below last title line to the separator
+  //   separatorSize     = stroke width of the separator line
+  //   categoryGap       = space from separator bottom to top of category text
+  //   categoryFontSize  = height of the category label
+  const titleBlockHeight = titleFontSize + (lines.length - 1) * lineHeight;
+  const separatorGap  = hasCategory ? h * 0.045 : 0;
+  const separatorSize = hasCategory ? 2          : 0;
+  const categoryGap   = hasCategory ? h * 0.025  : 0;
+  const totalGroupHeight = titleBlockHeight
+    + (hasCategory ? separatorGap + separatorSize + categoryGap + categoryFontSize : 0);
+
+  // Center the group, then apply verticalBias to push it below any nav overlay.
+  // verticalBias = 0   → geometric center (web / no overlay)
+  // verticalBias = 0.12 → center shifted 12 % of banner height downward (mobile)
+  const groupTopY = (h - totalGroupHeight) / 2 + h * verticalBias;
+  const startY    = groupTopY + titleFontSize / 2;   // visual center of first title line
+
+  const dyTitle = titleFontSize * 0.35;
+  const dyCategory = categoryFontSize * 0.35;
+
+  const nameSvg = lines.map((line, i) =>
+    `<text x="${w / 2}" y="${startY + i * lineHeight}" dy="${dyTitle}" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', sans-serif" font-size="${titleFontSize}" font-weight="800" fill="#ffffff">${escapeXml(line)}</text>`
   ).join('\n  ');
 
   let categorySvg = '';
   if (hasCategory) {
-    const categoryY = startY + ((lines.length - 1) * lineHeight) + (h * 0.1);
+    const separatorY = groupTopY + titleBlockHeight + separatorGap;
+    const categoryY  = separatorY + separatorSize + categoryGap + categoryFontSize / 2;
+
     categorySvg = `
-  <line x1="${w/2 - 16}" y1="${categoryY - (h * 0.035)}" x2="${w/2 + 16}" y2="${categoryY - (h * 0.035)}" 
+  <line x1="${w / 2 - 16}" y1="${separatorY}" x2="${w / 2 + 16}" y2="${separatorY}"
     stroke="rgba(255,255,255,0.4)" stroke-width="2" stroke-linecap="round" />
-  <text x="50%" y="${categoryY}" dy="0.32em" text-anchor="middle" 
-    font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', sans-serif" 
-    font-size="${categoryFontSize}" font-weight="700" fill="rgba(255,255,255,0.9)" 
-    letter-spacing="0.2em" style="text-transform: uppercase; text-shadow: 0px 2px 8px rgba(0,0,0,0.1);">
-    ${escapeXml(category!)}
-  </text>`;
+  <text x="${w / 2}" y="${categoryY}" dy="${dyCategory}" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', sans-serif" font-size="${categoryFontSize}" font-weight="700" fill="rgba(255,255,255,0.9)">${escapeXml((category!).toUpperCase())}</text>`;
   }
 
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid slice">
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid slice">
   ${buildSvgDefs(uid, config)}
   <rect width="${w}" height="${h}" fill="url(#${uid}-grad)" />
-  <rect width="${w}" height="${h}" filter="url(#${uid}-noise)" pointer-events="none" style="mix-blend-mode: overlay;" />
+  <rect width="${w}" height="${h}" filter="url(#${uid}-noise)" pointer-events="none" />
   <rect x="1" y="1" width="${w-2}" height="${h-2}" fill="none" stroke="#ffffff" stroke-opacity="0.2" stroke-width="2" rx="4" pointer-events="none" />
   <g>
   ${nameSvg}${categorySvg}
@@ -374,8 +384,18 @@ export function getProfileImageUrl(name: string, profilePicture: string, categor
   return isRealImageUrl(profilePicture) ? profilePicture : generateAvatarDataUrl(name, size, category);
 }
 
-export function getCoverImageUrl(name: string, coverImage: string, category?: string, width: number = 1600, height: number = 800): string {
-  return isRealImageUrl(coverImage) ? coverImage : generateBannerDataUrl(name, category, { width, height });
+// Updated: pass verticalBias ≈ 0.12 for mobile to account for nav bar overlay
+export function getCoverImageUrl(
+  name: string,
+  coverImage: string,
+  category?: string,
+  width: number = 1600,
+  height: number = 800,
+  verticalBias: number = 0
+): string {
+  return isRealImageUrl(coverImage)
+    ? coverImage
+    : generateBannerDataUrl(name, category, { width, height }, undefined, verticalBias);
 }
 
 export function getAvatarUrl(profilePicture: string, name: string, category?: string, size: number = 200): string {

@@ -213,7 +213,7 @@ export default function ServiceAreaMap({
       const allCoords = zipAreas.flatMap(za => za.coords);
       if (allCoords.length > 0) {
         mapRef.current.fitToCoordinates(allCoords, {
-          edgePadding: { top: 10, right: 10, bottom: 10, left: 10 },
+          edgePadding: { top: 60, right: 60, bottom: 60, left: 60 },
           animated: true,
         });
       }
