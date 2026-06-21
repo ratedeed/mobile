@@ -11,7 +11,7 @@ import {
   Linking,
   useColorScheme,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { backendLoginFirebase, syncEmailVerificationStatus, appleSignIn, getContractorProfile } from '../api';
 import { auth } from '../firebaseConfig';
@@ -31,7 +31,22 @@ const LoginScreen = () => {
   const [showVerificationMessage, setShowVerificationMessage] = useState(false);
   const [apiError, setApiError] = useState(null);
   const navigation = useNavigation();
+  const route = useRoute();
   const { updateBackendToken } = useAuth();
+
+  const verified = route.params?.verified;
+
+  useEffect(() => {
+    if (verified) {
+      Toast.show({
+        type: 'info',
+        text1: 'Email Changed',
+        text2: 'Your email has been changed. Use your new email to log in.',
+        visibilityTime: 6000
+      });
+      navigation.setParams({ verified: undefined });
+    }
+  }, [verified]);
 
   const redirectContractor = async () => {
     try {

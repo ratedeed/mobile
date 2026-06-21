@@ -188,7 +188,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 const ProfileScreen: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const insets = useSafeAreaInsets();
-  const { logout, firebaseUser: authUser, isAuthenticated } = useAuth();
+  const { logout, firebaseUser: authUser, isAuthenticated, updateBackendToken, backendToken } = useAuth();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
   const isSocialUser = !auth.currentUser || auth.currentUser.providerData.some(p => p.providerId !== 'password');
@@ -291,6 +291,12 @@ const ProfileScreen: React.FC = () => {
   useEffect(() => { return () => { isMounted.current = false; }; }, []);
 
   useFocusEffect(useCallback(() => { loadProfile(); }, [loadProfile]));
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadProfile();
+    }
+  }, [backendToken, isAuthenticated, loadProfile]);
   const onRefresh = useCallback(() => { setRefreshing(true); loadProfile(); }, [loadProfile]);
 
   const handleUpdateProfilePic = async () => {
@@ -327,9 +333,19 @@ const ProfileScreen: React.FC = () => {
     try {
       if (!auth.currentUser) throw new Error('You must be logged in.');
       await reauthenticateWithCredential(auth.currentUser, EmailAuthProvider.credential(user?.email || '', emailPassword));
-      await requestEmailChange(emailNew.trim(), emailPassword);
-      setEmailMessage({ type: 'success', text: 'Verification email sent. Please check your inbox and tap the link to complete the change.' });
-      setTimeout(() => { setActiveSheet(null); setEmailNew(''); setEmailPassword(''); }, 5000);
+      // Trigger Firebase email change verification directly on mobile
+      await verifyBeforeUpdateEmail(auth.currentUser, emailNew.trim());
+      
+      // Log out immediately from both backend and frontend store/state
+      await logout();
+
+      // Close sheet and reset states
+      setActiveSheet(null);
+      setEmailNew('');
+      setEmailPassword('');
+
+      // Redirect to Login Screen with param
+      (navigation as any).navigate('Login', { verified: true });
     } catch (err: any) {
       if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') setEmailMessage({ type: 'error', text: 'Current password is incorrect.' });
       else if (err.code === 'auth/email-already-in-use') setEmailMessage({ type: 'error', text: 'This email is already in use.' });
@@ -349,7 +365,15 @@ const ProfileScreen: React.FC = () => {
       if (!auth.currentUser || !user?.email) throw new Error('You must be logged in.');
       await reauthenticateWithCredential(auth.currentUser, EmailAuthProvider.credential(user.email, currentPassword));
       await updatePassword(auth.currentUser, newPassword);
-      await apiChangePassword(currentPassword, newPassword);
+      
+      // Request fresh Firebase token after password changes
+      await auth.currentUser.getIdToken(true);
+
+      const res = await apiChangePassword(currentPassword, newPassword);
+      if (res && res.token) {
+        await updateBackendToken(res.token, true, { refreshToken: res.refreshToken });
+      }
+
       setPwMessage({ type: 'success', text: 'Password changed!' });
       setTimeout(() => { setActiveSheet(null); setCurrentPassword(''); setNewPassword(''); setConfirmPassword(''); }, 1500);
     } catch (err: any) {

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { AppState } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthInfo, UserRole } from '../types';
 import { syncFavoritesWithServer } from '../utils/favoritesStore';
@@ -6,7 +7,7 @@ import { disconnectSocket, setAuthInvalidatedCallback, logout as apiLogout } fro
 import { jwtDecode } from 'jwt-decode';
 import { getSecureItem, setSecureItem, removeSecureItem } from '../utils/secureStore';
 import { auth } from '../firebaseConfig';
-import { signOut } from 'firebase/auth';
+import { signOut, onIdTokenChanged } from 'firebase/auth';
 
 const USER_DATA_KEY = 'ratedeed-user-data';
 
@@ -157,6 +158,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUserRole(null);
   }, []);
 
+  const updateBackendToken = useCallback(async (token: string, emailVerifiedStatus: boolean, userData?: any) => {
+    if (token) {
+      await setSecureItem('auth_token', token);
+    }
+
+    const currentData = await loadUserData() || {};
+    const mergedData = { ...currentData, ...userData, emailVerified: emailVerifiedStatus };
+
+    if (userData?.refreshToken) {
+      await setSecureItem('refresh_token', userData.refreshToken);
+      delete mergedData.refreshToken;
+    }
+    delete mergedData.token;
+
+    await saveUserData(mergedData);
+
+    let decodedId = null;
+    if (token) {
+      try {
+        const decodedToken: any = jwtDecode(token);
+        decodedId = decodedToken.id || decodedToken._id;
+      } catch {}
+    }
+
+    setBackendToken(token);
+    setIsEmailVerified(emailVerifiedStatus);
+    if (mergedData._id || mergedData.id || decodedId) {
+      setUserId((mergedData._id || mergedData.id || decodedId) ?? null);
+    }
+    if (mergedData.role) {
+      setUserRole(mergedData.role as UserRole);
+    }
+    syncFavoritesWithServer();
+  }, []);
+
   useEffect(() => {
     loadStoredAuth();
     setAuthInvalidatedCallback(() => {
@@ -192,6 +228,77 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   }, [logout]);
 
+  // Listen for Firebase Auth changes to automatically sync email address changes on mobile
+  useEffect(() => {
+    let hasReloadedFirebaseUser = false;
+    const unsubscribe = onIdTokenChanged(auth, async (fUser) => {
+      if (fUser) {
+        // Force reload exactly once per session/listener setup to pull fresh status from Firebase servers
+        if (!hasReloadedFirebaseUser) {
+          hasReloadedFirebaseUser = true;
+          try {
+            await fUser.reload();
+          } catch (e) {
+            if (__DEV__) console.warn('Initial Firebase reload failed on mobile:', e);
+          }
+        }
+
+        if (fUser.email) {
+          setFirebaseUser(fUser);
+          const currentData = await loadUserData();
+          if (currentData) {
+            const normalizedFirebaseEmail = fUser.email.toLowerCase().trim();
+            const normalizedStoreEmail = currentData.email?.toLowerCase().trim();
+
+            if (normalizedStoreEmail && normalizedStoreEmail !== normalizedFirebaseEmail) {
+              if (__DEV__) console.log('Firebase email mismatch detected on mobile. Syncing with backend...');
+              try {
+                const idToken = await fUser.getIdToken(true);
+                const { backendLoginFirebase } = require('../utils/apiClient');
+                const syncRes = await backendLoginFirebase(idToken, fUser.email);
+                if (syncRes && syncRes.token) {
+                  const { token, refreshToken, socketToken, ...userData } = syncRes;
+                  await updateBackendToken(syncRes.token, syncRes.emailVerified, userData);
+                  if (__DEV__) console.log('Successfully synced mobile email updates to backend.');
+                }
+              } catch (syncErr) {
+                if (__DEV__) console.warn('Failed to sync Firebase email update on mobile:', syncErr);
+              }
+            }
+          }
+        }
+      } else {
+        setFirebaseUser(null);
+      }
+    });
+
+    return unsubscribe;
+  }, [updateBackendToken]);
+
+  // Reload Firebase Auth current user when app becomes active to catch email changes verified in background
+  useEffect(() => {
+    const handleAppStateChange = async (nextAppState: string) => {
+      if (nextAppState === 'active') {
+        try {
+          if (auth && auth.currentUser) {
+            if (__DEV__) console.log('App focused/active. Reloading Firebase Auth user profile...');
+            await auth.currentUser.reload();
+          }
+        } catch (err) {
+          if (__DEV__) console.warn('Failed to reload Firebase user on app focus:', err);
+        }
+      }
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    // Run once on load as well
+    handleAppStateChange('active');
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
+
   const updateUser = useCallback(async (userData: Partial<AuthInfo>) => {
     try {
       const current = await loadUserData() || {};
@@ -205,41 +312,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUserId(updated._id || updated.id || null);
       }
     } catch {}
-  }, []);
-
-  const updateBackendToken = useCallback(async (token: string, emailVerifiedStatus: boolean, userData?: any) => {
-    if (token) {
-      await setSecureItem('auth_token', token);
-    }
-
-    const currentData = await loadUserData() || {};
-    const mergedData = { ...currentData, ...userData, emailVerified: emailVerifiedStatus };
-
-    if (userData?.refreshToken) {
-      await setSecureItem('refresh_token', userData.refreshToken);
-      delete mergedData.refreshToken;
-    }
-    delete mergedData.token;
-
-    await saveUserData(mergedData);
-
-    let decodedId = null;
-    if (token) {
-      try {
-        const decodedToken: any = jwtDecode(token);
-        decodedId = decodedToken.id || decodedToken._id;
-      } catch {}
-    }
-
-    setBackendToken(token);
-    setIsEmailVerified(emailVerifiedStatus);
-    if (mergedData._id || mergedData.id || decodedId) {
-      setUserId((mergedData._id || mergedData.id || decodedId) ?? null);
-    }
-    if (mergedData.role) {
-      setUserRole(mergedData.role as UserRole);
-    }
-    syncFavoritesWithServer();
   }, []);
 
   const isAuthenticated = !!backendToken;
