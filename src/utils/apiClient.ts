@@ -1064,7 +1064,15 @@ export const requestEmailChange = async (newEmail: string, currentPassword: stri
 
 export const changePassword = async (currentPassword: string, newPassword: string): Promise<any> => {
   const authHeaders = await getAuthHeaders();
-  return put(`${API_BASE}/users/change-password`, { currentPassword, newPassword }, authHeaders);
+  let firebaseIdToken;
+  try {
+    if (firebaseAuth.currentUser) {
+      firebaseIdToken = await firebaseAuth.currentUser.getIdToken(true);
+    }
+  } catch (e) {
+    if (__DEV__) console.warn('Could not fetch Firebase ID token for change-password');
+  }
+  return put(`${API_BASE}/users/change-password`, { currentPassword, newPassword, firebaseIdToken }, authHeaders);
 };
 
 export const deleteAccount = async (): Promise<any> => {

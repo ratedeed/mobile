@@ -20,9 +20,11 @@ import { createUserWithEmailAndPassword, sendEmailVerification, deleteUser } fro
 import Toast from 'react-native-toast-message';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { useAuth } from '../context/AuthContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const RegisterScreen = () => {
   const isDark = useColorScheme() === 'dark';
+  const insets = useSafeAreaInsets();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -170,7 +172,13 @@ const RegisterScreen = () => {
       className="flex-1 bg-white dark:bg-neutral-950"
     >
       <ScrollView
-        contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 40 }}
+        contentContainerStyle={{
+          flexGrow: 1,
+          justifyContent: 'center',
+          paddingHorizontal: 24,
+          paddingTop: Math.max(insets.top, 40),
+          paddingBottom: Math.max(insets.bottom, 40),
+        }}
         keyboardShouldPersistTaps="handled"
       >
         {/* Logo */}

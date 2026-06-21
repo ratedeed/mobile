@@ -18,10 +18,12 @@ import { auth } from '../firebaseConfig';
 import { sendEmailVerification, signInWithEmailAndPassword } from 'firebase/auth';
 import Toast from 'react-native-toast-message';
 import { useAuth } from '../context/AuthContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as AppleAuthentication from 'expo-apple-authentication';
 
 const LoginScreen = () => {
   const isDark = useColorScheme() === 'dark';
+  const insets = useSafeAreaInsets();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -220,7 +222,13 @@ const LoginScreen = () => {
       className="flex-1 bg-white dark:bg-neutral-950"
     >
       <ScrollView
-        contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24 }}
+        contentContainerStyle={{
+          flexGrow: 1,
+          justifyContent: 'center',
+          paddingHorizontal: 24,
+          paddingTop: Math.max(insets.top, 24),
+          paddingBottom: Math.max(insets.bottom, 24),
+        }}
         keyboardShouldPersistTaps="handled"
       >
         {/* Logo */}

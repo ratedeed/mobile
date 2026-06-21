@@ -147,11 +147,14 @@ function SettingsSheet({ title, onClose, children, visible }: { title: string; o
 
   return (
     <Modal transparent visible={visible} onRequestClose={handleClose} animationType="none" statusBarTranslucent>
-      <Animated.View className="flex-1 justify-end" style={{ backgroundColor: 'rgba(0,0,0,0.5)', opacity: fadeAnim }}>
-        <Pressable className="absolute inset-0" onPress={handleClose} />
-        <Animated.View style={{ transform: [{ translateY: slideAnim }] }}>
-          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-            <View className="bg-white dark:bg-neutral-950 rounded-t-[24px]">
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
+      >
+        <Animated.View className="flex-1 justify-end" style={{ backgroundColor: 'rgba(0,0,0,0.5)', opacity: fadeAnim }}>
+          <Pressable className="absolute inset-0" onPress={handleClose} />
+          <Animated.View style={{ transform: [{ translateY: slideAnim }], flexShrink: 1 }}>
+            <View className="bg-white dark:bg-neutral-950 rounded-t-[24px]" style={{ flexShrink: 1 }}>
               <View className="items-center pt-3 pb-1">
                 <View className="w-9 h-[5px] rounded-full bg-neutral-300 dark:bg-neutral-600" />
               </View>
@@ -165,9 +168,9 @@ function SettingsSheet({ title, onClose, children, visible }: { title: string; o
                 {children}
               </ScrollView>
             </View>
-          </KeyboardAvoidingView>
+          </Animated.View>
         </Animated.View>
-      </Animated.View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

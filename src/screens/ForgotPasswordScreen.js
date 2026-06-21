@@ -3,9 +3,11 @@ import { View, ScrollView, Pressable, Text, TextInput, Alert, KeyboardAvoidingVi
 import { useNavigation } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { forgotPassword } from '../api';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const ForgotPasswordScreen = () => {
   const isDark = useColorScheme() === 'dark';
+  const insets = useSafeAreaInsets();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
@@ -29,7 +31,16 @@ const ForgotPasswordScreen = () => {
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? 50 : 0} className="flex-1 bg-white dark:bg-neutral-950">
-      <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24 }} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={{
+          flexGrow: 1,
+          justifyContent: 'center',
+          paddingHorizontal: 24,
+          paddingTop: Math.max(insets.top, 24),
+          paddingBottom: Math.max(insets.bottom, 24),
+        }}
+        keyboardShouldPersistTaps="handled"
+      >
         {/* Logo */}
         <View className="items-center mb-8">
           <FontAwesome5 name="hammer" size={48} color="#4F46E5" />

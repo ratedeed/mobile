@@ -141,10 +141,14 @@ function StarRating({ rating, size = 12 }: { rating: number; size?: number }) {
 function Sheet({ visible, onClose, title, children }: { visible: boolean; onClose: () => void; title: string; children: React.ReactNode }) {
   if (!visible) return null;
   return (
-    <View className="absolute inset-0 z-[90] justify-end" style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
-      <Pressable className="flex-1" onPress={onClose} />
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <View className="bg-white dark:bg-neutral-800 rounded-t-2xl max-h-[85vh]">
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      className="absolute inset-0 z-[90]"
+      style={{ flex: 1 }}
+    >
+      <View className="flex-1 justify-end" style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
+        <Pressable className="absolute inset-0" onPress={onClose} />
+        <View className="bg-white dark:bg-neutral-800 rounded-t-2xl max-h-[85vh]" style={{ flexShrink: 1 }}>
           <View className="w-10 h-1 rounded-full bg-neutral-300 dark:bg-neutral-500 mx-auto mt-3" />
           <View className="flex-row items-center justify-between px-5 pt-4 pb-2 border-b border-neutral-100 dark:border-neutral-700">
             <Text className="text-lg font-bold text-neutral-900 dark:text-white">{title}</Text>
@@ -156,8 +160,8 @@ function Sheet({ visible, onClose, title, children }: { visible: boolean; onClos
             {children}
           </ScrollView>
         </View>
-      </KeyboardAvoidingView>
-    </View>
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -1375,11 +1379,11 @@ const ContractorDashboardScreen: React.FC = () => {
               </Text>
               <View className="flex-row items-center bg-neutral-100 dark:bg-neutral-800 rounded-lg px-3 mb-4">
                 <Text className="flex-1 text-sm text-neutral-500 dark:text-neutral-400 py-3" numberOfLines={1}>
-                  https://ratedeed.com/contractor/{editableData.slug || 'my-profile'}
+                  https://www.ratedeed.com/c/{editableData.slug || 'my-profile'}
                 </Text>
                 <Pressable 
                   onPress={async () => {
-                    await Clipboard.setStringAsync(`https://ratedeed.com/contractor/${editableData.slug || ''}`);
+                    await Clipboard.setStringAsync(`https://www.ratedeed.com/c/${editableData.slug || ''}`);
                     Alert.alert('Copied!', 'Profile link copied to clipboard.');
                   }} 
                   className="p-2"
@@ -1389,10 +1393,10 @@ const ContractorDashboardScreen: React.FC = () => {
               </View>
               <View className="flex-row justify-center" style={{ gap: 16 }}>
                 {[
-                  { name: 'facebook-f', color: '#1877F2', url: `https://www.facebook.com/sharer/sharer.php?u=https://ratedeed.com/contractor/${editableData.slug}` },
-                  { name: 'x-twitter', color: '#000000', url: `https://twitter.com/intent/tweet?url=https://ratedeed.com/contractor/${editableData.slug}` },
-                  { name: 'linkedin-in', color: '#0A66C2', url: `https://www.linkedin.com/sharing/share-offsite/?url=https://ratedeed.com/contractor/${editableData.slug}` },
-                  { name: 'whatsapp', color: '#25D366', url: `whatsapp://send?text=Check out my profile on Ratedeed: https://ratedeed.com/contractor/${editableData.slug}` },
+                  { name: 'facebook-f', color: '#1877F2', url: `https://www.facebook.com/sharer/sharer.php?u=https://www.ratedeed.com/c/${editableData.slug}` },
+                  { name: 'x-twitter', color: '#000000', url: `https://twitter.com/intent/tweet?url=https://www.ratedeed.com/c/${editableData.slug}` },
+                  { name: 'linkedin-in', color: '#0A66C2', url: `https://www.linkedin.com/sharing/share-offsite/?url=https://www.ratedeed.com/c/${editableData.slug}` },
+                  { name: 'whatsapp', color: '#25D366', url: `whatsapp://send?text=Check out my profile on Ratedeed: https://www.ratedeed.com/c/${editableData.slug}` },
                 ].map(social => (
                   <Pressable 
                     key={social.name} 

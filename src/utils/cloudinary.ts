@@ -72,7 +72,7 @@ export async function uploadToCloudinary(
     formData.append('api_key', String(signData.api_key));
     formData.append('signature', String(signData.signature));
     formData.append('timestamp', String(signData.timestamp));
-    formData.append('folder', folder);
+    formData.append('folder', signData.folder || folder);
 
     const cloudinaryRes = await fetch(
       `https://api.cloudinary.com/v1_1/${signData.cloud_name}/image/upload`,
