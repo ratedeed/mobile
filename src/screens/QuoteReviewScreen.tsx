@@ -14,6 +14,7 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { getQuote, updateQuoteStatus } from '../api';
+import HapticFeedback from '../utils/haptics';
 
 export default function QuoteReviewScreen() {
   const colorScheme = useColorScheme();
@@ -115,6 +116,7 @@ export default function QuoteReviewScreen() {
     setActionLoading('accept');
     try {
       await updateQuoteStatus(quoteId, 'accepted');
+      HapticFeedback.success();
 
       const firstMilestone = quote?.isMilestone && quote?.milestones?.length
         ? quote.milestones.find((m: any) => m.status === 'pending' || !m.status) || quote.milestones[0]
@@ -136,6 +138,7 @@ export default function QuoteReviewScreen() {
         totalMilestonesCount: quote?.milestones?.length || 0,
       });
     } catch (err: any) {
+      HapticFeedback.error();
       Alert.alert('Error', err?.message || 'Failed to initiate payment.');
     } finally {
       setActionLoading(null);
@@ -147,10 +150,12 @@ export default function QuoteReviewScreen() {
     setActionLoading('reject');
     try {
       await updateQuoteStatus(quoteId, 'rejected');
+      HapticFeedback.warning();
       Alert.alert('Quote Declined', 'You have declined this quote.', [
         { text: 'OK', onPress: () => navigation.goBack() },
       ]);
     } catch (err: any) {
+      HapticFeedback.error();
       Alert.alert('Error', err?.message || 'Failed to decline quote.');
     } finally {
       setActionLoading(null);

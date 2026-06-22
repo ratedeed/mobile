@@ -217,6 +217,58 @@ const SkeletonRow = () => {
   );
 };
 
+// ─── Message Bubble Skeleton ──────────────────────────────────────────────────
+const MessageBubbleSkeleton = () => {
+  const pulse = useRef(new Animated.Value(0.3)).current;
+  useEffect(() => {
+    const a = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1, duration: 700, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0.3, duration: 700, useNativeDriver: true })
+      ])
+    );
+    a.start();
+    return () => a.stop();
+  }, []);
+
+  return (
+    <View className="flex-1 px-4 py-6 bg-neutral-50/60 dark:bg-neutral-950/60" style={{ gap: 20 }}>
+      {/* Left message skeleton */}
+      <View className="flex-row items-start" style={{ width: '100%' }}>
+        <Animated.View className="w-8 h-8 rounded-full bg-neutral-200 dark:bg-neutral-800 mr-2" style={{ opacity: pulse }} />
+        <View className="bg-white dark:bg-neutral-900 p-3 rounded-2xl rounded-tl-sm border border-neutral-100 dark:border-neutral-800" style={{ width: '60%', gap: 6 }}>
+          <Animated.View className="h-3 bg-neutral-200 dark:bg-neutral-800 rounded-full" style={{ opacity: pulse, width: '80%' }} />
+          <Animated.View className="h-2.5 bg-neutral-100 dark:bg-neutral-800 rounded-full" style={{ opacity: pulse, width: '50%' }} />
+        </View>
+      </View>
+
+      {/* Right message skeleton */}
+      <View className="flex-row justify-end" style={{ width: '100%' }}>
+        <View className="bg-indigo-50/40 dark:bg-indigo-950/20 p-3 rounded-2xl rounded-tr-sm border border-indigo-100/50 dark:border-indigo-900/30" style={{ width: '65%', gap: 6 }}>
+          <Animated.View className="h-3 bg-neutral-200 dark:bg-neutral-800 rounded-full" style={{ opacity: pulse, width: '90%' }} />
+          <Animated.View className="h-2.5 bg-neutral-100 dark:bg-neutral-800 rounded-full" style={{ opacity: pulse, width: '60%' }} />
+        </View>
+      </View>
+
+      {/* Left message skeleton */}
+      <View className="flex-row items-start" style={{ width: '100%' }}>
+        <Animated.View className="w-8 h-8 rounded-full bg-neutral-200 dark:bg-neutral-800 mr-2" style={{ opacity: pulse }} />
+        <View className="bg-white dark:bg-neutral-900 p-3 rounded-2xl rounded-tl-sm border border-neutral-100 dark:border-neutral-800" style={{ width: '50%', gap: 6 }}>
+          <Animated.View className="h-3 bg-neutral-200 dark:bg-neutral-800 rounded-full" style={{ opacity: pulse, width: '70%' }} />
+        </View>
+      </View>
+
+      {/* Right message skeleton */}
+      <View className="flex-row justify-end" style={{ width: '100%' }}>
+        <View className="bg-indigo-50/40 dark:bg-indigo-950/20 p-3 rounded-2xl rounded-tr-sm border border-indigo-100/50 dark:border-indigo-900/30" style={{ width: '55%', gap: 6 }}>
+          <Animated.View className="h-3 bg-neutral-200 dark:bg-neutral-800 rounded-full" style={{ opacity: pulse, width: '75%' }} />
+          <Animated.View className="h-2.5 bg-neutral-100 dark:bg-neutral-800 rounded-full" style={{ opacity: pulse, width: '40%' }} />
+        </View>
+      </View>
+    </View>
+  );
+};
+
 // ─── Empty Inbox ──────────────────────────────────────────────────────────────
 const EmptyInbox = () => (
   <View className="flex-1 items-center justify-center px-10 pt-20">
@@ -1366,10 +1418,13 @@ const MessagesScreen = () => {
               </View>
               <Pressable onPress={() => setActionSheetVisible(true)} className="w-11 h-11 items-center justify-center rounded-full" accessibilityLabel="Chat options" accessibilityRole="button"><FontAwesome5 name="ellipsis-h" size={16} color={isDark ? "#a3a3a3" : "#525252"} /></Pressable>
             </View>
-
-            <FlatList
-              ref={messagesRef}
-              data={processedMessages}
+            
+            {loading && processedMessages.length === 0 ? (
+              <MessageBubbleSkeleton />
+            ) : (
+              <FlatList
+                ref={messagesRef}
+                data={processedMessages}
               renderItem={renderMessageItem}
               keyExtractor={(item, idx) => item._id || `msg-${idx}`}
               className="flex-1 bg-neutral-50/60 dark:bg-neutral-950/60"
@@ -1409,6 +1464,7 @@ const MessagesScreen = () => {
                 ) : null
               }
             />
+            )}
 
             {showScrollBtn && <Pressable onPress={() => { HapticFeedback.selection(); messagesRef.current?.scrollToEnd({ animated: true }); }} className="absolute bottom-24 right-4 w-11 h-11 bg-white dark:bg-neutral-800 rounded-full items-center justify-center shadow-lg" style={{ shadowColor: "#000", shadowOpacity: 0.12, shadowRadius: 8, shadowOffset: { height: 2 }, elevation: 5 }} accessibilityLabel="Scroll to bottom" accessibilityRole="button"><FontAwesome5 name="chevron-down" size={12} color={isDark ? "#a3a3a3" : "#525252"} /></Pressable>}
 

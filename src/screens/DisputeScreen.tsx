@@ -18,6 +18,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { raiseDispute, getJobById, getContractorJobs, getUserJobs } from '../api';
 import { uploadToCloudinary, CLOUDINARY_FOLDERS } from '../utils/cloudinary';
 import { requestPhotoLibraryPermission } from '../utils/permissions';
+import HapticFeedback from '../utils/haptics';
 import { useAuth } from '../context/AuthContext';
 
 const CATEGORIES = [
@@ -149,7 +150,8 @@ export default function DisputeScreen() {
       );
       const reason = `[${category}] ${description.trim()}`;
       await raiseDispute(jobIdState, reason, undefined, uploadedUrls);
-
+      
+      HapticFeedback.warning();
       Alert.alert(
         'Dispute Filed',
         isContractor
@@ -158,6 +160,7 @@ export default function DisputeScreen() {
         [{ text: 'Done', onPress: () => navigation.goBack() }]
       );
     } catch (err: any) {
+      HapticFeedback.error();
       Alert.alert('Error', err?.message || 'Failed to file dispute. Please try again.');
     } finally {
       setSubmitting(false);

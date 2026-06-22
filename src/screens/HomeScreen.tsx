@@ -171,6 +171,19 @@ const ListingCard = ({
             <Text className="text-[10px] font-semibold text-emerald-700">Serves your area</Text>
           </View>
         )}
+        {listing.avgResponseHours !== undefined && listing.avgResponseHours !== null && (
+          <View className="flex-row items-center mt-0.5" style={{ gap: 4 }}>
+            {listing.avgResponseHours < 1 ? (
+              <Text className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 dark:bg-emerald-950/20 dark:text-emerald-400 px-1.5 py-0.5 rounded-full">⚡ Responds &lt;1h</Text>
+            ) : listing.avgResponseHours < 4 ? (
+              <Text className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 dark:bg-emerald-950/20 dark:text-emerald-400 px-1.5 py-0.5 rounded-full">⚡ Responds ~{Math.round(listing.avgResponseHours)}h</Text>
+            ) : listing.avgResponseHours < 24 ? (
+              <Text className="text-[10px] font-semibold text-amber-700 bg-amber-50 dark:bg-amber-950/20 dark:text-amber-400 px-1.5 py-0.5 rounded-full">⏱️ Responds ~{Math.round(listing.avgResponseHours)}h</Text>
+            ) : (
+              <Text className="text-[10px] font-semibold text-neutral-500 bg-neutral-100 dark:bg-neutral-900/30 dark:text-neutral-400 px-1.5 py-0.5 rounded-full">🕐 Responds ~{Math.round(listing.avgResponseHours / 24)}d</Text>
+            )}
+          </View>
+        )}
         <View className="flex-row items-center mt-1" style={{ gap: 4 }}>
           <FontAwesome5 name="lock" size={10} color="#16a34a" />
           <Text className="text-[12px] font-semibold text-neutral-700 dark:text-neutral-300">Escrow Protected</Text>

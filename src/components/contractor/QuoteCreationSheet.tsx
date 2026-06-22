@@ -20,6 +20,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { uploadToCloudinary, CLOUDINARY_FOLDERS } from '../../utils/cloudinary';
 import { requestPhotoLibraryPermission } from '../../utils/permissions';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import HapticFeedback from '../../utils/haptics';
 
 const CATEGORIES = ['Plumbers', 'Electricians', 'Painters', 'Landscapers', 'HVAC', 'Roofers', 'Carpenters', 'Cleaners', 'Handymen', 'Home Builders'];
 
@@ -265,9 +266,11 @@ export default function QuoteCreationSheet({
       setPhotos([]);
       setNotes('');
       setError('');
+      HapticFeedback.success();
       onCreated?.();
       onClose();
     } catch (e: any) {
+      HapticFeedback.error();
       const msg = e?.message || 'Failed to send quote';
       if (msg.includes('Stripe') || msg.includes('connect')) {
         setError('Stripe account not connected. Complete Stripe setup in your dashboard first.');

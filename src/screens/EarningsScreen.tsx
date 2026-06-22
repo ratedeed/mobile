@@ -5,6 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { getContractorEarnings } from '../api';
 import { getPlatformFeePercent } from '../utils/apiClient';
+import { SkeletonLoader } from '../components/common/SkeletonLoader';
 
 interface Transaction {
   _id: string;
@@ -123,8 +124,8 @@ export default function EarningsScreen() {
 
   if (loading) {
     return (
-      <View className="flex-1 bg-white dark:bg-neutral-900 items-center justify-center">
-        <ActivityIndicator size="large" color="#4F46E5" />
+      <View className="flex-1 bg-white dark:bg-neutral-900 p-6 pt-16">
+        <SkeletonLoader type="list" count={4} />
       </View>
     );
   }

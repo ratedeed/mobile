@@ -26,13 +26,14 @@ import HapticFeedback from '../utils/haptics';
 import { SvgImage } from '../components/common/SvgImage';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
-import { fetchContractorDetails, fetchContractorPosts, createLead, fetchContractorReviews, extractId, browseContractors, post as apiPost, submitClaim, getContractorBySlug } from '../api';
+import { fetchContractorDetails, fetchContractorPosts, createLead, fetchContractorReviews, extractId, browseContractors, post as apiPost, submitClaim, getContractorBySlug, checkOnlineStatus, onUserOnlineStatus, offUserOnlineStatus } from '../api';
 import { API_BASE_URL } from '../config';
 import { uploadToCloudinary, CLOUDINARY_FOLDERS } from '../utils/cloudinary';
 import { requestPhotoLibraryPermission } from '../utils/permissions';
 import { getCoverImageUrl, getProfileImageUrl, isSvgUrl } from '../utils/avatarUtils';
 import { isFavorite, addFavorite, removeFavorite } from '../utils/favoritesStore';
 import { VerifiedBadge } from '../components/common/VerifiedBadge';
+import { SkeletonLoader } from '../components/common/SkeletonLoader';
 import ServiceAreaMap from '../components/common/ServiceAreaMap';
 import { useAuth } from '../context/AuthContext';
 import GuestPrompt from '../components/GuestPrompt';
@@ -100,6 +101,7 @@ const BusinessDetailScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+  const [isOnline, setIsOnline] = useState(false);
   const [showAllReviews, setShowAllReviews] = useState(false);
   const [galleryProject, setGalleryProject] = useState<any>(null);
   const [galleryIndex, setGalleryIndex] = useState(0);
@@ -254,6 +256,32 @@ const BusinessDetailScreen: React.FC = () => {
 
   useEffect(() => { if (id) loadContractorDetails(); }, [id]);
 
+  useEffect(() => {
+    const targetUserId = contractor?.user?._id;
+    if (!targetUserId) {
+      setIsOnline(false);
+      return;
+    }
+
+    try {
+      checkOnlineStatus(targetUserId);
+    } catch (err) {
+      if (__DEV__) console.warn('checkOnlineStatus failed:', err);
+    }
+
+    const handleStatus = (data: { userId: string; isOnline: boolean }) => {
+      if (data.userId === targetUserId) {
+        setIsOnline(data.isOnline);
+      }
+    };
+
+    onUserOnlineStatus(handleStatus);
+
+    return () => {
+      offUserOnlineStatus(handleStatus);
+    };
+  }, [contractor?.user?._id]);
+
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     loadContractorDetails().finally(() => setRefreshing(false));
@@ -325,8 +353,8 @@ const BusinessDetailScreen: React.FC = () => {
 
   if (loading) {
     return (
-      <View className="flex-1 bg-white dark:bg-neutral-950 items-center justify-center">
-        <ActivityIndicator size="large" color="#a3a3a3" />
+      <View className="flex-1 bg-white dark:bg-neutral-950 p-6 pt-16">
+        <SkeletonLoader type="profile" count={1} />
       </View>
     );
   }
@@ -601,11 +629,25 @@ const BusinessDetailScreen: React.FC = () => {
           {/* Header Row: Floating Avatar, Name, and Escrow protected badge */}
           <View className="relative flex-row items-start justify-between z-10 mt-3 min-h-[50px]" style={{ overflow: 'visible' }}>
             {/* Floating Avatar */}
-            <View className="absolute left-0 top-[-36px] w-[72px] h-[72px] rounded-full border-4 border-white bg-white overflow-hidden shadow-md z-20">
-              {isSvgUrl(avatarImage) ? (
-                <SvgImage uri={avatarImage} width="100%" height="100%" />
-              ) : (
-                <Image source={{ uri: avatarImage }} className="w-full h-full" resizeMode="cover" />
+            <View className="absolute left-0 top-[-36px] w-[72px] h-[72px] z-20" style={{ overflow: 'visible' }}>
+              <View className="w-full h-full rounded-full border-4 border-white bg-white overflow-hidden shadow-md">
+                {isSvgUrl(avatarImage) ? (
+                  <SvgImage uri={avatarImage} width="100%" height="100%" />
+                ) : (
+                  <Image source={{ uri: avatarImage }} className="w-full h-full" resizeMode="cover" />
+                )}
+              </View>
+              {isOnline && (
+                <View 
+                  className="absolute bottom-0 right-0 w-[18px] h-[18px] rounded-full border-2 border-white bg-green-500" 
+                  style={{
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowOpacity: 0.2,
+                    shadowRadius: 1,
+                    elevation: 2,
+                  }}
+                />
               )}
             </View>
             {/* Business details */}
@@ -630,6 +672,46 @@ const BusinessDetailScreen: React.FC = () => {
                   </Text>
                 </View>
               )}
+              
+              {/* Badges Row */}
+              <View className="flex-row flex-wrap items-center mt-1.5" style={{ gap: 4 }}>
+                {c.isVerified && (
+                  <View className="bg-indigo-50 dark:bg-indigo-950/30 px-2 py-0.5 rounded-full border border-indigo-100 dark:border-indigo-900/30">
+                    <Text className="text-[9px] font-bold text-indigo-700 dark:text-indigo-400 uppercase">Licensed</Text>
+                  </View>
+                )}
+                {c.avgResponseHours !== undefined && c.avgResponseHours !== null && (
+                  (() => {
+                    const hrs = c.avgResponseHours;
+                    let text = '';
+                    let colorClass = '';
+                    let textClass = '';
+                    if (hrs < 1) {
+                      text = '⚡ Responds in <1h';
+                      colorClass = 'bg-emerald-50 border-emerald-100 dark:bg-emerald-950/20 dark:border-emerald-900/30';
+                      textClass = 'text-emerald-700 dark:text-emerald-400';
+                    } else if (hrs < 4) {
+                      text = `⚡ Responds in ~${Math.round(hrs)}h`;
+                      colorClass = 'bg-emerald-50 border-emerald-100 dark:bg-emerald-950/20 dark:border-emerald-900/30';
+                      textClass = 'text-emerald-700 dark:text-emerald-400';
+                    } else if (hrs < 24) {
+                      text = `⏱️ Responds in ~${Math.round(hrs)}h`;
+                      colorClass = 'bg-amber-50 border-amber-100 dark:bg-amber-950/20 dark:border-amber-900/30';
+                      textClass = 'text-amber-700 dark:text-amber-400';
+                    } else {
+                      const days = Math.round(hrs / 24);
+                      text = `🕐 Responds in ~${days}d`;
+                      colorClass = 'bg-neutral-50 border-neutral-200 dark:bg-neutral-900/30 dark:border-neutral-800';
+                      textClass = 'text-neutral-600 dark:text-neutral-400';
+                    }
+                    return (
+                      <View className={`px-2 py-0.5 rounded-full border ${colorClass}`}>
+                        <Text className={`text-[9px] font-bold ${textClass}`}>{text}</Text>
+                      </View>
+                    );
+                  })()
+                )}
+              </View>
             </View>
 
             {/* Escrow Protected Trust Badge Card */}

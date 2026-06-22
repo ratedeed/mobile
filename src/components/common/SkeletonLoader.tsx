@@ -58,7 +58,7 @@ export const Skeleton: React.FC<SkeletonProps> = ({
 };
 
 interface SkeletonLoaderProps {
-  type?: 'card' | 'list' | 'profile' | 'post' | 'text' | 'notification';
+  type?: 'card' | 'list' | 'profile' | 'post' | 'text' | 'notification' | 'messageBubble' | 'conversationRow';
   count?: number;
 }
 
@@ -68,6 +68,36 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
 }) => {
   const renderSkeleton = () => {
     switch (type) {
+      case 'conversationRow':
+        return (
+          <View style={styles.conversationRow}>
+            <Skeleton width={54} height={54} borderRadius={27} />
+            <View style={styles.listContent}>
+              <Skeleton width="45%" height={14} style={styles.mb8} />
+              <Skeleton width="75%" height={12} />
+            </View>
+          </View>
+        );
+
+      case 'messageBubble':
+        return (
+          <View style={styles.messageBubbleContainer}>
+            <View style={styles.messageBubbleLeftContainer}>
+              <Skeleton width={32} height={32} borderRadius={16} style={{ marginRight: 8 }} />
+              <View style={[styles.messageBubble, styles.messageBubbleLeft]}>
+                <Skeleton width={140} height={14} style={styles.mb8} />
+                <Skeleton width={90} height={12} />
+              </View>
+            </View>
+            <View style={styles.messageBubbleRightContainer}>
+              <View style={[styles.messageBubble, styles.messageBubbleRight]}>
+                <Skeleton width={160} height={14} style={styles.mb8} />
+                <Skeleton width={110} height={12} />
+              </View>
+            </View>
+          </View>
+        );
+
       case 'card':
         return (
           <View style={styles.card}>
@@ -223,5 +253,42 @@ const styles = StyleSheet.create({
   notificationContent: {
     marginLeft: 12,
     flex: 1,
+  },
+  conversationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+    backgroundColor: Colors.neutral50,
+    borderRadius: 12,
+    marginBottom: 8,
+  },
+  messageBubbleContainer: {
+    paddingVertical: 8,
+    width: '100%',
+  },
+  messageBubbleLeftContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+    width: '100%',
+  },
+  messageBubbleRightContainer: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginBottom: 12,
+    width: '100%',
+  },
+  messageBubble: {
+    padding: 12,
+    borderRadius: 16,
+    maxWidth: '75%',
+  },
+  messageBubbleLeft: {
+    backgroundColor: Colors.neutral100,
+    borderTopLeftRadius: 4,
+  },
+  messageBubbleRight: {
+    backgroundColor: Colors.neutral200,
+    borderTopRightRadius: 4,
   },
 });

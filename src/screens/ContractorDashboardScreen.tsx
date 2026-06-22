@@ -53,6 +53,7 @@ import { useAuth } from '../context/AuthContext';
 import { requestPhotoLibraryPermission } from '../utils/permissions';
 import { EmptyState } from '../components/common/EmptyState';
 import { VerifiedBadge } from '../components/common/VerifiedBadge';
+import { SkeletonLoader } from '../components/common/SkeletonLoader';
 
 const TABS = [
   { key: 'posts', label: 'Posts' },
@@ -762,8 +763,8 @@ const ContractorDashboardScreen: React.FC = () => {
 
   if (loading) {
     return (
-      <View className="flex-1 bg-white dark:bg-neutral-900 items-center justify-center">
-        <ActivityIndicator size="large" color="#4F46E5" />
+      <View className="flex-1 bg-white dark:bg-neutral-900 p-6 pt-16">
+        <SkeletonLoader type="profile" count={1} />
       </View>
     );
   }

@@ -29,6 +29,7 @@ import {
   uploadProgressPhoto,
 } from '../utils/apiClient';
 import { useAuth } from '../context/AuthContext';
+import HapticFeedback from '../utils/haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { uploadToCloudinary, CLOUDINARY_FOLDERS } from '../utils/cloudinary';
 import { requestPhotoLibraryPermission } from '../utils/permissions';
@@ -52,6 +53,14 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; 
   refunded: { label: 'Refunded', color: '#6b7280', bg: '#f3f4f6', icon: 'undo' },
   cancelled: { label: 'Cancelled', color: '#6b7280', bg: '#f3f4f6', icon: 'times-circle' },
 };
+
+const JOB_FLOW = [
+  { status: 'awaiting_payment', label: 'Accepted', icon: 'check-circle' },
+  { status: 'funded_in_progress', label: 'Funded', icon: 'dollar-sign' },
+  { status: 'completed_pending_release', label: 'Done', icon: 'hammer' },
+  { status: 'completed_paid', label: 'Released', icon: 'unlock' },
+  { status: 'reviewed', label: 'Reviewed', icon: 'star' },
+];
 
 const formatCurrency = (cents: number) => `$${(cents / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
 const formatDate = (d: string) =>
@@ -196,9 +205,15 @@ export default function JobDetailScreen() {
           setActionLoading(action);
           try {
             await fn();
+            if (action.includes('cancel')) {
+              HapticFeedback.warning();
+            } else {
+              HapticFeedback.success();
+            }
             Alert.alert('Success', successMsg);
             loadJob();
           } catch (e: any) {
+            HapticFeedback.error();
             Alert.alert('Error', e?.message || `Failed to ${action}`);
           } finally {
             setActionLoading(null);
@@ -253,11 +268,13 @@ export default function JobDetailScreen() {
     handleAction('decline change order', () => declineChangeOrder(jobId, coId), 'Change order declined.');
   const handleCreateChangeOrder = async () => {
     if (!coTitle.trim() || !coAmount.trim()) {
+      HapticFeedback.error();
       Alert.alert('Error', 'Title and amount are required.');
       return;
     }
     const parsedAmount = parseFloat(coAmount);
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      HapticFeedback.error();
       Alert.alert('Error', 'Please enter a valid amount greater than 0.');
       return;
     }
@@ -268,6 +285,7 @@ export default function JobDetailScreen() {
         description: coDescription.trim(),
         amount: Math.round(parsedAmount * 100),
       });
+      HapticFeedback.success();
       Alert.alert('Success', 'Change order sent!');
       setShowChangeOrder(false);
       setCoTitle('');
@@ -275,6 +293,7 @@ export default function JobDetailScreen() {
       setCoAmount('');
       loadJob();
     } catch (e: any) {
+      HapticFeedback.error();
       Alert.alert('Error', e?.message || 'Failed to create change order');
     } finally {
       setActionLoading(null);
@@ -308,6 +327,15 @@ export default function JobDetailScreen() {
   const contractor = job.contractor || {};
   const homeowner = job.user || {};
   const changeOrders = job.changeOrders || [];
+
+  const currentStepIndex = (() => {
+    if (job.status === 'completed_paid' && job.isReviewed) return 4;
+    const idx = JOB_FLOW.findIndex(s => s.status === job.status);
+    if (idx !== -1) return idx;
+    if (['partially_funded'].includes(job.status)) return 1;
+    if (['completed', 'paid'].includes(job.status)) return 3;
+    return 0;
+  })();
 
   return (
     <View className="flex-1 bg-neutral-50 dark:bg-neutral-950" style={{ paddingTop: Math.max(insets.top, 12) }}>
@@ -347,6 +375,87 @@ export default function JobDetailScreen() {
               Created {formatDate(job.createdAt)}
             </Text>
           </View>
+
+          {/* Escrow Timeline */}
+          {!['cancelled', 'refunded', 'disputed'].includes(job.status) ? (
+            <View className="p-4 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
+              <Text className="text-[13px] font-bold text-neutral-950 dark:text-neutral-50 mb-4 uppercase tracking-wider text-center">
+                Escrow Milestone Timeline
+              </Text>
+              
+              <View className="flex-row items-center justify-between px-2 relative">
+                {/* Horizontal track line in background */}
+                <View className="absolute left-6 right-6 top-[15px] h-0.5 bg-neutral-200 dark:bg-neutral-800 z-0" />
+                
+                {/* Filled track line based on progress */}
+                <View 
+                  className="absolute left-6 top-[15px] h-0.5 bg-indigo-600 z-0" 
+                  style={{ 
+                    width: `${Math.max(0, (currentStepIndex / 4) * 100)}%`,
+                    left: 24,
+                    right: 24
+                  }} 
+                />
+
+                {JOB_FLOW.map((flowStep, idx) => {
+                  const isCompleted = idx < currentStepIndex;
+                  const isCurrent = idx === currentStepIndex;
+
+                  return (
+                    <View key={flowStep.status} className="items-center z-10 flex-1">
+                      <View 
+                        className={`w-8 h-8 rounded-full items-center justify-center border-2 ${
+                          isCompleted 
+                            ? 'bg-indigo-600 border-indigo-600' 
+                            : isCurrent 
+                              ? 'bg-white dark:bg-neutral-900 border-indigo-600' 
+                              : 'bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800'
+                        }`}
+                      >
+                        <FontAwesome5 
+                          name={flowStep.icon} 
+                          size={11} 
+                          color={isCompleted ? '#ffffff' : isCurrent ? '#4F46E5' : '#a3a3a3'} 
+                        />
+                      </View>
+                      <Text 
+                        className={`text-[9px] mt-1.5 font-semibold text-center ${
+                          isCurrent 
+                            ? 'text-indigo-600 font-bold' 
+                            : isCompleted 
+                              ? 'text-neutral-700 dark:text-neutral-300' 
+                              : 'text-neutral-400 dark:text-neutral-500'
+                        }`}
+                        numberOfLines={1}
+                      >
+                        {flowStep.label}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </View>
+            </View>
+          ) : job.status === 'disputed' ? (
+            <View className="p-4 rounded-2xl border border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-900/50 flex-row items-center" style={{ gap: 12 }}>
+              <View className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 items-center justify-center">
+                <FontAwesome5 name="gavel" size={16} color="#DC2626" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-[14px] font-bold text-red-800 dark:text-red-300">Escrow Dispute Active</Text>
+                <Text className="text-[12px] text-red-600 dark:text-red-400 mt-0.5">Escrow release has been halted until resolution.</Text>
+              </View>
+            </View>
+          ) : (
+            <View className="p-4 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 flex-row items-center" style={{ gap: 12 }}>
+              <View className="w-10 h-10 rounded-full bg-neutral-100 dark:bg-neutral-800 items-center justify-center">
+                <FontAwesome5 name="times-circle" size={18} color="#737373" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-[14px] font-bold text-neutral-800 dark:text-neutral-200">Timeline Cancelled</Text>
+                <Text className="text-[12px] text-neutral-500 dark:text-neutral-400 mt-0.5">This project has been cancelled or refunded.</Text>
+              </View>
+            </View>
+          )}
 
           {quote.lineItems && quote.lineItems.length > 0 && (
             <View className="p-4 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">

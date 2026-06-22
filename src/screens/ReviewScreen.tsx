@@ -14,6 +14,7 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { submitReview } from '../api';
+import HapticFeedback from '../utils/haptics';
 
 const STARS = [1, 2, 3, 4, 5];
 
@@ -37,14 +38,17 @@ export default function ReviewScreen() {
   const handleSubmit = async () => {
     if (submitting) return;
     if (rating === 0) {
+      HapticFeedback.error();
       Alert.alert('Required', 'Please select a star rating.');
       return;
     }
     if (!comment.trim()) {
+      HapticFeedback.error();
       Alert.alert('Required', 'Please write a review comment.');
       return;
     }
     if (!contractorId) {
+      HapticFeedback.error();
       Alert.alert('Error', 'Missing contractor information.');
       return;
     }
@@ -57,10 +61,12 @@ export default function ReviewScreen() {
         comment: comment.trim(),
         jobId: jobId || quoteId,
       } as any);
+      HapticFeedback.success();
       Alert.alert('Thank you!', 'Your review has been submitted.', [
         { text: 'Done', onPress: () => navigation.goBack() },
       ]);
     } catch (err: any) {
+      HapticFeedback.error();
       Alert.alert('Error', err.message || 'Failed to submit review');
     } finally {
       setSubmitting(false);
@@ -89,7 +95,7 @@ export default function ReviewScreen() {
           {STARS.map((star) => (
             <Pressable
               key={star}
-              onPress={() => setRating(star)}
+              onPress={() => { setRating(star); HapticFeedback.selection(); }}
               onPressIn={() => setHoverRating(star)}
               onPressOut={() => setHoverRating(0)}
             >

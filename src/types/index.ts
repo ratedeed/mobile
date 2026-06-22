@@ -103,6 +103,7 @@ export interface Contractor {
   onboardingComplete?: boolean;
   portfolio?: PortfolioItem[];
   posts?: Post[];
+  avgResponseHours?: number | null;
   reviewsList?: Review[];
   insuranceInfo?: string;
   yearsExperience?: number;

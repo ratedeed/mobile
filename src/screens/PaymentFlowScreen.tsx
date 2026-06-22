@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { createCheckoutSession, createPaymentIntent, getQuote } from '../api';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useStripe, usePlatformPay, confirmPlatformPayPayment, PlatformPay, PlatformPayButton } from '@stripe/stripe-react-native';
+import HapticFeedback from '../utils/haptics';
 
 const STEP_LABELS = ['Review', 'Payment', 'Confirmed'];
 
@@ -100,6 +101,7 @@ export default function PaymentFlowScreen() {
           return;
         }
         if (quote && (quote.status === 'accepted' || quote.status === 'paid' || (quote.jobId && quote.jobStatus && quote.jobStatus !== 'awaiting_payment'))) {
+          HapticFeedback.success();
           setVerifying(false);
           setIsPolling(false);
           setCurrentStep(2);
@@ -193,11 +195,13 @@ export default function PaymentFlowScreen() {
       );
 
       if (error) {
+        HapticFeedback.error();
         Alert.alert('Payment Failed', error.message || 'Apple Pay could not be completed.');
       } else if (paymentIntent?.status?.toLowerCase() === 'succeeded') {
         startPollingPaymentStatus(true);
       }
     } catch (err: any) {
+      HapticFeedback.error();
       Alert.alert('Error', err?.message || 'Apple Pay failed to initialize.');
     } finally {
       setPaying(false);
@@ -242,6 +246,7 @@ export default function PaymentFlowScreen() {
       });
 
       if (error) {
+        HapticFeedback.error();
         Alert.alert('Stripe Error', error.message || 'Failed to initialize payment sheet.');
         return;
       }
@@ -249,12 +254,14 @@ export default function PaymentFlowScreen() {
       const { error: presentError } = await presentPaymentSheet();
       if (presentError) {
         if (presentError.code !== 'Canceled') {
+          HapticFeedback.error();
           Alert.alert('Payment Failed', presentError.message);
         }
       } else {
         startPollingPaymentStatus(true);
       }
     } catch (err: any) {
+      HapticFeedback.error();
       Alert.alert('Error', err?.message || 'Failed to initiate secure payment. Please try again.');
     } finally {
       setPaying(false);

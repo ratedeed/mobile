@@ -24,6 +24,7 @@ import { Contractor } from '../types';
 import { getCoverImageUrl, isSvgUrl } from '../utils/avatarUtils';
 import { getFavorites, addFavorite, removeFavorite } from '../utils/favoritesStore';
 import { VerifiedBadge } from '../components/common/VerifiedBadge';
+import { SkeletonLoader } from '../components/common/SkeletonLoader';
 
 // Categories matching web version (same as HomeScreen)
 const CATEGORIES = [
@@ -140,6 +141,19 @@ const ListingCard = ({
           <View className="flex-row items-center mt-0.5" style={{ gap: 2 }}>
             <FontAwesome5 name="map-marker-alt" size={10} color="#059669" />
             <Text className="text-[10px] font-semibold text-emerald-700">Serves your area</Text>
+          </View>
+        )}
+        {listing.avgResponseHours !== undefined && listing.avgResponseHours !== null && (
+          <View className="flex-row items-center mt-0.5" style={{ gap: 4 }}>
+            {listing.avgResponseHours < 1 ? (
+              <Text className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 dark:bg-emerald-950/20 dark:text-emerald-400 px-1.5 py-0.5 rounded-full">⚡ Responds &lt;1h</Text>
+            ) : listing.avgResponseHours < 4 ? (
+              <Text className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 dark:bg-emerald-950/20 dark:text-emerald-400 px-1.5 py-0.5 rounded-full">⚡ Responds ~{Math.round(listing.avgResponseHours)}h</Text>
+            ) : listing.avgResponseHours < 24 ? (
+              <Text className="text-[10px] font-semibold text-amber-700 bg-amber-50 dark:bg-amber-950/20 dark:text-amber-400 px-1.5 py-0.5 rounded-full">⏱️ Responds ~{Math.round(listing.avgResponseHours)}h</Text>
+            ) : (
+              <Text className="text-[10px] font-semibold text-neutral-500 bg-neutral-100 dark:bg-neutral-900/30 dark:text-neutral-400 px-1.5 py-0.5 rounded-full">🕐 Responds ~{Math.round(listing.avgResponseHours / 24)}d</Text>
+            )}
           </View>
         )}
         <View className="flex-row items-center mt-1" style={{ gap: 4 }}>
@@ -427,9 +441,23 @@ const BusinessSearchScreen: React.FC = () => {
 
       {/* Loading State */}
       {loading && contractors.length === 0 ? (
-        <View className="flex-1 items-center justify-center py-20">
-          <ActivityIndicator size="large" color={isDark ? '#a3a3a3' : '#737373'} />
-          <Text className="text-sm text-neutral-500 dark:text-neutral-400 mt-3">Searching contractors...</Text>
+        <View className="flex-1 px-4 py-4">
+          <View className="flex-row justify-between mb-4">
+            <View style={{ width: '48%' }}>
+              <SkeletonLoader type="card" count={1} />
+            </View>
+            <View style={{ width: '48%' }}>
+              <SkeletonLoader type="card" count={1} />
+            </View>
+          </View>
+          <View className="flex-row justify-between">
+            <View style={{ width: '48%' }}>
+              <SkeletonLoader type="card" count={1} />
+            </View>
+            <View style={{ width: '48%' }}>
+              <SkeletonLoader type="card" count={1} />
+            </View>
+          </View>
         </View>
       ) : error ? (
         <View className="flex-1 items-center justify-center py-20 px-6">
