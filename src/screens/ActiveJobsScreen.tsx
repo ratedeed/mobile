@@ -251,9 +251,13 @@ export default function ActiveJobsScreen() {
                   if (quote.jobId) {
                     navigation.navigate('JobDetail', { jobId: quote.jobId });
                   } else {
+                    const firstMilestone = (quote.isMilestone && quote.milestones?.length)
+                      ? quote.milestones.find((m: any) => m.status === 'pending' || !m.status) || quote.milestones[0]
+                      : null;
                     navigation.navigate('PaymentFlow', {
                       quoteId: quote._id,
-                      totalAmount: quote.totalAmount || quote.quoteTotal || 0,
+                      milestoneId: firstMilestone ? (firstMilestone._id || firstMilestone.id) : undefined,
+                      totalAmount: firstMilestone ? firstMilestone.amount : (quote.totalAmount || quote.quoteTotal || 0),
                       contractorName: quote.contractorId?.companyName || quote.contractorId?.businessName || 'Contractor',
                       description: quote.description || quote.projectTitle || 'Home Project',
                     });

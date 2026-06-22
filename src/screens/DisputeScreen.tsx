@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -15,9 +15,10 @@ import { useColorScheme } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { raiseDispute } from '../api';
+import { raiseDispute, getJobById, getContractorJobs, getUserJobs } from '../api';
 import { uploadToCloudinary, CLOUDINARY_FOLDERS } from '../utils/cloudinary';
 import { requestPhotoLibraryPermission } from '../utils/permissions';
+import { useAuth } from '../context/AuthContext';
 
 const CATEGORIES = [
   { key: 'work_quality', label: 'Work Quality', icon: 'star-half-alt' },
@@ -35,10 +36,54 @@ export default function DisputeScreen() {
   const isDark = useColorScheme() === 'dark';
   const navigation = useNavigation();
   const route = useRoute();
-  const { jobId, contractorName } = (route.params || {}) as {
-    jobId: string;
+  const { jobId, quoteId, contractorName } = (route.params || {}) as {
+    jobId?: string;
+    quoteId?: string;
     contractorName?: string;
   };
+
+  const { userRole } = useAuth();
+  const isContractor = userRole === 'contractor';
+
+  const [jobIdState, setJobIdState] = useState<string | null>(jobId || null);
+  const [jobAmount, setJobAmount] = useState<number>(0);
+  const [loadingJob, setLoadingJob] = useState(false);
+
+  useEffect(() => {
+    if (jobId) {
+      setJobIdState(jobId);
+      setLoadingJob(true);
+      getJobById(jobId)
+        .then((j) => {
+          setJobAmount(j.totalAmount || j.amount || 0);
+        })
+        .catch((err) => {
+          console.error('Failed to fetch job details:', err);
+        })
+        .finally(() => {
+          setLoadingJob(false);
+        });
+    } else if (quoteId) {
+      setLoadingJob(true);
+      const fetchFn = isContractor ? getContractorJobs : getUserJobs;
+      fetchFn()
+        .then((jobs: any[]) => {
+          const found = jobs.find((j) => j.quoteId === quoteId);
+          if (found) {
+            setJobIdState(found._id || found.id);
+            setJobAmount(found.totalAmount || found.amount || 0);
+          } else {
+            Alert.alert('Error', 'No job found associated with this quote.');
+          }
+        })
+        .catch((err) => {
+          console.error('Failed to fetch jobs:', err);
+        })
+        .finally(() => {
+          setLoadingJob(false);
+        });
+    }
+  }, [jobId, quoteId, isContractor]);
 
   const [category, setCategory] = useState<string | null>(null);
   const [description, setDescription] = useState('');
@@ -92,7 +137,7 @@ export default function DisputeScreen() {
       return;
     }
 
-    if (!jobId) {
+    if (!jobIdState) {
       Alert.alert('Error', 'Missing job information.');
       return;
     }
@@ -103,11 +148,13 @@ export default function DisputeScreen() {
         photos.map(p => uploadToCloudinary(p, CLOUDINARY_FOLDERS.CHAT))
       );
       const reason = `[${category}] ${description.trim()}`;
-      await raiseDispute(jobId, reason, undefined, uploadedUrls);
+      await raiseDispute(jobIdState, reason, undefined, uploadedUrls);
 
       Alert.alert(
         'Dispute Filed',
-        'Your dispute has been submitted successfully. Our team will review it within 24-48 hours.',
+        isContractor
+          ? 'Your dispute inquiry has been submitted. Our team will review it.'
+          : 'Your dispute has been submitted successfully. Our team will review it within 24-48 hours.',
         [{ text: 'Done', onPress: () => navigation.goBack() }]
       );
     } catch (err: any) {
@@ -131,18 +178,28 @@ export default function DisputeScreen() {
         keyboardShouldPersistTaps="handled"
       >
         {/* Header */}
-        <Text className="text-2xl font-bold text-neutral-900 dark:text-white mb-1">File a Dispute</Text>
+        <Text className="text-2xl font-bold text-neutral-900 dark:text-white mb-1">
+          {isContractor ? 'Dispute Inquiry' : 'File a Dispute'}
+        </Text>
         <Text className="text-sm text-neutral-500 dark:text-neutral-400 dark:text-neutral-500 mb-8">
-          {contractorName ? `for work by ${contractorName}` : 'Report an issue with a completed job'}
+          {isContractor
+            ? 'Report an issue or reply to a customer dispute'
+            : contractorName
+              ? `for work by ${contractorName}`
+              : 'Report an issue with a completed job'}
         </Text>
 
         {/* Info Banner */}
         <View className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 rounded-xl p-4 flex-row mb-6" style={{ gap: 12 }}>
           <FontAwesome5 name="info-circle" size={18} color="#4F46E5" />
           <View className="flex-1">
-            <Text className="text-sm font-semibold text-indigo-900">Fair Resolution</Text>
+            <Text className="text-sm font-semibold text-indigo-900">
+              {isContractor ? 'Payment Held in Escrow' : 'Fair Resolution'}
+            </Text>
             <Text className="text-xs text-indigo-700 dark:text-indigo-300 mt-1 leading-4">
-              Disputes are reviewed by our team. Funds in escrow will be held until the issue is resolved.
+              {isContractor
+                ? `The payment${jobAmount ? ` of $${jobAmount.toLocaleString()}` : ''} is held securely in escrow. It will not be released until the dispute is resolved.`
+                : `Disputes are reviewed by our team. Funds${jobAmount ? ` of $${jobAmount.toLocaleString()}` : ''} in escrow will be held until the issue is resolved.`}
             </Text>
           </View>
         </View>

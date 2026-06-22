@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -34,10 +34,17 @@ const STEPS = [
 ];
 
 export default function ContractorOnboardingScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
   const isDark = useColorScheme() === 'dark';
   const [currentStep, setCurrentStep] = useState(0);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'Main' }, { name: 'ContractorDashboard' }],
+    });
+  }, [navigation]);
 
   // Profile
   const [description, setDescription] = useState('');

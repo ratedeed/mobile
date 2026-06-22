@@ -687,12 +687,14 @@ export default function JobDetailScreen() {
                     }
 
                     let paymentAmount = 0;
+                    let milestoneId = undefined;
                     let paymentDescription = job.quote?.description || job.quote?.projectName || 'Project Payment';
                     if (job.isMilestone && job.milestones && job.milestones.length > 0) {
                       const nextMilestone = job.milestones.find((m: any) => m.status === 'pending');
                       if (nextMilestone) {
                         paymentAmount = nextMilestone.amount;
                         paymentDescription = `Milestone: ${nextMilestone.name}`;
+                        milestoneId = nextMilestone._id || nextMilestone.id;
                       }
                     } else {
                       paymentAmount = Math.max(0, (job.quote?.totalAmount || job.quote?.total || 0) - (job.amountFunded || 0));
@@ -701,6 +703,7 @@ export default function JobDetailScreen() {
                     navigation.navigate('PaymentFlow', {
                       jobId: job._id,
                       quoteId: job.quote?._id,
+                      milestoneId,
                       totalAmount: paymentAmount,
                       contractorName: contractor.companyName || contractor.businessName || 'Contractor',
                       description: paymentDescription,
@@ -713,9 +716,7 @@ export default function JobDetailScreen() {
                   <Text className="text-[14px] font-bold text-white">Complete Payment</Text>
                 </Pressable>
               )}
-              {isUser &&
-                (job.status === 'completed_pending_release' ||
-                  (job.isMilestone && job.status === 'funded_in_progress')) && (
+              {isUser && job.status === 'completed_pending_release' && (
                   <Pressable
                     onPress={handleReleaseFunds}
                     disabled={actionLoading === 'release payment'}
@@ -742,9 +743,12 @@ export default function JobDetailScreen() {
                   <Text className="text-[14px] font-semibold text-neutral-600 dark:text-neutral-400">Awaiting homeowner approval to release payment</Text>
                 </View>
               )}
-              {isUser && !['disputed', 'cancelled', 'refunded', 'completed_paid'].includes(job.status) && (
+              {(isUser || isContractor) && !['disputed', 'cancelled', 'refunded', 'completed_paid'].includes(job.status) && (
                 <Pressable
-                  onPress={() => navigation.navigate('DisputeScreen', { jobId: job._id })}
+                  onPress={() => navigation.navigate('DisputeScreen', {
+                    jobId: job._id,
+                    contractorName: contractor.companyName || contractor.businessName || 'Contractor',
+                  })}
                   className="flex-row items-center justify-center py-3 rounded-xl border border-red-300 dark:border-red-800"
                   style={{ gap: 8 }}
                 >

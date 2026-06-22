@@ -29,6 +29,7 @@ import {
   fetchMessages,
   sendMessage,
   createConversation,
+  deleteConversation,
   extractId,
   registerSocket,
   joinConversationSocket,
@@ -360,6 +361,10 @@ const MessagesScreen = () => {
   const [stripeStatus, setStripeStatus] = useState(null);
   const [blockedUsers, setBlockedUsers] = useState(new Set());
   const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [messagesPage, setMessagesPage] = useState(1);
+  const [hasMoreMessages, setHasMoreMessages] = useState(false);
+  const [loadingMoreMessages, setLoadingMoreMessages] = useState(false);
+  const shouldScrollToEndRef = useRef(false);
 
   const blockedUsersRef = useRef(new Set());
   blockedUsersRef.current = blockedUsers;
@@ -434,6 +439,7 @@ const MessagesScreen = () => {
       });
 
       if (selectedConvRef.current && (msg.conversationId === selectedConvRef.current.conversationId || msg.conversation === selectedConvRef.current.conversationId)) {
+        shouldScrollToEndRef.current = true;
         setMessages((prev) => {
           if (prev.some((m) => m._id === msg._id)) return prev;
           return [...prev, msg].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
@@ -626,38 +632,61 @@ const MessagesScreen = () => {
   }, [route.params?.openQuoteSheet, selectedConversation, userRole, navigation]);
 
   // ─── Load messages ─────────────────────────────────────────────────────────
-  const loadMessages = useCallback(async (conversationId) => {
+  const loadMessages = useCallback(async (conversationId, page = 1) => {
     if (!conversationId) return;
-    setLoading(true);
+    if (page === 1) {
+      setLoading(true);
+      shouldScrollToEndRef.current = true;
+    } else {
+      setLoadingMoreMessages(true);
+    }
     try {
-      // Mark conversation as read on backend immediately
-      const { markConversationAsRead } = await import("../api");
-      await markConversationAsRead(conversationId);
-      refreshUnreadMessagesCount();
-      refreshNotifications();
+      if (page === 1) {
+        // Mark conversation as read on backend immediately
+        const { markConversationAsRead } = await import("../api");
+        await markConversationAsRead(conversationId);
+        refreshUnreadMessagesCount();
+        refreshNotifications();
+      }
 
-      const data = await fetchMessages(conversationId);
+      const data = await fetchMessages(conversationId, page, 50);
       const msgs = Array.isArray(data) ? data : data?.messages || [];
-      setMessages([...msgs].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt)));
-      
-      // Immediately clear the unread dot locally to avoid UI lag
-      setConversations(prev => ({
-        ...prev,
-        [conversationId]: {
-          ...prev[conversationId],
-          unreadCount: 0
-        }
-      }));
+      const pagination = Array.isArray(data) ? null : data?.pagination;
+      const hasMore = pagination ? pagination.hasMore : false;
+
+      setHasMoreMessages(hasMore);
+      setMessagesPage(page);
+
+      if (page === 1) {
+        setMessages([...msgs].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt)));
+        
+        // Immediately clear the unread dot locally to avoid UI lag
+        setConversations(prev => ({
+          ...prev,
+          [conversationId]: {
+            ...prev[conversationId],
+            unreadCount: 0
+          }
+        }));
+      } else {
+        const sortedNew = [...msgs].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+        setMessages(prev => [...sortedNew, ...prev]);
+      }
     } catch (err) {
       console.error("[Messages] Load error:", err);
-    } finally { setLoading(false); }
+    } finally { 
+      setLoading(false); 
+      setLoadingMoreMessages(false);
+    }
   }, [currentUserId, refreshUnreadMessagesCount, refreshNotifications]);
 
   useEffect(() => {
     const cId = selectedConversation?.conversationId;
     if (!cId) return;
+    setMessagesPage(1);
+    setHasMoreMessages(false);
     if (cId.startsWith("temp-")) setMessages([]);
-    else loadMessages(cId);
+    else loadMessages(cId, 1);
   }, [selectedConversation?.conversationId]);
 
   // ─── Process messages for grouping ─────────────────────────────────────────
@@ -695,6 +724,7 @@ const MessagesScreen = () => {
   // ─── Send message ──────────────────────────────────────────────────────────
   const handleSendMessage = async () => {
     if ((!newMessage.trim() && !pendingAttachment) || !selectedConversation || !currentUserId) return;
+    shouldScrollToEndRef.current = true;
     HapticFeedback.medium();
 
     // Stop typing indicator
@@ -1250,7 +1280,12 @@ const MessagesScreen = () => {
               keyExtractor={(item, idx) => item._id || `msg-${idx}`}
               className="flex-1 bg-neutral-50/60 dark:bg-neutral-950/60"
               contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 100 }}
-              onContentSizeChange={() => messagesRef.current?.scrollToEnd({ animated: false })}
+              onContentSizeChange={() => {
+                if (shouldScrollToEndRef.current) {
+                  messagesRef.current?.scrollToEnd({ animated: false });
+                  shouldScrollToEndRef.current = false;
+                }
+              }}
               onScroll={(e) => {
                 const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
                 setShowScrollBtn(contentSize.height - layoutMeasurement.height - contentOffset.y > 300);
@@ -1260,7 +1295,25 @@ const MessagesScreen = () => {
               keyboardDismissMode="on-drag"
               maintainVisibleContentPosition={{ minIndexForVisible: 0, autoscrollToTopThreshold: 10 }}
               ListFooterComponent={isOtherTyping ? <TypingIndicator name={chatName?.split(" ")[0]} /> : null}
-              ListHeaderComponent={loading ? <View className="items-center py-10"><ActivityIndicator size="small" color="#818CF8" /></View> : null}
+              ListHeaderComponent={
+                loading ? (
+                  <View className="items-center py-10"><ActivityIndicator size="small" color="#818CF8" /></View>
+                ) : hasMoreMessages ? (
+                  <View className="items-center py-4">
+                    <Pressable
+                      onPress={() => loadMessages(selectedConversation?.conversationId || selectedConversation?._id, messagesPage + 1)}
+                      disabled={loadingMoreMessages}
+                      className="px-3 py-1.5 bg-neutral-100 dark:bg-neutral-800 rounded-full active:opacity-60"
+                    >
+                      {loadingMoreMessages ? (
+                        <ActivityIndicator size="small" color="#818CF8" />
+                      ) : (
+                        <Text className="text-[12px] font-semibold text-neutral-600 dark:text-neutral-300">Load older messages</Text>
+                      )}
+                    </Pressable>
+                  </View>
+                ) : null
+              }
             />
 
             {showScrollBtn && <Pressable onPress={() => { HapticFeedback.selection(); messagesRef.current?.scrollToEnd({ animated: true }); }} className="absolute bottom-24 right-4 w-11 h-11 bg-white dark:bg-neutral-800 rounded-full items-center justify-center shadow-lg" style={{ shadowColor: "#000", shadowOpacity: 0.12, shadowRadius: 8, shadowOffset: { height: 2 }, elevation: 5 }} accessibilityLabel="Scroll to bottom" accessibilityRole="button"><FontAwesome5 name="chevron-down" size={12} color={isDark ? "#a3a3a3" : "#525252"} /></Pressable>}
@@ -1307,7 +1360,12 @@ const MessagesScreen = () => {
                 return null;
               })()}
 
-              <View className="flex-1 bg-neutral-100 dark:bg-neutral-800 rounded-2xl px-4 py-2.5 max-h-[120px]"><TextInput className="text-[15px] text-neutral-800 dark:text-neutral-200 leading-5" placeholder="Type a message..." placeholderTextColor={isDark ? "#9ca3af" : "#a3a3a3"} value={newMessage} onChangeText={handleTextChange} multiline style={{ maxHeight: 100 }} accessibilityLabel="Message input" accessibilityRole="text" /></View>
+              <View className="flex-1 bg-neutral-100 dark:bg-neutral-800 rounded-2xl px-4 py-2.5 max-h-[120px]"><TextInput className="text-[15px] text-neutral-800 dark:text-neutral-200 leading-5" maxLength={500} placeholder="Type a message..." placeholderTextColor={isDark ? "#9ca3af" : "#a3a3a3"} value={newMessage} onChangeText={handleTextChange} multiline style={{ maxHeight: 100 }} accessibilityLabel="Message input" accessibilityRole="text" /></View>
+              {newMessage.length > 0 && (
+                <Text className={`text-[10px] select-none mr-1 mb-3 self-end ${newMessage.length >= 450 ? 'text-red-500 font-semibold' : 'text-neutral-400'}`}>
+                  {newMessage.length}/500
+                </Text>
+              )}
               <Pressable onPress={handleSendMessage} disabled={(!newMessage.trim() && !pendingAttachment) || isUploading} className={`w-11 h-11 rounded-full items-center justify-center mb-0.5 ${newMessage.trim() || pendingAttachment ? "bg-indigo-600" : "bg-neutral-200 dark:bg-neutral-700"}`} style={newMessage.trim() || pendingAttachment ? { shadowColor: "#4F46E5", shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { height: 2 }, elevation: 3 } : undefined} accessibilityLabel="Send message" accessibilityRole="button">
                 {isUploading ? <ActivityIndicator size="small" color="white" /> : <FontAwesome5 name="paper-plane" size={14} color={newMessage.trim() || pendingAttachment ? "white" : (isDark ? "#737373" : "#a3a3a3")} />}
               </Pressable>

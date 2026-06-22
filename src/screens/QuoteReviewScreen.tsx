@@ -125,6 +125,7 @@ export default function QuoteReviewScreen() {
 
       (navigation as any).navigate('PaymentFlow', {
         quoteId,
+        milestoneId: firstMilestone ? (firstMilestone._id || firstMilestone.id) : undefined,
         totalAmount: amountToPay,
         contractorName: quote?.contractor?.companyName || quote?.contractor?.businessName || 'Contractor',
         description: paymentDescription,

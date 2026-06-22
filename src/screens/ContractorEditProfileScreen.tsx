@@ -304,6 +304,7 @@ export default function ContractorEditProfileScreen() {
       setVerifLicenseNumber('');
       setLicenseDocUri(null);
     } catch (err: any) {
+      Alert.alert('Verification Error', err?.message || 'Failed to submit verification request.');
       setVerificationResult({
         success: false,
         message: err?.message || 'Failed to submit verification request.',

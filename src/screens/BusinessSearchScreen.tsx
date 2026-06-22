@@ -185,6 +185,7 @@ const BusinessSearchScreen: React.FC = () => {
   );
   const [contractors, setContractors] = useState<Contractor[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [totalResults, setTotalResults] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [nearbyLabel, setNearbyLabel] = useState('');
@@ -222,6 +223,7 @@ const BusinessSearchScreen: React.FC = () => {
 
   const fetchContractors = useCallback(async (zipOverride?: string, nameOverride?: string) => {
     try {
+      setError(null);
       const zip = (zipOverride !== undefined ? zipOverride : debouncedZip) || '';
       const name = (nameOverride !== undefined ? nameOverride : debouncedName) || '';
 
@@ -269,8 +271,9 @@ const BusinessSearchScreen: React.FC = () => {
       }
 
       setTotalResults(data?.total || list.length);
-    } catch (error) {
-      // console.error('Error fetching contractors:', error);
+    } catch (err: any) {
+      // console.error('Error fetching contractors:', err);
+      setError(err?.message || 'Failed to fetch contractors. Please try again.');
       setContractors([]);
       setTotalResults(0);
     } finally {
@@ -427,6 +430,18 @@ const BusinessSearchScreen: React.FC = () => {
         <View className="flex-1 items-center justify-center py-20">
           <ActivityIndicator size="large" color={isDark ? '#a3a3a3' : '#737373'} />
           <Text className="text-sm text-neutral-500 dark:text-neutral-400 mt-3">Searching contractors...</Text>
+        </View>
+      ) : error ? (
+        <View className="flex-1 items-center justify-center py-20 px-6">
+          <FontAwesome5 name="exclamation-circle" size={48} color="#ef4444" />
+          <Text className="font-semibold text-neutral-900 dark:text-neutral-50 mt-3 text-center">Failed to fetch contractors</Text>
+          <Text className="text-sm text-neutral-500 dark:text-neutral-400 mt-1 text-center mb-6">{error}</Text>
+          <Pressable
+            onPress={() => fetchContractors()}
+            className="bg-indigo-600 px-6 py-2.5 rounded-full"
+          >
+            <Text className="text-white font-semibold text-sm">Retry</Text>
+          </Pressable>
         </View>
       ) : displayResults.length > 0 ? (
         <FlatList

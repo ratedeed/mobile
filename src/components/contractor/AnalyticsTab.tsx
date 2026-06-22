@@ -322,16 +322,7 @@ export default function AnalyticsTab({ jobs, quotes, reviews, profile, loading, 
               </View>
             </View>
 
-            {/* Avg Response Time */}
-            <View className="bg-white dark:bg-neutral-900 rounded-xl p-3.5 border border-neutral-100 dark:border-neutral-700 flex-row items-center" style={{ width: '48%', gap: 10 }}>
-              <View className="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 items-center justify-center">
-                <FontAwesome5 name="clock" size={16} color="#059669" />
-              </View>
-              <View className="flex-1">
-                <Text className="text-sm font-bold text-neutral-900 dark:text-white">{performanceMetrics.avgResponseTime}</Text>
-                <Text className="text-[9px] text-neutral-500 dark:text-neutral-400 mt-0.5">Avg. first reply</Text>
-              </View>
-            </View>
+
 
             {/* On-Time Rate */}
             <View className="bg-white dark:bg-neutral-900 rounded-xl p-3.5 border border-neutral-100 dark:border-neutral-700 flex-row items-center" style={{ width: '48%', gap: 10 }}>

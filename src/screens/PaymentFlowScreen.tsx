@@ -19,6 +19,7 @@ export default function PaymentFlowScreen() {
   const { isPlatformPaySupported } = usePlatformPay();
 
   const quoteId = route.params?.quoteId || '';
+  const milestoneId = route.params?.milestoneId || '';
   const contractorName = route.params?.contractorName || 'Contractor';
   const quoteDescription = route.params?.description || '';
 
@@ -54,7 +55,7 @@ export default function PaymentFlowScreen() {
     async function initPayment() {
       try {
         setLoadingPaymentIntent(true);
-        const response = await createPaymentIntent(quoteId);
+        const response = await createPaymentIntent(quoteId, milestoneId);
         if (response?.clientSecret) {
           setClientSecret(response.clientSecret);
           if (response.amount !== undefined) {
@@ -162,7 +163,7 @@ export default function PaymentFlowScreen() {
       setPaying(true);
       let currentClientSecret = clientSecret;
       if (!currentClientSecret) {
-        const response = await createPaymentIntent(quoteId);
+        const response = await createPaymentIntent(quoteId, milestoneId);
         if (!response?.clientSecret) {
           Alert.alert('Payment Error', 'Could not initialize Apple Pay session.');
           return;
@@ -213,7 +214,7 @@ export default function PaymentFlowScreen() {
       setPaying(true);
       let currentClientSecret = clientSecret;
       if (!currentClientSecret) {
-        const response = await createPaymentIntent(quoteId);
+        const response = await createPaymentIntent(quoteId, milestoneId);
         if (!response?.clientSecret) {
           Alert.alert('Payment Error', 'Could not initialize secure payment session.');
           return;

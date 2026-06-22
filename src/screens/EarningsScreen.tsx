@@ -166,6 +166,13 @@ export default function EarningsScreen() {
                 </View>
               )}
             </View>
+            {item.type === 'payment' && (
+              <View className="mt-1 flex-row flex-wrap" style={{ gap: 8 }}>
+                <Text className="text-[10px] text-neutral-400 dark:text-neutral-500">Gross: {formatCurrency(amount)}</Text>
+                <Text className="text-[10px] text-neutral-400 dark:text-neutral-500">Fee (5%): {formatCurrency(amount * 0.05)}</Text>
+                <Text className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">Net (95%): {formatCurrency(amount * 0.95)}</Text>
+              </View>
+            )}
           </View>
 
           {/* Amount */}
@@ -238,8 +245,8 @@ export default function EarningsScreen() {
           </View>
         </View>
 
-        {/* Transaction History Header */}
-        <Text className="text-base font-bold text-neutral-900 dark:text-white mb-3">Transaction History</Text>
+        {/* Completed Jobs (Released Escrow) Header */}
+        <Text className="text-base font-bold text-neutral-900 dark:text-white mb-3">Completed Jobs (Released Escrow)</Text>
       </View>
     ),
     [availableBalance, pendingPayouts, totalEarned, feePercent]

@@ -781,9 +781,9 @@ export const markConversationAsRead = async (conversationId: string): Promise<vo
   return put(`${API_BASE}/messages/read-conversation/${conversationId}`, {}, authHeaders);
 };
 
-export const fetchMessages = async (conversationId: string): Promise<any[]> => {
+export const fetchMessages = async (conversationId: string, page = 1, limit = 50): Promise<any> => {
   const authHeaders = await getAuthHeaders();
-  return get(`${API_BASE}/messages/conversation/${conversationId}`, authHeaders);
+  return get(`${API_BASE}/messages/conversation/${conversationId}?page=${page}&limit=${limit}`, authHeaders);
 };
 
 export const findOrCreateConversation = async (participantIds: string[]): Promise<any> => {
@@ -792,6 +792,11 @@ export const findOrCreateConversation = async (participantIds: string[]): Promis
 };
 
 export const createConversation = findOrCreateConversation;
+
+export const deleteConversation = async (conversationId: string): Promise<any> => {
+  const authHeaders = await getAuthHeaders();
+  return del(`${API_BASE}/messages/conversation/${conversationId}`, authHeaders);
+};
 
 export const createQuoteFromChat = async (data: any): Promise<any> => {
   const authHeaders = await getAuthHeaders();
@@ -856,6 +861,11 @@ export const fetchContractorReviews = async (contractorId: string): Promise<Revi
 export const submitReview = async (contractorId: string, reviewData: Partial<Review> & { jobId: string }): Promise<Review> => {
   const authHeaders = await getAuthHeaders();
   return post(`${API_BASE}/contractors/${contractorId}/reviews`, reviewData, authHeaders);
+};
+
+export const respondToReview = async (reviewId: string, reply: string): Promise<any> => {
+  const authHeaders = await getAuthHeaders();
+  return post(`${API_BASE}/reviews/${encodeURIComponent(reviewId)}/respond`, { reply }, authHeaders);
 };
 
 // ==========================================
@@ -953,6 +963,11 @@ export const createQuote = async (quoteData: any): Promise<Quote> => {
 export const getContractorLeads = async (): Promise<Lead[]> => {
   const authHeaders = await getAuthHeaders();
   return get(`${API_BASE}/leads`, authHeaders);
+};
+
+export const updateLeadStatus = async (leadId: string, status: 'new' | 'contacted' | 'quoted' | 'archived'): Promise<any> => {
+  const authHeaders = await getAuthHeaders();
+  return put(`${API_BASE}/leads/${encodeURIComponent(leadId)}`, { status }, authHeaders);
 };
 
 export const getContractorQuotes = async (): Promise<Quote[]> => {
@@ -1119,9 +1134,9 @@ export const getBlockedUsers = async (): Promise<any[]> => {
 // Apple Pay / Native Payment
 // ==========================================
 
-export const createPaymentIntent = async (quoteId: string): Promise<{ clientSecret: string; amount?: number }> => {
+export const createPaymentIntent = async (quoteId: string, milestoneId?: string): Promise<{ clientSecret: string; amount?: number }> => {
   const authHeaders = await getAuthHeaders();
-  return post(`${API_BASE}/stripe/payment-intent`, { quoteId }, authHeaders);
+  return post(`${API_BASE}/stripe/payment-intent`, { quoteId, milestoneId }, authHeaders);
 };
 
 export const appleSignIn = async (data: { identityToken: string; appleUserIdentifier: string; fullName?: { givenName?: string; familyName?: string }; email?: string }): Promise<any> => {

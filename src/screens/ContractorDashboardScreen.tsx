@@ -26,11 +26,13 @@ import {
   deletePost,
   getContractorEarnings,
   getContractorLeads,
+  updateLeadStatus,
   getContractorQuotes,
   getContractorJobs,
   getStripeConnectUrl,
   getStripeAccountStatus,
   fetchContractorReviews,
+  respondToReview,
   updateContractorProfile, getContractorProfile,
   requestVerification,
   getContractorDetails,
@@ -108,6 +110,10 @@ function StatusBadge({ status }: { status: string }) {
     completed_pending_release: { label: 'Pending Release', bg: 'bg-blue-100 dark:bg-blue-900/40', text: 'text-blue-800 dark:text-blue-300' },
     completed_paid: { label: 'Completed', bg: 'bg-emerald-100 dark:bg-emerald-900/40', text: 'text-emerald-800 dark:text-emerald-300' },
     disputed: { label: 'Disputed', bg: 'bg-indigo-100 dark:bg-indigo-900/40', text: 'text-indigo-800 dark:text-indigo-300' },
+    new: { label: 'New', bg: 'bg-emerald-100 dark:bg-emerald-900/40', text: 'text-emerald-800 dark:text-emerald-300' },
+    contacted: { label: 'Contacted', bg: 'bg-amber-100 dark:bg-amber-900/40', text: 'text-amber-800 dark:text-amber-300' },
+    quoted: { label: 'Quoted', bg: 'bg-blue-100 dark:bg-blue-900/40', text: 'text-blue-800 dark:text-blue-300' },
+    archived: { label: 'Archived', bg: 'bg-neutral-100 dark:bg-neutral-800/45', text: 'text-neutral-500 dark:text-neutral-400' },
   };
   const c = config[status] || { label: status, bg: 'bg-neutral-100 dark:bg-neutral-800 dark:bg-neutral-800', text: 'text-neutral-800 dark:text-neutral-100 dark:text-neutral-300' };
   return (
@@ -194,6 +200,10 @@ const ContractorDashboardScreen: React.FC = () => {
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [activeEditSection, setActiveEditSection] = useState<string | null>(null);
   const [newZip, setNewZip] = useState('');
+  const [leadFilter, setLeadFilter] = useState<'active' | 'archived'>('active');
+  const [activeReplyReviewId, setActiveReplyReviewId] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState('');
+  const [replySubmitting, setReplySubmitting] = useState(false);
 
   const [postCaption, setPostCaption] = useState('');
   const [postTags, setPostTags] = useState('');
@@ -322,12 +332,42 @@ const ContractorDashboardScreen: React.FC = () => {
         }));
       }
     } catch (err: any) {
+      Alert.alert('Verification Error', err?.message || 'Failed to submit verification request.');
       setVerificationResult({
         success: false,
         message: err?.message || 'Failed to submit verification request.',
       });
     } finally {
       setIsSubmittingVerification(false);
+    }
+  };
+
+  const handleUpdateLeadStatus = async (leadId: string, status: 'new' | 'contacted' | 'quoted' | 'archived') => {
+    try {
+      await updateLeadStatus(leadId, status);
+      Alert.alert('Success', `Lead status updated to ${status}`);
+      loadData();
+    } catch (e: any) {
+      Alert.alert('Error', e?.message || 'Failed to update lead status');
+    }
+  };
+
+  const handleRespondToReview = async (reviewId: string) => {
+    if (!replyText.trim()) {
+      Alert.alert('Validation Error', 'Please enter a reply.');
+      return;
+    }
+    setReplySubmitting(true);
+    try {
+      await respondToReview(reviewId, replyText.trim());
+      Alert.alert('Success', 'Your response has been submitted!');
+      setActiveReplyReviewId(null);
+      setReplyText('');
+      loadData();
+    } catch (e: any) {
+      Alert.alert('Error', e?.message || 'Failed to submit response');
+    } finally {
+      setReplySubmitting(false);
     }
   };
 
@@ -732,7 +772,7 @@ const ContractorDashboardScreen: React.FC = () => {
   ];
   const completedCount = completionSteps.filter(s => s.done).length;
   const completionPct = Math.round((completedCount / completionSteps.length) * 100);
-  const showBanner = !onboardingComplete && !bannerDismissed && completedCount < completionSteps.length;
+  const showBanner = false;
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0} className="flex-1 bg-neutral-50 dark:bg-neutral-800">
@@ -1100,6 +1140,60 @@ const ContractorDashboardScreen: React.FC = () => {
                         <Text className="text-xs text-neutral-400 dark:text-neutral-500">{formatDate(review.createdAt)}</Text>
                       </View>
                       <Text className="text-sm text-neutral-700 dark:text-neutral-300 mt-3">{review.comment || review.title || ''}</Text>
+
+                      {/* Reply Section */}
+                      <View className="mt-4 pt-3 border-t border-neutral-100 dark:border-neutral-800">
+                        {review.reply ? (
+                          <View className="bg-neutral-50 dark:bg-neutral-800/40 p-3 rounded-lg border border-neutral-100 dark:border-neutral-800">
+                            <View className="flex-row items-center mb-1" style={{ gap: 6 }}>
+                              <FontAwesome5 name="comment-dots" size={12} color="#4F46E5" />
+                              <Text className="text-xs font-bold text-neutral-800 dark:text-neutral-200">Your Response:</Text>
+                            </View>
+                            <Text className="text-xs text-neutral-600 dark:text-neutral-400 leading-5">{review.reply}</Text>
+                          </View>
+                        ) : activeReplyReviewId === review._id ? (
+                          <View style={{ gap: 8 }}>
+                            <TextInput
+                              value={replyText}
+                              onChangeText={setReplyText}
+                              placeholder="Write your response to this client feedback..."
+                              placeholderTextColor="#a3a3a3"
+                              multiline
+                              numberOfLines={3}
+                              className="w-full text-xs p-2.5 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white"
+                              style={{ textAlignVertical: 'top', minHeight: 60 }}
+                            />
+                            <View className="flex-row justify-end" style={{ gap: 8 }}>
+                              <Pressable
+                                onPress={() => { setActiveReplyReviewId(null); setReplyText(''); }}
+                                className="px-3 py-1.5 rounded-lg bg-neutral-100 dark:bg-neutral-800"
+                              >
+                                <Text className="text-[10px] font-semibold text-neutral-600 dark:text-neutral-300">Cancel</Text>
+                              </Pressable>
+                              <Pressable
+                                onPress={() => handleRespondToReview(review._id)}
+                                disabled={!replyText.trim() || replySubmitting}
+                                className={`px-4 py-1.5 rounded-lg flex-row items-center ${
+                                  (!replyText.trim() || replySubmitting) ? 'bg-indigo-300' : 'bg-indigo-600'
+                                }`}
+                                style={{ gap: 6 }}
+                              >
+                                {replySubmitting && <ActivityIndicator size="small" color="#fff" style={{ marginRight: 4 }} />}
+                                <Text className="text-[10px] font-semibold text-white">Submit</Text>
+                              </Pressable>
+                            </View>
+                          </View>
+                        ) : (
+                          <Pressable
+                            onPress={() => { setActiveReplyReviewId(review._id); setReplyText(''); }}
+                            className="flex-row items-center"
+                            style={{ gap: 6 }}
+                          >
+                            <FontAwesome5 name="reply" size={10} color="#4F46E5" />
+                            <Text className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">Reply to Review</Text>
+                          </Pressable>
+                        )}
+                      </View>
                     </View>
                   ))}
                 </View>
@@ -1248,74 +1342,153 @@ const ContractorDashboardScreen: React.FC = () => {
               )}
 
               {/* Leads */}
-              {paymentSubTab === 'leads' && (
-                <View>
-                  <Text className="text-base font-semibold text-neutral-900 dark:text-white mb-3">New Inquiries</Text>
-                  {leads.length === 0 ? (
-                    <EmptyState icon="users" title="No new inquiries" message="When homeowners reach out, their inquiries will appear here" />
-                  ) : (
-                    <View style={{ gap: 10 }}>
-                      {leads.map(lead => (
-                        <View key={lead._id} className="bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-700 p-4">
-                          <View className="flex-row justify-between items-start">
-                            <View>
-                              <Text className="text-sm font-semibold text-neutral-900 dark:text-white">{lead.projectTitle || 'New Inquiry'}</Text>
-                              <Text className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-                                From: {lead.user ? `${lead.user.firstName || ''} ${lead.user.lastName || ''}`.trim() : 'Homeowner'}
-                              </Text>
-                            </View>
-                            <Text className="text-xs text-neutral-400 dark:text-neutral-500">{formatDate(lead.createdAt)}</Text>
-                          </View>
-                          {lead.description && (
-                            <Text className="text-sm text-neutral-600 dark:text-neutral-300 mt-2">{lead.description}</Text>
-                          )}
-                          <View className="flex-row mt-3 border-t border-neutral-100 dark:border-neutral-800 pt-3" style={{ gap: 8 }}>
-                            <Pressable
-                              onPress={() => {
-                                const recipientId = lead.user?._id;
-                                const recipientName = lead.user ? `${lead.user.firstName || ''} ${lead.user.lastName || ''}`.trim() : 'Homeowner';
-                                if (recipientId) {
-                                  navigation.navigate('ChatScreen', {
-                                    recipientId,
-                                    recipientName,
-                                  } as any);
-                                } else {
-                                  Alert.alert('Error', 'User ID is not available.');
-                                }
-                              }}
-                              className="flex-1 flex-row justify-center items-center py-2 bg-neutral-100 dark:bg-neutral-800 rounded-lg"
-                              style={{ gap: 6 }}
-                            >
-                              <FontAwesome5 name="comment" size={12} color={isDark ? '#d4d4d4' : '#525252'} />
-                              <Text className="text-[12px] font-semibold text-neutral-700 dark:text-neutral-300">Message</Text>
-                            </Pressable>
-                            <Pressable
-                              onPress={() => {
-                                const recipientId = lead.user?._id;
-                                const recipientName = lead.user ? `${lead.user.firstName || ''} ${lead.user.lastName || ''}`.trim() : 'Homeowner';
-                                if (recipientId) {
-                                  navigation.navigate('ChatScreen', {
-                                    recipientId,
-                                    recipientName,
-                                    openQuoteSheet: true,
-                                  } as any);
-                                } else {
-                                  Alert.alert('Error', 'User ID is not available.');
-                                }
-                              }}
-                              className="flex-1 flex-row justify-center items-center py-2 bg-indigo-600 rounded-lg"
-                              style={{ gap: 6 }}
-                            >
-                              <FontAwesome5 name="file-invoice-dollar" size={12} color="#ffffff" />
-                              <Text className="text-[12px] font-semibold text-white">Create Quote</Text>
-                            </Pressable>
-                          </View>
-                        </View>
-                      ))}
+              {paymentSubTab === 'leads' && (() => {
+                const displayedLeads = leads.filter(lead => {
+                  const isArchived = lead.status === 'archived';
+                  return leadFilter === 'active' ? !isArchived : isArchived;
+                });
+
+                return (
+                  <View>
+                    {/* Header & Filter Bar */}
+                    <View className="flex-row items-center justify-between mb-3">
+                      <Text className="text-base font-semibold text-neutral-900 dark:text-white">Inquiries</Text>
+                      <View className="flex-row bg-neutral-100 dark:bg-neutral-800 rounded-lg p-0.5" style={{ gap: 2 }}>
+                        <Pressable
+                          onPress={() => setLeadFilter('active')}
+                          className={`px-3 py-1 rounded-md ${leadFilter === 'active' ? 'bg-white dark:bg-neutral-700 shadow-sm' : ''}`}
+                        >
+                          <Text className={`text-xs font-semibold ${leadFilter === 'active' ? 'text-neutral-900 dark:text-white' : 'text-neutral-500 dark:text-neutral-400'}`}>
+                            Active
+                          </Text>
+                        </Pressable>
+                        <Pressable
+                          onPress={() => setLeadFilter('archived')}
+                          className={`px-3 py-1 rounded-md ${leadFilter === 'archived' ? 'bg-white dark:bg-neutral-700 shadow-sm' : ''}`}
+                        >
+                          <Text className={`text-xs font-semibold ${leadFilter === 'archived' ? 'text-neutral-900 dark:text-white' : 'text-neutral-500 dark:text-neutral-400'}`}>
+                            Archived
+                          </Text>
+                        </Pressable>
+                      </View>
                     </View>
-                  )}
-                </View>
-              )}
+
+                    {displayedLeads.length === 0 ? (
+                      <EmptyState
+                        icon="users"
+                        title={leadFilter === 'active' ? "No active inquiries" : "No archived inquiries"}
+                        message={leadFilter === 'active' ? "When homeowners reach out, their inquiries will appear here" : "Archived inquiries will appear here"}
+                      />
+                    ) : (
+                      <View style={{ gap: 10 }}>
+                        {displayedLeads.map(lead => (
+                          <View key={lead._id} className="bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-700 p-4">
+                            <View className="flex-row justify-between items-start">
+                              <View className="flex-1 mr-2">
+                                <Text className="text-sm font-semibold text-neutral-900 dark:text-white">{lead.projectTitle || 'New Inquiry'}</Text>
+                                <Text className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                                  From: {lead.user ? `${lead.user.firstName || ''} ${lead.user.lastName || ''}`.trim() : 'Homeowner'}
+                                </Text>
+                              </View>
+                              <Text className="text-xs text-neutral-400 dark:text-neutral-500 shrink-0">{formatDate(lead.createdAt)}</Text>
+                            </View>
+
+                            {lead.description && (
+                              <Text className="text-sm text-neutral-600 dark:text-neutral-300 mt-2">{lead.description}</Text>
+                            )}
+
+                            {/* Contact Preference & Status */}
+                            <View className="flex-row flex-wrap items-center mt-3" style={{ gap: 6 }}>
+                              {lead.contactPreference && (
+                                <View className="bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900 px-2 py-0.5 rounded-full">
+                                  <Text className="text-[10px] font-bold text-indigo-700 dark:text-indigo-400 uppercase tracking-wider">
+                                    {lead.contactPreference}
+                                  </Text>
+                                </View>
+                              )}
+                              <StatusBadge status={lead.status || 'new'} />
+                            </View>
+
+                            {/* Action Buttons */}
+                            <View className="flex-row flex-wrap items-center mt-4 border-t border-neutral-100 dark:border-neutral-800 pt-3" style={{ gap: 8 }}>
+                              {leadFilter === 'active' ? (
+                                <>
+                                  {lead.status === 'new' && (
+                                    <Pressable
+                                      onPress={() => handleUpdateLeadStatus(lead._id, 'contacted')}
+                                      className="flex-1 min-w-[120px] flex-row justify-center items-center py-2 border border-violet-200 dark:border-violet-800 rounded-lg bg-violet-50/50 dark:bg-violet-950/20"
+                                      style={{ gap: 6 }}
+                                    >
+                                      <FontAwesome5 name="check" size={10} color="#7c3aed" />
+                                      <Text className="text-[11px] font-bold text-violet-700 dark:text-violet-400">Mark Contacted</Text>
+                                    </Pressable>
+                                  )}
+                                  <Pressable
+                                    onPress={() => handleUpdateLeadStatus(lead._id, 'archived')}
+                                    className="flex-1 min-w-[80px] flex-row justify-center items-center py-2 bg-neutral-100 dark:bg-neutral-800 rounded-lg"
+                                    style={{ gap: 6 }}
+                                  >
+                                    <FontAwesome5 name="archive" size={10} color={isDark ? '#d4d4d4' : '#525252'} />
+                                    <Text className="text-[11px] font-semibold text-neutral-700 dark:text-neutral-300">Archive</Text>
+                                  </Pressable>
+                                  <Pressable
+                                    onPress={() => {
+                                      const recipientId = lead.user?._id;
+                                      const recipientName = lead.user ? `${lead.user.firstName || ''} ${lead.user.lastName || ''}`.trim() : 'Homeowner';
+                                      if (recipientId) {
+                                        navigation.navigate('ChatScreen', {
+                                          recipientId,
+                                          recipientName,
+                                        } as any);
+                                      } else {
+                                        Alert.alert('Error', 'User ID is not available.');
+                                      }
+                                    }}
+                                    className="flex-1 min-w-[80px] flex-row justify-center items-center py-2 bg-neutral-100 dark:bg-neutral-800 rounded-lg"
+                                    style={{ gap: 6 }}
+                                  >
+                                    <FontAwesome5 name="comment" size={10} color={isDark ? '#d4d4d4' : '#525252'} />
+                                    <Text className="text-[11px] font-semibold text-neutral-700 dark:text-neutral-300">Message</Text>
+                                  </Pressable>
+                                  <Pressable
+                                    onPress={() => {
+                                      const recipientId = lead.user?._id;
+                                      const recipientName = lead.user ? `${lead.user.firstName || ''} ${lead.user.lastName || ''}`.trim() : 'Homeowner';
+                                      if (recipientId) {
+                                        navigation.navigate('ChatScreen', {
+                                          recipientId,
+                                          recipientName,
+                                          openQuoteSheet: true,
+                                        } as any);
+                                      } else {
+                                        Alert.alert('Error', 'User ID is not available.');
+                                      }
+                                    }}
+                                    className="flex-1 min-w-[100px] flex-row justify-center items-center py-2 bg-indigo-600 rounded-lg"
+                                    style={{ gap: 6 }}
+                                  >
+                                    <FontAwesome5 name="file-invoice-dollar" size={10} color="#ffffff" />
+                                    <Text className="text-[11px] font-bold text-white">Create Quote</Text>
+                                  </Pressable>
+                                </>
+                              ) : (
+                                <Pressable
+                                  onPress={() => handleUpdateLeadStatus(lead._id, 'new')}
+                                  className="flex-1 flex-row justify-center items-center py-2 border border-neutral-200 dark:border-neutral-700 rounded-lg"
+                                  style={{ gap: 6 }}
+                                >
+                                  <FontAwesome5 name="undo" size={10} color={isDark ? '#d4d4d4' : '#525252'} />
+                                  <Text className="text-[11px] font-semibold text-neutral-700 dark:text-neutral-300">Restore Lead</Text>
+                                </Pressable>
+                              )}
+                            </View>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+                  </View>
+                );
+              })()}
 
               {/* Quotes */}
               {paymentSubTab === 'quotes' && (

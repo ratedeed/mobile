@@ -64,7 +64,7 @@ export const removeFavorite = async (id: string) => {
     const current = await getFavorites();
     const updated = current.filter(fid => fid !== id);
     await AsyncStorage.setItem(FAVORITES_KEY, JSON.stringify(updated));
-    await del(`${API_BASE_URL}/api/users/favorite/${id}`);
+    await apiPost(`${API_BASE_URL}/api/users/favorite/${id}`, {});
   } catch {
     // favorite removal failure is non-critical
   }
