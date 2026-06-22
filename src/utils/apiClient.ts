@@ -299,7 +299,13 @@ export const normalizeApiContractor = (c: any): Contractor => {
       description: data.description || data.bio || '',
       isVerified: data.isVerified || data.isTopRated || data.licenseStatus === 'Verified' || data.licenseStatus === 'approved' || false,
       averageRating: data.averageRating || data.rating || 0,
-      reviewCount: data.numReviews || data.reviewCount || data.reviews || 0,
+      reviewCount: data.numReviews !== undefined && data.numReviews !== null
+        ? Number(data.numReviews)
+        : (data.reviewCount !== undefined && data.reviewCount !== null
+            ? Number(data.reviewCount)
+            : (Array.isArray(data.reviews)
+                ? data.reviews.length
+                : 0)),
       pricing: pricing,
       pricingInfo: pricing,
       priceRange: pricing,

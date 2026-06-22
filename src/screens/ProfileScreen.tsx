@@ -292,7 +292,8 @@ const ProfileScreen: React.FC = () => {
         let reviewCount = 0;
         if (userData.role === 'contractor' || userData.role === 'admin') {
           const cProfile = await getContractorProfile().catch(() => null);
-          reviewCount = cProfile?.reviewCount || 0;
+          const val = cProfile?.reviewCount as any;
+          reviewCount = typeof val === 'number' ? val : (Array.isArray(val) ? val.length : 0);
         }
 
         setStats({
