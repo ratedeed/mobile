@@ -1163,36 +1163,49 @@ const ContractorDashboardScreen: React.FC = () => {
                         <Pressable
                           onPress={async () => {
                             if (isStripeConnecting) return;
-                            setIsStripeConnecting(true);
-                            try {
-                              const { url } = await getStripeConnectUrl();
-                              let result;
+                            
+                            const runStripeConnect = async (businessType: 'individual' | 'company') => {
+                              setIsStripeConnecting(true);
                               try {
-                                result = await WebBrowser.openAuthSessionAsync(url, 'ratedeed://contractor-dashboard');
-                              } catch (browserError: any) {
-                                if (browserError?.message?.toLowerCase().includes('already open')) {
-                                  try { await WebBrowser.dismissBrowser(); } catch {}
-                                  Alert.alert(
-                                    'Browser Already Open',
-                                    'Please close any open browser windows and try again, or open Stripe setup in your default browser.',
-                                    [
-                                      { text: 'Cancel', style: 'cancel' },
-                                      { text: 'Open in Browser', onPress: () => Linking.openURL(url) }
-                                    ]
-                                  );
-                                  return;
+                                const { url } = await getStripeConnectUrl(businessType);
+                                let result;
+                                try {
+                                  result = await WebBrowser.openAuthSessionAsync(url, 'ratedeed://contractor-dashboard');
+                                } catch (browserError: any) {
+                                  if (browserError?.message?.toLowerCase().includes('already open')) {
+                                    try { await WebBrowser.dismissBrowser(); } catch {}
+                                    Alert.alert(
+                                      'Browser Already Open',
+                                      'Please close any open browser windows and try again, or open Stripe setup in your default browser.',
+                                      [
+                                        { text: 'Cancel', style: 'cancel' },
+                                        { text: 'Open in Browser', onPress: () => Linking.openURL(url) }
+                                      ]
+                                    );
+                                    return;
+                                  }
+                                  throw browserError;
                                 }
-                                throw browserError;
+                                if (result.type === 'success' && result.url?.includes('stripe_return=true')) {
+                                  Alert.alert('Success', 'Stripe account connected successfully!');
+                                  setTimeout(() => navigation.replace('ContractorDashboard'), 500);
+                                }
+                              } catch (e) {
+                                Alert.alert('Stripe Error', (e as any)?.message || 'Failed to connect Stripe. Check your internet connection and try again.');
+                              } finally {
+                                setIsStripeConnecting(false);
                               }
-                              if (result.type === 'success' && result.url?.includes('stripe_return=true')) {
-                                Alert.alert('Success', 'Stripe account connected successfully!');
-                                setTimeout(() => navigation.replace('ContractorDashboard'), 500);
-                              }
-                            } catch (e) {
-                              Alert.alert('Stripe Error', (e as any)?.message || 'Failed to connect Stripe. Check your internet connection and try again.');
-                            } finally {
-                              setIsStripeConnecting(false);
-                            }
+                            };
+
+                            Alert.alert(
+                              'Stripe Onboarding',
+                              'Would you like to register as an Individual/Sole Proprietor or as a Company/LLC?',
+                              [
+                                { text: 'Cancel', style: 'cancel' },
+                                { text: 'Individual (SSN)', onPress: () => runStripeConnect('individual') },
+                                { text: 'Company (EIN)', onPress: () => runStripeConnect('company') }
+                              ]
+                            );
                           }}
                           disabled={isStripeConnecting}
                           className={`px-3 py-2 rounded-lg ${isStripeConnecting ? 'bg-indigo-400' : 'bg-indigo-600'}`}

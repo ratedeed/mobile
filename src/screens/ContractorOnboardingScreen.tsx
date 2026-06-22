@@ -202,15 +202,27 @@ export default function ContractorOnboardingScreen() {
   };
 
   const handleStripeConnect = async () => {
-    try {
-      const { url } = await getStripeConnectUrl();
-      if (url) {
-        Alert.alert('Stripe Connect', 'Opening Stripe setup in your browser.');
-        Linking.openURL(url);
+    const runStripeConnect = async (businessType: 'individual' | 'company') => {
+      try {
+        const { url } = await getStripeConnectUrl(businessType);
+        if (url) {
+          Alert.alert('Stripe Connect', 'Opening Stripe setup in your browser.');
+          Linking.openURL(url);
+        }
+      } catch {
+        Alert.alert('Error', 'Failed to connect to Stripe. Please try again later.');
       }
-    } catch {
-      Alert.alert('Error', 'Failed to connect to Stripe. Please try again later.');
-    }
+    };
+
+    Alert.alert(
+      'Stripe Onboarding',
+      'Would you like to register as an Individual/Sole Proprietor or as a Company/LLC?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Individual (SSN)', onPress: () => runStripeConnect('individual') },
+        { text: 'Company (EIN)', onPress: () => runStripeConnect('company') }
+      ]
+    );
   };
 
   const goBack = () => {
