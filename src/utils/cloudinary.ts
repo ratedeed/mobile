@@ -23,6 +23,7 @@ export const CLOUDINARY_FOLDERS = {
   USER_PROFILE: 'ratedeed/user_profile_pictures',
   USER_BANNER: 'ratedeed/user_banner_images',
   CHAT: 'ratedeed/chat',
+  DISPUTES: 'ratedeed/disputes',
 } as const;
 
 /**
@@ -58,12 +59,26 @@ export async function uploadToCloudinary(
       // File URI — use React Native FormData file object
       const filename = localUri.split('/').pop() || 'image.jpg';
       const match = /\.(\w+)$/.exec(filename);
-      const type = match ? `image/${match[1]}` : `image/jpeg`;
+      const ext = match ? match[1].toLowerCase() : '';
+      let type = 'image/jpeg';
+      if (ext === 'pdf') {
+        type = 'application/pdf';
+      } else if (ext === 'png') {
+        type = 'image/png';
+      } else if (ext === 'gif') {
+        type = 'image/gif';
+      } else if (ext === 'webp') {
+        type = 'image/webp';
+      } else if (ext === 'jpg' || ext === 'jpeg') {
+        type = 'image/jpeg';
+      } else if (ext) {
+        type = `image/${ext}`;
+      }
 
       const fileToUpload = {
         uri: Platform.OS === "android" ? localUri : localUri.replace("file://", ""),
         name: filename,
-        type: type || "image/jpeg",
+        type: type,
       };
 
       formData.append("file", fileToUpload as any);
@@ -75,7 +90,7 @@ export async function uploadToCloudinary(
     formData.append('folder', signData.folder || folder);
 
     const cloudinaryRes = await fetch(
-      `https://api.cloudinary.com/v1_1/${signData.cloud_name}/image/upload`,
+      `https://api.cloudinary.com/v1_1/${signData.cloud_name}/auto/upload`,
       {
         method: 'POST',
         body: formData,

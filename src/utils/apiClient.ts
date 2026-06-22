@@ -59,7 +59,10 @@ export const setAuthInvalidatedCallback = (callback: () => void) => {
 };
 
 export const setAuthTokenUpdatedCallback = (callback: (token: string) => void) => {
-  onTokenUpdated = callback;
+  onTokenUpdated = (token: string) => {
+    updateSocketToken(token);
+    callback(token);
+  };
 };
 
 export const refreshTokenIfNeeded = async (): Promise<void> => {
@@ -745,6 +748,25 @@ export const offNewNotification = (callback?: (notification: any) => void) => {
 export const emitTyping = (conversationId: string, userId: string, isTyping: boolean, recipientId?: string) => {
   if (socket?.connected) {
     socket.emit('typing', { conversationId, userId, isTyping, recipientId });
+  }
+};
+
+export const checkOnlineStatus = (targetUserId: string) => {
+  if (socket?.connected && targetUserId) {
+    socket.emit('checkOnlineStatus', { targetUserId });
+  } else if (targetUserId) {
+    socket?.once('connect', () => {
+      socket?.emit('checkOnlineStatus', { targetUserId });
+    });
+  }
+};
+
+export const updateSocketToken = (newToken: string) => {
+  if (socket) {
+    socket.auth = newToken ? { token: newToken } : {};
+    if (socket.connected) {
+      socket.disconnect().connect();
+    }
   }
 };
 

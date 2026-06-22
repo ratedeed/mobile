@@ -26,29 +26,81 @@ export default function AnalyticsTab({ jobs, quotes, reviews, profile, loading, 
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedBar, setSelectedBar] = useState<number | null>(null);
 
+  const filterByDateRange = (itemDateStr: any) => {
+    if (!itemDateStr) return false;
+    const date = new Date(itemDateStr);
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    switch (dateRange) {
+      case 'week': {
+        const day = startOfToday.getDay();
+        const diff = startOfToday.getDate() - day + (day === 0 ? -6 : 1);
+        const startOfWeek = new Date(startOfToday.setDate(diff));
+        return date >= startOfWeek;
+      }
+      case 'month': {
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        return date >= startOfMonth;
+      }
+      case 'quarter': {
+        const currentQuarter = Math.floor(now.getMonth() / 3);
+        const startOfQuarter = new Date(now.getFullYear(), currentQuarter * 3, 1);
+        return date >= startOfQuarter;
+      }
+      case 'year': {
+        const startOfYear = new Date(now.getFullYear(), 0, 1);
+        return date >= startOfYear;
+      }
+      default:
+        return true;
+    }
+  };
+
+  const filteredJobs = useMemo(() => {
+    return jobs.filter((j: any) => {
+      const dateStr = j.completedAt || j.updatedAt || j.createdAt;
+      return filterByDateRange(dateStr);
+    });
+  }, [jobs, dateRange]);
+
+  const filteredQuotes = useMemo(() => {
+    return quotes.filter((q: any) => {
+      const dateStr = q.createdAt || q.updatedAt;
+      return filterByDateRange(dateStr);
+    });
+  }, [quotes, dateRange]);
+
+  const filteredReviews = useMemo(() => {
+    return reviews.filter((r: any) => {
+      const dateStr = r.createdAt || r.updatedAt;
+      return filterByDateRange(dateStr);
+    });
+  }, [reviews, dateRange]);
+
   const isCompletedJob = (status?: string) => {
     if (!status) return false;
     return ['completed', 'paid', 'completed_paid', 'completed_pending_release'].includes(status);
   };
 
   const kpiData = useMemo(() => {
-    const completedJobs = jobs.filter((j: any) => isCompletedJob(j.status));
+    const completedJobs = filteredJobs.filter((j: any) => isCompletedJob(j.status));
     const totalRevenue = completedJobs.reduce((sum: number, j: any) => sum + (j.totalAmount || j.amount || 0), 0) / 100;
-    const activeJobsList = jobs.filter((j: any) => !isCompletedJob(j.status) && !['cancelled', 'refunded', 'rejected', 'declined'].includes(j.status));
+    const activeJobsList = filteredJobs.filter((j: any) => !isCompletedJob(j.status) && !['cancelled', 'refunded', 'rejected', 'declined'].includes(j.status));
     const avgRating = profile?.averageRating || profile?.rating || 0;
-    const reviewCount = profile?.reviewCount || reviews.length || 0;
-    const respondedQuotes = quotes.filter((q: any) => q.status !== 'pending' && q.status !== 'draft');
-    const responseRate = quotes.length > 0 ? Math.round((respondedQuotes.length / quotes.length) * 100) : 100;
+    const reviewCount = profile?.reviewCount || filteredReviews.length || 0;
+    const respondedQuotes = filteredQuotes.filter((q: any) => q.status !== 'pending' && q.status !== 'draft');
+    const responseRate = filteredQuotes.length > 0 ? Math.round((respondedQuotes.length / filteredQuotes.length) * 100) : 100;
 
     return { totalRevenue, activeJobs: activeJobsList.length, responseRate, avgRating, reviewCount };
-  }, [jobs, quotes, reviews, profile]);
+  }, [filteredJobs, filteredQuotes, filteredReviews, profile]);
 
   const performanceMetrics = useMemo(() => {
-    const accepted = quotes.filter((q: any) => q.status === 'accepted' || isCompletedJob(q.status)).length;
-    const conversionRate = quotes.length > 0 ? Math.round((accepted / quotes.length) * 100) : 0;
+    const accepted = filteredQuotes.filter((q: any) => q.status === 'accepted' || isCompletedJob(q.status)).length;
+    const conversionRate = filteredQuotes.length > 0 ? Math.round((accepted / filteredQuotes.length) * 100) : 0;
 
     // On-time completion: completed jobs with estimatedCompletionDate that finished before deadline
-    const completedWithDates = jobs.filter((j: any) =>
+    const completedWithDates = filteredJobs.filter((j: any) =>
       isCompletedJob(j.status) && j.estimatedCompletionDate
     );
     let onTimeRate = 0;
@@ -63,7 +115,7 @@ export default function AnalyticsTab({ jobs, quotes, reviews, profile, loading, 
 
     // Repeat client rate: clients with >1 job / total unique clients
     const clientCounts: Record<string, number> = {};
-    jobs.forEach((j: any) => {
+    filteredJobs.forEach((j: any) => {
       const name = j.client?.firstName || j.user?.firstName || 'unknown';
       clientCounts[name] = (clientCounts[name] || 0) + 1;
     });
@@ -72,7 +124,7 @@ export default function AnalyticsTab({ jobs, quotes, reviews, profile, loading, 
     const repeatRate = uniqueClients > 0 ? Math.round((repeatClients / uniqueClients) * 100) : 0;
 
     return { conversionRate, avgResponseTime: '—', onTimeRate, repeatRate };
-  }, [quotes, jobs]);
+  }, [filteredQuotes, filteredJobs]);
 
   const earningsData = useMemo(() => {
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -82,7 +134,7 @@ export default function AnalyticsTab({ jobs, quotes, reviews, profile, loading, 
       const past = new Date(d.getFullYear(), d.getMonth() - i, 1);
       monthlyData[months[past.getMonth()]] = 0;
     }
-    const completedJobs = jobs.filter((j: any) => isCompletedJob(j.status));
+    const completedJobs = filteredJobs.filter((j: any) => isCompletedJob(j.status));
     completedJobs.forEach((j: any) => {
       const dateStr = j.completedAt || j.updatedAt || j.createdAt;
       if (dateStr) {
@@ -94,10 +146,10 @@ export default function AnalyticsTab({ jobs, quotes, reviews, profile, loading, 
       }
     });
     return Object.entries(monthlyData).map(([month, value]) => ({ month, value }));
-  }, [jobs]);
+  }, [filteredJobs]);
 
   const serviceBreakdown = useMemo(() => {
-    const completedJobs = jobs.filter((j: any) => isCompletedJob(j.status));
+    const completedJobs = filteredJobs.filter((j: any) => isCompletedJob(j.status));
     const breakdown: Record<string, number> = {};
     completedJobs.forEach((j: any) => {
       const category = j.category || j.serviceType || 'General Service';
@@ -109,11 +161,11 @@ export default function AnalyticsTab({ jobs, quotes, reviews, profile, loading, 
     }));
     if (res.length === 0) return [{ name: 'No completed jobs yet', amount: 0, color: '#6366f1' }];
     return res;
-  }, [jobs]);
+  }, [filteredJobs]);
 
   const topClients = useMemo(() => {
     const clients: Record<string, any> = {};
-    jobs.forEach((j: any) => {
+    filteredJobs.forEach((j: any) => {
       const name = j.client?.firstName ? `${j.client.firstName} ${j.client.lastName || ''}`.trim() : j.user?.firstName ? `${j.user.firstName} ${j.user.lastName || ''}`.trim() : 'Unknown Client';
       if (!clients[name]) clients[name] = { name, jobs: 0, total: 0, lastProject: '', avatar: '👤' };
       clients[name].jobs += 1;
@@ -127,11 +179,11 @@ export default function AnalyticsTab({ jobs, quotes, reviews, profile, loading, 
     const res = Object.values(clients).sort((a: any, b: any) => b.total - a.total).slice(0, 3);
     if (res.length === 0) return [{ name: 'No clients yet', jobs: 0, total: 0, lastProject: 'None', avatar: '👤' }];
     return res;
-  }, [jobs]);
+  }, [filteredJobs]);
 
   const recentActivity = useMemo(() => {
     const activities: any[] = [];
-    jobs.forEach((j: any) => {
+    filteredJobs.forEach((j: any) => {
       const isCompleted = isCompletedJob(j.status);
       activities.push({
         id: `job-${j.id || j._id}`,
@@ -144,7 +196,7 @@ export default function AnalyticsTab({ jobs, quotes, reviews, profile, loading, 
         iconColor: isCompleted ? '#525252' : '#4F46E5',
       });
     });
-    quotes.forEach((q: any) => {
+    filteredQuotes.forEach((q: any) => {
       activities.push({
         id: `quote-${q.id || q._id}`,
         title: 'New quote request',
@@ -169,7 +221,7 @@ export default function AnalyticsTab({ jobs, quotes, reviews, profile, loading, 
     });
     if (res.length === 0) return [{ id: 'none', title: 'No activity yet', description: 'When you get quotes or jobs, they will appear here.', time: 'Now', icon: 'chart-line', colorClass: 'bg-neutral-100', iconColor: '#525252' }];
     return res;
-  }, [jobs, quotes]);
+  }, [filteredJobs, filteredQuotes]);
 
   const totalServiceRevenue = serviceBreakdown.reduce((sum, s) => sum + s.amount, 0);
   const maxEarning = Math.max(...earningsData.map(d => d.value), 1000);

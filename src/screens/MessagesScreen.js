@@ -16,6 +16,7 @@ import {
   Modal,
   Linking,
   Keyboard,
+  AppState,
 } from "react-native";
 import { FontAwesome5 } from "@expo/vector-icons";
 import { useRoute, useNavigation } from "@react-navigation/native";
@@ -34,6 +35,7 @@ import {
   registerSocket,
   joinConversationSocket,
   leaveConversationSocket,
+  checkOnlineStatus,
   onNewMessage,
   offNewMessage,
   onMessageRead,
@@ -53,7 +55,7 @@ import { useAuth } from "../context/AuthContext";
 import { useContractor } from "../context/ContractorContext";
 import { useNotifications } from "../context/NotificationsContext";
 import { SvgImage } from "../components/common/SvgImage";
-import { getProfileImageUrl, isSvgUrl } from "../utils/avatarUtils";
+import { getProfileImageUrl, isSvgUrl, getCoverImageUrl } from "../utils/avatarUtils";
 import { uploadToCloudinary, CLOUDINARY_FOLDERS } from "../utils/cloudinary";
 import ActionSheet from "../components/common/ActionSheet";
 import QuoteCreationSheet from "../components/contractor/QuoteCreationSheet";
@@ -482,6 +484,14 @@ const MessagesScreen = () => {
   // ─── Join / leave conversation room ────────────────────────────────────────
   useEffect(() => {
     const cId = selectedConversation?.conversationId;
+    const otherId = resolveId(selectedConversation?.otherParticipant);
+    if (otherId) {
+      try {
+        checkOnlineStatus(otherId);
+      } catch (err) {
+        if (__DEV__) console.warn('checkOnlineStatus failed:', err);
+      }
+    }
     if (cId && !cId.startsWith("temp-")) {
       (async () => {
         try {
@@ -498,7 +508,7 @@ const MessagesScreen = () => {
         })();
       };
     }
-  }, [selectedConversation?.conversationId]);
+  }, [selectedConversation?.conversationId, selectedConversation?.otherParticipant]);
 
   // ─── Stripe status for contractors ─────────────────────────────────────────
   useEffect(() => {
@@ -612,6 +622,25 @@ const MessagesScreen = () => {
 
   useEffect(() => { if (currentUserId) loadConversations(); }, [currentUserId]);
 
+  // ─── Re-fetch conversations/messages on app foreground ───────────────────────
+  useEffect(() => {
+    const handleAppStateChange = (nextAppState) => {
+      if (nextAppState === "active") {
+        if (currentUserId) {
+          loadConversations();
+          const cId = selectedConversation?.conversationId || selectedConversation?._id;
+          if (cId && !cId.startsWith("temp-")) {
+            loadMessages(cId, 1);
+          }
+        }
+      }
+    };
+    const subscription = AppState.addEventListener("change", handleAppStateChange);
+    return () => {
+      subscription.remove();
+    };
+  }, [currentUserId, selectedConversation, loadConversations, loadMessages]);
+
   // Auto-select conversation when conversationId is provided (e.g. from notification tap)
   useEffect(() => {
     if (!conversationId || selectedConversation) return;
@@ -658,7 +687,17 @@ const MessagesScreen = () => {
       setMessagesPage(page);
 
       if (page === 1) {
-        setMessages([...msgs].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt)));
+        setMessages(prev => {
+          const optimistic = prev.filter(m => m._isOptimistic && (m.conversationId === conversationId || m.conversationId?.startsWith("temp-")));
+          const serverMsgs = [...msgs];
+          const combined = [...serverMsgs];
+          for (const opt of optimistic) {
+            if (!combined.some(c => c._id === opt._id)) {
+              combined.push(opt);
+            }
+          }
+          return combined.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+        });
         
         // Immediately clear the unread dot locally to avoid UI lag
         setConversations(prev => ({
@@ -980,6 +1019,26 @@ const MessagesScreen = () => {
     }
   };
 
+  const handleHideConversation = async () => {
+    const cId = selectedConversation?.conversationId || selectedConversation?._id;
+    if (!cId) {
+      Alert.alert("Error", "Unable to delete chat. Please try again.");
+      return;
+    }
+    try {
+      await deleteConversation(cId);
+      setConversations(prev => {
+        const copy = { ...prev };
+        delete copy[cId];
+        return copy;
+      });
+      setSelectedConversation(null);
+      Alert.alert("Success", "Conversation deleted.");
+    } catch (e) {
+      Alert.alert("Error", e?.message || "Failed to delete conversation. Please try again.");
+    }
+  };
+
   const handleSelectConversation = useCallback((item) => {
     HapticFeedback.selection();
     setSelectedConversation(item);
@@ -1022,11 +1081,17 @@ const MessagesScreen = () => {
               <>
                 <View className="w-full bg-white dark:bg-neutral-800 rounded-2xl border border-neutral-200 dark:border-neutral-700 overflow-hidden" style={[{ shadowColor: "#000", shadowOpacity: isDark ? 0 : 0.04, shadowRadius: 10, shadowOffset: { height: 3 }, elevation: isDark ? 0 : 3 }, msg._isOptimistic && !msg._failed ? { opacity: 0.6 } : undefined]}>
                   {/* Beautiful cover image */}
-                  <Image 
-                    source={{ uri: "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&q=80&w=600&h=300" }} 
-                    className="w-full h-36 bg-neutral-100"
-                    resizeMode="cover"
-                  />
+                  {(() => {
+                    const cName = msg.quote?.contractor?.companyName || msg.quote?.contractor?.businessName || selectedConversation?.otherParticipant?.companyName || selectedConversation?.otherParticipant?.firstName || 'Contractor';
+                    const cImage = msg.quote?.contractor?.bannerImage || msg.quote?.contractor?.coverImage || selectedConversation?.otherParticipant?.bannerImage || selectedConversation?.otherParticipant?.coverImage || '';
+                    const cCat = msg.quote?.contractor?.category || selectedConversation?.otherParticipant?.category || '';
+                    const coverUrl = getCoverImageUrl(cName, cImage, cCat, 600, 300);
+                    return isSvgUrl(coverUrl) ? (
+                      <View className="w-full h-36 bg-neutral-100"><SvgImage uri={coverUrl} width="100%" height="100%" /></View>
+                    ) : (
+                      <Image source={{ uri: coverUrl }} className="w-full h-36 bg-neutral-100" resizeMode="cover" />
+                    );
+                  })()}
                   
                   {msg.quote.status && msg.quote.status !== 'pending' && msg.quote.status !== 'pending_user_approval' && (
                     <View className={`px-4 py-2 flex-row items-center border-b ${msg.quote.status === 'accepted' || msg.quote.status === 'funded_in_progress' ? (isDark ? 'bg-emerald-900/40 border-emerald-800' : 'bg-emerald-50 border-emerald-100') : msg.quote.status === 'rejected' || msg.quote.status === 'declined' ? (isDark ? 'bg-red-900/40 border-red-800' : 'bg-red-50 border-red-100') : (isDark ? 'bg-amber-900/40 border-amber-800' : 'bg-amber-50 border-amber-100')}`}>
@@ -1192,10 +1257,36 @@ const MessagesScreen = () => {
   // If deep-linked to ChatScreen but no conversation loaded yet, redirect back
   useEffect(() => {
     if (route.name === "ChatScreen" && !selectedConversation && !loading && Object.values(conversations).length > 0) {
+      if (conversationId) {
+        const target = Object.values(conversations).find(c => c.conversationId === conversationId || c._id === conversationId);
+        if (target) {
+          setSelectedConversation(target);
+          return;
+        }
+      }
+      if (recipientId) {
+        const target = Object.values(conversations).find(c => collectAllIds(c.otherParticipant).includes(resolveId(recipientId)));
+        if (target) {
+          setSelectedConversation(target);
+          return;
+        }
+        setSelectedConversation({
+          conversationId: `temp-${Date.now()}`,
+          otherParticipant: {
+            _id: recipientId,
+            firstName: recipientName || "User",
+            role: route.params?.recipientRole || "User",
+            profilePicture: route.params?.recipientImage || ""
+          },
+          messages: [],
+          lastMessage: null
+        });
+        return;
+      }
       const target = conversations[Object.keys(conversations)[0]];
       if (target) setSelectedConversation(target);
     }
-  }, [route.name, selectedConversation, loading, conversations]);
+  }, [route.name, selectedConversation, loading, conversations, conversationId, recipientId, recipientName]);
 
   if (!isAuthenticated) {
     return (
@@ -1258,6 +1349,9 @@ const MessagesScreen = () => {
                   <View className="w-10 h-10 rounded-full overflow-hidden"><SvgImage uri={chatAvatar} width="100%" height="100%" /></View>
                 ) : (
                   <Image source={{ uri: chatAvatar }} className="w-10 h-10 rounded-full bg-neutral-100 dark:bg-neutral-700" />
+                )}
+                {chatOnline && (
+                  <View className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white dark:border-neutral-900" />
                 )}
               </View>
               <View className="flex-1 min-w-0">
@@ -1377,6 +1471,7 @@ const MessagesScreen = () => {
       <ImageLightbox images={activeImage ? [activeImage] : []} visible={lightboxVisible} onClose={() => setLightboxVisible(false)} />
       
       <ActionSheet visible={actionSheetVisible} onClose={() => setActionSheetVisible(false)} title="Chat Options" options={[
+        { id: "hide", label: "Delete Chat", icon: "trash-alt", isDestructive: true, onPress: () => { setActionSheetVisible(false); Alert.alert("Delete Chat", "Are you sure you want to delete this chat? It will hide the conversation until a new message is received.", [{ text: "Cancel", style: "cancel" }, { text: "Delete", style: "destructive", onPress: handleHideConversation }]); } },
         { id: "report", label: "Report User", icon: "flag", isDestructive: true, onPress: () => { setActionSheetVisible(false); setTimeout(() => setReportModalVisible(true), 300); } },
         blockedUsers.has(resolveId(selectedConversation?.otherParticipant))
           ? { id: "unblock", label: "Unblock User", icon: "user-check", onPress: () => Alert.alert("Unblock User", `Are you sure you want to unblock ${chatName}?`, [{ text: "Cancel", style: "cancel" }, { text: "Unblock", onPress: handleUnblockUser }]) }

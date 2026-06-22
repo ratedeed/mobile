@@ -30,7 +30,21 @@ export async function uploadToCloudinary(
     // Extract filename from URI
     const fileName = fileUri.split('/').pop() || 'upload.jpg';
     const match = /\.(\w+)$/.exec(fileName);
-    const type = match ? `image/${match[1]}` : `image/jpeg`;
+    const ext = match ? match[1].toLowerCase() : '';
+    let type = 'image/jpeg';
+    if (ext === 'pdf') {
+      type = 'application/pdf';
+    } else if (ext === 'png') {
+      type = 'image/png';
+    } else if (ext === 'gif') {
+      type = 'image/gif';
+    } else if (ext === 'webp') {
+      type = 'image/webp';
+    } else if (ext === 'jpg' || ext === 'jpeg') {
+      type = 'image/jpeg';
+    } else if (ext) {
+      type = `image/${ext}`;
+    }
 
     // React Native FormData requires an object with uri, name, and type
     formData.append('file', {
@@ -46,7 +60,7 @@ export async function uploadToCloudinary(
 
     // Step 3: Upload directly to Cloudinary
     const cloudinaryRes = await fetch(
-      `https://api.cloudinary.com/v1_1/${signData.cloud_name}/image/upload`,
+      `https://api.cloudinary.com/v1_1/${signData.cloud_name}/auto/upload`,
       {
         method: 'POST',
         body: formData,

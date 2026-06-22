@@ -23,8 +23,34 @@ try {
   if (__DEV__) {
     console.warn("Firebase initialization error. Check EXPO_PUBLIC_ env variables.");
   }
-  app = {};
-  auth = {};
+  // Safe mock app object
+  app = {
+    name: '[MockApp]',
+    options: {},
+    automaticDataCollectionEnabled: false,
+  };
+
+  // Safe mock auth object with Proxy fallback for safety
+  const mockAuth = {
+    app,
+    currentUser: null,
+    onAuthStateChanged: (callback) => () => {},
+    onIdTokenChanged: (callback) => () => {},
+    signOut: () => Promise.resolve(),
+    signInWithEmailAndPassword: () => Promise.reject(new Error("Firebase is not initialized.")),
+    createUserWithEmailAndPassword: () => Promise.reject(new Error("Firebase is not initialized.")),
+  };
+
+  auth = new Proxy(mockAuth, {
+    get(target, prop) {
+      if (prop in target) {
+        return target[prop];
+      }
+      if (prop === 'then') return undefined;
+      // Return dummy functions for any other properties accessed as functions
+      return () => {};
+    }
+  });
 }
 
 export { app, auth };

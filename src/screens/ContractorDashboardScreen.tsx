@@ -42,6 +42,7 @@ import {
   post as apiPost,
 } from '../api';
 import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
 import ServiceAreaMap from '../components/common/ServiceAreaMap';
 import AnalyticsTab from '../components/contractor/AnalyticsTab';
 import { API_BASE_URL } from '../config';
@@ -284,39 +285,37 @@ const ContractorDashboardScreen: React.FC = () => {
   };
 
   const handleLicenseDocSelect = async () => {
-    const hasPermission = await requestPhotoLibraryPermission();
-    if (!hasPermission) return;
-
     try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        quality: 0.7,
-        base64: true,
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['image/*', 'application/pdf'],
+        copyToCacheDirectory: true,
       });
       if (result.canceled || !result.assets?.length) return;
       const asset = result.assets[0];
-      if (asset.fileSize && asset.fileSize > 5 * 1024 * 1024) {
-        Alert.alert('File too large', 'Please choose an image under 5MB.');
+      if (asset.size && asset.size > 5 * 1024 * 1024) {
+        Alert.alert('File too large', 'Please choose a document under 5MB.');
         return;
       }
-      setLicenseDocUri(`data:image/jpeg;base64,${asset.base64}`);
+      setLicenseDocUri(asset.uri);
     } catch (err: any) {
-      Alert.alert('Error', err?.message || 'Failed to select image');
+      Alert.alert('Error', err?.message || 'Failed to select document');
     }
   };
 
   const handleSubmitVerification = async () => {
     if (!editableData.licenseNumber.trim() || !licenseDocUri) {
-      Alert.alert('Error', 'Please provide both license number and a photo of your license.');
+      Alert.alert('Error', 'Please provide both license number and your verification document.');
       return;
     }
     setIsSubmittingVerification(true);
     setVerificationResult(null);
 
     try {
+      const cloudinaryUrl = await uploadToCloudinary(licenseDocUri, CLOUDINARY_FOLDERS.LICENSES);
+
       await requestVerification({
         licenseNumber: editableData.licenseNumber.trim(),
-        licenseDocumentFile: licenseDocUri, // Pass the base64 string directly
+        licenseDocumentFile: cloudinaryUrl, // Pass the Cloudinary URL
       });
       setVerificationResult({
         success: true,
@@ -551,6 +550,12 @@ const ContractorDashboardScreen: React.FC = () => {
 
 
   useEffect(() => {
+    if (!loading && !onboardingComplete && realContractorId) {
+      navigation.navigate('ContractorOnboarding');
+    }
+  }, [loading, onboardingComplete, realContractorId, navigation]);
+
+  useEffect(() => {
     return () => {
       if (addressSearchTimer.current) clearTimeout(addressSearchTimer.current);
     };
@@ -772,7 +777,7 @@ const ContractorDashboardScreen: React.FC = () => {
   ];
   const completedCount = completionSteps.filter(s => s.done).length;
   const completionPct = Math.round((completedCount / completionSteps.length) * 100);
-  const showBanner = false;
+  const showBanner = !bannerDismissed && completionPct < 100;
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0} className="flex-1 bg-neutral-50 dark:bg-neutral-800">

@@ -39,12 +39,6 @@ export default function ContractorOnboardingScreen() {
   const [currentStep, setCurrentStep] = useState(0);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'Main' }, { name: 'ContractorDashboard' }],
-    });
-  }, [navigation]);
 
   // Profile
   const [description, setDescription] = useState('');

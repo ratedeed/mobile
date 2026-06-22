@@ -25,6 +25,7 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import HapticFeedback from '../utils/haptics';
 import { SvgImage } from '../components/common/SvgImage';
 import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
 import { fetchContractorDetails, fetchContractorPosts, createLead, fetchContractorReviews, extractId, browseContractors, post as apiPost, submitClaim, getContractorBySlug } from '../api';
 import { API_BASE_URL } from '../config';
 import { uploadToCloudinary, CLOUDINARY_FOLDERS } from '../utils/cloudinary';
@@ -127,21 +128,16 @@ const BusinessDetailScreen: React.FC = () => {
   const { isAuthenticated } = useAuth();
 
   const handleClaimDocumentPick = async () => {
-    const hasPermission = await requestPhotoLibraryPermission();
-    if (!hasPermission) return;
-
     try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        quality: 0.8,
-        allowsMultipleSelection: false,
-        base64: true,
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['image/*', 'application/pdf'],
+        copyToCacheDirectory: true,
       });
       if (result.canceled || !result.assets?.length) return;
 
       const asset = result.assets[0];
-      if (asset.fileSize && asset.fileSize > 5 * 1024 * 1024) {
-        Alert.alert('File too large', 'Please choose an image under 5MB.');
+      if (asset.size && asset.size > 5 * 1024 * 1024) {
+        Alert.alert('File too large', 'Please choose a document under 5MB.');
         return;
       }
       setClaimDocumentFile(asset.uri);
@@ -496,7 +492,13 @@ const BusinessDetailScreen: React.FC = () => {
           )}
           {(!(contractor?.isVerified) && !contractor?.user) && (
             <Pressable
-              onPress={() => setShowClaimModal(true)}
+              onPress={() => {
+                if (!isAuthenticated) {
+                  navigation.navigate('Login');
+                } else {
+                  setShowClaimModal(true);
+                }
+              }}
               className="w-8 h-8 items-center justify-center bg-white dark:bg-neutral-950 rounded-full shadow-sm"
             >
               <FontAwesome5 name="shield-alt" size={14} color="#4F46E5" />

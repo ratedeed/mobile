@@ -161,6 +161,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updateBackendToken = useCallback(async (token: string, emailVerifiedStatus: boolean, userData?: any) => {
     if (token) {
       await setSecureItem('auth_token', token);
+      const { updateSocketToken } = require('../utils/apiClient');
+      updateSocketToken(token);
     }
 
     const currentData = await loadUserData() || {};
@@ -230,6 +232,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Listen for Firebase Auth changes to automatically sync email address changes on mobile
   useEffect(() => {
+    if (!auth || !auth.app || auth.app.name === '[MockApp]') return;
     let hasReloadedFirebaseUser = false;
     const unsubscribe = onIdTokenChanged(auth, async (fUser) => {
       if (fUser) {

@@ -270,7 +270,29 @@ const NotificationsScreen: React.FC = () => {
     } else if (path.startsWith('/payment/')) {
       const quoteId = path.split('/')[2];
       if (quoteId) {
-        navigation.navigate('PaymentFlow', { quoteId });
+        (async () => {
+          try {
+            const { getQuote } = await import('../api');
+            const q = await getQuote(quoteId);
+            if (q) {
+              const firstMilestone = (q.isMilestone && q.milestones?.length)
+                ? q.milestones.find((m: any) => m.status === 'pending' || !m.status) || q.milestones[0]
+                : null;
+              navigation.navigate('PaymentFlow', {
+                quoteId: q._id,
+                milestoneId: firstMilestone ? (firstMilestone._id || firstMilestone.id) : undefined,
+                totalAmount: firstMilestone ? firstMilestone.amount : (q.totalAmount || q.quoteTotal || 0),
+                contractorName: q.contractorId?.companyName || q.contractorId?.businessName || 'Contractor',
+                description: q.description || q.projectTitle || 'Home Project',
+                isMilestone: q.isMilestone,
+              });
+            } else {
+              navigation.navigate('PaymentFlow', { quoteId });
+            }
+          } catch {
+            navigation.navigate('PaymentFlow', { quoteId });
+          }
+        })();
       }
     } else if (path.startsWith('/dispute/')) {
       const jobId = path.split('/')[2];
@@ -280,7 +302,26 @@ const NotificationsScreen: React.FC = () => {
     } else if (path.startsWith('/review/')) {
       const jobId = path.split('/')[2];
       if (jobId) {
-        navigation.navigate('ReviewScreen', { jobId });
+        (async () => {
+          try {
+            const { getJobById } = await import('../api');
+            const j = await getJobById(jobId);
+            if (j) {
+              const contractor = j.contractor || {};
+              const quote = j.quote || {};
+              navigation.navigate('ReviewScreen', {
+                jobId: j._id,
+                quoteId: quote._id || j._id,
+                contractorId: contractor._id || contractor.id || j.contractorId,
+                contractorName: contractor.companyName || contractor.businessName || 'Contractor',
+              });
+            } else {
+              navigation.navigate('ReviewScreen', { jobId });
+            }
+          } catch {
+            navigation.navigate('ReviewScreen', { jobId });
+          }
+        })();
       }
     }
   };

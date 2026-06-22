@@ -25,7 +25,6 @@
           "fetch",
           "remote-notification"
         ],
-        "NSMicrophoneUsageDescription": "Allow RateDeed to access your microphone to record voice messages and videos.",
         "NSUserTrackingUsageDescription": "Allow RateDeed to use your data to provide a better, more personalized experience and for analytics."
       },
       "googleServicesFile": "./GoogleService-Info.plist",
@@ -67,8 +66,7 @@
         "backgroundColor": "#ffffff"
       },
       "permissions": [
-        "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.CAMERA"
       ]
     },
     "web": {

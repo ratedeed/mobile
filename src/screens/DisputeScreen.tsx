@@ -145,7 +145,7 @@ export default function DisputeScreen() {
     setSubmitting(true);
     try {
       const uploadedUrls = await Promise.all(
-        photos.map(p => uploadToCloudinary(p, CLOUDINARY_FOLDERS.CHAT))
+        photos.map(p => uploadToCloudinary(p, CLOUDINARY_FOLDERS.DISPUTES))
       );
       const reason = `[${category}] ${description.trim()}`;
       await raiseDispute(jobIdState, reason, undefined, uploadedUrls);
@@ -198,8 +198,8 @@ export default function DisputeScreen() {
             </Text>
             <Text className="text-xs text-indigo-700 dark:text-indigo-300 mt-1 leading-4">
               {isContractor
-                ? `The payment${jobAmount ? ` of $${jobAmount.toLocaleString()}` : ''} is held securely in escrow. It will not be released until the dispute is resolved.`
-                : `Disputes are reviewed by our team. Funds${jobAmount ? ` of $${jobAmount.toLocaleString()}` : ''} in escrow will be held until the issue is resolved.`}
+                ? `The payment${jobAmount ? ` of $${(jobAmount / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''} is held securely in escrow. It will not be released until the dispute is resolved.`
+                : `Disputes are reviewed by our team. Funds${jobAmount ? ` of $${(jobAmount / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''} in escrow will be held until the issue is resolved.`}
             </Text>
           </View>
         </View>

@@ -114,6 +114,8 @@ export default function QuoteReviewScreen() {
     if (!quoteId || actionLoading) return;
     setActionLoading('accept');
     try {
+      await updateQuoteStatus(quoteId, 'accepted');
+
       const firstMilestone = quote?.isMilestone && quote?.milestones?.length
         ? quote.milestones.find((m: any) => m.status === 'pending' || !m.status) || quote.milestones[0]
         : null;
