@@ -150,6 +150,10 @@ export default function PaymentFlowScreen() {
 
   const handleApplePay = async () => {
     if (paying) return;
+    if (paymentAmount <= 0) {
+      Alert.alert('Invalid Amount', 'Payment amount must be greater than $0.');
+      return;
+    }
     if (Platform.OS !== 'ios') {
       Alert.alert('Apple Pay', 'Apple Pay is only available on iOS devices.');
       return;
@@ -201,6 +205,10 @@ export default function PaymentFlowScreen() {
 
   const handlePayment = async () => {
     if (paying) return;
+    if (paymentAmount <= 0) {
+      Alert.alert('Invalid Amount', 'Payment amount must be greater than $0.');
+      return;
+    }
     try {
       setPaying(true);
       let currentClientSecret = clientSecret;
@@ -389,10 +397,10 @@ export default function PaymentFlowScreen() {
 
             <Pressable
               onPress={handlePayment}
-              disabled={paying}
+              disabled={paying || paymentAmount <= 0}
               style={{
                 width: '100%', paddingVertical: 14, borderRadius: 12, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, marginTop: 16,
-                backgroundColor: paying ? '#d4d4d4' : '#4F46E5'
+                backgroundColor: (paying || paymentAmount <= 0) ? '#d4d4d4' : '#4F46E5'
               }}
             >
               {paying ? (

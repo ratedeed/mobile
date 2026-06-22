@@ -73,8 +73,7 @@ export default function QuoteCreationSheet({
 
   // Dynamic Line Items State
   const [lineItems, setLineItems] = useState<{ description: string; amount: string }[]>([
-    { description: 'Labor', amount: '2800' },
-    { description: 'Materials & fixtures', amount: '3200' },
+    { description: '', amount: '' },
   ]);
 
   useEffect(() => {
@@ -261,8 +260,7 @@ export default function QuoteCreationSheet({
       setEndTime('');
       setJobAddress('');
       setLineItems([
-        { description: 'Labor', amount: '2800' },
-        { description: 'Materials & fixtures', amount: '3200' },
+        { description: '', amount: '' },
       ]);
       setPhotos([]);
       setNotes('');

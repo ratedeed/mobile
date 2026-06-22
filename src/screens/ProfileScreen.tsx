@@ -26,7 +26,7 @@ import * as ImagePicker from "expo-image-picker";
 import { uploadToCloudinary, CLOUDINARY_FOLDERS } from "../utils/cloudinary";
 import { requestPhotoLibraryPermission } from '../utils/permissions';
 
-import { getUserProfile, updateUserProfile, getBlockedUsers, unblockUser } from '../api';
+import { getUserProfile, updateUserProfile, getBlockedUsers, unblockUser, getUserJobs, listConversations, getContractorProfile } from '../api';
 import { useAuth } from '../context/AuthContext';
 import * as Sentry from '@sentry/react-native';
 import { User } from '../types';
@@ -200,6 +200,7 @@ const ProfileScreen: React.FC = () => {
   const [ipZipCode, setIpZipCode] = useState<string>('');
   const [hapticsEnabled, setHapticsEnabled] = useState<boolean>(true);
   const [defaultZip, setDefaultZip] = useState('');
+  const [stats, setStats] = useState({ reviews: 0, messages: 0, projects: 0 });
 
   useEffect(() => {
     if (user?.zipCode) {
@@ -280,6 +281,28 @@ const ProfileScreen: React.FC = () => {
         email: userData.email || '',
         zipCode: userData.zipCode || '',
       });
+
+      // Fetch dynamic stats
+      try {
+        const [jobsData, conversations] = await Promise.all([
+          getUserJobs().catch(() => []),
+          listConversations().catch(() => []),
+        ]);
+        
+        let reviewCount = 0;
+        if (userData.role === 'contractor' || userData.role === 'admin') {
+          const cProfile = await getContractorProfile().catch(() => null);
+          reviewCount = cProfile?.reviewCount || 0;
+        }
+
+        setStats({
+          reviews: reviewCount,
+          messages: conversations?.length || 0,
+          projects: jobsData?.length || 0,
+        });
+      } catch (statsErr) {
+        console.warn('Failed to load profile stats:', statsErr);
+      }
     } catch (err) {
       Sentry.captureException(err);
     } finally {
@@ -502,7 +525,11 @@ const ProfileScreen: React.FC = () => {
         {/* Stats */}
         <View className="px-6 py-5">
           <View className="flex-row" style={{ gap: 10 }}>
-            {[{ value: '0', label: 'Reviews' }, { value: '0', label: 'Messages' }, { value: '0', label: 'Projects' }].map((stat, i) => (
+            {[
+              { value: String(stats.reviews), label: 'Reviews' },
+              { value: String(stats.messages), label: 'Messages' },
+              { value: String(stats.projects), label: 'Projects' }
+            ].map((stat, i) => (
               <View key={i} className="flex-1 bg-white dark:bg-neutral-900 rounded-2xl py-4 px-3 items-center" style={{ borderWidth: 1, borderColor: isDark ? '#262626' : '#f0f0f0' }}>
                 <Text className="text-[22px] font-bold text-neutral-900 dark:text-neutral-50 tracking-tight">{stat.value}</Text>
                 <Text className="text-[12px] font-medium text-neutral-400 dark:text-neutral-500 mt-1">{stat.label}</Text>

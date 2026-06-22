@@ -73,6 +73,38 @@ export default function JobDetailScreen() {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
 
+  const insets = useSafeAreaInsets();
+  const { userRole, userId } = useAuth();
+
+  const [job, setJob] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [showChangeOrder, setShowChangeOrder] = useState(false);
+  const [coTitle, setCoTitle] = useState('');
+  const [coDescription, setCoDescription] = useState('');
+  const [coAmount, setCoAmount] = useState('');
+  const [uploadProgressPhotoLoading, setUploadProgressPhotoLoading] = useState(false);
+
+  const loadJob = useCallback(async () => {
+    if (!jobId) return;
+    try {
+      const data = await getJobById(jobId);
+      setJob(data);
+    } catch (e) {
+      Alert.alert('Error', 'Failed to load job details');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [jobId]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadJob();
+    }, [loadJob])
+  );
+
   if (!jobId) {
     return (
       <View
@@ -101,37 +133,6 @@ export default function JobDetailScreen() {
       </View>
     );
   }
-  const insets = useSafeAreaInsets();
-  const { userRole, userId } = useAuth();
-
-  const [job, setJob] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [showChangeOrder, setShowChangeOrder] = useState(false);
-  const [coTitle, setCoTitle] = useState('');
-  const [coDescription, setCoDescription] = useState('');
-  const [coAmount, setCoAmount] = useState('');
-
-  const loadJob = useCallback(async () => {
-    try {
-      const data = await getJobById(jobId);
-      setJob(data);
-    } catch (e) {
-      Alert.alert('Error', 'Failed to load job details');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [jobId]);
-
-  useFocusEffect(
-    useCallback(() => {
-      loadJob();
-    }, [loadJob])
-  );
-
-  const [uploadProgressPhotoLoading, setUploadProgressPhotoLoading] = useState(false);
 
   const handleUploadProgressPhoto = async () => {
     const hasPermission = await requestPhotoLibraryPermission();

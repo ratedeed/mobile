@@ -184,6 +184,13 @@ export default function QuoteReviewScreen() {
   const lineItems = quote.lineItems || [];
   const total = quote.totalAmount || quote.total || 0;
   const totalInDollars = (total / 100).toFixed(2);
+
+  const firstMilestone = quote?.isMilestone && quote?.milestones?.length
+    ? quote.milestones.find((m: any) => m.status === 'pending' || !m.status) || quote.milestones[0]
+    : null;
+  const amountToPay = firstMilestone ? firstMilestone.amount : total;
+  const amountToPayInDollars = (amountToPay / 100).toFixed(2);
+
   const isPending = (quote.status === 'pending' || quote.status === 'pending_user_approval');
 
   if (quote.status === 'rejected') {
@@ -427,7 +434,7 @@ export default function QuoteReviewScreen() {
                   ? 'Quote Expired' 
                   : actionLoading === 'accept' 
                     ? 'Accepting...' 
-                    : `Accept & Pay $${Number(totalInDollars).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                    : `Accept & Pay $${Number(amountToPayInDollars).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
             </Text>
             {actionLoading !== 'accept' && !isExpired && <FontAwesome5 name="arrow-right" size={12} color="#fff" />}
           </Pressable>
