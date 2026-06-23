@@ -189,9 +189,15 @@ export default function ContractorOnboardingScreen() {
     setSaving(true);
     try {
       await updateContractorProfile({ onboardingComplete: true } as any);
-      navigation.navigate('ContractorDashboard' as never);
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Main' }, { name: 'ContractorDashboard' }],
+      });
     } catch {
-      navigation.navigate('ContractorDashboard' as never);
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Main' }, { name: 'ContractorDashboard' }],
+      });
     } finally {
       setSaving(false);
     }

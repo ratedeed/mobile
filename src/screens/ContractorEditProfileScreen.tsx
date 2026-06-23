@@ -136,7 +136,9 @@ export default function ContractorEditProfileScreen() {
       setProfilePicture(data.profilePicture || (data as any).imageUrl || '');
       const bannerUrl = data.bannerImage || (data as any).bannerUrl || '';
       setCoverImage(bannerUrl);
-      setBannerPics(data.bannerImages || (bannerUrl ? [bannerUrl] : []));
+      const rawBanners = data.bannerImages || [];
+      const banners = (Array.isArray(rawBanners) && rawBanners.length > 0) ? rawBanners : (bannerUrl ? [bannerUrl] : []);
+      setBannerPics(banners);
 
       if (Array.isArray(data.servicesOffered)) {
         setServices(data.servicesOffered.map((s: any) => {

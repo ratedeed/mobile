@@ -491,7 +491,9 @@ const ContractorDashboardScreen: React.FC = () => {
       setPortfolio(normalizedPortfolio);
       setContractorName(name);
       setBannerUrl(getCoverImageUrl(name, rawBanner, cat));
-      setBannerPics(profile.bannerImages || (rawBanner ? [rawBanner] : []));
+      const rawBanners = profile.bannerImages || [];
+      const banners = (Array.isArray(rawBanners) && rawBanners.length > 0) ? rawBanners : (rawBanner ? [rawBanner] : []);
+      setBannerPics(banners);
       setAvatarUrl(getProfileImageUrl(name, rawAvatar, cat));
 
       setEditableData({
