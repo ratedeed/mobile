@@ -51,6 +51,7 @@ import { getCoverImageUrl, getProfileImageUrl, isSvgUrl } from '../utils/avatarU
 import { SvgImage } from '../components/common/SvgImage';
 import { useAuth } from '../context/AuthContext';
 import { requestPhotoLibraryPermission } from '../utils/permissions';
+import { parsePriceRange } from '../utils/price';
 import { EmptyState } from '../components/common/EmptyState';
 import { VerifiedBadge } from '../components/common/VerifiedBadge';
 import { SkeletonLoader } from '../components/common/SkeletonLoader';
@@ -87,6 +88,8 @@ function formatPhoneInput(text: string): string {
   if (digits.length <= 6) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
   return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
 }
+
+
 
 function stripPhone(phone: string): string {
   return phone.replace(/\D/g, '');
@@ -225,7 +228,7 @@ const ContractorDashboardScreen: React.FC = () => {
     description: "",
     pricing: "",
     certifications: "" as any,
-    servicesOffered: [] as { name: string; description: string; priceRange: string }[],
+    servicesOffered: [] as { name: string; description: string; minPrice: string; maxPrice: string; contactForQuote: boolean }[],
     phone: "",
     email: "",
     website: "",
@@ -454,12 +457,18 @@ const ContractorDashboardScreen: React.FC = () => {
       const rawLoc = (typeof profile.location === 'string') ? profile.location : '';
       const address = profile.businessAddress || profile.contactInfo?.streetAddress || profile.contact?.address || rawLoc || "";
       
-      const rawServices = profile.services || profile.servicesOffered || [];
-      const normalizedServices = rawServices.map((s: any) => ({
-        name: typeof s === "string" ? s : s.name || "",
-        description: s.description || s.desc || "",
-        priceRange: s.priceRange || s.priceEstimate || ""
-      }));
+       const rawServices = profile.services || profile.servicesOffered || [];
+       const normalizedServices = rawServices.map((s: any) => {
+         const rawRange = s.priceRange || s.priceEstimate || '';
+         const parsed = parsePriceRange(rawRange);
+         return {
+           name: typeof s === "string" ? s : s.name || "",
+           description: s.description || s.desc || "",
+           minPrice: parsed.min,
+           maxPrice: parsed.max,
+           contactForQuote: parsed.contactForQuote,
+         };
+       });
 
       const rawZips = profile.zipCodesCovered || profile.zipCodes || profile.serviceArea || [];
       const zipsArray = Array.isArray(rawZips) ? rawZips : (typeof rawZips === 'string' ? rawZips.split(',').map(z => z.trim()).filter(Boolean) : []);
@@ -710,12 +719,25 @@ const ContractorDashboardScreen: React.FC = () => {
         zipCodesCovered: editableData.zipCodes.length > 0 ? editableData.zipCodes : undefined,
         licenseNumber: editableData.licenseNumber || undefined,
         businessHours: Object.keys(formattedHours).length > 0 ? formattedHours : undefined,
-        // Match web version: send services as objects with priceEstimate
-        servicesOffered: editableData.servicesOffered.map(s => ({
-          name: s.name || undefined,
-          description: s.description || undefined,
-          priceEstimate: s.priceRange || undefined,
-        })),
+        servicesOffered: editableData.servicesOffered.map(s => {
+          let priceEstimate = 'Contact for Quote';
+          if (!s.contactForQuote) {
+            const min = (s.minPrice || '').replace(/[^0-9]/g, '').trim();
+            const max = (s.maxPrice || '').replace(/[^0-9]/g, '').trim();
+            if (min && max) {
+              priceEstimate = `$${Number(min).toLocaleString()} – $${Number(max).toLocaleString()}`;
+            } else if (min) {
+              priceEstimate = `$${Number(min).toLocaleString()}+`;
+            } else if (max) {
+              priceEstimate = `Up to $${Number(max).toLocaleString()}`;
+            }
+          }
+          return {
+            name: s.name || undefined,
+            description: s.description || undefined,
+            priceEstimate,
+          };
+        }),
         services: editableData.servicesOffered.map(s => s.name),
         // Match web version: map portfolio properly
         portfolio: portfolio.map(p => ({
@@ -1044,8 +1066,16 @@ const ContractorDashboardScreen: React.FC = () => {
                       {service.description ? (
                         <Text className="text-xs text-neutral-500 dark:text-neutral-400 dark:text-neutral-500 mt-1">{service.description}</Text>
                       ) : null}
-                      {service.priceRange ? (
-                        <Text className="text-xs font-semibold text-indigo-600 mt-2">{service.priceRange}</Text>
+                      {service.contactForQuote ? (
+                        <Text className="text-xs font-semibold text-indigo-600 mt-2">Contact for Quote</Text>
+                      ) : (service.minPrice || service.maxPrice) ? (
+                        <Text className="text-xs font-semibold text-indigo-600 mt-2">
+                          {service.minPrice && service.maxPrice
+                            ? `$${Number(service.minPrice).toLocaleString()} – $${Number(service.maxPrice).toLocaleString()}`
+                            : service.minPrice
+                            ? `$${Number(service.minPrice).toLocaleString()}+`
+                            : `Up to $${Number(service.maxPrice).toLocaleString()}`}
+                        </Text>
                       ) : null}
                     </View>
                   ))}
@@ -2258,7 +2288,7 @@ const ContractorDashboardScreen: React.FC = () => {
                 <View className="flex-row items-center justify-between mb-2">
                   <Text className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 dark:text-neutral-500">Services Offered</Text>
                   <Pressable 
-                    onPress={() => setEditableData(p => ({ ...p, servicesOffered: [...p.servicesOffered, { name: '', description: '', priceRange: '' }] }))}
+                    onPress={() => setEditableData(p => ({ ...p, servicesOffered: [...p.servicesOffered, { name: '', description: '', minPrice: '', maxPrice: '', contactForQuote: false }] }))}
                     className="flex-row items-center bg-indigo-50 px-3 py-1.5 rounded-lg"
                     style={{ gap: 6 }}
                   >
@@ -2304,17 +2334,73 @@ const ContractorDashboardScreen: React.FC = () => {
                       multiline
                       className="text-xs text-neutral-600 dark:text-neutral-300 mb-2 p-2 bg-neutral-50 dark:bg-neutral-800 rounded-lg"
                     />
-                    <TextInput
-                      value={service.priceRange}
-                      onChangeText={t => {
-                        const next = [...editableData.servicesOffered];
-                        next[idx].priceRange = t;
-                        setEditableData(p => ({ ...p, servicesOffered: next }));
-                      }}
-                      placeholder="Price Range (e.g. $500 - $1,500)"
-                      placeholderTextColor="#a3a3a3"
-                      className="text-xs font-semibold text-indigo-600"
-                    />
+                    <View style={{ gap: 8 }} className="mt-1">
+                      <Pressable
+                        onPress={() => {
+                          const next = [...editableData.servicesOffered];
+                          next[idx].contactForQuote = !next[idx].contactForQuote;
+                          setEditableData(p => ({ ...p, servicesOffered: next }));
+                        }}
+                        className="flex-row items-center py-1"
+                        style={{ gap: 8 }}
+                      >
+                        <View
+                          className={`w-5 h-5 rounded-md items-center justify-center border ${
+                            service.contactForQuote
+                              ? 'bg-neutral-900 border-neutral-900 dark:bg-white dark:border-white'
+                              : 'bg-white dark:bg-neutral-800 border-neutral-300 dark:border-neutral-700'
+                          }`}
+                        >
+                          {service.contactForQuote && (
+                            <FontAwesome5
+                              name="check"
+                              size={8}
+                              color={isDark ? '#171717' : 'white'}
+                            />
+                          )}
+                        </View>
+                        <Text className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                          Contact for custom quote
+                        </Text>
+                      </Pressable>
+
+                      {!service.contactForQuote && (
+                        <View className="flex-row" style={{ gap: 8 }}>
+                          <View className="flex-1 relative justify-center">
+                            <Text className="absolute left-3 text-xs text-neutral-400 dark:text-neutral-500 z-10">$</Text>
+                            <TextInput
+                              value={service.minPrice}
+                              onChangeText={t => {
+                                const val = t.replace(/[^0-9]/g, '');
+                                const next = [...editableData.servicesOffered];
+                                next[idx].minPrice = val;
+                                setEditableData(p => ({ ...p, servicesOffered: next }));
+                              }}
+                              placeholder="Min price"
+                              placeholderTextColor={isDark ? "#737373" : "#a3a3a3"}
+                              keyboardType="numeric"
+                              className="bg-neutral-50 dark:bg-neutral-800 rounded-lg pl-7 pr-3 py-2 text-xs text-neutral-900 dark:text-white"
+                            />
+                          </View>
+                          <View className="flex-1 relative justify-center">
+                            <Text className="absolute left-3 text-xs text-neutral-400 dark:text-neutral-500 z-10">$</Text>
+                            <TextInput
+                              value={service.maxPrice}
+                              onChangeText={t => {
+                                const val = t.replace(/[^0-9]/g, '');
+                                const next = [...editableData.servicesOffered];
+                                next[idx].maxPrice = val;
+                                setEditableData(p => ({ ...p, servicesOffered: next }));
+                              }}
+                              placeholder="Max price"
+                              placeholderTextColor={isDark ? "#737373" : "#a3a3a3"}
+                              keyboardType="numeric"
+                              className="bg-neutral-50 dark:bg-neutral-800 rounded-lg pl-7 pr-3 py-2 text-xs text-neutral-900 dark:text-white"
+                            />
+                          </View>
+                        </View>
+                      )}
+                    </View>
                   </View>
                 ))}
               </View>

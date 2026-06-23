@@ -23,13 +23,16 @@ import { VerifiedBadge } from '../components/common/VerifiedBadge';
 import { uploadToCloudinary, CLOUDINARY_FOLDERS } from '../utils/cloudinary';
 import { useAuth } from '../context/AuthContext';
 import { requestPhotoLibraryPermission } from '../utils/permissions';
+import { parsePriceRange, formatPriceRange } from '../utils/price';
 
 type EditSection = 'about' | 'services' | 'portfolio' | 'posts' | 'verification' | null;
 
 interface ServiceItem {
   name: string;
   description: string;
-  priceRange: string;
+  minPrice: string;
+  maxPrice: string;
+  contactForQuote: boolean;
 }
 
 interface PortfolioProject {
@@ -136,11 +139,17 @@ export default function ContractorEditProfileScreen() {
       setBannerPics(data.bannerImages || (bannerUrl ? [bannerUrl] : []));
 
       if (Array.isArray(data.servicesOffered)) {
-        setServices(data.servicesOffered.map((s: any) => ({
-          name: s.name || '',
-          description: s.description || '',
-          priceRange: s.priceEstimate || s.priceRange || '',
-        })));
+        setServices(data.servicesOffered.map((s: any) => {
+          const rawRange = s.priceEstimate || s.priceRange || '';
+          const parsed = parsePriceRange(rawRange);
+          return {
+            name: s.name || '',
+            description: s.description || '',
+            minPrice: parsed.min,
+            maxPrice: parsed.max,
+            contactForQuote: parsed.contactForQuote,
+          };
+        }));
       }
 
       if (Array.isArray(data.portfolio)) {
@@ -258,7 +267,7 @@ export default function ContractorEditProfileScreen() {
         servicesOffered: services.map(s => ({
           name: s.name || undefined,
           description: s.description || undefined,
-          priceEstimate: s.priceRange || undefined,
+          priceEstimate: formatPriceRange(s.minPrice, s.maxPrice, s.contactForQuote),
         })),
         portfolio: portfolio.map(p => ({
           name: p.title || undefined,
@@ -319,8 +328,8 @@ export default function ContractorEditProfileScreen() {
     setActiveSection(activeSection === section ? null : section);
   };
 
-  const addService = () => setServices([...services, { name: '', description: '', priceRange: '' }]);
-  const updateService = (index: number, field: keyof ServiceItem, value: string) => {
+  const addService = () => setServices([...services, { name: '', description: '', minPrice: '', maxPrice: '', contactForQuote: false }]);
+  const updateService = (index: number, field: keyof ServiceItem, value: any) => {
     const updated = [...services];
     updated[index] = { ...updated[index], [field]: value };
     setServices(updated);
@@ -703,13 +712,65 @@ export default function ContractorEditProfileScreen() {
                       className="text-xs bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg p-2 mb-2 text-neutral-900 dark:text-white" 
                       multiline
                     />
-                    <TextInput 
-                      value={service.priceRange} 
-                      onChangeText={(v) => updateService(index, 'priceRange', v)} 
-                      placeholder="Price range e.g. $100 - $500" 
-                      placeholderTextColor={isDark ? '#737373' : '#a3a3a3'}
-                      className="text-xs bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg p-2 font-semibold text-indigo-600" 
-                    />
+                    <View style={{ gap: 8 }} className="mt-1">
+                      <TouchableOpacity
+                        onPress={() => updateService(index, 'contactForQuote', !service.contactForQuote)}
+                        className="flex-row items-center py-1"
+                        style={{ gap: 8 }}
+                      >
+                        <View
+                          className={`w-5 h-5 rounded-md items-center justify-center border ${
+                            service.contactForQuote
+                              ? 'bg-neutral-900 border-neutral-900 dark:bg-white dark:border-white'
+                              : 'bg-white dark:bg-neutral-800 border-neutral-300 dark:border-neutral-700'
+                          }`}
+                        >
+                          {service.contactForQuote && (
+                            <FontAwesome5
+                              name="check"
+                              size={8}
+                              color={isDark ? '#171717' : 'white'}
+                            />
+                          )}
+                        </View>
+                        <Text className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                          Contact for custom quote
+                        </Text>
+                      </TouchableOpacity>
+
+                      {!service.contactForQuote && (
+                        <View className="flex-row" style={{ gap: 8 }}>
+                          <View className="flex-1 relative justify-center">
+                            <Text className="absolute left-3 text-sm text-neutral-400 dark:text-neutral-500 z-10">$</Text>
+                            <TextInput
+                              value={service.minPrice}
+                              onChangeText={t => {
+                                const val = t.replace(/[^0-9]/g, '');
+                                updateService(index, 'minPrice', val);
+                              }}
+                              placeholder="Min price"
+                              placeholderTextColor={isDark ? "#737373" : "#a3a3a3"}
+                              keyboardType="numeric"
+                              className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg pl-7 pr-3 py-2 text-sm text-neutral-900 dark:text-white"
+                            />
+                          </View>
+                          <View className="flex-1 relative justify-center">
+                            <Text className="absolute left-3 text-sm text-neutral-400 dark:text-neutral-500 z-10">$</Text>
+                            <TextInput
+                              value={service.maxPrice}
+                              onChangeText={t => {
+                                const val = t.replace(/[^0-9]/g, '');
+                                updateService(index, 'maxPrice', val);
+                              }}
+                              placeholder="Max price"
+                              placeholderTextColor={isDark ? "#737373" : "#a3a3a3"}
+                              keyboardType="numeric"
+                              className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg pl-7 pr-3 py-2 text-sm text-neutral-900 dark:text-white"
+                            />
+                          </View>
+                        </View>
+                      )}
+                    </View>
                   </View>
                 ))}
                 <TouchableOpacity onPress={addService} className="w-full py-3 border-2 border-dashed border-neutral-200 dark:border-neutral-700 rounded-xl items-center flex-row justify-center">

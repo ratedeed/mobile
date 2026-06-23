@@ -20,6 +20,7 @@ import { updateContractorProfile, getStripeConnectUrl } from '../api';
 import { uploadToCloudinary, CLOUDINARY_FOLDERS } from '../utils/cloudinary';
 import { Linking } from 'react-native';
 import { requestPhotoLibraryPermission } from '../utils/permissions';
+import { parsePriceRange, formatPriceRange } from '../utils/price';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -28,8 +29,6 @@ const STEPS = [
   { key: 'profile', label: 'Profile', icon: 'camera' },
   { key: 'services', label: 'Services', icon: 'dollar-sign' },
   { key: 'portfolio', label: 'Portfolio', icon: 'image' },
-  { key: 'location', label: 'Area', icon: 'map-marker-alt' },
-  { key: 'license', label: 'License', icon: 'shield-alt' },
   { key: 'payments', label: 'Payments', icon: 'credit-card' },
 ];
 
@@ -48,8 +47,14 @@ export default function ContractorOnboardingScreen() {
   const [bannerImageUrl, setBannerImageUrl] = useState('');
 
   // Services
-  const [services, setServices] = useState<{ name: string; description: string; priceEstimate: string }[]>([
-    { name: '', description: '', priceEstimate: '' },
+  const [services, setServices] = useState<{
+    name: string;
+    description: string;
+    minPrice: string;
+    maxPrice: string;
+    contactForQuote: boolean;
+  }[]>([
+    { name: '', description: '', minPrice: '', maxPrice: '', contactForQuote: false },
   ]);
 
   // Portfolio
@@ -141,7 +146,13 @@ export default function ContractorOnboardingScreen() {
         updateData.description = description.trim();
       } else if (currentStep === 2) {
         const valid = services.filter(s => s.name.trim());
-        if (valid.length > 0) updateData.servicesOffered = valid;
+        if (valid.length > 0) {
+          updateData.servicesOffered = valid.map(s => ({
+            name: s.name,
+            description: s.description,
+            priceEstimate: formatPriceRange(s.minPrice, s.maxPrice, s.contactForQuote)
+          }));
+        }
       } else if (currentStep === 3) {
         // Use base64 strings directly for portfolio
         const uploaded = [];
@@ -155,22 +166,6 @@ export default function ContractorOnboardingScreen() {
           }
         }
         if (uploaded.length > 0) updateData.portfolio = uploaded;
-      } else if (currentStep === 4) {
-        const rawCodes = zipCodes.split(',').map(z => z.trim()).filter(Boolean);
-        if (rawCodes.length === 0) {
-          Alert.alert('Required', 'Please enter at least one ZIP code.');
-          setSaving(false);
-          return;
-        }
-        const invalidCodes = rawCodes.filter(z => !/^\d{5}$/.test(z));
-        if (invalidCodes.length > 0) {
-          Alert.alert('Invalid ZIP Code', `The following ZIP codes are invalid: ${invalidCodes.join(', ')}. Please enter only 5-digit ZIP codes.`);
-          setSaving(false);
-          return;
-        }
-        updateData.zipCodesCovered = rawCodes;
-      } else if (currentStep === 5) {
-        if (licenseNumber.trim()) updateData.licenseNumber = licenseNumber;
       }
 
       if (Object.keys(updateData).length > 0) {
@@ -375,19 +370,71 @@ export default function ContractorOnboardingScreen() {
                       placeholderTextColor={isDark ? "#9ca3af" : "#a3a3a3"}
                       className="bg-white dark:bg-neutral-800 rounded-xl px-3 py-2.5 text-sm text-neutral-900 dark:text-white mb-2"
                     />
-                    <TextInput
-                      value={service.priceEstimate}
-                      onChangeText={t => setServices(s => s.map((sv, idx) => idx === i ? { ...sv, priceEstimate: t } : sv))}
-                      placeholder="Price range (e.g., $500 - $2,000)"
-                      placeholderTextColor={isDark ? "#9ca3af" : "#a3a3a3"}
-                      className="bg-white dark:bg-neutral-800 rounded-xl px-3 py-2.5 text-sm text-neutral-900 dark:text-white"
-                    />
+                    <View style={{ gap: 8 }} className="mt-1">
+                      <Pressable
+                        onPress={() => setServices(s => s.map((sv, idx) => idx === i ? { ...sv, contactForQuote: !sv.contactForQuote } : sv))}
+                        className="flex-row items-center py-1"
+                        style={{ gap: 8 }}
+                      >
+                        <View
+                          className={`w-5 h-5 rounded-md items-center justify-center border ${
+                            service.contactForQuote
+                              ? 'bg-neutral-900 border-neutral-900 dark:bg-white dark:border-white'
+                              : 'bg-white dark:bg-neutral-800 border-neutral-300 dark:border-neutral-700'
+                          }`}
+                        >
+                          {service.contactForQuote && (
+                            <FontAwesome5
+                              name="check"
+                              size={8}
+                              color={isDark ? '#171717' : 'white'}
+                            />
+                          )}
+                        </View>
+                        <Text className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                          Contact for custom quote
+                        </Text>
+                      </Pressable>
+
+                      {!service.contactForQuote && (
+                        <View className="flex-row" style={{ gap: 8 }}>
+                          <View className="flex-1 relative justify-center">
+                            <Text className="absolute left-3 text-sm text-neutral-400 dark:text-neutral-500 z-10">$</Text>
+                            <TextInput
+                              value={service.minPrice}
+                              onChangeText={t => {
+                                const val = t.replace(/[^0-9]/g, '');
+                                setServices(s => s.map((sv, idx) => idx === i ? { ...sv, minPrice: val } : sv));
+                              }}
+                              placeholder="Min price"
+                              placeholderTextColor={isDark ? "#737373" : "#a3a3a3"}
+                              keyboardType="numeric"
+                              className="bg-white dark:bg-neutral-800 rounded-xl pl-7 pr-3 py-2.5 text-sm text-neutral-900 dark:text-white"
+                            />
+                          </View>
+                          <View className="flex-1 relative justify-center">
+                            <Text className="absolute left-3 text-sm text-neutral-400 dark:text-neutral-500 z-10">$</Text>
+                            <TextInput
+                              value={service.maxPrice}
+                              onChangeText={t => {
+                                const val = t.replace(/[^0-9]/g, '');
+                                setServices(s => s.map((sv, idx) => idx === i ? { ...sv, maxPrice: val } : sv));
+                              }}
+                              placeholder="Max price"
+                              placeholderTextColor={isDark ? "#737373" : "#a3a3a3"}
+                              keyboardType="numeric"
+                              className="bg-white dark:bg-neutral-800 rounded-xl pl-7 pr-3 py-2.5 text-sm text-neutral-900 dark:text-white"
+                            />
+                          </View>
+                        </View>
+                      )}
+                    </View>
                   </View>
                 ))}
               </View>
 
               <Pressable
-                onPress={() => setServices(s => [...s, { name: '', description: '', priceEstimate: '' }])}
+                onPress={() => setServices(s => [...s, { name: '', description: '', minPrice: '', maxPrice: '', contactForQuote: false }])}
                 className="flex-row items-center mt-4"
                 style={{ gap: 8 }}
               >
@@ -450,56 +497,8 @@ export default function ContractorOnboardingScreen() {
             </View>
           )}
 
-          {/* Step 4: Location */}
+          {/* Step 4: Payments */}
           {currentStep === 4 && (
-            <View className="pt-2 pb-32">
-              <Text className="text-xl font-bold text-neutral-900 dark:text-white mb-1">Service Area</Text>
-              <Text className="text-sm text-neutral-500 dark:text-neutral-400 mb-6">Where do you offer your services?</Text>
-
-              <Text className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest mb-2">ZIP Codes You Cover</Text>
-              <TextInput
-                value={zipCodes}
-                onChangeText={setZipCodes}
-                placeholder="Enter ZIP codes separated by commas (e.g., 10001, 10002, 10003)"
-                placeholderTextColor={isDark ? "#9ca3af" : "#a3a3a3"}
-                multiline
-                className="bg-neutral-50 dark:bg-neutral-900 rounded-2xl px-4 py-3 text-sm text-neutral-900 dark:text-white min-h-[80px]"
-                style={{ textAlignVertical: 'top' }}
-              />
-              <Text className="text-[10px] text-neutral-400 dark:text-neutral-500 mt-1">Homeowners in these areas will see your profile.</Text>
-            </View>
-          )}
-
-          {/* Step 5: License */}
-          {currentStep === 5 && (
-            <View className="pt-2 pb-32">
-              <Text className="text-xl font-bold text-neutral-900 dark:text-white mb-1">License Verification</Text>
-              <Text className="text-sm text-neutral-500 dark:text-neutral-400 mb-6">Get a verified badge on your profile. Optional but recommended.</Text>
-
-              <View className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 flex-row mb-6" style={{ gap: 12 }}>
-                <FontAwesome5 name="shield-alt" size={24} color="#059669" />
-                <View className="flex-1">
-                  <Text className="text-sm font-bold text-emerald-900">Why verify?</Text>
-                  <Text className="text-xs text-emerald-700 mt-0.5 leading-4">
-                    Verified contractors get 3x more leads. Build trust with homeowners instantly.
-                  </Text>
-                </View>
-              </View>
-
-              <Text className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest mb-2">License Number</Text>
-              <TextInput
-                value={licenseNumber}
-                onChangeText={setLicenseNumber}
-                placeholder="e.g., #ABC-12345"
-                placeholderTextColor={isDark ? "#9ca3af" : "#a3a3a3"}
-                className="bg-neutral-50 dark:bg-neutral-900 rounded-2xl px-4 py-3 text-sm text-neutral-900 dark:text-white"
-              />
-              <Text className="text-[10px] text-neutral-400 dark:text-neutral-500 mt-2">Verification request will be reviewed by our team.</Text>
-            </View>
-          )}
-
-          {/* Step 6: Payments */}
-          {currentStep === 6 && (
             <View className="pt-2 pb-32">
               <Text className="text-xl font-bold text-neutral-900 dark:text-white mb-1">Get Paid</Text>
               <Text className="text-sm text-neutral-500 dark:text-neutral-400 mb-6">Connect Stripe to receive payments directly to your bank account.</Text>

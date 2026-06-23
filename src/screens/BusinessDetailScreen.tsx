@@ -795,6 +795,7 @@ const BusinessDetailScreen: React.FC = () => {
                 {services.map((svc: any, i: number) => {
                   const name = typeof svc === 'string' ? svc : svc.name;
                   const desc = typeof svc === 'string' ? '' : svc.description;
+                  const priceRange = typeof svc === 'string' ? '' : (svc.priceRange || svc.priceEstimate || '');
                   
                   // Dynamically select an icon based on service name
                   let iconName = 'hammer';
@@ -826,7 +827,14 @@ const BusinessDetailScreen: React.FC = () => {
                           <FontAwesome5 name={iconName} size={16} color="#4f46e5" />
                         </View>
                         <View className="flex-1">
-                          <Text className="text-sm font-bold text-neutral-900 dark:text-neutral-50">{name}</Text>
+                          <View className="flex-row items-center flex-wrap" style={{ gap: 6 }}>
+                            <Text className="text-sm font-bold text-neutral-900 dark:text-neutral-50">{name}</Text>
+                            {!!priceRange && (
+                              <View className="bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-100 dark:border-indigo-900/30 rounded-md px-2 py-0.5">
+                                <Text className="text-[10px] font-semibold text-indigo-600 dark:text-indigo-400">{priceRange}</Text>
+                              </View>
+                            )}
+                          </View>
                           <Text className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5" numberOfLines={1}>{subtext}</Text>
                         </View>
                       </View>
@@ -842,7 +850,7 @@ const BusinessDetailScreen: React.FC = () => {
                         }}
                         className="bg-indigo-50 dark:bg-indigo-900/40 border border-indigo-100 dark:border-indigo-800 rounded-lg px-3 py-1.5"
                       >
-                        <Text className="text-xs font-bold text-indigo-700 dark:text-indigo-300">Custom Quote</Text>
+                        <Text className="text-xs font-bold text-indigo-700 dark:text-indigo-300">Get Quote</Text>
                       </Pressable>
                     </View>
                   );
