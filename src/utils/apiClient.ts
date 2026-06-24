@@ -1008,9 +1008,9 @@ export const getUserQuotes = async (): Promise<Quote[]> => {
   return get(`${API_BASE}/quotes`, authHeaders);
 };
 
-export const createCheckoutSession = async (quoteId: string): Promise<{ url: string }> => { 
+export const createCheckoutSession = async (quoteId: string, milestoneId?: string): Promise<{ url: string }> => { 
   const authHeaders = await getAuthHeaders(); 
-  return post(`${API_BASE}/jobs/checkout`, { quoteId, platform: 'mobile' }, authHeaders); 
+  return post(`${API_BASE}/jobs/checkout`, { quoteId, milestoneId, platform: 'mobile' }, authHeaders); 
 }; 
 
 export const getContractorJobs = async (): Promise<Job[]> => {

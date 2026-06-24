@@ -575,9 +575,9 @@ export default function ContractorOnboardingScreen() {
               )}
             </Pressable>
           )}
-          {currentStep < STEPS.length - 1 && currentStep > 1 && (
+          {currentStep > 1 && (
             <Pressable
-              onPress={() => saveAndNext(true)}
+              onPress={currentStep === STEPS.length - 1 ? handleFinish : () => saveAndNext(true)}
               disabled={saving}
               className="py-3"
             >
