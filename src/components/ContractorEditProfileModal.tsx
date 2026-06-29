@@ -451,7 +451,7 @@ export default function ContractorEditProfileModal({ visible, onClose, onProfile
         companyName: companyName || undefined,
         businessName: companyName || undefined,
         description: description || undefined,
-        pricingInfo: pricingInfo || undefined,
+        pricingInfo: '',
         certifications: certifications
           .split(',')
           .map((s) => s.trim())
@@ -534,73 +534,7 @@ export default function ContractorEditProfileModal({ visible, onClose, onProfile
 
   if (!visible) return null;
 
-  // ─── Ratedeed-style reusable input ───────────────────────────
-  const RatedeedInput = ({
-    value,
-    onChangeText,
-    placeholder,
-    multiline,
-    style,
-    keyboardType,
-    autoCapitalize,
-  }: {
-    value: string;
-    onChangeText: (t: string) => void;
-    placeholder: string;
-    multiline?: boolean;
-    style?: any;
-    keyboardType?: any;
-    autoCapitalize?: any;
-  }) => (
-    <TextInput
-      value={value}
-      onChangeText={onChangeText}
-      placeholder={placeholder}
-      placeholderTextColor={COLORS.textMuted}
-      multiline={multiline}
-      keyboardType={keyboardType}
-      autoCapitalize={autoCapitalize}
-      style={{
-        borderWidth: 1.5,
-        borderColor: COLORS.border,
-        borderRadius: RADII.md,
-        paddingHorizontal: 16,
-        paddingVertical: 14,
-        fontSize: 15,
-        color: COLORS.textPrimary,
-        backgroundColor: COLORS.background,
-        fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
-        ...(multiline ? { minHeight: 100, textAlignVertical: 'top' as const } : {}),
-        ...style,
-      }}
-    />
-  );
 
-  // ─── Ratedeed-style label ────────────────────────────────────
-  const FieldLabel = ({ children, style }: { children: React.ReactNode; style?: any }) => (
-    <Text
-      style={{
-        fontSize: 13,
-        fontWeight: '600',
-        color: COLORS.textPrimary,
-        letterSpacing: 0.2,
-        marginBottom: 8,
-        ...style,
-      }}
-    >
-      {children}
-    </Text>
-  );
-
-  // ─── Ratedeed-style section heading ──────────────────────────
-  const SectionHeading = ({ title, subtitle }: { title: string; subtitle?: string }) => (
-    <View style={{ marginBottom: 20 }}>
-      <Text style={{ fontSize: 22, fontWeight: '700', color: COLORS.dark, letterSpacing: -0.3 }}>{title}</Text>
-      {subtitle && (
-        <Text style={{ fontSize: 14, color: COLORS.textSecondary, marginTop: 4, lineHeight: 20 }}>{subtitle}</Text>
-      )}
-    </View>
-  );
 
   const renderTimePicker = () => {
     if (!showTimePicker) return null;
@@ -804,16 +738,7 @@ export default function ContractorEditProfileModal({ visible, onClose, onProfile
                           />
                         </View>
 
-                        <View>
-                          <FieldLabel>Pricing information</FieldLabel>
-                          <RatedeedInput
-                            value={pricingInfo}
-                            onChangeText={setPricingInfo}
-                            placeholder="e.g. Free estimates, $50/hr minimum, flat-rate pricing"
-                            multiline
-                            style={{ minHeight: 90 }}
-                          />
-                        </View>
+
                       </View>
                     )}
 

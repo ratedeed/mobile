@@ -480,6 +480,9 @@ const BusinessSearchScreen: React.FC = () => {
           columnWrapperStyle={{ justifyContent: 'space-between' }}
           contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 100 }}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          windowSize={5}
+          maxToRenderPerBatch={8}
+          removeClippedSubviews={Platform.OS === 'android'}
         />
       ) : hasSearch ? (
         <View className="flex-1 items-center justify-center py-20">

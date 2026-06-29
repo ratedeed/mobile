@@ -40,6 +40,7 @@ interface PortfolioProject {
   title: string;
   images: string[];
   category: string;
+  localUri?: string;
 }
 
 export default function ContractorEditProfileScreen() {
@@ -227,6 +228,30 @@ export default function ContractorEditProfileScreen() {
     }
   };
 
+  const pickPortfolioImage = async (index: number) => {
+    const hasPermission = await requestPhotoLibraryPermission();
+    if (!hasPermission) return;
+
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.7,
+      });
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const updated = [...portfolio];
+        updated[index] = {
+          ...updated[index],
+          localUri: result.assets[0].uri,
+        };
+        setPortfolio(updated);
+      }
+    } catch (err: any) {
+      Alert.alert('Error', err?.message || 'Failed to pick image');
+    }
+  };
+
   const handleSave = async () => {
     if (!companyName.trim()) {
       Alert.alert('Validation Error', 'Company Name is required.');
@@ -254,6 +279,22 @@ export default function ContractorEditProfileScreen() {
         finalCoverImageUrl = await uploadToCloudinary(bannerPicUri, CLOUDINARY_FOLDERS.CONTRACTOR_BANNER);
       }
 
+      const updatedPortfolio = await Promise.all(
+        portfolio.map(async (p) => {
+          let projectImages = [...(p.images || [])];
+          if (p.localUri) {
+            const cloudinaryUrl = await uploadToCloudinary(p.localUri, CLOUDINARY_FOLDERS.PORTFOLIO);
+            projectImages = [cloudinaryUrl];
+          }
+          return {
+            name: p.title || undefined,
+            category: p.category || undefined,
+            imageUrl: projectImages[0] || undefined,
+            images: projectImages,
+          };
+        })
+      );
+
       const updateData: any = {
         companyName: companyName || undefined,
         businessName: companyName || undefined,
@@ -271,12 +312,7 @@ export default function ContractorEditProfileScreen() {
           description: s.description || undefined,
           priceEstimate: formatPriceRange(s.minPrice, s.maxPrice, s.contactForQuote),
         })),
-        portfolio: portfolio.map(p => ({
-          name: p.title || undefined,
-          category: p.category || undefined,
-          imageUrl: p.images[0] || undefined,
-          images: p.images,
-        })),
+        portfolio: updatedPortfolio,
       };
 
       await updateContractorProfile(updateData);
@@ -808,11 +844,16 @@ export default function ContractorEditProfileScreen() {
                     </TouchableOpacity>
                     
                     <View className="flex-row items-center">
-                        <View className="w-12 h-12 rounded-lg bg-neutral-200 dark:bg-neutral-700 overflow-hidden mr-3">
-                            {project.images[0] && (
-                                <Image source={{ uri: project.images[0] }} className="w-full h-full" resizeMode="cover" />
+                        <TouchableOpacity 
+                          onPress={() => pickPortfolioImage(index)}
+                          className="w-12 h-12 rounded-lg bg-neutral-200 dark:bg-neutral-700 overflow-hidden mr-3 items-center justify-center border border-neutral-300 dark:border-neutral-600"
+                        >
+                            {project.localUri || (project.images && project.images[0]) ? (
+                                <Image source={{ uri: project.localUri || project.images[0] }} className="w-full h-full" resizeMode="cover" />
+                            ) : (
+                                <FontAwesome5 name="camera" size={14} color={isDark ? '#737373' : '#a3a3a3'} />
                             )}
-                        </View>
+                        </TouchableOpacity>
                         <View className="flex-1 pr-6">
                             <TextInput 
                             value={project.title} 

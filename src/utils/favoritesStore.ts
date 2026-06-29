@@ -37,36 +37,44 @@ export const syncFavoritesWithServer = async () => {
   try {
     const serverIds = await get(`${API_BASE_URL}/api/users/favorites`);
     if (Array.isArray(serverIds)) {
-      const local = await getFavorites();
-      const merged = Array.from(new Set([...local, ...serverIds]));
-      await AsyncStorage.setItem(FAVORITES_KEY, JSON.stringify(merged));
+      await AsyncStorage.setItem(FAVORITES_KEY, JSON.stringify(serverIds));
     }
   } catch {
     // sync failure is non-critical
   }
 };
 
-export const addFavorite = async (id: string) => {
+export const addFavorite = async (id: string): Promise<void> => {
+  const current = await getFavorites();
+  const alreadyFav = current.includes(id);
+  if (!alreadyFav) {
+    const updated = [...current, id];
+    await AsyncStorage.setItem(FAVORITES_KEY, JSON.stringify(updated));
+  }
   try {
-    const current = await getFavorites();
-    if (!current.includes(id)) {
-      const updated = [...current, id];
-      await AsyncStorage.setItem(FAVORITES_KEY, JSON.stringify(updated));
-    }
     await apiPost(`${API_BASE_URL}/api/users/favorite/${id}`, {});
-  } catch {
-    // favorite failure is non-critical
+  } catch (error) {
+    if (!alreadyFav) {
+      await AsyncStorage.setItem(FAVORITES_KEY, JSON.stringify(current));
+    }
+    throw error;
   }
 };
 
-export const removeFavorite = async (id: string) => {
-  try {
-    const current = await getFavorites();
+export const removeFavorite = async (id: string): Promise<void> => {
+  const current = await getFavorites();
+  const wasFav = current.includes(id);
+  if (wasFav) {
     const updated = current.filter(fid => fid !== id);
     await AsyncStorage.setItem(FAVORITES_KEY, JSON.stringify(updated));
+  }
+  try {
     await apiPost(`${API_BASE_URL}/api/users/favorite/${id}`, {});
-  } catch {
-    // favorite removal failure is non-critical
+  } catch (error) {
+    if (wasFav) {
+      await AsyncStorage.setItem(FAVORITES_KEY, JSON.stringify(current));
+    }
+    throw error;
   }
 };
 

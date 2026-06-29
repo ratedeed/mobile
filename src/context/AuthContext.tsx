@@ -3,7 +3,7 @@ import { AppState } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthInfo, UserRole } from '../types';
 import { syncFavoritesWithServer } from '../utils/favoritesStore';
-import { disconnectSocket, setAuthInvalidatedCallback, logout as apiLogout } from '../utils/apiClient';
+import { disconnectSocket, setAuthInvalidatedCallback, logout as apiLogout, refreshTokenIfNeeded, updateSocketToken, setAuthTokenUpdatedCallback, backendLoginFirebase } from '../utils/apiClient';
 import { jwtDecode } from 'jwt-decode';
 import { getSecureItem, setSecureItem, removeSecureItem } from '../utils/secureStore';
 import { auth } from '../firebaseConfig';
@@ -68,7 +68,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         let activeToken = token;
         if (isTokenExpired(token)) {
           try {
-            const { refreshTokenIfNeeded } = require('../utils/apiClient');
             await refreshTokenIfNeeded();
             const refreshedToken = await getSecureItem('auth_token');
             if (refreshedToken && !isTokenExpired(refreshedToken)) {
@@ -161,8 +160,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updateBackendToken = useCallback(async (token: string, emailVerifiedStatus: boolean, userData?: any) => {
     if (token) {
       await setSecureItem('auth_token', token);
-      const { updateSocketToken } = require('../utils/apiClient');
-      updateSocketToken(token);
+       updateSocketToken(token);
     }
 
     const currentData = await loadUserData() || {};
@@ -200,7 +198,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setAuthInvalidatedCallback(() => {
       logout();
     });
-    const { setAuthTokenUpdatedCallback } = require('../utils/apiClient');
     setAuthTokenUpdatedCallback(async (newToken: string) => {
       setBackendToken(newToken);
       try {
@@ -257,7 +254,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               if (__DEV__) console.log('Firebase email mismatch detected on mobile. Syncing with backend...');
               try {
                 const idToken = await fUser.getIdToken(true);
-                const { backendLoginFirebase } = require('../utils/apiClient');
                 const syncRes = await backendLoginFirebase(idToken, fUser.email);
                 if (syncRes && syncRes.token) {
                   const { token, refreshToken, socketToken, ...userData } = syncRes;
@@ -271,6 +267,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         }
       } else {
+        hasReloadedFirebaseUser = false;
         setFirebaseUser(null);
       }
     });

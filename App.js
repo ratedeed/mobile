@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { View, Platform } from 'react-native';
 import { useColorScheme } from 'nativewind';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -29,6 +30,39 @@ import Constants from 'expo-constants';
 import { requestTrackingPermissionsAsync } from 'expo-tracking-transparency';
 import * as Linking from 'expo-linking';
 
+Sentry.init({
+  dsn: Constants.expoConfig?.extra?.sentryDsn || '',
+  debug: false,
+  beforeSend(event) {
+    const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+    const scrub = (val) => {
+      if (typeof val === 'string') {
+        let clean = val;
+        clean = clean.replace(/bearer\s+[a-zA-Z0-9-_=]+\.[a-zA-Z0-9-_=]+\.?[a-zA-Z0-9-_.+/=]*/gi, '[Redacted JWT]');
+        clean = clean.replace(emailRegex, '[Redacted Email]');
+        return clean;
+      }
+      if (val && typeof val === 'object') {
+        for (const key in val) {
+          if (Object.prototype.hasOwnProperty.call(val, key)) {
+            if (key.toLowerCase() === 'authorization' || key.toLowerCase() === 'jwt') {
+              val[key] = '[Redacted]';
+            } else {
+              val[key] = scrub(val[key]);
+            }
+          }
+        }
+      }
+      return val;
+    };
+    if (event.request && event.request.headers) {
+      if (event.request.headers['Authorization']) event.request.headers['Authorization'] = '[Redacted]';
+      if (event.request.headers['authorization']) event.request.headers['authorization'] = '[Redacted]';
+    }
+    return scrub(event);
+  }
+});
+
 const STRIPE_PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
 
 if (!process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
@@ -38,11 +72,6 @@ if (!process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
     throw new Error('CRITICAL: EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY environment variable is not defined in production build!');
   }
 }
-
-Sentry.init({
-  dsn: Constants.expoConfig?.extra?.sentryDsn || '',
-  debug: false,
-});
 
 const linking = {
   prefixes: ['ratedeed://', 'https://ratedeed.com'],
@@ -70,17 +99,36 @@ const linking = {
         },
       },
       BusinessDetail: 'contractor/:slug',
-      ChatScreen: 'chat/:recipientId',
+      ChatScreen: 'chat/:conversationId',
       Notifications: 'notifications',
       BusinessSearch: 'search',
       QuoteReview: 'quote-review/:quoteId',
       ContractorDashboard: 'contractor-dashboard',
-      VerifyEmailChange: 'verify-email-change',
-      ResetPassword: 'reset-password',
+      VerifyEmailChange: {
+        path: 'verify-email-change',
+        parse: {
+          token: (token) => token,
+        },
+      },
+      ResetPassword: {
+        path: 'reset-password',
+        parse: {
+          token: (token) => token,
+          oobCode: (oobCode) => oobCode,
+        },
+      },
       JobDetail: 'jobs/:jobId',
       PaymentFlow: 'payment/:quoteId',
       DisputeScreen: 'dispute/:jobId',
       ReviewScreen: 'review/:jobId',
+      EarningsScreen: 'earnings',
+      ChangeOrderScreen: 'change-order/:jobId',
+      ContractorOnboarding: 'contractor-onboarding',
+      ContractorEditProfile: 'contractor-edit-profile',
+      Login: 'login',
+      Register: 'register',
+      ForgotPassword: 'forgot-password',
+      ContractorSignup: 'contractor-signup',
     },
   },
 };
@@ -112,7 +160,7 @@ function AppNavigator({ splashComplete }) {
   usePushNotifications(); // Initialize push notification listeners inside NavigationContainer
 
   return (
-    <View className="flex-1" style={{ backgroundColor: colorScheme === 'dark' ? '#0a0a0a' : '#ffffff' }}>
+    <View className="flex-1 bg-background">
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
       {/* Always show MainNavigator so guests can browse */}
       <MainNavigator />
@@ -169,23 +217,25 @@ function App() {
   }
 
   return (
-    <SafeAreaProvider>
-      <ErrorBoundary>
-        <StripeProvider publishableKey={STRIPE_PUBLISHABLE_KEY || ''} merchantIdentifier="merchant.com.ratedeed.app">
-          <AuthProvider>
-            <NotificationsProvider>
-              <ContractorProvider>
-                <AppContent splashComplete={splashComplete} />
-                <OfflineBanner isVisible={!isConnected} />
-                {!splashComplete && (
-                  <AnimatedSplashScreen onComplete={() => setSplashComplete(true)} minDuration={1500} />
-                )}
-              </ContractorProvider>
-            </NotificationsProvider>
-          </AuthProvider>
-        </StripeProvider>
-      </ErrorBoundary>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <ErrorBoundary>
+          <StripeProvider publishableKey={STRIPE_PUBLISHABLE_KEY || ''} merchantIdentifier="merchant.com.ratedeed.app">
+            <AuthProvider>
+              <NotificationsProvider>
+                <ContractorProvider>
+                  <AppContent splashComplete={splashComplete} />
+                  <OfflineBanner isVisible={!isConnected} />
+                  {!splashComplete && (
+                    <AnimatedSplashScreen onComplete={() => setSplashComplete(true)} minDuration={1500} />
+                  )}
+                </ContractorProvider>
+              </NotificationsProvider>
+            </AuthProvider>
+          </StripeProvider>
+        </ErrorBoundary>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
 

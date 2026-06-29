@@ -37,6 +37,7 @@ import { SkeletonLoader } from '../components/common/SkeletonLoader';
 import ServiceAreaMap from '../components/common/ServiceAreaMap';
 import { useAuth } from '../context/AuthContext';
 import GuestPrompt from '../components/GuestPrompt';
+import LazyImage from '../components/common/LazyImage';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -562,6 +563,9 @@ const BusinessDetailScreen: React.FC = () => {
               }}
               getItemLayout={(_, index) => ({ length: SCREEN_WIDTH, offset: SCREEN_WIDTH * index, index })}
               keyExtractor={(_, i) => i.toString()}
+              windowSize={2}
+              maxToRenderPerBatch={2}
+              removeClippedSubviews
               renderItem={({ item }) => (
                 <View style={{ width: SCREEN_WIDTH, height: '100%' }}>
                   {isSvgUrl(item) ? (
@@ -569,7 +573,7 @@ const BusinessDetailScreen: React.FC = () => {
                       <SvgImage uri={item} width="100%" height="100%" />
                     </View>
                   ) : (
-                    <Image source={{ uri: item }} className="w-full h-full" resizeMode="cover" />
+                    <LazyImage uri={item} style={{ width: '100%', height: '100%' }} />
                   )}
                 </View>
               )}
@@ -879,7 +883,7 @@ const BusinessDetailScreen: React.FC = () => {
                     >
                       <View className="w-[140px] h-[105px] rounded-xl overflow-hidden bg-neutral-100 dark:bg-neutral-800 border border-neutral-100 dark:border-neutral-800">
                         {images[0] ? (
-                          <Image source={{ uri: images[0] }} className="w-full h-full" resizeMode="cover" />
+                          <LazyImage uri={images[0]} style={{ width: '100%', height: '100%' }} />
                         ) : (
                           <View className="w-full h-full items-center justify-center">
                             <FontAwesome5 name="image" size={20} color={isDark ? '#737373' : '#d4d4d4'} />
@@ -902,7 +906,7 @@ const BusinessDetailScreen: React.FC = () => {
               <Text className="text-base font-bold text-neutral-900 dark:text-neutral-50 mb-3">Recent Updates</Text>
               {posts.map(post => (
                 <View key={post._id} className="mb-4 bg-white dark:bg-neutral-900 rounded-xl border border-neutral-100 dark:border-neutral-800 overflow-hidden">
-                  {post.images?.[0] && <Image source={{ uri: post.images[0] }} className="w-full aspect-square" resizeMode="cover" />}
+                  {post.images?.[0] && <LazyImage uri={post.images[0]} style={{ width: '100%' }} aspectRatio={1} />}
                   <View className="p-3">
                     <Text className="text-sm text-neutral-700 dark:text-neutral-300">{post.caption}</Text>
                   </View>
@@ -1062,7 +1066,7 @@ const BusinessDetailScreen: React.FC = () => {
                             <SvgImage uri={review.user.profilePicture} width="100%" height="100%" />
                           </View>
                         ) : review.user?.profilePicture ? (
-                          <Image source={{ uri: review.user.profilePicture }} className="w-9 h-9 rounded-full" />
+                          <LazyImage uri={review.user.profilePicture} style={{ width: 36, height: 36 }} borderRadius={18} />
                         ) : (
                           <View className="w-9 h-9 rounded-full bg-neutral-100 dark:bg-neutral-800 items-center justify-center">
                             <FontAwesome5 name="user" size={12} color={isDark ? '#737373' : '#d4d4d4'} />
@@ -1431,6 +1435,9 @@ const BusinessDetailScreen: React.FC = () => {
               setActiveImageIndex(index);
             }}
             keyExtractor={(_, i) => i.toString()}
+            windowSize={2}
+            maxToRenderPerBatch={2}
+            removeClippedSubviews
             renderItem={({ item }) => (
               <View style={{ width: SCREEN_WIDTH, flex: 1 }} className="items-center justify-center">
                 {isSvgUrl(item) ? (
@@ -1438,7 +1445,7 @@ const BusinessDetailScreen: React.FC = () => {
                     <SvgImage uri={item} width="100%" height="100%" />
                   </View>
                 ) : (
-                  <Image source={{ uri: item }} className="w-full h-3/4" resizeMode="contain" />
+                  <LazyImage uri={item} style={{ width: '100%', height: '75%' }} />
                 )}
               </View>
             )}
@@ -1473,10 +1480,9 @@ const BusinessDetailScreen: React.FC = () => {
           {/* Main Image View */}
           <View className="flex-1 items-center justify-center p-4">
             {galleryProject?.images?.[galleryIndex] ? (
-              <Image 
-                source={{ uri: galleryProject.images[galleryIndex] }} 
-                className="w-full h-full" 
-                resizeMode="contain" 
+              <LazyImage 
+                uri={galleryProject.images[galleryIndex]} 
+                style={{ width: '100%', height: '100%' }} 
               />
             ) : (
               <View className="w-full h-full items-center justify-center">
@@ -1525,7 +1531,7 @@ const BusinessDetailScreen: React.FC = () => {
                       i === galleryIndex ? 'border-2 border-white w-14 h-14' : 'w-10 h-10 opacity-50'
                     }`}
                   >
-                    <Image source={{ uri: img }} className="w-full h-full" resizeMode="cover" />
+                    <LazyImage uri={img} style={{ width: '100%', height: '100%' }} />
                   </Pressable>
                 ))}
               </ScrollView>

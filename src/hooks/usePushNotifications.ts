@@ -23,6 +23,7 @@ export const usePushNotifications = () => {
   const navigation = useNavigation<NavigationProp<any>>();
   const [expoPushToken, setExpoPushToken] = useState<string | undefined>();
   const [notification, setNotification] = useState<Notifications.Notification | undefined>();
+  const pendingNotificationRef = useRef<any>(null);
 
   useEffect(() => {
     const initPush = async () => {
@@ -85,6 +86,7 @@ export const usePushNotifications = () => {
   }, [isAuthenticated, expoPushToken]);
 
   useEffect(() => {
+    if (!isAuthenticated) return;
     const unsubscribe = messaging().onTokenRefresh(token => {
       if (__DEV__) {
         console.log('[Push] FCM token refreshed:', token?.substring(0, 20) + '...');
@@ -92,22 +94,14 @@ export const usePushNotifications = () => {
       setExpoPushToken(token);
     });
     return unsubscribe;
-  }, []);
+  }, [isAuthenticated]);
 
   useEffect(() => {
+    if (!isAuthenticated) return;
     const unsubscribe = messaging().onMessage(async remoteMessage => {
-      const data = remoteMessage.data || {};
       if (__DEV__) {
-        console.log('[Push] Foreground message:', remoteMessage);
+        console.log('[Push] Foreground message received:', remoteMessage);
       }
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: String(data.title || remoteMessage.notification?.title || 'New Notification'),
-          body: String(data.body || remoteMessage.notification?.body || 'You have a new message.'),
-          data: data as Record<string, string>,
-        },
-        trigger: null,
-      });
       refreshNotifications().catch(() => {});
     });
 
@@ -119,7 +113,7 @@ export const usePushNotifications = () => {
       unsubscribe();
       receivedListener.remove();
     };
-  }, [refreshNotifications]);
+  }, [refreshNotifications, isAuthenticated]);
 
   useEffect(() => {
     const navigateByLink = (link: string | undefined, userRole: string | null) => {
@@ -258,17 +252,29 @@ export const usePushNotifications = () => {
     };
 
     const responseListener = Notifications.addNotificationResponseReceivedListener(response => {
-      if (!isAuthenticated) return;
       const data = response.notification.request.content.data;
-      handleRouteData(data);
+      if (!isAuthenticated) {
+        pendingNotificationRef.current = data;
+      } else {
+        handleRouteData(data);
+      }
     });
 
     const checkInitialNotification = async () => {
       const response = await Notifications.getLastNotificationResponseAsync();
-      if (!response || !isAuthenticated) return;
+      if (!response) return;
       const data = response.notification.request.content.data;
-      handleRouteData(data);
+      if (!isAuthenticated) {
+        pendingNotificationRef.current = data;
+      } else {
+        handleRouteData(data);
+      }
     };
+
+    if (isAuthenticated && pendingNotificationRef.current) {
+      handleRouteData(pendingNotificationRef.current);
+      pendingNotificationRef.current = null;
+    }
 
     checkInitialNotification();
 

@@ -115,7 +115,6 @@ export default function QuoteReviewScreen() {
     if (!quoteId || actionLoading) return;
     setActionLoading('accept');
     try {
-      await updateQuoteStatus(quoteId, 'accepted');
       HapticFeedback.success();
 
       const firstMilestone = quote?.isMilestone && quote?.milestones?.length
@@ -337,6 +336,33 @@ export default function QuoteReviewScreen() {
                 </View>
               </>
             )}
+          </View>
+        ) : null}
+
+        {/* Milestones Schedule */}
+        {quote.isMilestone && quote.milestones && quote.milestones.length > 0 ? (
+          <View className="bg-white dark:bg-neutral-900 rounded-xl p-4 border border-neutral-100 dark:border-neutral-800 mb-4">
+            <Text className="text-sm font-semibold text-neutral-900 dark:text-white mb-3">Milestone Schedule</Text>
+            {quote.milestones.map((milestone: any, i: number) => (
+              <View key={milestone._id || milestone.id || i} className="flex-row justify-between items-center mb-3">
+                <View className="flex-1 mr-3">
+                  <Text className="text-sm font-semibold text-neutral-900 dark:text-white">
+                    Milestone {i + 1}: {milestone.name}
+                  </Text>
+                  {milestone.description ? (
+                    <Text className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">{milestone.description}</Text>
+                  ) : null}
+                </View>
+                <View className="items-end">
+                  <Text className="text-sm font-bold text-neutral-900 dark:text-white">
+                    ${(milestone.amount / 100).toFixed(2)}
+                  </Text>
+                  <Text className="text-[10px] text-neutral-400 font-medium capitalize mt-0.5">
+                    {milestone.status || 'Pending'}
+                  </Text>
+                </View>
+              </View>
+            ))}
           </View>
         ) : null}
 

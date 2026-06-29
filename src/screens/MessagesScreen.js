@@ -430,6 +430,12 @@ const MessagesScreen = () => {
   const otherTypingTimeoutRef = useRef(null);
   const lastTypingEmit = useRef(0);
 
+  const chatOther = selectedConversation?.otherParticipant;
+  const chatName = getParticipantDisplayName(chatOther) || recipientName || "Chat";
+  const chatAvatar = getProfileImageUrl(chatName, chatOther?.profilePicture || route.params?.recipientImage || "");
+  const chatOnline = onlineUsers[resolveId(chatOther)] || false;
+  const showChat = selectedConversation || route.name === "ChatScreen";
+
   // ─── Keyboard visibility listener ──────────────────────────────────────────
   useEffect(() => {
     const show = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', () => setKeyboardVisible(true));
@@ -674,24 +680,7 @@ const MessagesScreen = () => {
 
   useEffect(() => { if (currentUserId) loadConversations(); }, [currentUserId]);
 
-  // ─── Re-fetch conversations/messages on app foreground ───────────────────────
-  useEffect(() => {
-    const handleAppStateChange = (nextAppState) => {
-      if (nextAppState === "active") {
-        if (currentUserId) {
-          loadConversations();
-          const cId = selectedConversation?.conversationId || selectedConversation?._id;
-          if (cId && !cId.startsWith("temp-")) {
-            loadMessages(cId, 1);
-          }
-        }
-      }
-    };
-    const subscription = AppState.addEventListener("change", handleAppStateChange);
-    return () => {
-      subscription.remove();
-    };
-  }, [currentUserId, selectedConversation, loadConversations, loadMessages]);
+
 
   // Auto-select conversation when conversationId is provided (e.g. from notification tap)
   useEffect(() => {
@@ -770,6 +759,25 @@ const MessagesScreen = () => {
       setLoadingMoreMessages(false);
     }
   }, [currentUserId, refreshUnreadMessagesCount, refreshNotifications]);
+
+  // ─── Re-fetch conversations/messages on app foreground ───────────────────────
+  useEffect(() => {
+    const handleAppStateChange = (nextAppState) => {
+      if (nextAppState === "active") {
+        if (currentUserId) {
+          loadConversations();
+          const cId = selectedConversation?.conversationId || selectedConversation?._id;
+          if (cId && !cId.startsWith("temp-")) {
+            loadMessages(cId, 1);
+          }
+        }
+      }
+    };
+    const subscription = AppState.addEventListener("change", handleAppStateChange);
+    return () => {
+      subscription.remove();
+    };
+  }, [currentUserId, selectedConversation, loadConversations, loadMessages]);
 
   useEffect(() => {
     const cId = selectedConversation?.conversationId;
@@ -1300,11 +1308,7 @@ const MessagesScreen = () => {
       .sort((a, b) => new Date(b.lastMessage.createdAt) - new Date(a.lastMessage.createdAt));
   }, [conversations, searchQuery]);
 
-  const chatOther = selectedConversation?.otherParticipant;
-  const chatName = getParticipantDisplayName(chatOther) || recipientName || "Chat";
-  const chatAvatar = getProfileImageUrl(chatName, chatOther?.profilePicture || route.params?.recipientImage || "");
-  const chatOnline = onlineUsers[resolveId(chatOther)] || false;
-  const showChat = selectedConversation || route.name === "ChatScreen";
+
 
   // If deep-linked to ChatScreen but no conversation loaded yet, redirect back
   useEffect(() => {

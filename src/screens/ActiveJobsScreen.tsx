@@ -344,7 +344,7 @@ export default function ActiveJobsScreen() {
                             'This will cancel your dispute and resume the job. Continue?',
                             [
                               { text: 'No', style: 'cancel' },
-                              { text: 'Cancel Dispute', style: 'destructive', onPress: () => handleCancelDispute(quote.jobId || quote._id) },
+                              { text: 'Cancel Dispute', style: 'destructive', onPress: () => handleCancelDispute(quote.jobId) },
                             ]
                           )}
                           className="py-2 rounded-lg bg-white dark:bg-neutral-800 border border-red-200 dark:border-red-800 items-center"
@@ -354,7 +354,7 @@ export default function ActiveJobsScreen() {
                       </View>
                     )}
 
-                    {['awaiting_payment', 'quoted', 'pending_user_approval', 'funded_in_progress', 'partially_funded'].includes(displayStatus) && (
+                    {['awaiting_payment', 'funded_in_progress', 'partially_funded'].includes(displayStatus) && quote.jobId && (
                       <Pressable
                         onPress={() => {
                           const isFunded = ['funded_in_progress', 'partially_funded'].includes(displayStatus);
@@ -366,7 +366,7 @@ export default function ActiveJobsScreen() {
                             msg,
                             [
                               { text: 'Keep Job', style: 'cancel' },
-                              { text: 'Cancel Job', style: 'destructive', onPress: () => handleCancel(quote.jobId || quote._id) }
+                              { text: 'Cancel Job', style: 'destructive', onPress: () => handleCancel(quote.jobId) }
                             ]
                           );
                         }}

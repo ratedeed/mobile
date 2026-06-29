@@ -16,7 +16,8 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { updateContractorProfile, getStripeConnectUrl } from '../api';
+import * as WebBrowser from 'expo-web-browser';
+import { updateContractorProfile, getStripeConnectUrl, getContractorProfile } from '../api';
 import { uploadToCloudinary, CLOUDINARY_FOLDERS } from '../utils/cloudinary';
 import { Linking } from 'react-native';
 import { requestPhotoLibraryPermission } from '../utils/permissions';
@@ -37,6 +38,57 @@ export default function ContractorOnboardingScreen() {
   const isDark = useColorScheme() === 'dark';
   const [currentStep, setCurrentStep] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [loadingProfile, setLoadingProfile] = useState(true);
+
+  useEffect(() => {
+    async function loadProfile() {
+      try {
+        const profile = await getContractorProfile();
+        if (profile) {
+          if (profile.description) setDescription(profile.description);
+          if (profile.profilePicture) {
+            setProfilePictureUrl(profile.profilePicture);
+            setProfilePictureUri(profile.profilePicture);
+          }
+          if (profile.bannerImage) {
+            setBannerImageUrl(profile.bannerImage);
+            setBannerImageUri(profile.bannerImage);
+          }
+          if (profile.servicesOffered && profile.servicesOffered.length > 0) {
+            setServices(profile.servicesOffered.map((s: any) => {
+              const rawRange = s.priceRange || s.priceEstimate || '';
+              const parsed = parsePriceRange(rawRange);
+              return {
+                name: typeof s === 'string' ? s : s.name || '',
+                description: s.description || '',
+                minPrice: parsed.min || '',
+                maxPrice: parsed.max || '',
+                contactForQuote: parsed.contactForQuote || false
+              };
+            }));
+          }
+          if (profile.portfolio && profile.portfolio.length > 0) {
+            setPortfolioItems(profile.portfolio.map(p => ({
+              name: p.name || '',
+              localUri: '',
+              imageUrl: p.imageUrl || ''
+            })));
+          }
+          if (profile.zipCodesCovered && profile.zipCodesCovered.length > 0) {
+            setZipCodes(profile.zipCodesCovered.join(', '));
+          }
+          if (profile.licenseNumber) {
+            setLicenseNumber(profile.licenseNumber);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load profile for onboarding hydration:', err);
+      } finally {
+        setLoadingProfile(false);
+      }
+    }
+    loadProfile();
+  }, []);
 
 
   // Profile
@@ -175,11 +227,8 @@ export default function ContractorOnboardingScreen() {
       if (currentStep < STEPS.length - 1) {
         setCurrentStep(currentStep + 1);
       }
-    } catch {
-      Alert.alert('Error', 'Failed to save. Your changes may not have been saved.');
-      if (currentStep < STEPS.length - 1) {
-        setCurrentStep(currentStep + 1);
-      }
+    } catch (err: any) {
+      Alert.alert('Error', err?.message || 'Failed to save. Your changes may not have been saved.');
     } finally {
       setSaving(false);
     }
@@ -193,11 +242,8 @@ export default function ContractorOnboardingScreen() {
         index: 0,
         routes: [{ name: 'Main' }, { name: 'ContractorDashboard' }],
       });
-    } catch {
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'Main' }, { name: 'ContractorDashboard' }],
-      });
+    } catch (err: any) {
+      Alert.alert('Error', err?.message || 'Failed to complete onboarding. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -208,11 +254,30 @@ export default function ContractorOnboardingScreen() {
       try {
         const { url } = await getStripeConnectUrl(businessType);
         if (url) {
-          Alert.alert('Stripe Connect', 'Opening Stripe setup in your browser.');
-          Linking.openURL(url);
+          let result;
+          try {
+            result = await WebBrowser.openAuthSessionAsync(url, 'ratedeed://contractor-onboarding');
+          } catch (browserError: any) {
+            if (browserError?.message?.toLowerCase().includes('already open')) {
+              try { await WebBrowser.dismissBrowser(); } catch {}
+              Alert.alert(
+                'Browser Already Open',
+                'Please close any open browser windows and try again, or open Stripe setup in your default browser.',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  { text: 'Open in Browser', onPress: () => Linking.openURL(url) }
+                ]
+              );
+              return;
+            }
+            throw browserError;
+          }
+          if (result.type === 'success' && result.url?.includes('stripe_return=true')) {
+            Alert.alert('Success', 'Stripe account connected successfully!');
+          }
         }
-      } catch {
-        Alert.alert('Error', 'Failed to connect to Stripe. Please try again later.');
+      } catch (err: any) {
+        Alert.alert('Error', err?.message || 'Failed to connect to Stripe. Please try again later.');
       }
     };
 
@@ -231,6 +296,14 @@ export default function ContractorOnboardingScreen() {
     if (currentStep > 0) setCurrentStep(currentStep - 1);
     else navigation.goBack();
   };
+
+  if (loadingProfile) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: isDark ? '#171717' : '#ffffff' }}>
+        <ActivityIndicator size="large" color="#4F46E5" />
+      </View>
+    );
+  }
 
   return (
     <View className="flex-1 bg-white dark:bg-neutral-950">

@@ -1,9 +1,8 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   Animated,
   Dimensions,
   PanResponder,
@@ -32,9 +31,11 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
 }) => {
   const translateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
+  const [shouldRender, setShouldRender] = useState(visible);
 
   useEffect(() => {
     if (visible) {
+      setShouldRender(true);
       const snapY = SCREEN_HEIGHT * (1 - snapPoints[initialSnapIndex || 0]);
       Animated.parallel([
         Animated.spring(translateY, {
@@ -61,7 +62,9 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
           duration: 250,
           useNativeDriver: true,
         }),
-      ]).start();
+      ]).start(() => {
+        setShouldRender(false);
+      });
     }
   }, [visible, initialSnapIndex, snapPoints, translateY, backdropOpacity]);
 
@@ -69,24 +72,33 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: (_, gestureState) => {
-        return gestureState.dy > 5;
+        return Math.abs(gestureState.dy) > 5;
+      },
+      onPanResponderGrant: () => {
+        translateY.extractOffset();
       },
       onPanResponderMove: (_, gestureState) => {
-        if (gestureState.dy > 0) {
-          translateY.setValue(gestureState.moveY);
-        }
+        translateY.setValue(gestureState.dy);
       },
       onPanResponderRelease: (_, gestureState) => {
-        if (gestureState.dy > 100 || gestureState.vy > 0.5) {
+        translateY.flattenOffset();
+        const currentY = (translateY as any)._value;
+        const targetSnapPoints = snapPoints.map(p => SCREEN_HEIGHT * (1 - p));
+        const points = [...targetSnapPoints, SCREEN_HEIGHT];
+        
+        const closest = points.reduce((prev, curr) => 
+          Math.abs(curr - currentY) < Math.abs(prev - currentY) ? curr : prev
+        );
+
+        if (closest === SCREEN_HEIGHT || gestureState.dy > 100 || gestureState.vy > 0.5) {
           Animated.timing(translateY, {
             toValue: SCREEN_HEIGHT,
             duration: 250,
             useNativeDriver: true,
           }).start(() => onClose());
         } else {
-          const snapY = SCREEN_HEIGHT * (1 - snapPoints[initialSnapIndex || 0]);
           Animated.spring(translateY, {
-            toValue: snapY,
+            toValue: closest,
             useNativeDriver: true,
             damping: 20,
             stiffness: 150,
@@ -96,12 +108,17 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
     })
   ).current;
 
-  if (!visible) return null;
+  if (!shouldRender) return null;
 
   return (
     <View style={styles.container}>
       <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]}>
-        <Pressable style={styles.backdropPressable} onPress={onClose} />
+        <Pressable 
+          style={styles.backdropPressable} 
+          onPress={onClose} 
+          accessibilityLabel="Close panel"
+          accessibilityRole="button"
+        />
       </Animated.View>
 
       <Animated.View
@@ -109,14 +126,16 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
           styles.sheet,
           { transform: [{ translateY }] },
         ]}
+        accessibilityRole={"dialog" as any}
+        accessibilityViewIsModal={true}
       >
-        <View {...panResponder.panHandlers} style={styles.dragHandleContainer}>
+        <View {...panResponder.panHandlers} style={styles.dragHandleContainer} accessibilityRole="none">
           <View style={styles.dragHandle} />
         </View>
 
-        {(title || true) && (
+        {!!title && (
           <View style={styles.header}>
-            {title && <Text style={styles.title}>{title}</Text>}
+            <Text style={styles.title}>{title}</Text>
           </View>
         )}
 

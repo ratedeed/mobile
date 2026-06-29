@@ -28,17 +28,23 @@ export default function PaymentFlowScreen() {
   const [paying, setPaying] = useState(false);
   const [applePayAvailable, setApplePayAvailable] = useState(false);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
-  const [paymentAmount, setPaymentAmount] = useState<number>(route.params?.totalAmount || 0);
+  const [paymentAmount, setPaymentAmount] = useState<number>((route.params?.totalAmount || 0) * 100);
   const [loadingPaymentIntent, setLoadingPaymentIntent] = useState(true);
   const [verifying, setVerifying] = useState(false);
   const isMounted = React.useRef(true);
+  const payingRef = React.useRef(false);
 
   useEffect(() => {
     isMounted.current = true;
+    if (!quoteId) {
+      Alert.alert('Error', 'Missing quote information. Cannot proceed to payment.', [
+        { text: 'OK', onPress: () => navigation.goBack() }
+      ]);
+    }
     return () => {
       isMounted.current = false;
     };
-  }, []);
+  }, [quoteId]);
 
   useEffect(() => {
     async function checkApplePay() {
@@ -152,7 +158,7 @@ export default function PaymentFlowScreen() {
 
 
   const handleApplePay = async () => {
-    if (paying) return;
+    if (paying || payingRef.current) return;
     if (paymentAmount <= 0) {
       Alert.alert('Invalid Amount', 'Payment amount must be greater than $0.');
       return;
@@ -162,6 +168,7 @@ export default function PaymentFlowScreen() {
       return;
     }
     try {
+      payingRef.current = true;
       setPaying(true);
       let currentClientSecret = clientSecret;
       if (!currentClientSecret) {
@@ -199,22 +206,27 @@ export default function PaymentFlowScreen() {
         Alert.alert('Payment Failed', error.message || 'Apple Pay could not be completed.');
       } else if (paymentIntent?.status?.toLowerCase() === 'succeeded') {
         startPollingPaymentStatus(true);
+      } else {
+        HapticFeedback.error();
+        Alert.alert('Payment Status', `Your payment is in status: ${paymentIntent?.status}. Please contact support or complete verification.`);
       }
     } catch (err: any) {
       HapticFeedback.error();
       Alert.alert('Error', err?.message || 'Apple Pay failed to initialize.');
     } finally {
+      payingRef.current = false;
       setPaying(false);
     }
   };
 
   const handlePayment = async () => {
-    if (paying) return;
+    if (paying || payingRef.current) return;
     if (paymentAmount <= 0) {
       Alert.alert('Invalid Amount', 'Payment amount must be greater than $0.');
       return;
     }
     try {
+      payingRef.current = true;
       setPaying(true);
       let currentClientSecret = clientSecret;
       if (!currentClientSecret) {
@@ -264,6 +276,7 @@ export default function PaymentFlowScreen() {
       HapticFeedback.error();
       Alert.alert('Error', err?.message || 'Failed to initiate secure payment. Please try again.');
     } finally {
+      payingRef.current = false;
       setPaying(false);
     }
   };

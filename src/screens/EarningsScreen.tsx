@@ -138,7 +138,7 @@ export default function EarningsScreen() {
   const renderTransaction = useCallback(
     ({ item }: { item: Transaction }) => {
       const iconColor = getTransactionColor(item.type);
-      const isPositive = item.type === 'payment' || item.type === 'refund';
+      const isPositive = item.type === 'payment';
       const amount = item.amount / 100;
 
       return (
@@ -170,8 +170,8 @@ export default function EarningsScreen() {
             {item.type === 'payment' && (
               <View className="mt-1 flex-row flex-wrap" style={{ gap: 8 }}>
                 <Text className="text-[10px] text-neutral-400 dark:text-neutral-500">Gross: {formatCurrency(amount)}</Text>
-                <Text className="text-[10px] text-neutral-400 dark:text-neutral-500">Fee (5%): {formatCurrency(amount * 0.05)}</Text>
-                <Text className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">Net (95%): {formatCurrency(amount * 0.95)}</Text>
+                <Text className="text-[10px] text-neutral-400 dark:text-neutral-500">Fee ({feePercent}%): {formatCurrency(amount * (feePercent / 100))}</Text>
+                <Text className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">Net ({100 - feePercent}%): {formatCurrency(amount * (1 - feePercent / 100))}</Text>
               </View>
             )}
           </View>
@@ -187,7 +187,7 @@ export default function EarningsScreen() {
         </View>
       );
     },
-    [isDark]
+    [isDark, feePercent]
   );
 
   const renderHeader = useCallback(

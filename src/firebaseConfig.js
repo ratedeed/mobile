@@ -20,9 +20,12 @@ try {
     persistence: getReactNativePersistence(ReactNativeAsyncStorage),
   });
 } catch (error) {
-  if (__DEV__) {
-    console.warn("Firebase initialization error. Check EXPO_PUBLIC_ env variables.");
-  }
+  console.error("Firebase initialization error. Check EXPO_PUBLIC_ env variables:", error);
+  try {
+    import('@sentry/react-native').then(Sentry => {
+      Sentry.captureException(error);
+    }).catch(() => {});
+  } catch (se) {}
   // Safe mock app object
   app = {
     name: '[MockApp]',

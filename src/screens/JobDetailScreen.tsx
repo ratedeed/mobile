@@ -27,6 +27,7 @@ import {
   acceptChangeOrder,
   declineChangeOrder,
   uploadProgressPhoto,
+  getPlatformFeePercent,
 } from '../utils/apiClient';
 import { useAuth } from '../context/AuthContext';
 import HapticFeedback from '../utils/haptics';
@@ -89,6 +90,24 @@ export default function JobDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [feePercent, setFeePercent] = useState(5);
+
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      try {
+        const res = await getPlatformFeePercent();
+        if (res && res.platformFeePercent !== undefined && isMounted) {
+          setFeePercent(res.platformFeePercent);
+        }
+      } catch {
+        // Fallback to 5%
+      }
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
   const [showChangeOrder, setShowChangeOrder] = useState(false);
   const [coTitle, setCoTitle] = useState('');
   const [coDescription, setCoDescription] = useState('');
@@ -193,16 +212,21 @@ export default function JobDetailScreen() {
     successMsg: string,
     extraWarning?: string
   ) => {
+    if (actionLoading) return;
+    setActionLoading(action);
     const body = extraWarning
       ? `Are you sure you want to ${action}?\n\n${extraWarning}`
       : `Are you sure you want to ${action}?`;
     Alert.alert('Confirm', body, [
-      { text: 'Cancel', style: 'cancel' },
+      { 
+        text: 'Cancel', 
+        style: 'cancel',
+        onPress: () => setActionLoading(null)
+      },
       {
         text: 'Confirm',
         style: 'destructive',
         onPress: async () => {
-          setActionLoading(action);
           try {
             await fn();
             if (action.includes('cancel')) {
@@ -481,11 +505,11 @@ export default function JobDetailScreen() {
               </View>
               {(() => {
                 const subtotalVal = quote.subtotal || quote.lineItems?.reduce((s: number, i: any) => s + (i.amount || 0), 0) || 0;
-                const serviceFeeVal = quote.serviceFee || Math.round((quote.totalAmount || 0) * 0.05);
-                const feePercent = subtotalVal > 0 ? Math.round((serviceFeeVal / subtotalVal) * 100) : 5;
+                const serviceFeeVal = quote.serviceFee || Math.round((quote.totalAmount || 0) * (feePercent / 100));
+                const displayFeePercent = subtotalVal > 0 ? Math.round((serviceFeeVal / subtotalVal) * 100) : feePercent;
                 return (
                   <View className="flex-row justify-between py-1">
-                    <Text className="text-[12px] text-neutral-500 dark:text-neutral-400">Platform fee ({feePercent}%)</Text>
+                    <Text className="text-[12px] text-neutral-500 dark:text-neutral-400">Platform fee ({displayFeePercent}%)</Text>
                     <Text className="text-[12px] text-neutral-500 dark:text-neutral-400">
                       {formatCurrency(serviceFeeVal)}
                     </Text>
@@ -743,7 +767,7 @@ export default function JobDetailScreen() {
               {isContractor && job.status === 'funded_in_progress' && (
                 <Pressable
                   onPress={handleMarkComplete}
-                  disabled={actionLoading === 'mark complete'}
+                  disabled={actionLoading !== null}
                   className="flex-row items-center justify-center py-3.5 bg-emerald-600 rounded-xl"
                   style={{ gap: 8 }}
                 >
@@ -828,7 +852,7 @@ export default function JobDetailScreen() {
               {isUser && job.status === 'completed_pending_release' && (
                   <Pressable
                     onPress={handleReleaseFunds}
-                    disabled={actionLoading === 'release payment'}
+                    disabled={actionLoading !== null}
                     className="flex-row items-center justify-center py-3.5 bg-indigo-600 rounded-xl"
                     style={{ gap: 8 }}
                   >
@@ -883,7 +907,7 @@ export default function JobDetailScreen() {
               {['awaiting_payment', 'funded_in_progress', 'partially_funded'].includes(job.status) && (
                 <Pressable
                   onPress={handleCancelJob}
-                  disabled={actionLoading === 'cancel this job'}
+                  disabled={actionLoading !== null}
                   className="flex-row items-center justify-center py-3 rounded-xl border border-neutral-300 dark:border-neutral-600"
                   style={{ gap: 8 }}
                 >
@@ -967,7 +991,7 @@ export default function JobDetailScreen() {
               </View>
               <Pressable
                 onPress={handleCreateChangeOrder}
-                disabled={!coTitle.trim() || !coAmount.trim() || actionLoading === 'changeOrder'}
+                disabled={!coTitle.trim() || !coAmount.trim() || actionLoading !== null}
                 className={`w-full py-3.5 rounded-xl items-center justify-center flex-row ${coTitle.trim() && coAmount.trim() ? 'bg-amber-500' : 'bg-neutral-200 dark:bg-neutral-700'}`}
                 style={{ gap: 8 }}
               >

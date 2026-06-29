@@ -176,7 +176,7 @@ export interface Notification {
   message: string;
   link?: string;
   read: boolean;
-  type?: 'new_message' | 'new_review' | 'admin_alert' | 'system_update' | 'new_quote' | 'quote_accepted' | 'quote_rejected' | 'new_lead' | 'job_update' | 'job_funded';
+  type?: 'new_message' | 'new_review' | 'admin_alert' | 'system_update' | 'new_quote' | 'quote_accepted' | 'quote_rejected' | 'new_lead' | 'job_update' | 'job_funded' | 'like' | 'comment' | 'quote_request' | 'tag' | 'admin_message' | 'REVIEW_ADDED' | 'system' | 'claim_approved' | 'claim_rejected' | 'license_approved' | 'license_rejected';
   createdAt?: string;
   sender?: any;
 }
@@ -221,7 +221,7 @@ export interface QuoteLineItem {
 }
 
 export type ProjectPhase = "quoted" | "accepted" | "scheduled" | "in_progress" | "completed" | "reviewed";
-export type QuoteStatus = "pending" | "accepted" | "declined" | "expired" | "withdrawn" | "revised";
+export type QuoteStatus = 'draft' | 'pending_user_approval' | 'accepted' | 'rejected' | 'expired' | 'pending' | 'declined' | 'withdrawn' | 'revised';
 export type ChangeOrderStatus = "pending" | "accepted" | "declined";
 export type DocType = "contract" | "permit" | "invoice" | "warranty" | "other";
 export type VoiceState = "idle" | "recording" | "paused" | "sent";
@@ -343,7 +343,7 @@ export interface Quote {
   startTime?: string;
   endTime?: string;
   contractorNotes?: string;
-  status: 'pending_user_approval' | 'accepted' | 'rejected' | 'expired';
+  status: QuoteStatus;
   isMilestone?: boolean;
   milestones?: Array<{ name: string; percentage: number; amount: number }>;
   expiresAt?: string;
@@ -357,7 +357,7 @@ export interface Job {
   contractor: string | Contractor;
   user: string | User;
   amountFunded: number;
-  status: 'awaiting_payment' | 'partially_funded' | 'funded_in_progress' | 'completed_pending_release' | 'completed_paid' | 'cancelled' | 'disputed';
+  status: 'awaiting_payment' | 'funded_in_progress' | 'completed_pending_release' | 'completed_paid' | 'disputed' | 'partially_funded' | 'cancelled';
   isMilestone?: boolean;
   milestones?: Array<{
     _id: string;
@@ -384,7 +384,7 @@ export interface Lead {
   projectTitle: string;
   description: string;
   contactPreference?: 'email' | 'phone' | 'message' | 'any';
-  status: 'new' | 'contacted' | 'quoted' | 'in_progress' | 'completed' | 'lost';
+  status: 'new' | 'contacted' | 'quoted' | 'archived' | 'in_progress' | 'completed' | 'lost';
   budget?: string;
   timeline?: string;
   createdAt: string;
@@ -485,16 +485,18 @@ export interface PostQueryParams {
 export type RootStackParamList = {
   Auth: undefined;
   Main: undefined;
-  Login: undefined;
+  Login: { returnTo?: string } | undefined;
   Signup: undefined;
+  Register: undefined;
+  ForgotPassword: undefined;
   ContractorSignup: undefined;
   Home: undefined;
   Search: undefined;
   Messages: undefined;
   Profile: undefined;
-  BusinessDetail: { id: string; slug?: string };
+  BusinessDetail: { id?: string; slug?: string };
   ContractorDashboard: undefined;
-  ChatScreen: { recipientId?: string; recipientName?: string };
+  ChatScreen: { conversationId?: string; recipientId?: string; recipientName?: string };
   Notifications: undefined;
   BusinessSearch: { query?: string; searchType?: string; category?: string };
   ReviewForm: { contractorId: string };
@@ -506,6 +508,23 @@ export type RootStackParamList = {
   LeadDetail: { leadId: string };
   ResetPassword: { oobCode?: string; token?: string };
   VerifyEmailChange: { token?: string };
+  PaymentFlow: {
+    quoteId: string;
+    milestoneId?: string;
+    totalAmount: number;
+    contractorName: string;
+    description: string;
+    isMilestone?: boolean;
+    milestoneName?: string;
+    totalMilestonesCount?: number;
+  };
+  DisputeScreen: { jobId?: string; quoteId?: string };
+  ReviewScreen: { quoteId?: string; jobId?: string; contractorId?: string; contractorName?: string };
+  ChangeOrderScreen: { jobId: string };
+  EarningsScreen: undefined;
+  ContractorOnboarding: undefined;
+  ContractorEditProfile: undefined;
+  ActiveJobs: undefined;
 };
 
 export type UserRole = 'user' | 'contractor' | 'admin';

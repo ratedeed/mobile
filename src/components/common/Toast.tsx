@@ -20,6 +20,23 @@ export const Toast: React.FC<ToastProps> = ({
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(-50)).current;
 
+  const handleDismiss = React.useCallback(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateY, {
+        toValue: -50,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      onDismiss();
+    });
+  }, [fadeAnim, translateY, onDismiss]);
+
   useEffect(() => {
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -39,24 +56,7 @@ export const Toast: React.FC<ToastProps> = ({
     }, duration);
 
     return () => clearTimeout(timer);
-  }, [fadeAnim, translateY, duration]);
-
-  const handleDismiss = () => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-      Animated.timing(translateY, {
-        toValue: -50,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      onDismiss();
-    });
-  };
+  }, [fadeAnim, translateY, duration, handleDismiss]);
 
   const getBackgroundColor = () => {
     switch (type) {
@@ -87,9 +87,11 @@ export const Toast: React.FC<ToastProps> = ({
   return (
     <Animated.View
       style={[
-        styles.container,
+        styles.toast,
         { backgroundColor: getBackgroundColor(), opacity: fadeAnim, transform: [{ translateY }] },
       ]}
+      accessibilityLiveRegion="assertive"
+      accessibilityRole="alert"
     >
       <View style={styles.iconContainer}>
         <Text style={styles.icon}>{getIcon()}</Text>
@@ -97,7 +99,13 @@ export const Toast: React.FC<ToastProps> = ({
       <Text style={styles.message} numberOfLines={2}>
         {message}
       </Text>
-      <TouchableOpacity onPress={handleDismiss} style={styles.closeButton}>
+      <TouchableOpacity 
+        onPress={handleDismiss} 
+        style={styles.closeButton}
+        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        accessibilityLabel="Dismiss message"
+        accessibilityRole="button"
+      >
         <Text style={styles.closeText}>×</Text>
       </TouchableOpacity>
     </Animated.View>
@@ -117,7 +125,7 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({ toasts, onDismis
   if (toasts.length === 0) return null;
 
   return (
-    <View style={styles.container} pointerEvents="box-none">
+    <View style={styles.toastContainer} pointerEvents="box-none">
       {toasts.map((toast) => (
         <Toast
           key={toast.id}
@@ -131,12 +139,16 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({ toasts, onDismis
 };
 
 const styles = StyleSheet.create({
-  container: {
+  toastContainer: {
     position: 'absolute',
     top: 50,
     left: 16,
     right: 16,
     zIndex: 99999,
+    flexDirection: 'column',
+    gap: 8,
+  },
+  toast: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
@@ -146,9 +158,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 4,
-  },
-  container2: {
-    flex: 1,
   },
   iconContainer: {
     marginRight: 12,

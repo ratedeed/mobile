@@ -125,6 +125,7 @@ export default function DisputeScreen() {
   };
 
   const handleSubmit = async () => {
+    if (submitting) return;
     if (!category) {
       Alert.alert('Required', 'Please select a dispute category.');
       return;

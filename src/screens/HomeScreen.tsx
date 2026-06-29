@@ -281,7 +281,7 @@ const HomeScreen = () => {
     }
     setLoadError(false);
     try {
-      const result: any = await browseContractors({ zip: zip || undefined, page: pageNum, limit: 500 });
+      const result: any = await browseContractors({ zip: zip || undefined, page: pageNum, limit: 20 });
       const list = extractList(result);
 
       if (mountedRef.current) {
@@ -710,6 +710,11 @@ const HomeScreen = () => {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         showsVerticalScrollIndicator={false}
         className="flex-1"
+        windowSize={5}
+        maxToRenderPerBatch={8}
+        removeClippedSubviews={Platform.OS === 'android'}
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.4}
       />
 
       <GuestPrompt

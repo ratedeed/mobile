@@ -120,18 +120,29 @@ export default function ServiceAreaMap({
     latitude && longitude ? { lat: latitude, lng: longitude } : null
   );
   const [zipAreas, setZipAreas] = useState<ZipArea[]>([]);
+  const [hasError, setHasError] = useState(false);
 
   // Geocode the business address
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      let coords: { lat: number; lng: number } | null = null;
-      if (latitude && longitude) {
-        coords = { lat: latitude, lng: longitude };
-      } else if (locationName) {
-        coords = await geocodeLocation(locationName);
+      try {
+        let coords: { lat: number; lng: number } | null = null;
+        if (latitude && longitude) {
+          coords = { lat: latitude, lng: longitude };
+        } else if (locationName) {
+          coords = await geocodeLocation(locationName);
+        }
+        if (!cancelled) {
+          if (coords) {
+            setCenter(coords);
+          } else if (!latitude && !longitude) {
+            setHasError(true);
+          }
+        }
+      } catch (err) {
+        if (!cancelled) setHasError(true);
       }
-      if (!cancelled) setCenter(coords);
     })();
     return () => { cancelled = true; };
   }, [latitude, longitude, locationName]);
@@ -189,19 +200,25 @@ export default function ServiceAreaMap({
     if (!zipCodes.length) { setZipAreas([]); return; }
     let cancelled = false;
     (async () => {
-      const results: ZipArea[] = [];
-      for (const zip of zipCodes) {
-        if (cancelled) break;
-        const area = await fetchZipArea(zip);
-        if (area) results.push(area);
-      }
-      if (!cancelled) {
-        setZipAreas(results);
-        if (!center && results.length > 0) {
-          const avgLat = results[0].coords.reduce((s, c) => s + c.latitude, 0) / results[0].coords.length;
-          const avgLng = results[0].coords.reduce((s, c) => s + c.longitude, 0) / results[0].coords.length;
-          setCenter({ lat: avgLat, lng: avgLng });
+      try {
+        const results: ZipArea[] = [];
+        for (const zip of zipCodes) {
+          if (cancelled) break;
+          const area = await fetchZipArea(zip);
+          if (area) results.push(area);
         }
+        if (!cancelled) {
+          setZipAreas(results);
+          if (!center && results.length > 0) {
+            const avgLat = results[0].coords.reduce((s, c) => s + c.latitude, 0) / results[0].coords.length;
+            const avgLng = results[0].coords.reduce((s, c) => s + c.longitude, 0) / results[0].coords.length;
+            setCenter({ lat: avgLat, lng: avgLng });
+          } else if (results.length === 0 && !center) {
+            setHasError(true);
+          }
+        }
+      } catch (err) {
+        if (!cancelled) setHasError(true);
       }
     })();
     return () => { cancelled = true; };
@@ -219,6 +236,15 @@ export default function ServiceAreaMap({
       }
     }
   }, [zipAreas]);
+
+  if (hasError) {
+    return (
+      <View style={[styles.container, { height }]} className="bg-neutral-100 items-center justify-center rounded-2xl px-4">
+        <FontAwesome5 name="exclamation-triangle" size={24} color="#EF4444" />
+        <Text className="text-xs text-neutral-500 mt-2 text-center">Could not load service area map</Text>
+      </View>
+    );
+  }
 
   if (!center) {
     return (

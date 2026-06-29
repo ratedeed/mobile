@@ -49,6 +49,7 @@ export default function ChangeOrderScreen() {
   const [changeOrderState, setChangeOrderState] = useState(initialChangeOrder);
 
   const handleSubmit = async () => {
+    if (submitting) return;
     if (!title.trim()) {
       Alert.alert('Required', 'Please enter a title for the change order.');
       return;
@@ -91,6 +92,7 @@ export default function ChangeOrderScreen() {
   };
 
   const handleAccept = async () => {
+    if (submitting) return;
     if (!jobId || !changeOrderState?._id) return;
     setSubmitting(true);
     try {
@@ -107,6 +109,7 @@ export default function ChangeOrderScreen() {
   };
 
   const handleDecline = async () => {
+    if (submitting) return;
     if (!jobId || !changeOrderState?._id) return;
     setSubmitting(true);
     try {

@@ -138,14 +138,38 @@ export const handleResponse = async (response: Response, retryFn?: () => Promise
   }
 };
 
-const executeRequest = async (makeRequestFn: () => Promise<Response>): Promise<Response> => {
+const executeRequest = async (
+  makeRequestFn: (signal?: AbortSignal) => Promise<Response>,
+  timeoutMs = 30000,
+  callerSignal?: AbortSignal
+): Promise<Response> => {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeoutMs);
+
+  if (callerSignal) {
+    if (callerSignal.aborted) {
+      controller.abort();
+    } else {
+      callerSignal.addEventListener('abort', () => controller.abort());
+    }
+  }
+
   try {
     const netState = await NetInfo.fetch();
     if (netState.isConnected === false) {
       throw new Error('No internet connection. Please check your network status.');
     }
-    return await makeRequestFn();
+    const response = await makeRequestFn(controller.signal);
+    clearTimeout(id);
+    return response;
   } catch (err: any) {
+    clearTimeout(id);
+    if (err.name === 'AbortError') {
+      if (callerSignal?.aborted) {
+        throw new Error('Request was cancelled.');
+      }
+      throw new Error('Request timed out. Please try again.');
+    }
     if (err.message && err.message.includes('No internet connection')) {
       throw err;
     }
@@ -164,8 +188,8 @@ const hasAuthHeader = (headers: Record<string, string>): boolean => {
   });
 };
 
-export const get = async (url: string, headers: Record<string, string> = {}): Promise<any> => {
-  const makeRequest = async () => {
+export const get = async (url: string, headers: Record<string, string> = {}, signal?: AbortSignal): Promise<any> => {
+  const makeRequest = async (timeoutSignal?: AbortSignal) => {
     const currentHeaders = { ...headers };
     if (!hasAuthHeader(currentHeaders)) {
       const authH = await getAuthHeaders();
@@ -174,14 +198,14 @@ export const get = async (url: string, headers: Record<string, string> = {}): Pr
       });
       Object.assign(currentHeaders, authH);
     }
-    return fetch(url, { method: 'GET', headers: currentHeaders });
+    return fetch(url, { method: 'GET', headers: currentHeaders, signal: timeoutSignal || signal });
   };
-  const response = await executeRequest(makeRequest);
-  return handleResponse(response, makeRequest);
+  const response = await executeRequest(makeRequest, 30000, signal);
+  return handleResponse(response, () => makeRequest());
 };
 
-export const post = async (url: string, data: any, headers: Record<string, string> = {}): Promise<any> => {
-  const makeRequest = async () => {
+export const post = async (url: string, data: any, headers: Record<string, string> = {}, signal?: AbortSignal): Promise<any> => {
+  const makeRequest = async (timeoutSignal?: AbortSignal) => {
     const currentHeaders: Record<string, string> = { 'Content-Type': 'application/json', ...headers };
     if (!hasAuthHeader(currentHeaders)) {
       const authH = await getAuthHeaders();
@@ -194,14 +218,15 @@ export const post = async (url: string, data: any, headers: Record<string, strin
       method: 'POST',
       headers: currentHeaders,
       body: JSON.stringify(data),
+      signal: timeoutSignal || signal
     });
   };
-  const response = await executeRequest(makeRequest);
-  return handleResponse(response, makeRequest);
+  const response = await executeRequest(makeRequest, 30000, signal);
+  return handleResponse(response);
 };
 
-export const put = async (url: string, data: any, headers: Record<string, string> = {}): Promise<any> => {
-  const makeRequest = async () => {
+export const put = async (url: string, data: any, headers: Record<string, string> = {}, signal?: AbortSignal): Promise<any> => {
+  const makeRequest = async (timeoutSignal?: AbortSignal) => {
     const currentHeaders: Record<string, string> = { 'Content-Type': 'application/json', ...headers };
     if (!hasAuthHeader(currentHeaders)) {
       const authH = await getAuthHeaders();
@@ -210,14 +235,14 @@ export const put = async (url: string, data: any, headers: Record<string, string
       });
       Object.assign(currentHeaders, authH);
     }
-    return fetch(url, { method: 'PUT', headers: currentHeaders, body: JSON.stringify(data) });
+    return fetch(url, { method: 'PUT', headers: currentHeaders, body: JSON.stringify(data), signal: timeoutSignal || signal });
   };
-  const response = await executeRequest(makeRequest);
-  return handleResponse(response, makeRequest);
+  const response = await executeRequest(makeRequest, 30000, signal);
+  return handleResponse(response);
 };
 
-export const del = async (url: string, headers: Record<string, string> = {}): Promise<any> => {
-  const makeRequest = async () => {
+export const del = async (url: string, headers: Record<string, string> = {}, signal?: AbortSignal): Promise<any> => {
+  const makeRequest = async (timeoutSignal?: AbortSignal) => {
     const currentHeaders = { ...headers };
     if (!hasAuthHeader(currentHeaders)) {
       const authH = await getAuthHeaders();
@@ -226,10 +251,10 @@ export const del = async (url: string, headers: Record<string, string> = {}): Pr
       });
       Object.assign(currentHeaders, authH);
     }
-    return fetch(url, { method: 'DELETE', headers: currentHeaders });
+    return fetch(url, { method: 'DELETE', headers: currentHeaders, signal: timeoutSignal || signal });
   };
-  const response = await executeRequest(makeRequest);
-  return handleResponse(response, makeRequest);
+  const response = await executeRequest(makeRequest, 30000, signal);
+  return handleResponse(response);
 };
 
 // ---- Normalization Helpers (Ported from web version) ----
@@ -388,11 +413,11 @@ export const logout = async (): Promise<void> => {
 };
 
 export const register = async (data: any): Promise<any> => {
-  return post(`${API_BASE}/users/signup/`, data);
+  return post(`${API_BASE}/users/signup`, data);
 };
 
 export const verifyEmailBackend = async (email: string): Promise<any> => {
-  return post(`${API_BASE}/users/verify-email/`, { email });
+  return post(`${API_BASE}/users/verify-email`, { email });
 };
 
 export const forgotPassword = async (email: string): Promise<any> => {
@@ -1201,9 +1226,9 @@ export const getPlatformFeePercent = async (): Promise<{ platformFeePercent: num
 // Dispute Resolution
 // ==========================================
 
-export const resolveDispute = async (jobId: string, action: 'release_all' | 'refund_all' | 'split' | 'resume', notes?: string): Promise<any> => {
+export const resolveDispute = async (jobId: string, action: 'release_all' | 'refund_all' | 'split' | 'resume', notes?: string, splitAmount?: number): Promise<any> => {
   const authHeaders = await getAuthHeaders();
-  return post(`${API_BASE}/jobs/${jobId}/dispute/resolve`, { action, notes }, authHeaders);
+  return post(`${API_BASE}/jobs/${jobId}/dispute/resolve`, { action, notes, splitAmount }, authHeaders);
 };
 
 export const cancelDispute = async (jobId: string): Promise<any> => {

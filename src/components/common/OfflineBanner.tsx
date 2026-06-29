@@ -11,10 +11,10 @@ export const OfflineBanner: React.FC<OfflineBannerProps> = ({ isVisible }) => {
   const insets = useSafeAreaInsets();
   if (!isVisible) return null;
 
-  const bottomPadding = Math.max(insets.bottom, 12);
+  const paddingTop = insets.top > 0 ? insets.top : 12;
 
   return (
-    <View style={[styles.container, { paddingBottom: bottomPadding }]}>
+    <View style={[styles.container, { paddingTop, paddingBottom: 10 }]}>
       <Text style={styles.text} numberOfLines={1}>No internet connection</Text>
     </View>
   );
@@ -23,11 +23,10 @@ export const OfflineBanner: React.FC<OfflineBannerProps> = ({ isVisible }) => {
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    bottom: 0,
+    top: 0,
     left: 0,
     right: 0,
     backgroundColor: Colors.warning500,
-    paddingTop: 8,
     paddingHorizontal: 16,
     alignItems: 'center',
     justifyContent: 'center',

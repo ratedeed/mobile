@@ -56,6 +56,99 @@ import { EmptyState } from '../components/common/EmptyState';
 import { VerifiedBadge } from '../components/common/VerifiedBadge';
 import { SkeletonLoader } from '../components/common/SkeletonLoader';
 
+const CURATED_TAGS = [
+  'Before & After',
+  'Completed Project',
+  'Under Construction',
+  'Kitchen',
+  'Bathroom',
+  'Outdoor Living',
+  'Special Offer',
+  'Announcement'
+];
+
+const CATEGORIES_LIST = [
+  { id: 'general', label: 'General' },
+  { id: 'builders', label: 'Home Builders' },
+  { id: 'plumbers', label: 'Plumbers' },
+  { id: 'electricians', label: 'Electricians' },
+  { id: 'painters', label: 'Painters' },
+  { id: 'landscape', label: 'Landscapers' },
+  { id: 'hvac', label: 'HVAC' },
+  { id: 'roofers', label: 'Roofers' },
+  { id: 'carpenters', label: 'Carpenters' },
+  { id: 'cleaners', label: 'Cleaners' },
+  { id: 'handyman', label: 'Handymen' },
+];
+
+const TAG_MAP: Record<string, string[]> = {
+  general: [
+    'Before & After', 'Completed Project', 'Under Construction', 'Special Offer',
+    'Announcement', 'Client Review', 'Service Update', 'Maintenance Tip'
+  ],
+  builders: [
+    'New Construction', 'Custom Home', 'Home Addition', 'Kitchen Remodel', 
+    'Bathroom Remodel', 'Framing', 'Foundation', 'Before & After'
+  ],
+  plumbers: [
+    'Leak Repair', 'Drain Cleaning', 'Water Heater', 'Pipe Replacement', 
+    'Emergency Service', 'Fixture Install', 'Clogged Drain', 'Sump Pump'
+  ],
+  electricians: [
+    'Wiring Upgrade', 'Panel Upgrade', 'Lighting Install', 'EV Charger', 
+    'Smart Home', 'Outlet Repair', 'Generator', 'Safety Inspection'
+  ],
+  painters: [
+    'Interior Painting', 'Exterior Painting', 'Cabinet Refinishing', 'Deck Staining', 
+    'Wallpaper Removal', 'Drywall Repair', 'Before & After', 'Color Consultation'
+  ],
+  landscape: [
+    'Lawn Care', 'Hardscaping', 'Garden Design', 'Irrigation System', 
+    'Tree Trimming', 'Patio Install', 'Spring Cleanup', 'Outdoor Lighting'
+  ],
+  hvac: [
+    'AC Installation', 'AC Repair', 'Heating Install', 'Furnace Repair', 
+    'Heat Pump', 'Duct Cleaning', 'Thermostat Install', 'Maintenance Tune-up'
+  ],
+  roofers: [
+    'Roof Replacement', 'Roof Repair', 'Shingle Repair', 'Gutter Install', 
+    'Leak Repair', 'Commercial Roofing', 'Storm Damage', 'Siding'
+  ],
+  carpenters: [
+    'Custom Deck', 'Trim & Molding', 'Framing', 'Cabinetry', 
+    'Door Installation', 'Wood Rot Repair', 'Shed Build', 'Furniture repair'
+  ],
+  cleaners: [
+    'Deep Cleaning', 'Move In/Out Clean', 'Regular Housekeeping', 'Post-Construction', 
+    'Carpet Cleaning', 'Window Wash', 'Eco-Friendly Clean', 'Office Cleaning'
+  ],
+  handyman: [
+    'Drywall Repair', 'Fixture Replace', 'Door Repair', 'Furniture Assembly', 
+    'Gutter Clean', 'TV Mounting', 'Fence Repair', 'Tile Repair'
+  ],
+};
+
+const getMobileTagIcon = (tag: string) => {
+  const t = tag.toLowerCase();
+  let name = 'wrench';
+  let color = '#737373';
+
+  if (t === 'before & after') { name = 'history'; color = '#6366f1'; }
+  else if (t === 'completed project') { name = 'check-circle'; color = '#059669'; }
+  else if (t === 'under construction') { name = 'hammer'; color = '#d97706'; }
+  else if (t === 'special offer') { name = 'percent'; color = '#f43f5e'; }
+  else if (t === 'announcement') { name = 'bullhorn'; color = '#3b82f6'; }
+  else if (t.includes('leak') || t.includes('drain') || t.includes('water') || t.includes('pipe') || t.includes('sump') || t.includes('clogged')) { name = 'tint'; color = '#3b82f6'; }
+  else if (t.includes('wiring') || t.includes('panel') || t.includes('lighting') || t.includes('charger') || t.includes('smart') || t.includes('outlet') || t.includes('generator') || t.includes('safety')) { name = 'bolt'; color = '#eab308'; }
+  else if (t.includes('paint') || t.includes('refinish') || t.includes('stain') || t.includes('wallpaper') || t.includes('drywall') || t.includes('color')) { name = 'paint-brush'; color = '#a855f7'; }
+  else if (t.includes('roof') || t.includes('gutter') || t.includes('shingle') || t.includes('siding') || t.includes('storm')) { name = 'home'; color = '#57534e'; }
+  else if (t.includes('clean') || t.includes('wash') || t.includes('housekeep')) { name = 'magic'; color = '#06b6d4'; }
+  else if (t.includes('bath') || t.includes('shower')) { name = 'bath'; color = '#0d9488'; }
+  else if (t.includes('tree') || t.includes('garden') || t.includes('lawn') || t.includes('irrigation') || t.includes('patio') || t.includes('landscape')) { name = 'tree'; color = '#10b981'; }
+
+  return <FontAwesome5 name={name} size={9} color={color} style={{ marginRight: 4 }} />;
+};
+
 const TABS = [
   { key: 'posts', label: 'Posts' },
   { key: 'about', label: 'About Us' },
@@ -211,7 +304,7 @@ const ContractorDashboardScreen: React.FC = () => {
   const [replySubmitting, setReplySubmitting] = useState(false);
 
   const [postCaption, setPostCaption] = useState('');
-  const [postTags, setPostTags] = useState('');
+  const [postTags, setPostTags] = useState<string[]>([]);
   const [postLocation, setPostLocation] = useState('');
   const [postImages, setPostImages] = useState<string[]>([]);
   const [postSubmitting, setPostSubmitting] = useState(false);
@@ -253,6 +346,8 @@ const ContractorDashboardScreen: React.FC = () => {
   const [avatarUrl, setAvatarUrl] = useState('');
   const [contractorName, setContractorName] = useState('');
   const [licenseStatus, setLicenseStatus] = useState<string>('not_submitted');
+  const [contractorCategory, setContractorCategory] = useState('general');
+  const [postCategory, setPostCategory] = useState('general');
   const [onboardingComplete, setOnboardingComplete] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(false);
 
@@ -490,6 +585,7 @@ const ContractorDashboardScreen: React.FC = () => {
       setReviews(Array.isArray(reviewsData) ? reviewsData : []);
       setPortfolio(normalizedPortfolio);
       setContractorName(name);
+      setContractorCategory(cat || 'general');
       setBannerUrl(getCoverImageUrl(name, rawBanner, cat));
       const rawBanners = profile.bannerImages || [];
       const banners = (Array.isArray(rawBanners) && rawBanners.length > 0) ? rawBanners : (rawBanner ? [rawBanner] : []);
@@ -555,6 +651,7 @@ const ContractorDashboardScreen: React.FC = () => {
     // Handle opening the create post sheet
     const openCreatePost = (route.params as any)?.openCreatePost;
     if (openCreatePost) {
+      setPostCategory(contractorCategory);
       setShowCreatePost(true);
       navigation.setParams({ openCreatePost: undefined } as any);
     }
@@ -583,9 +680,9 @@ const ContractorDashboardScreen: React.FC = () => {
       const uploadedUrls = await Promise.all(
         postImages.map(img => uploadToCloudinary(img, CLOUDINARY_FOLDERS.POST_IMAGES))
       );
-      const tags = postTags.split(',').map(t => t.trim()).filter(Boolean);
+      const tags = postTags;
       await createPost({ caption: postCaption, images: uploadedUrls, tags, location: postLocation });
-      setPostCaption(''); setPostTags(''); setPostLocation(''); setPostImages([]);
+      setPostCaption(''); setPostTags([]); setPostLocation(''); setPostImages([]);
       setShowCreatePost(false);
       loadData();
       Alert.alert('Success', 'Post created successfully');
@@ -716,7 +813,7 @@ const ContractorDashboardScreen: React.FC = () => {
 
       const updateData: any = {
         description: editableData.description || undefined,
-        pricing: editableData.pricing || undefined,
+        pricing: '',
         certifications: Array.isArray(editableData.certifications) ? editableData.certifications : editableData.certifications?.split(",").map((s: string) => s.trim()).filter(Boolean) || [],
         zipCodesCovered: editableData.zipCodes.length > 0 ? editableData.zipCodes : undefined,
         licenseNumber: editableData.licenseNumber || undefined,
@@ -953,7 +1050,7 @@ const ContractorDashboardScreen: React.FC = () => {
           {activeTab === 'posts' && (
             <View style={{ gap: 16 }}>
               {/* Create Post Card */}
-              <Pressable onPress={() => setShowCreatePost(true)} className="bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-700 p-4">
+              <Pressable onPress={() => { setPostCategory(contractorCategory); setShowCreatePost(true); }} className="bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-700 p-4">
                 <View className="flex-row items-center" style={{ gap: 8 }}>
                   <FontAwesome5 name="pen" size={14} color="#a3a3a3" />
                   <Text className="text-sm text-neutral-400 dark:text-neutral-500">What's new with your business?</Text>
@@ -974,25 +1071,73 @@ const ContractorDashboardScreen: React.FC = () => {
               {posts.length === 0 ? (
                 <EmptyState icon="file-alt" title="No posts yet" message="Share updates about your business" />
               ) : (
-                <View style={{ gap: 12 }}>
+                <View style={{ gap: 14 }}>
                   {posts.map(post => (
-                    <View key={post._id} className="bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-700 overflow-hidden">
+                    <View key={post._id} className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-100 dark:border-neutral-800 overflow-hidden shadow-sm">
+                      
+                      {/* Post Card Header */}
+                      <View className="p-4 flex-row items-start justify-between border-b border-neutral-50 dark:border-neutral-800">
+                        <View className="flex-row items-center" style={{ gap: 10 }}>
+                          {avatarUrl ? (
+                            <Image source={{ uri: avatarUrl }} className="w-9 h-9 rounded-full border border-neutral-100 dark:border-neutral-800" />
+                          ) : (
+                            <View className="w-9 h-9 bg-indigo-50 dark:bg-indigo-950 rounded-full items-center justify-center">
+                              <Text className="text-sm font-bold text-indigo-600 dark:text-indigo-400">
+                                {contractorName ? contractorName.charAt(0) : 'B'}
+                              </Text>
+                            </View>
+                          )}
+                          <View>
+                            <Text className="text-sm font-bold text-neutral-900 dark:text-white leading-tight">{contractorName || 'My Business'}</Text>
+                            <View className="flex-row items-center mt-1" style={{ gap: 6 }}>
+                              <Text className="text-[10px] text-neutral-400 dark:text-neutral-500">{formatDate(post.createdAt)}</Text>
+                              {post.location && (
+                                <>
+                                  <Text className="text-neutral-300 dark:text-neutral-600 text-[8px]">•</Text>
+                                  <View className="flex-row items-center bg-emerald-50 dark:bg-emerald-950/50 px-1.5 py-0.5 rounded-md" style={{ gap: 2 }}>
+                                    <FontAwesome5 name="map-marker-alt" size={8} color="#059669" />
+                                    <Text className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400">{post.location}</Text>
+                                  </View>
+                                </>
+                              )}
+                            </View>
+                          </View>
+                        </View>
+                        
+                        <Pressable 
+                          onPress={() => handleDeletePost(post._id)}
+                          className="p-1.5 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800"
+                        >
+                          <FontAwesome5 name="trash" size={12} color="#a3a3a3" />
+                        </Pressable>
+                      </View>
+
+                      {/* Post Card Image */}
                       {post.images?.length > 0 && (
-                        <View className="aspect-video bg-neutral-100 dark:bg-neutral-800">
+                        <View className="aspect-video bg-neutral-100 dark:bg-neutral-850">
                           <Image source={{ uri: post.images[0] }} className="w-full h-full" resizeMode="cover" />
                         </View>
                       )}
+
+                      {/* Post Card Body */}
                       <View className="p-4">
-                        <Text className="text-sm text-neutral-800 dark:text-neutral-100" style={{ lineHeight: 20 }}>{post.caption}</Text>
-                        <View className="flex-row items-center justify-end mt-3">
-                          <View className="flex-row items-center" style={{ gap: 8 }}>
-                            <Text className="text-xs text-neutral-400 dark:text-neutral-500">{formatDate(post.createdAt)}</Text>
-                            <Pressable onPress={() => handleDeletePost(post._id)}>
-                              <FontAwesome5 name="trash" size={12} color="#a3a3a3" />
-                            </Pressable>
+                        <Text className="text-sm text-neutral-800 dark:text-neutral-200" style={{ lineHeight: 20 }}>
+                          {post.caption}
+                        </Text>
+                        
+                        {/* Post Card Tags */}
+                        {post.tags && post.tags.length > 0 && (
+                          <View className="flex-row flex-wrap mt-3" style={{ gap: 6 }}>
+                            {post.tags.map((tag: string, idx: number) => (
+                              <View key={idx} className="flex-row items-center border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 px-2.5 py-1 rounded-full" style={{ gap: 4, marginRight: 4, marginBottom: 4 }}>
+                                {getMobileTagIcon(tag)}
+                                <Text className="text-[10px] font-bold text-neutral-700 dark:text-neutral-300">{tag}</Text>
+                              </View>
+                            ))}
                           </View>
-                        </View>
+                        )}
                       </View>
+
                     </View>
                   ))}
                 </View>
@@ -1645,72 +1790,132 @@ const ContractorDashboardScreen: React.FC = () => {
 
       {/* ==================== CREATE POST SHEET ==================== */}
       <Sheet visible={showCreatePost} onClose={() => setShowCreatePost(false)} title="Create Post">
-        <Text className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 dark:text-neutral-500 mb-1">Caption</Text>
+        <Text className="text-xs font-bold text-neutral-600 dark:text-neutral-300 mb-1.5">Caption</Text>
         <TextInput
           value={postCaption}
           onChangeText={setPostCaption}
-          placeholder="What's new with your projects?"
+          placeholder="Share an update, recent project details, or announcements with homeowners..."
           placeholderTextColor="#a3a3a3"
           multiline
           numberOfLines={3}
-          className="w-full border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-3 text-sm mb-3"
-          style={{ textAlignVertical: 'top', minHeight: 80 }}
+          className="w-full border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-3 text-sm mb-4 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white"
+          style={{ textAlignVertical: 'top', minHeight: 90 }}
         />
-        <Text className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 dark:text-neutral-500 mb-1">Tags (comma-separated)</Text>
-        <TextInput
-          value={postTags}
-          onChangeText={setPostTags}
-          placeholder="#Renovation, #Bathroom"
-          placeholderTextColor="#a3a3a3"
-          className="w-full border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm mb-3"
-        />
-        <Text className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 dark:text-neutral-500 mb-1">Location (Optional)</Text>
-        <TextInput
-          value={postLocation}
-          onChangeText={setPostLocation}
-          placeholder="e.g., Queens, NY"
-          placeholderTextColor="#a3a3a3"
-          className="w-full border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm mb-3"
-        />
+
+        <Text className="text-xs font-bold text-neutral-600 dark:text-neutral-300 mb-2">Project Category</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-4" style={{ marginBottom: 16 }}>
+          <View className="flex-row" style={{ gap: 8 }}>
+            {CATEGORIES_LIST.map(cat => {
+              const isSelected = postCategory === cat.id;
+              return (
+                <Pressable
+                  key={cat.id}
+                  onPress={() => {
+                    setPostCategory(cat.id);
+                    setPostTags([]); // Clear tags when category changes
+                  }}
+                  className={`px-3 py-1.5 rounded-full border ${
+                    isSelected
+                      ? 'bg-indigo-600 border-indigo-600'
+                      : 'bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-700'
+                  }`}
+                >
+                  <Text className={`text-xs font-bold ${isSelected ? 'text-white' : 'text-neutral-600 dark:text-neutral-300'}`}>
+                    {cat.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </ScrollView>
+
+        <Text className="text-xs font-bold text-neutral-600 dark:text-neutral-300 mb-2">Select Tags</Text>
+        <View className="flex-row flex-wrap mb-4" style={{ gap: 8, marginBottom: 16 }}>
+          {(TAG_MAP[postCategory] || TAG_MAP.general).map((tag: string) => {
+            const isSelected = postTags.includes(tag);
+            return (
+              <Pressable
+                key={tag}
+                onPress={() => {
+                  setPostTags(prev =>
+                    prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+                  );
+                }}
+                className={`px-3 py-1.5 rounded-full border ${
+                  isSelected
+                    ? 'bg-indigo-600 border-indigo-600'
+                    : 'bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-700'
+                }`}
+              >
+                <Text className={`text-xs font-bold ${isSelected ? 'text-white' : 'text-neutral-600 dark:text-neutral-300'}`}>
+                  {tag}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        <Text className="text-xs font-bold text-neutral-600 dark:text-neutral-300 mb-1.5">Location</Text>
+        <View className="w-full flex-row items-center border border-neutral-200 dark:border-neutral-700 rounded-xl px-3 mb-4 bg-white dark:bg-neutral-900">
+          <FontAwesome5 name="map-marker-alt" size={12} color="#a3a3a3" style={{ marginRight: 8 }} />
+          <TextInput
+            value={postLocation}
+            onChangeText={setPostLocation}
+            placeholder="Job location (city/neighborhood)"
+            placeholderTextColor="#a3a3a3"
+            className="flex-1 py-2 text-sm text-neutral-900 dark:text-white"
+          />
+        </View>
+
+        <Text className="text-xs font-bold text-neutral-600 dark:text-neutral-300 mb-1.5">Photos</Text>
         <Pressable
           onPress={handleAddImage}
           disabled={imageLoading}
-          className="w-full border-2 border-dashed border-neutral-200 dark:border-neutral-700 rounded-lg p-5 items-center mb-3"
+          className="w-full border border-dashed border-neutral-200 dark:border-neutral-700 rounded-xl p-4 items-center justify-center mb-5 min-h-[90px] bg-neutral-50/50 dark:bg-neutral-900/50"
         >
           {postImages.length > 0 ? (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              <View className="flex-row" style={{ gap: 8 }}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} className="w-full">
+              <View className="flex-row" style={{ gap: 10 }}>
                 {postImages.map((img, idx) => (
-                  <View key={idx} className="w-14 h-14 rounded-lg overflow-hidden relative">
+                  <View key={idx} className="w-16 h-16 rounded-xl overflow-hidden relative border border-neutral-100 dark:border-neutral-800">
                     <Image source={{ uri: img }} className="w-full h-full" />
                     <Pressable
                       onPress={() => setPostImages(prev => prev.filter((_, i) => i !== idx))}
-                      className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-black/60 items-center justify-center"
+                      className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/75 items-center justify-center"
                     >
                       <FontAwesome5 name="times" size={8} color="#fff" />
                     </Pressable>
                   </View>
                 ))}
+                <View className="w-16 h-16 rounded-xl border border-dashed border-neutral-300 flex items-center justify-center bg-white dark:bg-neutral-800">
+                  <FontAwesome5 name="plus" size={12} color="#a3a3a3" />
+                </View>
               </View>
             </ScrollView>
           ) : (
             <View className="items-center" style={{ gap: 6 }}>
-              <FontAwesome5 name="image" size={20} color="#a3a3a3" />
-              <Text className="text-sm text-neutral-500 dark:text-neutral-400 dark:text-neutral-500">{imageLoading ? 'Uploading...' : 'Tap to upload photos'}</Text>
+              <FontAwesome5 name="images" size={18} color="#a3a3a3" />
+              <Text className="text-xs font-bold text-neutral-700 dark:text-neutral-300">{imageLoading ? 'Uploading...' : 'Tap to upload photos'}</Text>
+              <Text className="text-[10px] text-neutral-400 dark:text-neutral-500">Showcase your recent job (max 3MB per file)</Text>
             </View>
           )}
         </Pressable>
+
         <Pressable
           onPress={handleCreatePost}
           disabled={!postCaption.trim() || postSubmitting}
-          className={`w-full py-3 rounded-xl items-center flex-row justify-center ${
-            postCaption.trim() ? 'bg-indigo-600' : 'bg-neutral-200'
+          className={`w-full py-3.5 rounded-xl items-center flex-row justify-center shadow-sm ${
+            postCaption.trim() ? 'bg-indigo-600' : 'bg-neutral-100 dark:bg-neutral-800'
           }`}
           style={{ gap: 8 }}
         >
-          {postSubmitting && <ActivityIndicator size="small" color="#fff" />}
-          <Text className={`text-sm font-semibold ${postCaption.trim() ? 'text-white' : 'text-neutral-400 dark:text-neutral-500'}`}>
-            {postSubmitting ? 'Publishing...' : 'Publish Post'}
+          {postSubmitting ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <FontAwesome5 name="paper-plane" size={12} color={postCaption.trim() ? '#fff' : '#a3a3a3'} />
+          )}
+          <Text className={`text-sm font-bold ${postCaption.trim() ? 'text-white' : 'text-neutral-400 dark:text-neutral-500'}`}>
+            {postSubmitting ? 'Publishing...' : 'Publish Update'}
           </Text>
         </Pressable>
       </Sheet>
@@ -2025,16 +2230,7 @@ const ContractorDashboardScreen: React.FC = () => {
                       style={{ textAlignVertical: "top", minHeight: 100 }}
                   />
                 </View>
-                <View>
-                  <Text className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 dark:text-neutral-500 mb-1.5">Pricing Info</Text>
-                  <TextInput
-                    value={editableData.pricing}
-                    onChangeText={t => setEditableData(p => ({ ...p, pricing: t }))}
-                      placeholder="e.g. $500 - $5,000"
-                      placeholderTextColor="#a3a3a3"
-                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm text-neutral-900 dark:text-white"
-                    />
-                </View>
+
                 <View>
                   <Text className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 dark:text-neutral-500 mb-1.5">Certifications</Text>
                   <TextInput

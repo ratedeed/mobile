@@ -1,15 +1,14 @@
 import React, { useState, useRef } from 'react';
 import {
   View,
-  Image,
   StyleSheet,
-  ScrollView,
+  FlatList,
   TouchableOpacity,
   Text,
   Dimensions,
-  Animated,
 } from 'react-native';
 import { Colors, Spacing, Radii } from '../../constants/designTokens';
+import LazyImage from './LazyImage';
 
 interface ImageGalleryProps {
   images: string[];
@@ -20,25 +19,28 @@ interface ImageGalleryProps {
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-const ImageGallery: React.FC<ImageGalleryProps> = ({
+export const ImageGallery: React.FC<ImageGalleryProps> = ({
   images,
   height = 250,
   onImagePress,
   showPagination = true,
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
-  const scrollRef = useRef<ScrollView>(null);
+  const flatListRef = useRef<FlatList>(null);
 
-  const handleScroll = (event: any) => {
-    const slideWidth = SCREEN_WIDTH;
-    const offset = event.nativeEvent.contentOffset.x;
-    const index = Math.round(offset / slideWidth);
-    setActiveIndex(index);
-  };
+  const onViewableItemsChanged = useRef(({ viewableItems }: any) => {
+    if (viewableItems && viewableItems.length > 0) {
+      setActiveIndex(viewableItems[0].index || 0);
+    }
+  }).current;
+
+  const viewabilityConfig = useRef({
+    itemVisiblePercentThreshold: 50,
+  }).current;
 
   const goToImage = (index: number) => {
-    scrollRef.current?.scrollTo({
-      x: index * SCREEN_WIDTH,
+    flatListRef.current?.scrollToIndex({
+      index,
       animated: true,
     });
     setActiveIndex(index);
@@ -56,28 +58,32 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
 
   return (
     <View style={styles.container}>
-      <ScrollView
-        ref={scrollRef}
+      <FlatList
+        ref={flatListRef}
+        data={images}
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
-      >
-        {images.map((uri, index) => (
+        onViewableItemsChanged={onViewableItemsChanged}
+        viewabilityConfig={viewabilityConfig}
+        keyExtractor={(_, index) => index.toString()}
+        windowSize={3}
+        maxToRenderPerBatch={2}
+        removeClippedSubviews={true}
+        renderItem={({ item, index }) => (
           <TouchableOpacity
-            key={index}
             activeOpacity={0.9}
             onPress={() => onImagePress?.(index)}
+            accessibilityRole="imagebutton"
+            accessibilityLabel={`View full screen image ${index + 1} of ${images.length}`}
           >
-            <Image
-              source={{ uri }}
+            <LazyImage
+              uri={item}
               style={[styles.image, { width: SCREEN_WIDTH, height }]}
-              resizeMode="cover"
             />
           </TouchableOpacity>
-        ))}
-      </ScrollView>
+        )}
+      />
 
       {showPagination && images.length > 1 && (
         <View style={styles.pagination}>
@@ -86,6 +92,9 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
               <TouchableOpacity
                 key={index}
                 onPress={() => goToImage(index)}
+                hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
+                accessibilityLabel={`Go to slide ${index + 1}`}
+                accessibilityRole="button"
               >
                 <View
                   style={[

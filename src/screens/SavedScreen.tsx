@@ -12,6 +12,8 @@ import {
   RefreshControl,
   useColorScheme,
   FlatList,
+  Alert,
+  Platform,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -112,8 +114,13 @@ const SavedScreen = () => {
 
   const handleRemove = useCallback(async (id: string) => {
     HapticFeedback.selection();
-    await removeFavorite(id);
     setSavedIds((prev) => prev.filter((sid) => sid !== id));
+    try {
+      await removeFavorite(id);
+    } catch (err) {
+      setSavedIds((prev) => [...prev, id]);
+      Alert.alert('Error', 'Failed to remove favorite from server. Please try again.');
+    }
   }, []);
 
   const savedContractors = useMemo(() => {
@@ -324,6 +331,9 @@ const SavedScreen = () => {
               />
             }
             showsVerticalScrollIndicator={false}
+            windowSize={5}
+            maxToRenderPerBatch={8}
+            removeClippedSubviews={Platform.OS === 'android'}
           />
         </View>
       )}

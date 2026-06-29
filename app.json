@@ -2,7 +2,7 @@
   "expo": {
     "name": "RateDeed",
     "slug": "ratedeed",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./icon.png",
     "newArchEnabled": true,
@@ -14,7 +14,7 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "buildNumber": "28",
+      "buildNumber": "29",
       "supportsTablet": true,
       "bundleIdentifier": "com.ratedeed.app",
       "associatedDomains": [
@@ -35,7 +35,7 @@
       }
     },
     "android": {
-      "versionCode": 28,
+      "versionCode": 29,
       "adaptiveIcon": {
         "foregroundImage": "./icon.png",
         "backgroundColor": "#ffffff"
@@ -66,7 +66,9 @@
         "backgroundColor": "#ffffff"
       },
       "permissions": [
-        "android.permission.CAMERA"
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_IMAGES"
       ]
     },
     "web": {

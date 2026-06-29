@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Image,
@@ -9,9 +9,9 @@ import {
   Animated,
   PanResponder,
   Modal,
-  StatusBar,
 } from 'react-native';
-import { Colors, Spacing } from '../constants/designTokens';
+import { StatusBar } from 'expo-status-bar';
+import { Spacing } from '../constants/designTokens';
 
 interface ImageLightboxProps {
   images: string[];
@@ -34,6 +34,16 @@ const ImageLightbox: React.FC<ImageLightboxProps> = ({
   const pan = useRef(new Animated.ValueXY()).current;
   const scaleValue = useRef(new Animated.Value(1)).current;
   const lastTap = useRef(0);
+
+  useEffect(() => {
+    if (visible) {
+      setCurrentIndex(initialIndex);
+      setScale(1);
+      scaleValue.setValue(1);
+      pan.setValue({ x: 0, y: 0 });
+      pan.setOffset({ x: 0, y: 0 });
+    }
+  }, [visible, initialIndex, pan, scaleValue]);
 
   const panResponder = useRef(
     PanResponder.create({
@@ -88,10 +98,16 @@ const ImageLightbox: React.FC<ImageLightboxProps> = ({
       onRequestClose={onClose}
       statusBarTranslucent
     >
-      <StatusBar backgroundColor="#000" barStyle="light-content" />
+      <StatusBar style="light" />
       <View style={styles.container}>
         {/* Close button - top right */}
-        <TouchableOpacity style={styles.closeButton} onPress={onClose} activeOpacity={0.7}>
+        <TouchableOpacity 
+          style={styles.closeButton} 
+          onPress={onClose} 
+          activeOpacity={0.7}
+          accessibilityLabel="Close lightbox"
+          accessibilityRole="button"
+        >
           <Text style={styles.closeText}>✕</Text>
         </TouchableOpacity>
 
@@ -108,6 +124,8 @@ const ImageLightbox: React.FC<ImageLightboxProps> = ({
             },
           ]}
           {...panResponder.panHandlers}
+          accessibilityRole="image"
+          accessibilityLabel={`Image ${currentIndex + 1} of ${images.length}`}
         >
           <TouchableOpacity
             activeOpacity={1}
@@ -130,6 +148,9 @@ const ImageLightbox: React.FC<ImageLightboxProps> = ({
                 <TouchableOpacity
                   key={index}
                   onPress={() => setCurrentIndex(index)}
+                  hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
+                  accessibilityLabel={`View image ${index + 1}`}
+                  accessibilityRole="button"
                 >
                   <View
                     style={[
