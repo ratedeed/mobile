@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef, memo } from 'react';
 import {
   View,
   ScrollView,
@@ -71,7 +71,7 @@ function derivePrice(c: Contractor): string | null {
 }
 
 // ---- Listing Card ----
-const ListingCard = ({
+const ListingCard = memo(({
   listing,
   isFavorite,
   onToggleFavorite,
@@ -191,7 +191,11 @@ const ListingCard = ({
       </View>
     </Pressable>
   );
-};
+}, (prevProps, nextProps) => {
+  return prevProps.listing._id === nextProps.listing._id &&
+         prevProps.isFavorite === nextProps.isFavorite &&
+         prevProps.detectedZip === nextProps.detectedZip;
+});
 
 // ---- Category matching logic (same as web) ----
 function matchesCategory(contractor: Contractor, catId: string, catLabel: string): boolean {
@@ -270,9 +274,6 @@ const HomeScreen = () => {
   };
 
   // 3-tier zip expansion — same as web version (HomePage.tsx lines 112-172)
-  // Tier 1: exact zip match
-  // Tier 2: 3-digit prefix (same local area) — checks serviceZipCodes
-  // Tier 3: 2-digit prefix (wider region/state) — checks serviceZipCodes
   const loadContractors = useCallback(async (zip?: string | null, pageNum = 1, append = false) => {
     if (pageNum === 1) {
       setLoading(true);
@@ -346,7 +347,7 @@ const HomeScreen = () => {
     if (mountedRef.current) setRefreshing(false);
   }, [fetchLocationAndData]);
 
-  const toggleFav = async (id: string) => {
+  const toggleFav = useCallback(async (id: string) => {
     if (!isAuthenticated) {
       setShowGuestPrompt(true);
       return;
@@ -375,36 +376,77 @@ const HomeScreen = () => {
         return n;
       });
     }
-  };
+  }, [isAuthenticated, favorites]);
 
-  const handleContractorPress = (contractor: Contractor) => {
+  const handleContractorPress = useCallback((contractor: Contractor) => {
     HapticFeedback.selection();
     if (contractor.slug) {
       navigation.navigate('BusinessDetail', { id: contractor._id, slug: contractor.slug });
     } else {
       navigation.navigate('BusinessDetail', { id: contractor._id });
     }
-  };
+  }, [navigation]);
 
   const handleLoadMore = useCallback(() => {
+    if (activeCategory === 'all') return; // Do not paginate in landing grouped view
     if (!loadingMore && hasMore && !loading) {
       loadContractors(searchZip || null, page + 1, true);
     }
-  }, [loadingMore, hasMore, loading, page, searchZip, loadContractors]);
+  }, [activeCategory, loadingMore, hasMore, loading, page, searchZip, loadContractors]);
 
-  const renderContractorCard = useCallback(
-    ({ item }: { item: any }) => (
-      <View className="w-[48%] mb-4">
-        <ListingCard
-          listing={item}
-          isFavorite={favorites.has(item._id)}
-          onToggleFavorite={() => toggleFav(item._id)}
-          detectedZip={ipZipCode}
-          onPress={() => handleContractorPress(item)}
-        />
-      </View>
-    ),
-    [favorites, ipZipCode, handleContractorPress, toggleFav]
+  const renderListItem = useCallback(
+    ({ item }: { item: any }) => {
+      if (activeCategory === 'all') {
+        // item is a category object
+        const cat = item;
+        const catContractors = allContractors
+          .filter((c) => matchesCategory(c, cat.id, cat.label))
+          .slice(0, 8);
+
+        if (catContractors.length === 0) return null;
+
+        return (
+          <View key={cat.id} className="flex-col px-4 mb-10" style={{ gap: 16 }}>
+            <View className="flex-row items-center justify-between">
+              <Text className="text-xl font-bold text-neutral-900 dark:text-neutral-50">{cat.label}</Text>
+              <Pressable
+                onPress={() => setActiveCategory(cat.id)}
+                className="w-8 h-8 items-center justify-center rounded-full bg-neutral-100 dark:bg-neutral-800"
+              >
+                <FontAwesome5 name="arrow-right" size={12} color={isDark ? '#a3a3a3' : '#6b7280'} />
+              </Pressable>
+            </View>
+            <View className="flex-row flex-wrap justify-between">
+              {catContractors.map((c) => (
+                <View key={c._id} className="w-[48%]">
+                  <ListingCard
+                    listing={c}
+                    isFavorite={favorites.has(c._id)}
+                    onToggleFavorite={() => toggleFav(c._id)}
+                    detectedZip={ipZipCode}
+                    onPress={() => handleContractorPress(c)}
+                  />
+                </View>
+              ))}
+            </View>
+          </View>
+        );
+      } else {
+        // item is a contractor object
+        return (
+          <View className="w-[48%] mb-4">
+            <ListingCard
+              listing={item}
+              isFavorite={favorites.has(item._id)}
+              onToggleFavorite={() => toggleFav(item._id)}
+              detectedZip={ipZipCode}
+              onPress={() => handleContractorPress(item)}
+            />
+          </View>
+        );
+      }
+    },
+    [activeCategory, allContractors, favorites, ipZipCode, isDark, handleContractorPress, toggleFav]
   );
 
   const renderHeader = useCallback(
@@ -513,84 +555,6 @@ const HomeScreen = () => {
         </View>
 
         <View className="h-[1px] bg-neutral-200 dark:bg-neutral-800 -mx-4 mt-2 mb-4" />
-
-        {activeCategory === 'all' && (
-          <View className="px-4 pt-4 w-full max-w-7xl mx-auto mb-20">
-            {loading ? (
-              /* Loading Skeletons */
-              <View className="flex-row flex-wrap justify-between">
-                {Array.from({ length: 10 }).map((_, i) => (
-                  <View key={i} className="w-[48%] mb-4">
-                    <Skeleton width="100%" height={150} borderRadius={12} />
-                    <View className="mt-2" style={{ gap: 6 }}>
-                      <Skeleton width="75%" height={14} />
-                      <Skeleton width="50%" height={12} />
-                      <Skeleton width="33%" height={12} />
-                    </View>
-                  </View>
-                ))}
-              </View>
-            ) : loadError ? (
-              <View className="items-center justify-center py-20 px-6">
-                <View className="w-16 h-16 bg-red-50 dark:bg-red-900/20 rounded-full items-center justify-center mb-4">
-                  <FontAwesome5 name="exclamation-triangle" size={24} color="#ef4444" />
-                </View>
-                <Text className="text-lg font-bold text-neutral-900 dark:text-neutral-50">Something went wrong</Text>
-                <Text className="text-sm text-neutral-500 dark:text-neutral-400 mt-1 text-center">
-                  Could not load contractors. Pull down to retry.
-                </Text>
-              </View>
-            ) : (
-              /* Bunch by Category View */
-              <View className="flex-col" style={{ gap: 40 }}>
-                {CATEGORIES.filter((cat) => cat.id !== 'all').map((cat) => {
-                  const catContractors = allContractors
-                    .filter((c) => matchesCategory(c, cat.id, cat.label))
-                    .slice(0, 8);
-
-                  if (catContractors.length === 0) return null;
-
-                  return (
-                    <View key={cat.id} className="flex-col" style={{ gap: 16 }}>
-                      <View className="flex-row items-center justify-between">
-                        <Text className="text-xl font-bold text-neutral-900 dark:text-neutral-50">{cat.label}</Text>
-                        <Pressable
-                          onPress={() => setActiveCategory(cat.id)}
-                          className="w-8 h-8 items-center justify-center rounded-full bg-neutral-100 dark:bg-neutral-800"
-                        >
-                          <FontAwesome5 name="arrow-right" size={12} color={isDark ? '#a3a3a3' : '#6b7280'} />
-                        </Pressable>
-                      </View>
-                      <View className="flex-row flex-wrap justify-between">
-                        {catContractors.map((c) => (
-                          <View key={c._id} className="w-[48%]">
-                            <ListingCard
-                              listing={c}
-                              isFavorite={favorites.has(c._id)}
-                              onToggleFavorite={() => toggleFav(c._id)}
-                              detectedZip={ipZipCode}
-                              onPress={() => handleContractorPress(c)}
-                            />
-                          </View>
-                        ))}
-                      </View>
-                    </View>
-                  );
-                })}
-                {allContractors.length === 0 && (
-                  <View className="items-center justify-center py-20">
-                    <Text className="text-lg font-medium text-neutral-500 dark:text-neutral-400">
-                      No contractors found
-                    </Text>
-                    <Text className="text-sm text-neutral-400 dark:text-neutral-50 mt-2 text-center">
-                      Try adjusting your location or check back later.
-                    </Text>
-                  </View>
-                )}
-              </View>
-            )}
-          </View>
-        )}
       </View>
     ),
     [
@@ -599,20 +563,14 @@ const HomeScreen = () => {
       nearbyLabel,
       activeCategory,
       CATEGORIES,
-      allContractors,
-      loading,
-      loadError,
-      favorites,
-      ipZipCode,
-      isDark,
       loadContractors,
-      toggleFav,
-      handleContractorPress,
     ]
   );
 
   const renderFooter = useCallback(() => {
-    if (activeCategory === 'all') return null;
+    if (activeCategory === 'all') {
+      return <View className="h-20" />;
+    }
     if (allContractors.length === 0) return null;
     return (
       <View className="items-center py-6 mb-20">
@@ -638,18 +596,43 @@ const HomeScreen = () => {
   }, [activeCategory, allContractors.length, loadingMore, hasMore, isDark, handleLoadMore]);
 
   const renderEmptyList = useCallback(() => {
-    if (activeCategory === 'all') return null;
     if (loading) {
+      // Render skeletons
+      const skeletonCount = activeCategory === 'all' ? 4 : 10;
       return (
         <View className="flex-row flex-wrap justify-between px-4">
-          {Array.from({ length: 10 }).map((_, i) => (
-            <View key={i} className="w-[48%] mb-4">
-              <View className="aspect-square bg-neutral-100 dark:bg-neutral-900 rounded-xl" />
-              <View className="mt-2" style={{ gap: 6 }}>
-                <View className="h-3.5 bg-neutral-100 dark:bg-neutral-900 rounded w-3/4" />
-                <View className="h-3 bg-neutral-100 dark:bg-neutral-900 rounded w-1/2" />
-                <View className="h-3 bg-neutral-100 dark:bg-neutral-900 rounded w-1/3" />
-              </View>
+          {Array.from({ length: skeletonCount }).map((_, i) => (
+            <View key={i} className={activeCategory === 'all' ? "w-full mb-8" : "w-[48%] mb-4"}>
+              {activeCategory === 'all' ? (
+                <View style={{ gap: 12 }}>
+                  <Skeleton width="40%" height={24} borderRadius={6} />
+                  <View className="flex-row justify-between">
+                    <View className="w-[48%]">
+                      <Skeleton width="100%" height={150} borderRadius={12} />
+                      <View className="mt-2" style={{ gap: 6 }}>
+                        <Skeleton width="75%" height={14} />
+                        <Skeleton width="50%" height={12} />
+                      </View>
+                    </View>
+                    <View className="w-[48%]">
+                      <Skeleton width="100%" height={150} borderRadius={12} />
+                      <View className="mt-2" style={{ gap: 6 }}>
+                        <Skeleton width="75%" height={14} />
+                        <Skeleton width="50%" height={12} />
+                      </View>
+                    </View>
+                  </View>
+                </View>
+              ) : (
+                <View>
+                  <Skeleton width="100%" height={150} borderRadius={12} />
+                  <View className="mt-2" style={{ gap: 6 }}>
+                    <Skeleton width="75%" height={14} />
+                    <Skeleton width="50%" height={12} />
+                    <Skeleton width="33%" height={12} />
+                  </View>
+                </View>
+              )}
             </View>
           ))}
         </View>
@@ -669,8 +652,11 @@ const HomeScreen = () => {
       );
     }
     return (
-      <View className="items-center justify-center py-20">
+      <View className="items-center justify-center py-20 px-4">
         <Text className="text-lg font-medium text-neutral-500 dark:text-neutral-400">No contractors found</Text>
+        <Text className="text-sm text-neutral-400 dark:text-neutral-500 mt-2 text-center">
+          Try adjusting your location or check back later.
+        </Text>
       </View>
     );
   }, [activeCategory, loading, loadError]);
@@ -690,6 +676,13 @@ const HomeScreen = () => {
     return list;
   }, [allContractors, activeCategory, searchName]);
 
+  const data = useMemo(() => {
+    if (activeCategory === 'all') {
+      return allContractors.length === 0 ? [] : CATEGORIES.filter(cat => cat.id !== 'all');
+    }
+    return filtered;
+  }, [activeCategory, allContractors.length, filtered]);
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -697,9 +690,9 @@ const HomeScreen = () => {
     >
       <FlatList
         key={activeCategory === 'all' ? 'single' : 'grid'}
-        data={activeCategory === 'all' ? [] : filtered}
-        renderItem={renderContractorCard}
-        keyExtractor={(item) => item._id}
+        data={data}
+        renderItem={renderListItem}
+        keyExtractor={(item) => item.id || item._id}
         numColumns={activeCategory === 'all' ? 1 : 2}
         columnWrapperStyle={
           activeCategory === 'all' ? undefined : { justifyContent: 'space-between', paddingHorizontal: 16 }
