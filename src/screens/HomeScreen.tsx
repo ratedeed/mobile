@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
   useColorScheme,
   FlatList,
+  Dimensions,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -44,6 +45,9 @@ const CATEGORIES = [
 ];
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const CARD_WIDTH = SCREEN_WIDTH * 0.45; // Show 2 cards fully, and the 3rd card's edge
 
 // ---- Helpers ----
 function deriveLocation(c: Contractor): string {
@@ -446,13 +450,13 @@ const HomeScreen = () => {
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 decelerationRate="fast"
-                snapToInterval={256}
+                snapToInterval={CARD_WIDTH + 12}
                 snapToAlignment="start"
                 contentContainerStyle={{ paddingHorizontal: 16 }}
                 className="-mx-4"
               >
                 {catContractors.map((c) => (
-                  <View key={c._id} style={{ width: 240, marginRight: 16 }}>
+                  <View key={c._id} style={{ width: CARD_WIDTH, marginRight: 12 }}>
                     <ListingCard
                       listing={c}
                       isFavorite={favorites.has(c._id)}
