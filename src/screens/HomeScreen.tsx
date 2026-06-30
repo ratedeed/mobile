@@ -288,7 +288,7 @@ const HomeScreen = () => {
     }
     setLoadError(false);
     try {
-      const result: any = await browseContractors({ zip: zip || undefined, page: pageNum, limit: 20 });
+      const result: any = await browseContractors({ zip: zip || undefined, page: pageNum, limit: 500 });
       const list = extractList(result);
 
       if (mountedRef.current) {

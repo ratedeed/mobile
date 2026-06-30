@@ -258,7 +258,7 @@ const BusinessSearchScreen: React.FC = () => {
 
       const filters: any = { page: 1, limit: 500, sortBy: 'rating' };
       if (zip.trim()) {
-        filters.zipCode = zip.trim();
+        filters.zip = zip.trim();
       }
       
       if (name.trim()) {
