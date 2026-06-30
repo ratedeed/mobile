@@ -442,9 +442,17 @@ const HomeScreen = () => {
               </Pressable>
             </View>
             {catContractors.length > 0 ? (
-              <View className="flex-row flex-wrap justify-between">
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                decelerationRate="fast"
+                snapToInterval={256}
+                snapToAlignment="start"
+                contentContainerStyle={{ paddingHorizontal: 16 }}
+                className="-mx-4"
+              >
                 {catContractors.map((c) => (
-                  <View key={c._id} className="w-[48%]">
+                  <View key={c._id} style={{ width: 240, marginRight: 16 }}>
                     <ListingCard
                       listing={c}
                       isFavorite={favorites.has(c._id)}
@@ -454,7 +462,7 @@ const HomeScreen = () => {
                     />
                   </View>
                 ))}
-              </View>
+              </ScrollView>
             ) : (
               <View className="bg-neutral-50 dark:bg-neutral-900/50 rounded-2xl p-6 border border-dashed border-neutral-200 dark:border-neutral-800 items-center justify-center py-8">
                 <Text className="text-sm font-medium text-neutral-400 dark:text-neutral-500">No local {cat.label.toLowerCase()} available</Text>
