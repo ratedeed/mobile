@@ -14,7 +14,7 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "buildNumber": "29",
+      "buildNumber": "31",
       "supportsTablet": true,
       "bundleIdentifier": "com.ratedeed.app",
       "associatedDomains": [
