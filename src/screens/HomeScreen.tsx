@@ -47,7 +47,7 @@ const CATEGORIES = [
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const CARD_WIDTH = SCREEN_WIDTH * 0.45; // Show 2 cards fully, and the 3rd card's edge
+const CARD_WIDTH = SCREEN_WIDTH * 0.425; // Show 2 cards fully, and the 3rd card's edge
 
 // ---- Helpers ----
 function deriveLocation(c: Contractor): string {
