@@ -76,7 +76,7 @@ function derivePrice(c: Contractor): string | null {
 }
 
 // ---- Listing Card (matches web) ----
-const ListingCard = ({
+const ListingCard = React.memo(({
   listing,
   searchZip,
   onPress,
@@ -105,10 +105,6 @@ const ListingCard = ({
             resizeMode="cover"
           />
         ) : null}
-        {/* Favorite heart - hidden until favorites feature is wired on search */}
-        {/* <View className="absolute top-2 right-2">
-          <FontAwesome5 name="heart" size={24} color="rgba(0,0,0,0.5)" />
-        </View> */}
       </View>
       {listing.isVerified && (
         <View className="absolute top-2 left-2" style={{ zIndex: 60, overflow: 'visible' }}>
@@ -182,7 +178,10 @@ const ListingCard = ({
       </View>
     </Pressable>
   );
-};
+}, (prevProps, nextProps) => {
+  return prevProps.listing._id === nextProps.listing._id &&
+         prevProps.searchZip === nextProps.searchZip;
+});
 
 // ---- SEARCH SCREEN ----
 const BusinessSearchScreen: React.FC = () => {
@@ -272,6 +271,14 @@ const BusinessSearchScreen: React.FC = () => {
       }
 
       const data: any = await browseContractors(filters);
+      
+      // Prevent race conditions: check if the query parameters changed while fetching
+      const currentZip = (zipOverride !== undefined ? zipOverride : debouncedZip) || '';
+      const currentName = (nameOverride !== undefined ? nameOverride : debouncedName) || '';
+      if (currentZip !== zip || currentName !== name) {
+        return;
+      }
+
       const list = data?.contractors || data?.data || (Array.isArray(data) ? data : []);
 
       setContractors(list);

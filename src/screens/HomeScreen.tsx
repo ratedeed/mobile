@@ -232,6 +232,7 @@ const HomeScreen = () => {
   const [hasMore, setHasMore] = useState(true);
   const [showGuestPrompt, setShowGuestPrompt] = useState(false);
   const mountedRef = useRef(true);
+  const isFetchingRef = useRef(false);
 
   // Sync searchZip when IP zip is detected
   useEffect(() => {
@@ -275,6 +276,11 @@ const HomeScreen = () => {
 
   // 3-tier zip expansion — same as web version (HomePage.tsx lines 112-172)
   const loadContractors = useCallback(async (zip?: string | null, pageNum = 1, append = false) => {
+    if (isFetchingRef.current && append) {
+      return;
+    }
+    isFetchingRef.current = true;
+
     if (pageNum === 1) {
       setLoading(true);
     } else {
@@ -287,7 +293,11 @@ const HomeScreen = () => {
 
       if (mountedRef.current) {
         if (append) {
-          setAllContractors((prev) => [...prev, ...list]);
+          setAllContractors((prev) => {
+            const existingIds = new Set(prev.map(c => c._id));
+            const uniqueList = list.filter(c => !existingIds.has(c._id));
+            return [...prev, ...uniqueList];
+          });
         } else {
           setAllContractors(list);
         }
@@ -316,6 +326,7 @@ const HomeScreen = () => {
         setHasMore(false);
       }
     } finally {
+      isFetchingRef.current = false;
       if (mountedRef.current) {
         setLoading(false);
         setLoadingMore(false);
@@ -389,7 +400,7 @@ const HomeScreen = () => {
 
   const handleLoadMore = useCallback(() => {
     if (activeCategory === 'all') return; // Do not paginate in landing grouped view
-    if (!loadingMore && hasMore && !loading) {
+    if (!loadingMore && hasMore && !loading && !isFetchingRef.current) {
       loadContractors(searchZip || null, page + 1, true);
     }
   }, [activeCategory, loadingMore, hasMore, loading, page, searchZip, loadContractors]);
