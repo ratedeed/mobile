@@ -197,19 +197,24 @@ const ListingCard = memo(({
          prevProps.detectedZip === nextProps.detectedZip;
 });
 
-// ---- Category matching logic (same as web) ----
+// ---- Category matching logic (restored mapping) ----
+const CATEGORY_KEYWORDS_MAP: Record<string, string[]> = {
+  builders: ['builder', 'building', 'construction', 'general contractor', 'framing contractor', 'concrete', 'drywall', 'mason', 'insulation', 'subcontractor'],
+  plumbers: ['plumber', 'plumbing'],
+  electricians: ['electrician', 'electrical'],
+  painters: ['painter', 'painting'],
+  landscape: ['landscaper', 'landscaping', 'landscape', 'garden'],
+  hvac: ['hvac', 'heating', 'cooling', 'air conditioning', 'furnace'],
+  roofers: ['roofer', 'roofing', 'roof'],
+  carpenters: ['carpenter', 'carpentry', 'woodwork'],
+  cleaners: ['cleaner', 'cleaning', 'housekeeping'],
+  handyman: ['handyman', 'handymen', 'maintenance']
+};
+
 function matchesCategory(contractor: Contractor, catId: string, catLabel: string): boolean {
   const cCat = (contractor.category || '').toLowerCase();
-  const searchTerm = catId.toLowerCase();
-  const singularSearch = searchTerm.endsWith('s') ? searchTerm.slice(0, -1) : searchTerm;
-  const labelTerm = catLabel.toLowerCase();
-  const singularLabel = labelTerm.endsWith('s') ? labelTerm.slice(0, -1) : labelTerm;
-  return (
-    cCat.includes(searchTerm) ||
-    cCat.includes(singularSearch) ||
-    cCat.includes(labelTerm) ||
-    cCat.includes(singularLabel)
-  );
+  const keywords = CATEGORY_KEYWORDS_MAP[catId] || [catId.toLowerCase(), catLabel.toLowerCase()];
+  return keywords.some(keyword => cCat.includes(keyword) || keyword.includes(cCat));
 }
 
 // ---- HOME SCREEN ----
@@ -275,7 +280,7 @@ const HomeScreen = () => {
   };
 
   // 3-tier zip expansion — same as web version (HomePage.tsx lines 112-172)
-  const loadContractors = useCallback(async (zip?: string | null, pageNum = 1, append = false) => {
+  const loadContractors = useCallback(async (zip?: string | null, pageNum = 1, append = false, categoryOverride?: string) => {
     if (isFetchingRef.current && append) {
       return;
     }
@@ -288,7 +293,14 @@ const HomeScreen = () => {
     }
     setLoadError(false);
     try {
-      const result: any = await browseContractors({ zip: zip || undefined, page: pageNum, limit: 500 });
+      const activeCat = categoryOverride !== undefined ? categoryOverride : activeCategory;
+      const filters: any = { zip: zip || undefined, page: pageNum, limit: 500 };
+      if (activeCat && activeCat !== 'all') {
+        const cat = CATEGORIES.find(c => c.id === activeCat);
+        if (cat) filters.type = cat.label;
+      }
+
+      const result: any = await browseContractors(filters);
       const list = extractList(result);
 
       if (mountedRef.current) {
@@ -332,7 +344,7 @@ const HomeScreen = () => {
         setLoadingMore(false);
       }
     }
-  }, []);
+  }, [activeCategory]);
 
   const fetchLocationAndData = useCallback(async () => {
     let zip: string | null = null;
@@ -414,32 +426,50 @@ const HomeScreen = () => {
           .filter((c) => matchesCategory(c, cat.id, cat.label))
           .slice(0, 8);
 
-        if (catContractors.length === 0) return null;
-
         return (
           <View key={cat.id} className="flex-col px-4 mb-10" style={{ gap: 16 }}>
             <View className="flex-row items-center justify-between">
               <Text className="text-xl font-bold text-neutral-900 dark:text-neutral-50">{cat.label}</Text>
               <Pressable
-                onPress={() => setActiveCategory(cat.id)}
+                onPress={() => {
+                  HapticFeedback.selection();
+                  setActiveCategory(cat.id);
+                  loadContractors(searchZip || null, 1, false, cat.id);
+                }}
                 className="w-8 h-8 items-center justify-center rounded-full bg-neutral-100 dark:bg-neutral-800"
               >
                 <FontAwesome5 name="arrow-right" size={12} color={isDark ? '#a3a3a3' : '#6b7280'} />
               </Pressable>
             </View>
-            <View className="flex-row flex-wrap justify-between">
-              {catContractors.map((c) => (
-                <View key={c._id} className="w-[48%]">
-                  <ListingCard
-                    listing={c}
-                    isFavorite={favorites.has(c._id)}
-                    onToggleFavorite={() => toggleFav(c._id)}
-                    detectedZip={ipZipCode}
-                    onPress={() => handleContractorPress(c)}
-                  />
-                </View>
-              ))}
-            </View>
+            {catContractors.length > 0 ? (
+              <View className="flex-row flex-wrap justify-between">
+                {catContractors.map((c) => (
+                  <View key={c._id} className="w-[48%]">
+                    <ListingCard
+                      listing={c}
+                      isFavorite={favorites.has(c._id)}
+                      onToggleFavorite={() => toggleFav(c._id)}
+                      detectedZip={ipZipCode}
+                      onPress={() => handleContractorPress(c)}
+                    />
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <View className="bg-neutral-50 dark:bg-neutral-900/50 rounded-2xl p-6 border border-dashed border-neutral-200 dark:border-neutral-800 items-center justify-center py-8">
+                <Text className="text-sm font-medium text-neutral-400 dark:text-neutral-500">No local {cat.label.toLowerCase()} available</Text>
+                <Pressable
+                  onPress={() => {
+                    HapticFeedback.selection();
+                    setActiveCategory(cat.id);
+                    loadContractors(searchZip || null, 1, false, cat.id);
+                  }}
+                  className="mt-2"
+                >
+                  <Text className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">Search wider area</Text>
+                </Pressable>
+              </View>
+            )}
           </View>
         );
       } else {
@@ -457,7 +487,7 @@ const HomeScreen = () => {
         );
       }
     },
-    [activeCategory, allContractors, favorites, ipZipCode, isDark, handleContractorPress, toggleFav]
+    [activeCategory, allContractors, favorites, ipZipCode, isDark, handleContractorPress, toggleFav, loadContractors, searchZip]
   );
 
   const renderHeader = useCallback(
@@ -559,6 +589,7 @@ const HomeScreen = () => {
                 onClick={() => {
                   HapticFeedback.selection();
                   setActiveCategory(cat.id);
+                  loadContractors(searchZip || null, 1, false, cat.id);
                 }}
               />
             ))}
