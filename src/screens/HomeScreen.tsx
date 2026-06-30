@@ -450,13 +450,13 @@ const HomeScreen = () => {
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 decelerationRate="fast"
-                snapToInterval={222}
+                snapToInterval={CARD_WIDTH + 12}
                 snapToAlignment="start"
                 contentContainerStyle={{ paddingHorizontal: 16 }}
                 className="-mx-4"
               >
                 {catContractors.map((c) => (
-                  <View key={c._id} style={{ width: 210, marginRight: 12 }}>
+                  <View key={c._id} style={{ width: CARD_WIDTH, marginRight: 12 }}>
                     <ListingCard
                       listing={c}
                       isFavorite={favorites.has(c._id)}
