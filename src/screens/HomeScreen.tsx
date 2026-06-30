@@ -224,6 +224,7 @@ const HomeScreen = () => {
   const { isAuthenticated } = useAuth();
   const [ipZipCode, setIpZipCode] = useState<string | null>(null);
   const [allContractors, setAllContractors] = useState<Contractor[]>([]);
+  const [groupedContractors, setGroupedContractors] = useState<Record<string, Contractor[]>>({});
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -294,38 +295,68 @@ const HomeScreen = () => {
     setLoadError(false);
     try {
       const activeCat = categoryOverride !== undefined ? categoryOverride : activeCategory;
-      const filters: any = { zip: zip || undefined, page: pageNum, limit: 500 };
-      if (activeCat && activeCat !== 'all') {
+      
+      if (activeCat === 'all') {
+        // Fetch all categories in parallel (limit 8 each)
+        const categoriesToFetch = CATEGORIES.filter(c => c.id !== 'all');
+        const results = await Promise.all(
+          categoriesToFetch.map(async (cat) => {
+            try {
+              const res: any = await browseContractors({
+                zip: zip || undefined,
+                type: cat.label,
+                limit: 8
+              });
+              const list = extractList(res);
+              return { catId: cat.id, contractors: list };
+            } catch (err) {
+              console.warn(`Failed to fetch category ${cat.label}:`, err);
+              return { catId: cat.id, contractors: [] };
+            }
+          })
+        );
+        const map: Record<string, Contractor[]> = {};
+        results.forEach(r => { map[r.catId] = r.contractors; });
+        
+        if (mountedRef.current) {
+          setGroupedContractors(map);
+          setAllContractors([]); // clear flat list
+          setPage(1);
+          setHasMore(false);
+          setNearbyLabel('');
+        }
+      } else {
+        const filters: any = { zip: zip || undefined, page: pageNum, limit: 500 };
         const cat = CATEGORIES.find(c => c.id === activeCat);
         if (cat) filters.type = cat.label;
-      }
 
-      const result: any = await browseContractors(filters);
-      const list = extractList(result);
+        const result: any = await browseContractors(filters);
+        const list = extractList(result);
 
-      if (mountedRef.current) {
-        if (append) {
-          setAllContractors((prev) => {
-            const existingIds = new Set(prev.map(c => c._id));
-            const uniqueList = list.filter(c => !existingIds.has(c._id));
-            return [...prev, ...uniqueList];
-          });
-        } else {
-          setAllContractors(list);
-        }
-
-        setPage(pageNum);
-        setHasMore(pageNum < (result?.pages || 1));
-
-        // Handle nearby label based on backend expansion flags
-        if (zip && result.isExpanded) {
-          if (result.expansionTier === 2) {
-            setNearbyLabel('Showing nearby cities');
-          } else if (result.expansionTier === 3) {
-            setNearbyLabel('Showing nearby cities & region');
+        if (mountedRef.current) {
+          if (append) {
+            setAllContractors((prev) => {
+              const existingIds = new Set(prev.map(c => c._id));
+              const uniqueList = list.filter(c => !existingIds.has(c._id));
+              return [...prev, ...uniqueList];
+            });
+          } else {
+            setAllContractors(list);
           }
-        } else {
-          setNearbyLabel('');
+
+          setPage(pageNum);
+          setHasMore(pageNum < (result?.pages || 1));
+
+          // Handle nearby label based on backend expansion flags
+          if (zip && result.isExpanded) {
+            if (result.expansionTier === 2) {
+              setNearbyLabel('Showing nearby cities');
+            } else if (result.expansionTier === 3) {
+              setNearbyLabel('Showing nearby cities & region');
+            }
+          } else {
+            setNearbyLabel('');
+          }
         }
       }
     } catch (err) {
@@ -422,9 +453,7 @@ const HomeScreen = () => {
       if (activeCategory === 'all') {
         // item is a category object
         const cat = item;
-        const catContractors = allContractors
-          .filter((c) => matchesCategory(c, cat.id, cat.label))
-          .slice(0, 8);
+        const catContractors = groupedContractors[cat.id] || [];
 
         return (
           <View key={cat.id} className="flex-col px-4 mb-10" style={{ gap: 16 }}>
