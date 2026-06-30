@@ -55,6 +55,18 @@ type FlatListItem = Contractor | Category;
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = SCREEN_WIDTH * 0.425;
 
+// ---- In-Memory Cache Implementation ----
+type CacheEntry = {
+  data: Contractor[];
+  timestamp: number;
+  pages?: number;
+  isExpanded?: boolean;
+  expansionTier?: number;
+};
+
+const contractorCache = new Map<string, CacheEntry>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
 const extractList = (result: unknown): Contractor[] => {
   if (Array.isArray(result)) return result as Contractor[];
   if (typeof result === 'object' && result !== null) {
@@ -74,18 +86,6 @@ const deriveLocation = (c: Contractor): string => {
   const addr = c.businessAddress || c.contact?.address;
   if (typeof addr === 'string' && addr.trim()) return addr.trim();
   return '';
-};
-
-const derivePrice = (c: Contractor): string | null => {
-  if (c.pricing) return c.pricing.split('–')[0]?.trim() || null;
-  if (c.servicesOffered?.length) {
-    const svc = c.servicesOffered[0];
-    if (typeof svc === 'object' && svc !== null) {
-      const range = svc.priceEstimate || svc.priceRange;
-      if (range) return range.split('–')[0]?.trim();
-    }
-  }
-  return null;
 };
 
 const getResponseTimeBadge = (hours: number) => {
@@ -139,9 +139,10 @@ const ListingCard = memo(({ listing, isFavorite, onToggleFavorite, detectedZip, 
           <Image source={{ uri: coverImage }} className="absolute inset-0 w-full h-full" resizeMode="cover" />
         ) : null}
         
+        {/* Favorite Heart - Restored Original Look */}
         <Pressable
           onPress={() => onToggleFavorite(listing._id)}
-          className="absolute top-2 right-2 w-9 h-9 rounded-full bg-black/30 items-center justify-center"
+          className="absolute top-2 right-2 w-11 h-11 items-center justify-center"
           accessibilityLabel={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
           accessibilityRole="button"
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -149,8 +150,8 @@ const ListingCard = memo(({ listing, isFavorite, onToggleFavorite, detectedZip, 
           <FontAwesome5
             name="heart"
             solid={isFavorite}
-            size={18}
-            color={isFavorite ? '#ff2d55' : '#ffffff'}
+            size={24}
+            color={isFavorite ? 'rgba(225,29,72,1)' : 'rgba(0,0,0,0.5)'}
           />
         </Pressable>
       </View>
@@ -303,13 +304,58 @@ const HomeScreen = () => {
     if (isFetchingRef.current && append) return;
     isFetchingRef.current = true;
 
-    if (pageNum === 1) {
-      setLoading(true);
+    const cacheKey = `${zip || 'all'}_${categoryId}_${pageNum}`;
+    const cachedEntry = contractorCache.get(cacheKey);
+
+    // 1. Handle Cache Hit (Stale-While-Revalidate)
+    if (cachedEntry) {
+      const isStale = Date.now() - cachedEntry.timestamp > CACHE_TTL;
+      
+      // If fresh, use cache and skip network
+      if (!isStale) {
+        if (mountedRef.current) {
+          const list = cachedEntry.data;
+          if (append) {
+            setAllContractors((prev) => {
+              const existingIds = new Set(prev.map(c => c._id));
+              const uniqueList = list.filter(c => !existingIds.has(c._id));
+              return [...prev, ...uniqueList];
+            });
+          } else {
+            setAllContractors(list);
+          }
+          setPage(pageNum);
+          setHasMore(pageNum < (cachedEntry.pages || 1));
+          setLoadError(false);
+          
+          if (zip && cachedEntry.isExpanded) {
+            if (cachedEntry.expansionTier === 2) setNearbyLabel('Showing nearby cities');
+            else if (cachedEntry.expansionTier === 3) setNearbyLabel('Showing nearby cities & region');
+          } else {
+            setNearbyLabel('');
+          }
+          
+          setLoading(false);
+          setLoadingMore(false);
+        }
+        isFetchingRef.current = false;
+        return;
+      }
+      
+      // If stale, render cached data immediately but continue to network fetch
+      if (!append) {
+        setAllContractors(cachedEntry.data);
+        setLoading(false); // Hide loading spinner, show stale data
+      }
     } else {
-      setLoadingMore(true);
+      // No cache found, show loading spinner
+      if (pageNum === 1) setLoading(true);
+      else setLoadingMore(true);
     }
+    
     setLoadError(false);
 
+    // 2. Network Fetch
     try {
       const filters: Record<string, any> = { zip: zip || undefined, page: pageNum, limit: 500 };
       if (categoryId && categoryId !== 'all') {
@@ -319,6 +365,15 @@ const HomeScreen = () => {
 
       const result: any = await browseContractors(filters);
       const list = extractList(result);
+
+      // Save to cache
+      contractorCache.set(cacheKey, {
+        data: list,
+        timestamp: Date.now(),
+        pages: result?.pages || 1,
+        isExpanded: result?.isExpanded,
+        expansionTier: result?.expansionTier
+      });
 
       if (mountedRef.current) {
         if (append) {
@@ -335,18 +390,16 @@ const HomeScreen = () => {
         setHasMore(pageNum < (result?.pages || 1));
 
         if (zip && result.isExpanded) {
-          if (result.expansionTier === 2) {
-            setNearbyLabel('Showing nearby cities');
-          } else if (result.expansionTier === 3) {
-            setNearbyLabel('Showing nearby cities & region');
-          }
+          if (result.expansionTier === 2) setNearbyLabel('Showing nearby cities');
+          else if (result.expansionTier === 3) setNearbyLabel('Showing nearby cities & region');
         } else {
           setNearbyLabel('');
         }
       }
     } catch (err) {
       if (mountedRef.current) {
-        if (!append) {
+        // Only show error if we have no cached data to fallback on
+        if (!append && !cachedEntry) {
           setAllContractors([]);
           setNearbyLabel('');
           setLoadError(true);
@@ -382,6 +435,8 @@ const HomeScreen = () => {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
+    // Bypass cache on manual refresh
+    contractorCache.clear(); 
     await fetchLocationAndData();
     if (mountedRef.current) setRefreshing(false);
   }, [fetchLocationAndData]);
