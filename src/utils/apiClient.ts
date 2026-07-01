@@ -998,9 +998,12 @@ export const updateBannerImage = async (imageUrl: string): Promise<User> => {
 // Payments & Stripe API
 // ==========================================
 
-export const getStripeConnectUrl = async (businessType?: 'individual' | 'company'): Promise<{ url: string }> => {
+export const getStripeConnectUrl = async (
+  businessType?: 'individual' | 'company',
+  returnTo?: string
+): Promise<{ url: string }> => {
   const authHeaders = await getAuthHeaders();
-  return post(`${API_BASE}/stripe/connect`, { platform: 'mobile', businessType }, authHeaders);
+  return post(`${API_BASE}/stripe/connect`, { platform: 'mobile', businessType, returnTo }, authHeaders);
 };
 
 export const getStripeAccountStatus = async (): Promise<StripeConnectStatus> => {

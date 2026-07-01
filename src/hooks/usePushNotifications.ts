@@ -248,12 +248,21 @@ export const usePushNotifications = () => {
         } else {
           navigation.navigate('Jobs');
         }
+      } else if (data?.type === 'stripe_approved' || data?.type === 'stripe_action_required') {
+        if (userRole === 'contractor' || userRole === 'admin') {
+          navigation.navigate('ContractorDashboard');
+        } else {
+          navigation.navigate('Profile');
+        }
       }
     };
 
     const responseListener = Notifications.addNotificationResponseReceivedListener(response => {
       const data = response.notification.request.content.data;
-      if (!isAuthenticated) {
+      // Wait for BOTH auth and role to be ready before navigating,
+      // otherwise role-dependent routes (e.g. ContractorDashboard) go
+      // to the wrong screen when userRole is still null during cold start.
+      if (!isAuthenticated || !userRole) {
         pendingNotificationRef.current = data;
       } else {
         handleRouteData(data);
@@ -264,14 +273,15 @@ export const usePushNotifications = () => {
       const response = await Notifications.getLastNotificationResponseAsync();
       if (!response) return;
       const data = response.notification.request.content.data;
-      if (!isAuthenticated) {
+      if (!isAuthenticated || !userRole) {
         pendingNotificationRef.current = data;
       } else {
         handleRouteData(data);
       }
     };
 
-    if (isAuthenticated && pendingNotificationRef.current) {
+    // Process any pending notification once auth AND role are both ready.
+    if (isAuthenticated && userRole && pendingNotificationRef.current) {
       handleRouteData(pendingNotificationRef.current);
       pendingNotificationRef.current = null;
     }

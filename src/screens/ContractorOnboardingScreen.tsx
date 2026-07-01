@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -13,11 +13,17 @@ import {
   Dimensions,
   useColorScheme,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as WebBrowser from 'expo-web-browser';
-import { updateContractorProfile, getStripeConnectUrl, getContractorProfile } from '../api';
+import {
+  updateContractorProfile,
+  getStripeConnectUrl,
+  getContractorProfile,
+  getStripeAccountStatus,
+} from '../api';
+import type { StripeConnectStatus } from '../types';
 import { uploadToCloudinary, CLOUDINARY_FOLDERS } from '../utils/cloudinary';
 import { Linking } from 'react-native';
 import { requestPhotoLibraryPermission } from '../utils/permissions';
@@ -89,6 +95,51 @@ export default function ContractorOnboardingScreen() {
     }
     loadProfile();
   }, []);
+
+  // Stripe Connect state
+  const [stripeStatus, setStripeStatus] = useState<StripeConnectStatus | null>(null);
+  const [isStripeConnecting, setIsStripeConnecting] = useState(false);
+  const [stripeStatusLoading, setStripeStatusLoading] = useState(true);
+  const [approvedAlertShown, setApprovedAlertShown] = useState(false);
+
+  const refreshStripeStatus = useCallback(async (showSpinner = false): Promise<StripeConnectStatus | null> => {
+    if (showSpinner) setStripeStatusLoading(true);
+    try {
+      const status = await getStripeAccountStatus();
+      setStripeStatus(status);
+      return status;
+    } catch (err) {
+      console.warn('Failed to fetch stripe status:', err);
+      return null;
+    } finally {
+      if (showSpinner) setStripeStatusLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshStripeStatus(true);
+  }, [refreshStripeStatus]);
+
+  useFocusEffect(
+    useCallback(() => {
+      refreshStripeStatus();
+    }, [refreshStripeStatus])
+  );
+
+  useEffect(() => {
+    if (
+      !stripeStatusLoading &&
+      stripeStatus?.chargesEnabled &&
+      !approvedAlertShown
+    ) {
+      setApprovedAlertShown(true);
+      Alert.alert(
+        "You're Approved!",
+        'Your Stripe account is fully verified and ready to receive payments.',
+        [{ text: 'Awesome' }]
+      );
+    }
+  }, [stripeStatusLoading, stripeStatus?.chargesEnabled, approvedAlertShown]);
 
 
   // Profile
@@ -251,8 +302,9 @@ export default function ContractorOnboardingScreen() {
 
   const handleStripeConnect = async () => {
     const runStripeConnect = async (businessType: 'individual' | 'company') => {
+      setIsStripeConnecting(true);
       try {
-        const { url } = await getStripeConnectUrl(businessType);
+        const { url } = await getStripeConnectUrl(businessType, 'contractor-onboarding');
         if (url) {
           let result;
           try {
@@ -272,12 +324,49 @@ export default function ContractorOnboardingScreen() {
             }
             throw browserError;
           }
-          if (result.type === 'success' && result.url?.includes('stripe_return=true')) {
-            Alert.alert('Success', 'Stripe account connected successfully!');
+
+          const returned = result.type === 'success' || result.type === 'cancel';
+          if (returned) {
+            const latest = await refreshStripeStatus(true);
+            if (latest?.chargesEnabled) {
+              setApprovedAlertShown(true);
+              Alert.alert(
+                'You\'re Approved!',
+                'Your Stripe account is fully verified and ready to receive payments. You can now create and send quotes to clients.',
+                [{ text: 'Awesome', onPress: () => {} }]
+              );
+            } else if (latest?.connected) {
+              const due = latest.requirements?.currentlyDue || [];
+              const pastDue = latest.requirements?.pastDue || [];
+              const reason = latest.requirements?.disabledReason || latest.disabledReason;
+              let message = 'Your Stripe account is still pending verification. We\'ll notify you once it\'s approved and you can start receiving payments.';
+              if (pastDue.length > 0) {
+                message = `Stripe needs additional information to verify your account:\n\n• ${pastDue.join('\n• ')}\n\nPlease tap "Continue Setup" to fix these issues.`;
+              } else if (due.length > 0) {
+                message = `Stripe still needs a few things from you to finish verification:\n\n• ${due.join('\n• ')}\n\nPlease tap "Continue Setup" to provide them.`;
+              } else if (reason) {
+                message = `Stripe couldn't fully verify your account (${reason}). Please tap "Continue Setup" to provide the missing information.`;
+              } else if (latest.message) {
+                message = `${latest.message}\n\nPlease tap "Continue Setup" to finish.`;
+              }
+              Alert.alert(
+                pastDue.length > 0 ? 'Action Required' : 'Verification Pending',
+                message,
+                [{ text: 'OK' }]
+              );
+            } else {
+              Alert.alert(
+                'Verification Submitted',
+                'Your information was submitted to Stripe. It can take a few minutes for them to verify your account. You can come back later to check your status.',
+                [{ text: 'Got it' }]
+              );
+            }
           }
         }
       } catch (err: any) {
         Alert.alert('Error', err?.message || 'Failed to connect to Stripe. Please try again later.');
+      } finally {
+        setIsStripeConnecting(false);
       }
     };
 
@@ -582,19 +671,82 @@ export default function ContractorOnboardingScreen() {
               <Text className="text-xl font-bold text-neutral-900 dark:text-white mb-1">Get Paid</Text>
               <Text className="text-sm text-neutral-500 dark:text-neutral-400 mb-6">Connect Stripe to receive payments directly to your bank account.</Text>
 
-              <View className="bg-neutral-900 dark:bg-neutral-800 rounded-3xl p-6 items-center mb-6">
-                <FontAwesome5 name="credit-card" size={32} color="white" />
+              <View className={`rounded-3xl p-6 items-center mb-6 ${
+                stripeStatus?.chargesEnabled
+                  ? 'bg-emerald-600'
+                  : stripeStatus?.connected
+                  ? 'bg-amber-500'
+                  : 'bg-neutral-900 dark:bg-neutral-800'
+              }`}>
+                <FontAwesome5
+                  name={stripeStatus?.chargesEnabled ? 'check-circle' : stripeStatus?.connected ? 'clock' : 'credit-card'}
+                  size={32}
+                  color="white"
+                />
                 <Text className="text-white font-bold mt-3 mb-1 text-base">Stripe Connect</Text>
-                <Text className="text-neutral-400 dark:text-neutral-500 text-xs leading-4 text-center mb-4 px-2">
-                  Secure payment processing. Funds are deposited directly to your bank after job completion.
+                <Text className="text-white/80 text-xs leading-4 text-center mb-4 px-2">
+                  {stripeStatus?.chargesEnabled
+                    ? "You're verified and ready to receive payments directly to your bank account."
+                    : stripeStatus?.connected
+                    ? "Your account is being reviewed by Stripe. We'll notify you as soon as you're approved."
+                    : "Secure payment processing. Funds are deposited directly to your bank after job completion."}
                 </Text>
-                <Pressable
-                  onPress={handleStripeConnect}
-                  className="bg-white dark:bg-neutral-950 rounded-xl px-6 py-3"
-                >
-                  <Text className="text-neutral-900 dark:text-white font-bold text-sm">Set Up Payments</Text>
-                </Pressable>
+                {stripeStatusLoading ? (
+                  <View className="bg-white/20 rounded-xl px-6 py-3 flex-row items-center" style={{ gap: 8 }}>
+                    <ActivityIndicator color="white" size="small" />
+                    <Text className="text-white font-bold text-sm">Checking status…</Text>
+                  </View>
+                ) : stripeStatus?.chargesEnabled ? (
+                  <View className="bg-white rounded-xl px-6 py-3 flex-row items-center" style={{ gap: 8 }}>
+                    <FontAwesome5 name="check" size={12} color="#059669" />
+                    <Text className="text-emerald-700 font-bold text-sm">Connected & Active</Text>
+                  </View>
+                ) : (
+                  <Pressable
+                    onPress={handleStripeConnect}
+                    disabled={isStripeConnecting}
+                    className="bg-white dark:bg-neutral-950 rounded-xl px-6 py-3 flex-row items-center"
+                    style={{ gap: 8, opacity: isStripeConnecting ? 0.6 : 1 }}
+                  >
+                    {isStripeConnecting ? (
+                      <>
+                        <ActivityIndicator color={isDark ? "#fff" : "#171717"} size="small" />
+                        <Text className="text-neutral-900 dark:text-white font-bold text-sm">Pending…</Text>
+                      </>
+                    ) : (
+                      <Text className="text-neutral-900 dark:text-white font-bold text-sm">
+                        {stripeStatus?.connected
+                          ? stripeStatus.requirements?.pastDue?.length
+                            ? 'Fix Now'
+                            : 'Continue Setup'
+                          : 'Set Up Payments'}
+                      </Text>
+                    )}
+                  </Pressable>
+                )}
               </View>
+
+              {stripeStatus?.connected && !stripeStatus?.chargesEnabled && (
+                <View className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-4 mb-4">
+                  <View className="flex-row items-start" style={{ gap: 10 }}>
+                    <FontAwesome5 name="exclamation-triangle" size={14} color="#d97706" />
+                    <View className="flex-1">
+                      <Text className="text-sm font-semibold text-amber-900 dark:text-amber-200 mb-1">
+                        {stripeStatus.requirements?.pastDue?.length
+                          ? 'Action Required'
+                          : 'Verification In Progress'}
+                      </Text>
+                      <Text className="text-xs text-amber-800 dark:text-amber-300 leading-4">
+                        {stripeStatus.requirements?.pastDue?.length
+                          ? `Stripe needs: ${stripeStatus.requirements.pastDue.join(', ')}. Tap "Continue Setup" above to finish.`
+                          : stripeStatus.disabledReason
+                          ? `Reason: ${stripeStatus.disabledReason}. Tap "Continue Setup" above to fix.`
+                          : 'Stripe is reviewing your info. This usually takes a few minutes.'}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              )}
 
               <Text className="text-[10px] text-neutral-400 dark:text-neutral-500 text-center">
                 You can complete Stripe setup later from your dashboard.

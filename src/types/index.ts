@@ -413,6 +413,15 @@ export interface StripeConnectStatus {
   accountId?: string;
   chargesEnabled?: boolean;
   payoutsEnabled?: boolean;
+  detailsSubmitted?: boolean;
+  disabledReason?: string | null;
+  requirements?: {
+    currentlyDue?: string[];
+    pastDue?: string[];
+    eventuallyDue?: string[];
+    disabledReason?: string | null;
+  };
+  message?: string;
 }
 
 // Admin types

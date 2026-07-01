@@ -89,8 +89,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         if (activeToken) {
-          setBackendToken(activeToken);
-
           let decodedId = null;
           let decodedRole = null;
           let decodedEmailVerified = null;
@@ -105,6 +103,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const finalRole = decodedRole || userData?.role || null;
           const finalEmailVerified = decodedEmailVerified !== undefined && decodedEmailVerified !== null ? decodedEmailVerified : (userData?.emailVerified || false);
 
+          // Set ALL auth state in a single batch so the notification handler
+          // never sees isAuthenticated=true with userRole=null (which caused
+          // role-dependent navigation to go to the wrong screen).
+          setBackendToken(activeToken);
           setUserId(userData?._id || userData?.id || decodedId || null);
           setIsEmailVerified(finalEmailVerified);
           setUserRole(finalRole as UserRole);

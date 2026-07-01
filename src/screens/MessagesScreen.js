@@ -126,7 +126,7 @@ const collectAllIds = (obj) => {
 };
 
 const getParticipantDisplayName = (entity) => {
-  if (!entity) return "Unknown";
+  if (!entity) return null;
   const firstLast = `${entity.firstName || ""} ${entity.lastName || ""}`.trim();
   return (
     firstLast ||
@@ -134,7 +134,7 @@ const getParticipantDisplayName = (entity) => {
     (entity.name && entity.name !== "Unknown" ? entity.name : "") ||
     entity.businessName ||
     entity.companyName ||
-    "Unknown"
+    null
   );
 };
 
@@ -340,7 +340,7 @@ const ReportModal = ({ visible, onClose, userName, onReport }) => {
 // ─── Conversation Item ────────────────────────────────────────────────────────
 const ConversationItem = React.memo(function ConversationItem({ conv, currentUserId, onlineUsers, onPress }) {
   const other = conv.otherParticipant;
-  const displayName = getParticipantDisplayName(other);
+  const displayName = getParticipantDisplayName(other) || "Unknown";
   const avatarUrl = getProfileImageUrl(displayName, other?.profilePicture || "", other?.category);
   const isOnline = onlineUsers[other?._id] || false;
   const hasAttachment = conv.lastMessage?.attachmentUrl;
@@ -432,7 +432,7 @@ const MessagesScreen = () => {
 
   const chatOther = selectedConversation?.otherParticipant;
   const chatName = getParticipantDisplayName(chatOther) || recipientName || "Chat";
-  const chatAvatar = getProfileImageUrl(chatName, chatOther?.profilePicture || route.params?.recipientImage || "");
+  const chatAvatar = getProfileImageUrl(chatName || "User", chatOther?.profilePicture || route.params?.recipientImage || "");
   const chatOnline = onlineUsers[resolveId(chatOther)] || false;
   const showChat = selectedConversation || route.name === "ChatScreen";
 
@@ -712,9 +712,10 @@ const MessagesScreen = () => {
     }
     try {
       if (page === 1) {
-        // Mark conversation as read on backend immediately
+        // Mark conversation as read on backend — non-blocking so a failure
+        // here doesn't prevent the actual messages from loading.
         const { markConversationAsRead } = await import("../api");
-        await markConversationAsRead(conversationId);
+        markConversationAsRead(conversationId).catch(() => {});
         refreshUnreadMessagesCount();
         refreshNotifications();
       }
@@ -1304,7 +1305,7 @@ const MessagesScreen = () => {
   const filteredConversations = useMemo(() => {
     return Object.values(conversations)
       .filter((c) => c.lastMessage)
-      .filter((c) => !searchQuery || getParticipantDisplayName(c.otherParticipant).toLowerCase().includes(searchQuery.toLowerCase()))
+      .filter((c) => !searchQuery || (getParticipantDisplayName(c.otherParticipant) || "").toLowerCase().includes(searchQuery.toLowerCase()))
       .sort((a, b) => new Date(b.lastMessage.createdAt) - new Date(a.lastMessage.createdAt));
   }, [conversations, searchQuery]);
 
