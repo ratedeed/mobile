@@ -22,6 +22,7 @@ interface Transaction {
 interface EarningsData {
   availableBalance: number;
   pendingPayouts: number;
+  pendingAvailableAt?: string | null;
   totalEarned: number;
   transactions?: Transaction[];
 }
@@ -141,7 +142,11 @@ export default function EarningsScreen() {
             try {
               const res = await requestPayout();
               HapticFeedback.success();
-              const msg = res?.message || res?.status ? `Payout status: ${res.status}` : 'Your payout has been initiated. Funds will arrive in 1-3 business days.';
+              let msg = res?.message || 'Your payout has been initiated.';
+              if (res?.arrivalDate) {
+                const d = new Date(res.arrivalDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                msg = `Payout initiated. Expected in your bank by ${d}.`;
+              }
               Alert.alert('Withdrawal Initiated', msg);
               loadData();
             } catch (err: any) {
@@ -166,6 +171,7 @@ export default function EarningsScreen() {
 
   const availableBalance = (earnings?.availableBalance || 0) / 100;
   const pendingPayouts = (earnings?.pendingPayouts || 0) / 100;
+  const pendingAvailableAt = earnings?.pendingAvailableAt || null;
   const totalEarned = (earnings?.totalEarned || 0) / 100;
   const transactions: Transaction[] = earnings?.transactions || [];
 
@@ -273,6 +279,15 @@ export default function EarningsScreen() {
             <Text className="text-xl font-bold text-neutral-900 dark:text-white mt-1">
               {formatCurrency(pendingPayouts)}
             </Text>
+            {pendingPayouts > 0 ? (
+              <Text className="text-[10px] text-neutral-400 dark:text-neutral-500 mt-0.5">
+                {pendingAvailableAt
+                  ? `Available ~${new Date(pendingAvailableAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · unlocks for withdrawal`
+                  : 'Processing — available soon'}
+              </Text>
+            ) : (
+              <Text className="text-[10px] text-neutral-400 dark:text-neutral-500 mt-0.5">No funds pending</Text>
+            )}
           </View>
           <View className="flex-1 bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 p-4">
             <View className="flex-row items-center" style={{ gap: 4 }}>
@@ -304,7 +319,7 @@ export default function EarningsScreen() {
         <Text className="text-base font-bold text-neutral-900 dark:text-white mb-3">Completed Jobs (Released Escrow)</Text>
       </View>
     ),
-    [availableBalance, pendingPayouts, totalEarned, feePercent, cashingOut, handleCashOut]
+    [availableBalance, pendingPayouts, pendingAvailableAt, totalEarned, feePercent, cashingOut, handleCashOut]
   );
 
   const renderEmpty = useCallback(
