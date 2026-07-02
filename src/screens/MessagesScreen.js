@@ -502,6 +502,29 @@ const MessagesScreen = () => {
         shouldScrollToEndRef.current = true;
         setMessages((prev) => {
           if (prev.some((m) => m._id === msg._id)) return prev;
+
+          // Dedupe: if the socket echoes back a message from the current user
+          // that matches a still-pending optimistic message (same text, same
+          // conversation, sent within the last 30s), replace the optimistic
+          // one instead of appending a duplicate.
+          if (isMessageFromMe(msg)) {
+            const msgText = (msg.messageText || '').trim();
+            const now = Date.now();
+            const matchIdx = prev.findIndex((m) => {
+              if (!m._isOptimistic) return false;
+              if ((m.conversationId || '').startsWith('temp-')) return false;
+              if (m.conversationId !== convoId) return false;
+              if ((m.messageText || '').trim() !== msgText) return false;
+              const age = now - new Date(m.createdAt).getTime();
+              return age >= 0 && age < 30000;
+            });
+            if (matchIdx >= 0) {
+              const next = [...prev];
+              next[matchIdx] = { ...msg, _isOptimistic: false, _failed: false, __isLocalSent: true };
+              return next.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+            }
+          }
+
           return [...prev, msg].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
         });
         if (!isMessageFromMe(msg)) {
