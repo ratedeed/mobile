@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useCallback } from 'react';
 import {
+  Animated,
   FlatList,
+  RefreshControl,
   ScrollView,
   SectionList,
   StyleSheet,
@@ -16,8 +18,9 @@ import { BouncingDotsLoader } from './BouncingDotsLoader';
 import { Colors } from '../../constants/designTokens';
 
 const INDICATOR_HEIGHT = 64;
-const THRESHOLD = 60;
 const COLLAPSE_DURATION = 200;
+
+const HIDDEN = 'rgba(0, 0, 0, 0)';
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
@@ -27,8 +30,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     alignItems: 'center',
-    justifyContent: 'flex-start',
-    paddingTop: 18,
+    justifyContent: 'center',
     overflow: 'hidden',
     zIndex: 999,
   },
@@ -44,13 +46,6 @@ const RefreshIndicator: React.FC<RefreshIndicatorProps> = ({ indicatorRef, color
     <BouncingDotsLoader size="small" color={color} />
   </View>
 );
-
-function clampHeight(raw: number, refreshing: boolean): number {
-  if (refreshing) return INDICATOR_HEIGHT;
-  if (raw <= 0) return 0;
-  const damped = raw <= THRESHOLD ? raw : THRESHOLD + (raw - THRESHOLD) * 0.5;
-  return Math.min(damped, 120);
-}
 
 function useIndicator(refreshing: boolean) {
   const indicatorRef = useRef<View | null>(null);
@@ -107,8 +102,27 @@ function useIndicator(refreshing: boolean) {
   return { indicatorRef, apply, isLockedRef };
 }
 
+function clampPull(raw: number): number {
+  if (raw <= 0) return 0;
+  return Math.min(raw, INDICATOR_HEIGHT * 1.5);
+}
+
+function makeRefreshControl(refreshing: boolean, onRefresh: () => void) {
+  return (
+    <RefreshControl
+      refreshing={refreshing}
+      onRefresh={onRefresh}
+      tintColor={HIDDEN}
+      colors={[HIDDEN]}
+      progressBackgroundColor={HIDDEN}
+      title=""
+      titleColor={HIDDEN}
+    />
+  );
+}
+
 interface FlatListWrapperProps<ItemT = any>
-  extends FlatListProps<ItemT> {
+  extends Omit<FlatListProps<ItemT>, 'refreshControl'> {
   refreshing: boolean;
   onRefresh: () => void;
   loaderColor?: string;
@@ -125,45 +139,22 @@ function BouncingRefreshFlatListInner<ItemT = any>(
     loaderColor,
     style,
     onScroll: userOnScroll,
-    onScrollBeginDrag: userOnScrollBeginDrag,
-    onScrollEndDrag: userOnScrollEndDrag,
     ...rest
   } = props;
 
   const { indicatorRef, apply, isLockedRef } = useIndicator(refreshing);
-  const pullValueRef = useRef(0);
-  const triggeredRef = useRef(false);
 
   const handleScroll = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-      const y = e.nativeEvent.contentOffset.y;
-      const next = clampHeight(-y, isLockedRef.current);
-      if (Math.abs(next - pullValueRef.current) > 0.5) {
-        pullValueRef.current = next;
-        apply(next);
+      if (!isLockedRef.current) {
+        const y = e.nativeEvent.contentOffset.y;
+        const pull = clampPull(-y);
+        apply(pull);
       }
       userOnScroll?.(e);
     },
     [apply, isLockedRef, userOnScroll],
   );
-
-  const handleScrollEndDrag = useCallback(
-    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-      if (!isLockedRef.current && !triggeredRef.current && pullValueRef.current >= THRESHOLD) {
-        triggeredRef.current = true;
-        onRefresh();
-      } else if (!isLockedRef.current) {
-        apply(0);
-        pullValueRef.current = 0;
-      }
-      userOnScrollEndDrag?.(e);
-    },
-    [apply, isLockedRef, onRefresh, userOnScrollEndDrag],
-  );
-
-  useEffect(() => {
-    if (!refreshing) triggeredRef.current = false;
-  }, [refreshing]);
 
   return (
     <View style={[styles.container, style]}>
@@ -171,19 +162,19 @@ function BouncingRefreshFlatListInner<ItemT = any>(
         ref={ref}
         {...rest}
         onScroll={handleScroll}
-        onScrollEndDrag={handleScrollEndDrag}
-        onScrollBeginDrag={userOnScrollBeginDrag}
         scrollEventThrottle={16}
+        refreshControl={makeRefreshControl(refreshing, onRefresh)}
       />
       <RefreshIndicator
         indicatorRef={indicatorRef}
-        color={loaderColor ?? Colors.primary500}
+        color={loaderColor ?? Colors.primary600}
       />
     </View>
   );
 }
 
-interface ScrollViewWrapperProps extends React.ComponentProps<typeof ScrollView> {
+interface ScrollViewWrapperProps
+  extends Omit<React.ComponentProps<typeof ScrollView>, 'refreshControl'> {
   refreshing: boolean;
   onRefresh: () => void;
   loaderColor?: string;
@@ -200,46 +191,23 @@ function BouncingRefreshScrollViewInner(
     loaderColor,
     style,
     onScroll: userOnScroll,
-    onScrollBeginDrag: userOnScrollBeginDrag,
-    onScrollEndDrag: userOnScrollEndDrag,
     children,
     ...rest
   } = props;
 
   const { indicatorRef, apply, isLockedRef } = useIndicator(refreshing);
-  const pullValueRef = useRef(0);
-  const triggeredRef = useRef(false);
 
   const handleScroll = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-      const y = e.nativeEvent.contentOffset.y;
-      const next = clampHeight(-y, isLockedRef.current);
-      if (Math.abs(next - pullValueRef.current) > 0.5) {
-        pullValueRef.current = next;
-        apply(next);
+      if (!isLockedRef.current) {
+        const y = e.nativeEvent.contentOffset.y;
+        const pull = clampPull(-y);
+        apply(pull);
       }
       userOnScroll?.(e);
     },
     [apply, isLockedRef, userOnScroll],
   );
-
-  const handleScrollEndDrag = useCallback(
-    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-      if (!isLockedRef.current && !triggeredRef.current && pullValueRef.current >= THRESHOLD) {
-        triggeredRef.current = true;
-        onRefresh();
-      } else if (!isLockedRef.current) {
-        apply(0);
-        pullValueRef.current = 0;
-      }
-      userOnScrollEndDrag?.(e);
-    },
-    [apply, isLockedRef, onRefresh, userOnScrollEndDrag],
-  );
-
-  useEffect(() => {
-    if (!refreshing) triggeredRef.current = false;
-  }, [refreshing]);
 
   return (
     <View style={[styles.container, style]}>
@@ -247,22 +215,21 @@ function BouncingRefreshScrollViewInner(
         ref={ref}
         {...rest}
         onScroll={handleScroll}
-        onScrollEndDrag={handleScrollEndDrag}
-        onScrollBeginDrag={userOnScrollBeginDrag}
         scrollEventThrottle={16}
+        refreshControl={makeRefreshControl(refreshing, onRefresh)}
       >
         {children}
       </ScrollView>
       <RefreshIndicator
         indicatorRef={indicatorRef}
-        color={loaderColor ?? Colors.primary500}
+        color={loaderColor ?? Colors.primary600}
       />
     </View>
   );
 }
 
 interface SectionListWrapperProps<ItemT = any, SectionT = any>
-  extends SectionListProps<ItemT, SectionT> {
+  extends Omit<SectionListProps<ItemT, SectionT>, 'refreshControl'> {
   refreshing: boolean;
   onRefresh: () => void;
   loaderColor?: string;
@@ -279,45 +246,22 @@ function BouncingRefreshSectionListInner<ItemT = any, SectionT = any>(
     loaderColor,
     style,
     onScroll: userOnScroll,
-    onScrollBeginDrag: userOnScrollBeginDrag,
-    onScrollEndDrag: userOnScrollEndDrag,
     ...rest
   } = props;
 
   const { indicatorRef, apply, isLockedRef } = useIndicator(refreshing);
-  const pullValueRef = useRef(0);
-  const triggeredRef = useRef(false);
 
   const handleScroll = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-      const y = e.nativeEvent.contentOffset.y;
-      const next = clampHeight(-y, isLockedRef.current);
-      if (Math.abs(next - pullValueRef.current) > 0.5) {
-        pullValueRef.current = next;
-        apply(next);
+      if (!isLockedRef.current) {
+        const y = e.nativeEvent.contentOffset.y;
+        const pull = clampPull(-y);
+        apply(pull);
       }
       userOnScroll?.(e);
     },
     [apply, isLockedRef, userOnScroll],
   );
-
-  const handleScrollEndDrag = useCallback(
-    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-      if (!isLockedRef.current && !triggeredRef.current && pullValueRef.current >= THRESHOLD) {
-        triggeredRef.current = true;
-        onRefresh();
-      } else if (!isLockedRef.current) {
-        apply(0);
-        pullValueRef.current = 0;
-      }
-      userOnScrollEndDrag?.(e);
-    },
-    [apply, isLockedRef, onRefresh, userOnScrollEndDrag],
-  );
-
-  useEffect(() => {
-    if (!refreshing) triggeredRef.current = false;
-  }, [refreshing]);
 
   return (
     <View style={[styles.container, style]}>
@@ -325,13 +269,12 @@ function BouncingRefreshSectionListInner<ItemT = any, SectionT = any>(
         ref={ref}
         {...rest}
         onScroll={handleScroll}
-        onScrollEndDrag={handleScrollEndDrag}
-        onScrollBeginDrag={userOnScrollBeginDrag}
         scrollEventThrottle={16}
+        refreshControl={makeRefreshControl(refreshing, onRefresh)}
       />
       <RefreshIndicator
         indicatorRef={indicatorRef}
-        color={loaderColor ?? Colors.primary500}
+        color={loaderColor ?? Colors.primary600}
       />
     </View>
   );

@@ -10,7 +10,11 @@ import {
 import { Colors } from '../../constants/designTokens';
 
 interface BouncingDotsLoaderProps {
-  size?: 'small' | 'medium' | 'large';
+  /** Dot diameter in px (number) OR a preset: 'small' | 'medium' | 'large' */
+  size?: 'small' | 'medium' | 'large' | number;
+  /** Gap between dots in px (used when `size` is a number; defaults from preset otherwise) */
+  gap?: number;
+  /** Fill color of the dots. Defaults to the Ratedeed brand indigo. */
   color?: string;
   style?: StyleProp<ViewStyle>;
   dotCount?: number;
@@ -39,12 +43,16 @@ const SIZE_MAP: Record<
  */
 export const BouncingDotsLoader: React.FC<BouncingDotsLoaderProps> = ({
   size = 'medium',
+  gap,
   color = Colors.primary600,
   style,
   dotCount = 3,
   speed = DURATION,
 }) => {
-  const { dot, gap } = SIZE_MAP[size];
+  const isNumeric = typeof size === 'number';
+  const preset = SIZE_MAP[(isNumeric ? 'medium' : size) as 'small' | 'medium' | 'large'];
+  const dot = isNumeric ? (size as number) : preset.dot;
+  const gapSize = gap ?? preset.gap;
   const half = speed / 2;
   const stagger = speed / 8;
 
@@ -86,7 +94,7 @@ export const BouncingDotsLoader: React.FC<BouncingDotsLoaderProps> = ({
     <View
       accessibilityRole="progressbar"
       accessibilityLabel="Loading"
-      style={[styles.container, { gap }, style]}
+      style={[styles.container, { gap: gapSize }, style]}
     >
       {anims.map((anim, i) => {
         const translateY = anim.interpolate({
