@@ -172,27 +172,51 @@ export default function JobDetailScreen() {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
         quality: 0.8,
-        allowsMultipleSelection: false,
+        allowsMultipleSelection: true,
+        selectionLimit: 10,
       });
 
       if (result.canceled || !result.assets?.length) return;
-      const asset = result.assets[0];
+      const assets = result.assets;
 
-      if (asset.fileSize && asset.fileSize > 5 * 1024 * 1024) {
-        Alert.alert('File too large', 'Please choose an image under 5MB.');
-        return;
+      for (const asset of assets) {
+        if (asset.fileSize && asset.fileSize > 5 * 1024 * 1024) {
+          Alert.alert('File too large', 'One or more selected images exceed 5MB and were skipped.');
+        }
       }
+
+      const validAssets = assets.filter((a) => !a.fileSize || a.fileSize <= 5 * 1024 * 1024);
+      if (!validAssets.length) return;
 
       setUploadProgressPhotoLoading(true);
-      const cloudinaryUrl = await uploadToCloudinary(asset.uri, CLOUDINARY_FOLDERS.CHAT);
-      
-      if (!cloudinaryUrl) {
-        throw new Error('Upload failed — no URL returned from server');
+      let uploaded = 0;
+      let firstError: string | null = null;
+      for (const asset of validAssets) {
+        try {
+          const cloudinaryUrl = await uploadToCloudinary(asset.uri, CLOUDINARY_FOLDERS.CHAT);
+          if (!cloudinaryUrl) {
+            throw new Error('Upload failed — no URL returned from server');
+          }
+          await uploadProgressPhoto(jobId, cloudinaryUrl);
+          uploaded++;
+        } catch (err: any) {
+          if (!firstError) firstError = err?.message || 'Failed to upload one or more photos';
+        }
       }
 
-      await uploadProgressPhoto(jobId, cloudinaryUrl);
-      Alert.alert('Success', 'Progress photo uploaded successfully!');
-      loadJob();
+      if (uploaded > 0) {
+        HapticFeedback.success();
+        Alert.alert(
+          'Success',
+          uploaded === 1
+            ? 'Progress photo uploaded successfully!'
+            : `${uploaded} progress photos uploaded successfully!` +
+              (firstError ? `\n\nSome photos failed: ${firstError}` : '')
+        );
+        loadJob();
+      } else if (firstError) {
+        Alert.alert('Error', firstError);
+      }
     } catch (err: any) {
       Alert.alert('Error', err?.message || 'Failed to upload progress photo');
     } finally {

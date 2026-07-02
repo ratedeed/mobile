@@ -1224,7 +1224,7 @@ const MessagesScreen = () => {
 
                   {/* Dates & contractor name */}
                   <View className="px-4 pb-3 flex-row items-center justify-between" style={{ borderBottomWidth: 1, borderBottomColor: isDark ? '#262626' : '#f5f5f5' }}>
-                    <Text className="text-[12px] text-neutral-400 dark:text-neutral-500">Sent by <Text className="font-semibold text-neutral-700 dark:text-neutral-300">{chatName}</Text></Text>
+                    <Text className="text-[12px] text-neutral-400 dark:text-neutral-500">Sent by <Text className="font-semibold text-neutral-700 dark:text-neutral-300">{msg.quote?.contractor?.companyName || msg.quote?.contractor?.businessName || (isMe ? 'You' : chatName)}</Text></Text>
                     {(msg.quote.estimatedStartDate || msg.quote.estimatedCompletionDate) && (
                       <View className="flex-row items-center" style={{ gap: 4 }}>
                         <FontAwesome5 name="calendar" size={11} color={isDark ? "#a3a3a3" : "#737373"} />
@@ -1273,15 +1273,24 @@ const MessagesScreen = () => {
                   {/* Escrow notice */}
                   <View className="mx-4 mb-4 p-3 rounded-xl flex-row items-start" style={{ gap: 8, backgroundColor: isDark ? '#1e293b' : '#f8fafc', borderWidth: 1, borderColor: isDark ? '#334155' : '#e2e8f0' }}>
                     <FontAwesome5 name="shield-alt" size={13} color={isDark ? "#94a3b8" : "#64748b"} style={{ marginTop: 2 }} />
-                    <Text className="text-[11px] flex-1 leading-[16px] text-neutral-500 dark:text-neutral-400">Escrow Protected — Payments are held safely and only released when you verify the work is completed.</Text>
+                    <Text className="text-[11px] flex-1 leading-[16px] text-neutral-500 dark:text-neutral-400">Escrow Protected — {isMe ? 'Funds are held safely and released to you once the homeowner verifies the work is complete.' : 'Payments are held safely and only released when you verify the work is completed.'}</Text>
                   </View>
-                  
+
                   {/* Action button */}
                   <View className="px-4 pb-4">
-                    <Pressable onPress={() => navigation.navigate('QuoteReview', { quoteId: msg.quoteId || msg.quote.id || msg.quote._id })} className="py-3.5 bg-neutral-900 dark:bg-neutral-100 rounded-xl items-center flex-row justify-center" style={{ gap: 6 }} accessibilityLabel="Review quote details" accessibilityRole="button">
-                      <Text className="text-[14px] font-bold text-white dark:text-neutral-900">Review Details</Text>
-                      <FontAwesome5 name="arrow-right" size={11} color={isDark ? "#171717" : "#FFFFFF"} />
-                    </Pressable>
+                    {isMe ? (
+                      <View className="py-3.5 rounded-xl items-center justify-center flex-row" style={{ gap: 6, backgroundColor: isDark ? '#262626' : '#f5f5f5' }}>
+                        <FontAwesome5 name={msg.quote.status === 'accepted' || msg.quote.status === 'funded_in_progress' ? 'check-circle' : msg.quote.status === 'rejected' || msg.quote.status === 'declined' ? 'times-circle' : 'paper-plane'} size={12} color={isDark ? '#a3a3a3' : '#737373'} />
+                        <Text className="text-[14px] font-bold text-neutral-500 dark:text-neutral-400">
+                          {msg.quote.status === 'accepted' || msg.quote.status === 'funded_in_progress' ? 'Quote Accepted' : msg.quote.status === 'rejected' || msg.quote.status === 'declined' ? 'Quote Declined' : 'Quote Sent — Awaiting Response'}
+                        </Text>
+                      </View>
+                    ) : (
+                      <Pressable onPress={() => navigation.navigate('QuoteReview', { quoteId: msg.quoteId || msg.quote.id || msg.quote._id })} className="py-3.5 bg-neutral-900 dark:bg-neutral-100 rounded-xl items-center flex-row justify-center" style={{ gap: 6 }} accessibilityLabel="Review quote details" accessibilityRole="button">
+                        <Text className="text-[14px] font-bold text-white dark:text-neutral-900">Review Details</Text>
+                        <FontAwesome5 name="arrow-right" size={11} color={isDark ? "#171717" : "#FFFFFF"} />
+                      </Pressable>
+                    )}
                   </View>
                 </View>
                 {(msg.isLastInGroup || msg._failed) && (

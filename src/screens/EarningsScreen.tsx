@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, ScrollView, Pressable, FlatList } from 'react-native';
+import { View, Text, ScrollView, Pressable, FlatList, Alert } from 'react-native';
 import { useColorScheme } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { getContractorEarnings } from '../api';
-import { getPlatformFeePercent } from '../utils/apiClient';
+import { getPlatformFeePercent, requestPayout } from '../utils/apiClient';
 import { SkeletonLoader } from '../components/common/SkeletonLoader';
-import { BouncingRefreshFlatList } from '../components/common';
+import { BouncingDotsLoader, BouncingRefreshFlatList } from '../components/common';
+import HapticFeedback from '../utils/haptics';
 
 interface Transaction {
   _id: string;
@@ -123,6 +124,38 @@ export default function EarningsScreen() {
     loadData();
   }, [loadData]);
 
+  const [cashingOut, setCashingOut] = useState(false);
+
+  const handleCashOut = useCallback(async () => {
+    const balance = (earnings?.availableBalance || 0) / 100;
+    if (cashingOut || balance <= 0) return;
+    Alert.alert(
+      'Withdraw Funds',
+      `Transfer your available balance of ${formatCurrency(balance)} to your linked bank account? This may take 1-3 business days to settle via Stripe.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Withdraw',
+          onPress: async () => {
+            setCashingOut(true);
+            try {
+              const res = await requestPayout();
+              HapticFeedback.success();
+              const msg = res?.message || res?.status ? `Payout status: ${res.status}` : 'Your payout has been initiated. Funds will arrive in 1-3 business days.';
+              Alert.alert('Withdrawal Initiated', msg);
+              loadData();
+            } catch (err: any) {
+              HapticFeedback.error();
+              Alert.alert('Withdrawal Failed', err?.message || 'We could not process your payout. Make sure your Stripe payout account is fully set up, then try again.');
+            } finally {
+              setCashingOut(false);
+            }
+          },
+        },
+      ]
+    );
+  }, [cashingOut, earnings, loadData]);
+
   if (loading) {
     return (
       <View className="flex-1 bg-white dark:bg-neutral-900 p-6 pt-16">
@@ -208,6 +241,26 @@ export default function EarningsScreen() {
             </View>
           </View>
           <Text className="text-4xl font-bold text-white">{formatCurrency(availableBalance)}</Text>
+          {availableBalance > 0 && (
+            <Pressable
+              onPress={handleCashOut}
+              disabled={cashingOut}
+              className="mt-4 py-3 rounded-xl items-center justify-center flex-row"
+              style={{ gap: 8, backgroundColor: cashingOut ? '#3f3f46' : '#4F46E5' }}
+            >
+              {cashingOut ? (
+                <BouncingDotsLoader size="small" color="#fff" />
+              ) : (
+                <>
+                  <FontAwesome5 name="arrow-up" size={13} color="#fff" />
+                  <Text className="text-sm font-bold text-white">Withdraw to Bank</Text>
+                </>
+              )}
+            </Pressable>
+          )}
+          {availableBalance <= 0 && (
+            <Text className="text-[11px] text-neutral-500 mt-3">No withdrawable balance yet. Funds become available once a job is completed and the homeowner releases escrow.</Text>
+          )}
         </View>
 
         {/* Stats Row */}
@@ -251,7 +304,7 @@ export default function EarningsScreen() {
         <Text className="text-base font-bold text-neutral-900 dark:text-white mb-3">Completed Jobs (Released Escrow)</Text>
       </View>
     ),
-    [availableBalance, pendingPayouts, totalEarned, feePercent]
+    [availableBalance, pendingPayouts, totalEarned, feePercent, cashingOut, handleCashOut]
   );
 
   const renderEmpty = useCallback(

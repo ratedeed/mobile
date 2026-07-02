@@ -1097,6 +1097,11 @@ export const getContractorEarnings = async (): Promise<Earnings> => {
   return get(`${API_BASE}/stripe/earnings`, authHeaders);
 };
 
+export const requestPayout = async (amount?: number): Promise<any> => {
+  const authHeaders = await getAuthHeaders();
+  return post(`${API_BASE}/stripe/payout`, amount != null ? { amount } : {}, authHeaders);
+};
+
 // ==========================================
 // Admin API
 // ==========================================
