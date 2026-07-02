@@ -378,6 +378,7 @@ export default function QuoteCreationSheet({
     : getProfileImageUrl(recipientName || 'User', '');
 
   return (
+    <>
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1 bg-white dark:bg-neutral-950">
         {/* Header */}
@@ -744,16 +745,17 @@ export default function QuoteCreationSheet({
           </Pressable>
         </View>
       </KeyboardAvoidingView>
-
-      <DateTimePickerSheet
-        visible={pickerVisible}
-        onClose={closePicker}
-        mode={pickerProps?.mode ?? 'date'}
-        title={pickerProps?.title ?? ''}
-        value={pickerProps?.value}
-        onConfirm={handlePickerConfirm}
-        minDate={pickerProps?.minDate}
-      />
     </Modal>
+
+    <DateTimePickerSheet
+      visible={pickerVisible}
+      onClose={closePicker}
+      mode={pickerProps?.mode ?? 'date'}
+      title={pickerProps?.title ?? ''}
+      value={pickerProps?.value}
+      onConfirm={handlePickerConfirm}
+      minDate={pickerProps?.minDate}
+    />
+    </>
   );
 }

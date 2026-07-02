@@ -1,17 +1,28 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
   View,
   Text,
   Pressable,
-  Modal,
-  ScrollView,
-  Animated,
-  PanResponder,
+  StyleSheet,
   useWindowDimensions,
+  Modal,
 } from 'react-native';
 import { useColorScheme } from 'nativewind';
 import { FontAwesome5 } from '@expo/vector-icons';
-import HapticFeedback from '../../utils/haptics';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  useReducedMotion,
+} from 'react-native-reanimated';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import BottomSheet, {
+  BottomSheetBackdrop,
+  BottomSheetFlatList,
+  BottomSheetScrollView,
+} from '@gorhom/bottom-sheet';
+import * as Haptics from 'expo-haptics';
+import { Colors } from '../../constants/designTokens';
 
 type Mode = 'date' | 'time';
 
@@ -20,7 +31,7 @@ interface DateTimePickerSheetProps {
   onClose: () => void;
   mode: Mode;
   title: string;
-  value?: string;
+  value?: string;              // ISO date "YYYY-MM-DD" or time "h:mm AM"
   onConfirm: (value: string) => void;
   minDate?: string;
   timeSlots?: string[];
@@ -32,6 +43,7 @@ const MONTHS = [
   'July', 'August', 'September', 'October', 'November', 'December',
 ];
 
+// ─── Date helpers ────────────────────────────────────────────────────
 function toISODate(d: Date): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -48,6 +60,20 @@ function parseISODate(s?: string): Date | null {
 
 function startOfDay(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+function isSameDay(a: Date, b: Date): boolean {
+  return a.getFullYear() === b.getFullYear()
+    && a.getMonth() === b.getMonth()
+    && a.getDate() === b.getDate();
+}
+
+function isSameMonth(a: Date, b: Date): boolean {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
+}
+
+function addMonths(d: Date, n: number): Date {
+  return new Date(d.getFullYear(), d.getMonth() + n, 1);
 }
 
 function formatTime(hour: number, minute: number): string {
@@ -78,305 +104,538 @@ const TIME_SLOTS: string[] = (() => {
   return slots;
 })();
 
-// Fallback bottom padding for phones with a home indicator (e.g. iPhone).
-// If this app already uses react-native-safe-area-context elsewhere, swap
-// this for `useSafeAreaInsets().bottom` for a pixel-perfect fit instead.
-const BOTTOM_INSET_FALLBACK = 24;
+// ─── Build months to render (HorizonCalendar-style vertical scroll) ──
+function buildMonthData(monthStart: Date, minDate: Date | null, today: Date) {
+  const year = monthStart.getFullYear();
+  const month = monthStart.getMonth();
+  const firstOfMonth = new Date(year, month, 1);
+  const startWeekday = firstOfMonth.getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-// Drag-to-dismiss thresholds for the handle.
-const DRAG_CLOSE_DISTANCE = 120;
-const DRAG_CLOSE_VELOCITY = 0.8;
+  // Only render current-month days; leading empty cells for weekday alignment
+  const cells: ({ date: Date; iso: string } | null)[] = [];
+  for (let i = 0; i < startWeekday; i++) cells.push(null);
+  for (let day = 1; day <= daysInMonth; day++) {
+    const d = new Date(year, month, day);
+    cells.push({ date: d, iso: toISODate(d) });
+  }
+  // NO trailing fill — variable row count, like HorizonCalendar
 
+  return { year, month, cells };
+}
+
+// ─── Animated day cell ───────────────────────────────────────────────
+type DayCellProps = {
+  cell: { date: Date; iso: string } | null;
+  isSelected: boolean;
+  isRangeStart: boolean;
+  isRangeEnd: boolean;
+  isInRange: boolean;
+  isToday: boolean;
+  disabled: boolean;
+  size: number;
+  isDark: boolean;
+  reduceMotion: boolean;
+  onPress: (date: Date) => void;
+};
+
+const DayCell = React.memo<DayCellProps>(({
+  cell, isSelected, isRangeStart, isRangeEnd, isInRange, isToday,
+  disabled, size, isDark, reduceMotion, onPress,
+}) => {
+  const scale = useSharedValue(1);
+
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  const handlePressIn = () => {
+    if (disabled || reduceMotion) return;
+    scale.value = withSpring(0.9, { damping: 15, stiffness: 300 });
+  };
+  const handlePressOut = () => {
+    if (disabled || reduceMotion) return;
+    scale.value = withSpring(1, { damping: 14, stiffness: 280 });
+  };
+
+  if (!cell) {
+    return <View style={{ width: size, height: size }} />;
+  }
+
+  const bgColor = isSelected
+    ? Colors.primary600
+    : isInRange
+      ? (isDark ? 'rgba(79,70,229,0.15)' : 'rgba(79,70,229,0.10)')
+      : 'transparent';
+  const textColor = isSelected
+    ? '#fff'
+    : disabled
+      ? (isDark ? '#525252' : '#d4d4d4')
+      : isToday
+        ? Colors.primary600
+        : (isDark ? '#fafafa' : '#262626');
+
+  return (
+    <Animated.View style={[{ width: size, height: size }, animStyle]}>
+      <Pressable
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        onPress={() => !disabled && onPress(cell.date)}
+        disabled={disabled}
+        style={[styles.cellInner, {
+          backgroundColor: bgColor,
+          borderRadius: size / 2,
+          // Range bar: connect start/middle/end with a continuous fill
+          borderTopLeftRadius: isRangeStart || isInRange ? 0 : size / 2,
+          borderBottomLeftRadius: isRangeStart || isInRange ? 0 : size / 2,
+          borderTopRightRadius: isRangeEnd || isInRange ? 0 : size / 2,
+          borderBottomRightRadius: isRangeEnd || isInRange ? 0 : size / 2,
+        }]}
+      >
+        <Text style={[styles.cellText, { color: textColor, fontSize: size * 0.34 }]}>
+          {cell.date.getDate()}
+        </Text>
+        {isToday && !isSelected && (
+          <View style={[styles.todayDot, { backgroundColor: Colors.primary600 }]} />
+        )}
+      </Pressable>
+    </Animated.View>
+  );
+});
+
+// ─── Month header ────────────────────────────────────────────────────
+const MonthHeader = React.memo<{ monthStart: Date; isDark: boolean }>(
+  ({ monthStart, isDark }) => (
+    <View style={styles.monthHeader}>
+      <Text style={[styles.monthTitle, { color: isDark ? '#fafafa' : '#171717' }]}>
+        {MONTHS[monthStart.getMonth()]} {monthStart.getFullYear()}
+      </Text>
+    </View>
+  )
+);
+
+// ─── Main component ──────────────────────────────────────────────────
 export default function DateTimePickerSheet({
-  visible,
-  onClose,
-  mode,
-  title,
-  value,
-  onConfirm,
-  minDate,
-  timeSlots,
+  visible, onClose, mode, title, value, onConfirm, minDate, timeSlots,
 }: DateTimePickerSheetProps) {
   const { width: screenWidth } = useWindowDimensions();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const reduceMotion = useReducedMotion() ?? false;
 
-  // FontAwesome5's icon color prop can't read Tailwind's `dark:` classes,
-  // so it needs an explicit light/dark pair.
-  const iconColorActive = isDark ? '#818CF8' : '#4F46E5'; // indigo-400 / indigo-600
-  const iconColorDisabled = isDark ? '#404040' : '#d4d4d4'; // neutral-700 / neutral-300
-  const iconColorClose = isDark ? '#a3a3a3' : '#737373'; // neutral-400 / neutral-500
-
-  // Was a one-time useMemo(() => new Date(), []) — went stale if the sheet
-  // stayed mounted (hidden) across midnight. Now refreshed every time it opens.
-  const [today, setToday] = useState(() => startOfDay(new Date()));
-
+  const today = useMemo(() => startOfDay(new Date()), []);
   const minDateD = useMemo(() => (minDate ? parseISODate(minDate) : null), [minDate]);
   const valueDate = useMemo(() => parseISODate(value), [value]);
   const selectedTimeNorm = useMemo(() => normalizeTime(value), [value]);
   const slots = timeSlots ?? TIME_SLOTS;
 
-  const [viewMonth, setViewMonth] = useState(() => {
+  // Single-date selection (no range in this version — Airbnb uses range
+  // for booking, but RateDeed may only need single date for booking a contractor)
+  const [selectedDate, setSelectedDate] = useState<Date | null>(valueDate);
+  const [selectedTime, setSelectedTime] = useState<string | null>(timeSlots ? (value ?? null) : selectedTimeNorm);
+  const [scrollIndex, setScrollIndex] = useState(0);
+
+  const sheetRef = useRef<any>(null);
+  const snapPoints = useMemo(() => ['85%'], []);
+
+  // Build months: current + 11 forward = 12 months total (Airbnb default)
+  const months = useMemo(() => {
     const base = valueDate || today;
-    return new Date(base.getFullYear(), base.getMonth(), 1);
-  });
+    const start = new Date(base.getFullYear(), base.getMonth(), 1);
+    const limit = minDateD || today;
+    return Array.from({ length: 12 }, (_, i) => {
+      const monthStart = addMonths(start, i);
+      if (monthStart < new Date(limit.getFullYear(), limit.getMonth(), 1)) return null;
+      return buildMonthData(monthStart, minDateD, today);
+    }).filter(Boolean) as ReturnType<typeof buildMonthData>[];
+  }, [valueDate, today, minDateD]);
 
-  // Drag-to-dismiss on the handle, using only core RN APIs (no extra deps).
-  const translateY = useRef(new Animated.Value(0)).current;
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onPanResponderMove: (_evt, gestureState) => {
-        if (gestureState.dy > 0) translateY.setValue(gestureState.dy);
-      },
-      onPanResponderRelease: (_evt, gestureState) => {
-        if (gestureState.dy > DRAG_CLOSE_DISTANCE || gestureState.vy > DRAG_CLOSE_VELOCITY) {
-          onClose();
-        } else {
-          Animated.spring(translateY, { toValue: 0, useNativeDriver: true }).start();
-        }
-      },
-    })
-  ).current;
-
+  // Reset state when sheet opens
   useEffect(() => {
     if (visible) {
-      const now = startOfDay(new Date());
-      setToday(now);
-      const base = valueDate || now;
-      setViewMonth(new Date(base.getFullYear(), base.getMonth(), 1));
-      translateY.setValue(0);
+      setSelectedDate(valueDate);
+      setSelectedTime(timeSlots ? (value ?? null) : selectedTimeNorm);
+      setScrollIndex(0);
+      sheetRef.current?.snapToIndex(0);
     }
-    // Intentionally only re-runs when the sheet opens — resetting on every
-    // `value`/`today` change would fight the user's in-progress month navigation.
-  }, [visible]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [visible]);  // eslint-disable-line react-hooks/exhaustive-deps
 
-  const cells = useMemo(() => {
-    const year = viewMonth.getFullYear();
-    const month = viewMonth.getMonth();
-    const firstOfMonth = new Date(year, month, 1);
-    const startWeekday = firstOfMonth.getDay();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const daysInPrevMonth = new Date(year, month, 0).getDate();
-    const arr: { date: Date; inMonth: boolean; iso: string }[] = [];
-    for (let i = 0; i < startWeekday; i++) {
-      const day = daysInPrevMonth - (startWeekday - 1 - i);
-      const d = new Date(year, month - 1, day);
-      arr.push({ date: d, inMonth: false, iso: toISODate(d) });
+  // Close handler — animate sheet down then call onClose
+  const handleClose = useCallback(() => {
+    sheetRef.current?.close();
+    // onClose fires via onChange when index reaches -1
+  }, []);
+
+  const handleSheetChange = useCallback((idx: number) => {
+    if (idx === -1) onClose();
+  }, [onClose]);
+
+  // ─── Date selection with haptic ──────────────────────────────────
+  const handleSelectDate = useCallback((d: Date) => {
+    setSelectedDate(d);
+    if (!reduceMotion) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
-    for (let day = 1; day <= daysInMonth; day++) {
-      const d = new Date(year, month, day);
-      arr.push({ date: d, inMonth: true, iso: toISODate(d) });
+  }, [reduceMotion]);
+
+  // ─── Time selection with haptic ──────────────────────────────────
+  const handleSelectTime = useCallback((slot: string) => {
+    setSelectedTime(slot);
+    if (!reduceMotion) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
-    let next = 1;
-    while (arr.length < 42) {
-      const d = new Date(year, month + 1, next++);
-      arr.push({ date: d, inMonth: false, iso: toISODate(d) });
+  }, [reduceMotion]);
+
+  // ─── Confirm: validate, fire callback, close ─────────────────────
+  const handleConfirm = useCallback(() => {
+    if (mode === 'date') {
+      if (!selectedDate) return;
+      onConfirm(toISODate(selectedDate));
+    } else {
+      if (!selectedTime) return;
+      onConfirm(selectedTime);
     }
-    return arr;
-  }, [viewMonth]);
+    if (!reduceMotion) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+    handleClose();
+  }, [mode, selectedDate, selectedTime, onConfirm, handleClose, reduceMotion]);
 
-  const canGoPrev = useMemo(() => {
-    const limit = minDateD || today;
-    const limitMonthStart = new Date(limit.getFullYear(), limit.getMonth(), 1);
-    return new Date(viewMonth.getFullYear(), viewMonth.getMonth(), 1) > limitMonthStart;
-  }, [viewMonth, minDateD, today]);
+  // ─── Clear: reset selection ──────────────────────────────────────
+  const handleClear = useCallback(() => {
+    setSelectedDate(null);
+    setSelectedTime(null);
+    if (!reduceMotion) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+  }, [reduceMotion]);
 
-  const isDisabled = (d: Date) => {
-    const limit = minDateD || today;
-    return d < limit;
+  // ─── Scroll to today ─────────────────────────────────────────────
+  const scrollToToday = useCallback(() => {
+    const todayIdx = months.findIndex(m =>
+      m.year === today.getFullYear() && m.month === today.getMonth()
+    );
+    if (todayIdx >= 0) {
+      setScrollIndex(todayIdx);
+      if (!reduceMotion) {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
+    }
+  }, [months, today, reduceMotion]);
+
+  const renderBackdrop = useCallback((props: any) => (
+    <BottomSheetBackdrop
+      {...props}
+      disappearsOnIndex={-1}
+      appearsOnIndex={0}
+      opacity={0.5}
+      pressBehavior="close"
+    />
+  ), []);
+
+  const dayCellSize = Math.min(Math.floor((screenWidth - 64) / 7), 44);
+
+  if (!visible) return null;
+
+  const sheetCommonProps = {
+    ref: sheetRef,
+    index: 0,
+    enablePanDownToClose: true,
+    backdropComponent: renderBackdrop,
+    onChange: handleSheetChange,
+    backgroundStyle: { backgroundColor: isDark ? '#171717' : '#fff', borderRadius: 24 },
+    handleIndicatorStyle: { width: 40, backgroundColor: isDark ? '#525252' : '#d4d4d4' },
+    animationConfigs: { damping: 28, stiffness: 380, mass: 0.8 },
   };
 
-  const handlePrevMonth = () => {
-    if (!canGoPrev) return;
-    HapticFeedback.selection();
-    setViewMonth(new Date(viewMonth.getFullYear(), viewMonth.getMonth() - 1, 1));
-  };
-
-  const handleNextMonth = () => {
-    HapticFeedback.selection();
-    setViewMonth(new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 1));
-  };
-
-  const handleSelectDate = (d: Date) => {
-    if (isDisabled(d)) return;
-    HapticFeedback.selection();
-    onConfirm(toISODate(d));
-    onClose();
-  };
-
-  const handleSelectTime = (slot: string) => {
-    HapticFeedback.selection();
-    onConfirm(slot);
-    onClose();
-  };
-
-  const dayCellSize = Math.min(Math.floor((screenWidth - 80) / 7), 44);
-  // Selected/today circle now scales with the cell instead of a fixed 36px,
-  // so it can't overflow the cell bounds on narrow phones (e.g. iPhone SE).
-  const circleSize = Math.max(Math.min(dayCellSize - 4, 36), 28);
-
-  return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable className="flex-1 justify-end" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onPress={onClose}>
-        <Animated.View style={{ transform: [{ translateY }] }}>
-          <Pressable
-            className="bg-white dark:bg-neutral-900 rounded-t-3xl"
-            style={{ maxHeight: '80%' }}
-            onPress={(e) => e.stopPropagation()}
-          >
-            {/* Handle — drag down to dismiss */}
-            <View className="items-center pt-3 pb-1" {...panResponder.panHandlers}>
-              <View className="w-10 h-1.5 rounded-full bg-neutral-300 dark:bg-neutral-700" />
-            </View>
-
-            {/* Header */}
-            <View className="flex-row items-center justify-between px-5 pb-3 border-b border-neutral-100 dark:border-neutral-800">
-              <Text className="text-[16px] font-bold text-neutral-900 dark:text-neutral-50">{title}</Text>
-              <Pressable
-                onPress={onClose}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                className="w-8 h-8 items-center justify-center rounded-full bg-neutral-100 dark:bg-neutral-800"
-                accessibilityRole="button"
-                accessibilityLabel="Close"
-              >
-                <FontAwesome5 name="times" solid size={13} color={iconColorClose} />
+  // ─── Time mode ───────────────────────────────────────────────────
+  if (mode === 'time') {
+    return (
+      <Modal visible transparent animationType="none" onRequestClose={handleClose}>
+        <GestureHandlerRootView style={StyleSheet.absoluteFill}>
+          <BottomSheet {...sheetCommonProps} snapPoints={['60%']}>
+            <View style={styles.sheetHeader}>
+              <Text style={[styles.sheetTitle, { color: isDark ? '#fafafa' : '#171717' }]}>
+                {title}
+              </Text>
+              <Pressable onPress={handleClose} style={styles.closeBtn}>
+                <FontAwesome5 name="times" size={14} color={isDark ? '#a3a3a3' : '#737373'} />
               </Pressable>
             </View>
 
-            {mode === 'date' ? (
-              <>
-                {/* Month nav */}
-                <View className="flex-row items-center justify-between px-5 py-3">
-                  <Pressable
-                    onPress={handlePrevMonth}
-                    disabled={!canGoPrev}
-                    hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                    className="w-9 h-9 items-center justify-center rounded-full"
-                    accessibilityRole="button"
-                    accessibilityLabel="Previous month"
-                    accessibilityState={{ disabled: !canGoPrev }}
-                  >
-                    <FontAwesome5
-                      name="chevron-left"
-                      solid
-                      size={14}
-                      color={canGoPrev ? iconColorActive : iconColorDisabled}
-                    />
-                  </Pressable>
-                  <Text className="text-[15px] font-bold text-neutral-900 dark:text-neutral-50">
-                    {MONTHS[viewMonth.getMonth()]} {viewMonth.getFullYear()}
-                  </Text>
-                  <Pressable
-                    onPress={handleNextMonth}
-                    hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                    className="w-9 h-9 items-center justify-center rounded-full"
-                    accessibilityRole="button"
-                    accessibilityLabel="Next month"
-                  >
-                    <FontAwesome5 name="chevron-right" solid size={14} color={iconColorActive} />
-                  </Pressable>
-                </View>
+            <BottomSheetScrollView
+              contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={styles.timeGrid}>
+                {slots.map((slot) => {
+                  const selected = selectedTime === slot;
+                  return (
+                    <Pressable
+                      key={slot}
+                      onPress={() => handleSelectTime(slot)}
+                      style={[
+                        styles.timeChip,
+                        {
+                          backgroundColor: selected ? Colors.primary600 : (isDark ? '#262626' : '#fafafa'),
+                          borderColor: selected ? Colors.primary600 : (isDark ? '#404040' : '#e5e5e5'),
+                        },
+                      ]}
+                    >
+                      <Text style={[
+                        styles.timeChipText,
+                        { color: selected ? '#fff' : (isDark ? '#fafafa' : '#262626') },
+                      ]}>
+                        {slot}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </BottomSheetScrollView>
 
-                {/* Weekday labels */}
-                <View className="flex-row px-3 pb-2">
-                  {WEEKDAYS.map((w, i) => (
-                    <View key={i} style={{ width: dayCellSize }} className="items-center">
-                      <Text className="text-[11px] font-bold text-neutral-400 dark:text-neutral-500">{w}</Text>
-                    </View>
-                  ))}
-                </View>
-
-                {/* Grid */}
-                <ScrollView
-                  className="px-3"
-                  showsVerticalScrollIndicator={false}
-                  contentContainerStyle={{ paddingBottom: 20 + BOTTOM_INSET_FALLBACK, paddingTop: 4 }}
-                >
-                  <View className="flex-row flex-wrap" style={{ width: dayCellSize * 7 }}>
-                    {cells.map((cell, i) => {
-                      const isSelected = valueDate ? cell.iso === toISODate(valueDate) : false;
-                      const isToday = cell.iso === toISODate(today);
-                      const disabled = isDisabled(cell.date);
-                      return (
-                        <Pressable
-                          key={i}
-                          onPress={() => cell.inMonth && handleSelectDate(cell.date)}
-                          disabled={!cell.inMonth || disabled}
-                          style={{ width: dayCellSize, height: dayCellSize }}
-                          className="items-center justify-center"
-                          accessibilityRole={cell.inMonth ? 'button' : undefined}
-                          accessibilityLabel={cell.inMonth ? cell.date.toDateString() : undefined}
-                          accessibilityState={{ selected: isSelected, disabled: !cell.inMonth || disabled }}
-                        >
-                          {isSelected ? (
-                            <View
-                              style={{ width: circleSize, height: circleSize, borderRadius: circleSize / 2 }}
-                              className="bg-indigo-600 items-center justify-center"
-                            >
-                              <Text className="text-[14px] font-bold text-white">{cell.date.getDate()}</Text>
-                            </View>
-                          ) : (
-                            <View
-                              style={{ width: circleSize, height: circleSize, borderRadius: circleSize / 2 }}
-                              className={`items-center justify-center ${
-                                cell.inMonth ? 'border' : ''
-                              } ${isToday ? 'border-indigo-500' : 'border-transparent'}`}
-                            >
-                              <Text
-                                className={`text-[14px] ${
-                                  !cell.inMonth
-                                    ? 'text-neutral-300 dark:text-neutral-700'
-                                    : disabled
-                                    ? 'text-neutral-300 dark:text-neutral-700'
-                                    : 'text-neutral-800 dark:text-neutral-100'
-                                } ${isToday ? 'font-bold text-indigo-600 dark:text-indigo-400' : 'font-medium'}`}
-                              >
-                                {cell.date.getDate()}
-                              </Text>
-                            </View>
-                          )}
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-                </ScrollView>
-              </>
-            ) : (
-              <ScrollView
-                className="px-5 py-4"
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={{ paddingBottom: 20 + BOTTOM_INSET_FALLBACK }}
+            {/* Footer — Clear + Confirm (Airbnb always has explicit actions) */}
+            <View style={[styles.footer, { borderTopColor: isDark ? '#262626' : '#f0f0f0' }]}>
+              <Pressable onPress={handleClear} style={styles.footerClearBtn}>
+                <Text style={[styles.footerClearText, { color: Colors.primary600 }]}>Clear</Text>
+              </Pressable>
+              <Pressable
+                onPress={handleConfirm}
+                disabled={!selectedTime}
+                style={[styles.footerConfirmBtn, {
+                  backgroundColor: selectedTime ? Colors.primary600 : (isDark ? '#262626' : '#e5e5e5'),
+                }]}
               >
-                <View className="flex-row flex-wrap" style={{ gap: 8 }}>
-                  {slots.map((slot) => {
-                    const selected = timeSlots ? value === slot : selectedTimeNorm === slot;
+                <Text style={[styles.footerConfirmText, {
+                  color: selectedTime ? '#fff' : (isDark ? '#525252' : '#a3a3a3'),
+                }]}>
+                  Save
+                </Text>
+              </Pressable>
+            </View>
+          </BottomSheet>
+        </GestureHandlerRootView>
+      </Modal>
+    );
+  }
+
+  // ─── Date mode ───────────────────────────────────────────────────
+  return (
+    <Modal visible transparent animationType="none" onRequestClose={handleClose}>
+      <GestureHandlerRootView style={StyleSheet.absoluteFill}>
+        <BottomSheet {...sheetCommonProps} snapPoints={snapPoints}>
+          {/* Header */}
+          <View style={styles.sheetHeader}>
+            <Text style={[styles.sheetTitle, { color: isDark ? '#fafafa' : '#171717' }]}>
+              {title}
+            </Text>
+            <Pressable onPress={handleClose} style={styles.closeBtn}>
+              <FontAwesome5 name="times" size={14} color={isDark ? '#a3a3a3' : '#737373'} />
+            </Pressable>
+          </View>
+
+          {/* Weekday row — sticky above the scrolling months */}
+          <View style={styles.weekdayRow}>
+            {WEEKDAYS.map((w, i) => (
+              <View key={i} style={{ width: dayCellSize, alignItems: 'center' }}>
+                <Text style={[styles.weekdayText, { color: isDark ? '#737373' : '#a3a3a3' }]}>
+                  {w}
+                </Text>
+              </View>
+            ))}
+          </View>
+
+          {/* Today quick-scroll button — Airbnb pattern */}
+          <View style={styles.todayBar}>
+            <Pressable onPress={scrollToToday} style={styles.todayPill}>
+              <Text style={[styles.todayPillText, { color: Colors.primary600 }]}>Today</Text>
+            </Pressable>
+          </View>
+
+          {/* Vertically scrolling months — HorizonCalendar pattern */}
+          <BottomSheetFlatList
+            data={months}
+            keyExtractor={(item) => `${item.year}-${item.month}`}
+            initialScrollIndex={scrollIndex}
+            getItemLayout={(_data, idx) => ({
+              length: 380,  // approx month height — tune for your cell size
+              offset: 380 * idx,
+              index: idx,
+            })}
+            renderItem={({ item: monthData }) => (
+              <View style={{ paddingHorizontal: 16, marginBottom: 24 }}>
+                <MonthHeader monthStart={new Date(monthData.year, monthData.month, 1)} isDark={isDark} />
+                <View style={styles.daysGrid}>
+                  {monthData.cells.map((cell, i) => {
+                    if (!cell) return <View key={i} style={{ width: dayCellSize, height: dayCellSize }} />;
+                    const isSelected = selectedDate ? isSameDay(cell.date, selectedDate) : false;
+                    const isToday = isSameDay(cell.date, today);
+                    const disabled = minDateD ? cell.date < minDateD : cell.date < today;
                     return (
-                      <Pressable
-                        key={slot}
-                        onPress={() => handleSelectTime(slot)}
-                        className={`px-4 py-2.5 rounded-xl border ${
-                          selected
-                            ? 'bg-indigo-600 border-indigo-600'
-                            : 'bg-neutral-50 dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700'
-                        }`}
-                        style={{ minWidth: 90 }}
-                        accessibilityRole="button"
-                        accessibilityLabel={slot}
-                        accessibilityState={{ selected }}
-                      >
-                        <Text className={`text-[14px] font-semibold ${selected ? 'text-white' : 'text-neutral-800 dark:text-neutral-100'}`}>
-                          {slot}
-                        </Text>
-                      </Pressable>
+                      <DayCell
+                        key={i}
+                        cell={cell}
+                        isSelected={isSelected}
+                        isRangeStart={false}
+                        isRangeEnd={false}
+                        isInRange={false}
+                        isToday={isToday}
+                        disabled={disabled}
+                        size={dayCellSize}
+                        isDark={isDark}
+                        reduceMotion={reduceMotion}
+                        onPress={handleSelectDate}
+                      />
                     );
                   })}
                 </View>
-              </ScrollView>
+              </View>
             )}
-          </Pressable>
-        </Animated.View>
-      </Pressable>
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 100 }}
+          />
+
+          {/* Footer — Clear + Confirm */}
+          <View style={[styles.footer, { borderTopColor: isDark ? '#262626' : '#f0f0f0' }]}>
+            <Pressable onPress={handleClear} style={styles.footerClearBtn}>
+              <Text style={[styles.footerClearText, { color: Colors.primary600 }]}>Clear</Text>
+            </Pressable>
+            <Pressable
+              onPress={handleConfirm}
+              disabled={!selectedDate}
+              style={[styles.footerConfirmBtn, {
+                backgroundColor: selectedDate ? Colors.primary600 : (isDark ? '#262626' : '#e5e5e5'),
+              }]}
+            >
+              <Text style={[styles.footerConfirmText, {
+                color: selectedDate ? '#fff' : (isDark ? '#525252' : '#a3a3a3'),
+              }]}>
+                Save
+              </Text>
+            </Pressable>
+          </View>
+        </BottomSheet>
+      </GestureHandlerRootView>
     </Modal>
   );
 }
+
+// ─── Styles ──────────────────────────────────────────────────────────
+const styles = StyleSheet.create({
+  sheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  sheetTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  closeBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.05)',
+  },
+  weekdayRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    justifyContent: 'space-around',
+  },
+  weekdayText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  todayBar: {
+    paddingHorizontal: 20,
+    paddingBottom: 8,
+  },
+  todayPill: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: 'rgba(79,70,229,0.08)',
+  },
+  todayPillText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  daysGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  monthHeader: {
+    paddingVertical: 16,
+    paddingHorizontal: 4,
+  },
+  monthTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  cellInner: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    margin: 2,
+  },
+  cellText: {
+    fontWeight: '600',
+  },
+  todayDot: {
+    position: 'absolute',
+    bottom: 4,
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+  },
+  timeGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  timeChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    minWidth: 90,
+    alignItems: 'center',
+  },
+  timeChipText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  footer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderTopWidth: 1,
+  },
+  footerClearBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  footerClearText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  footerConfirmBtn: {
+    paddingHorizontal: 32,
+    paddingVertical: 14,
+    borderRadius: 12,
+    minWidth: 120,
+    alignItems: 'center',
+  },
+  footerConfirmText: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+});
