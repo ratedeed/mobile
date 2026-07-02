@@ -21,7 +21,7 @@ import { Colors } from '../../constants/designTokens';
 const INDICATOR_HEIGHT = 64;
 const COLLAPSE_DURATION = 200;
 
-const HIDDEN = 'rgba(0, 0, 0, 0)';
+const HIDDEN = 'transparent';
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
@@ -110,8 +110,8 @@ function clampPull(raw: number): number {
 
 /**
  * Enhanced RefreshControl Maker
- * Uses progressViewOffset={-1000} on Android to completely push the 
- * native loading spinner out of the visible screen coordinates.
+ * Uses progressViewOffset={-1000} on Android and style={{ opacity: 0 }} on iOS/Android
+ * to guarantee the native activity indicator is entirely invisible.
  */
 function makeRefreshControl(refreshing: boolean, onRefresh: () => void) {
   return (
@@ -121,6 +121,8 @@ function makeRefreshControl(refreshing: boolean, onRefresh: () => void) {
       tintColor={HIDDEN}
       colors={[HIDDEN]}
       progressBackgroundColor={HIDDEN}
+      // Hides the native spinner visually on iOS & Android
+      style={{ opacity: 0 }}
       // Pushes the Android native spinner off-screen so its shadow/circle doesn't overlap
       progressViewOffset={Platform.OS === 'android' ? -1000 : undefined}
       title=""
