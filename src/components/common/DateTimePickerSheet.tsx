@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,13 +6,20 @@ import {
   StyleSheet,
   useWindowDimensions,
   Modal,
-  Animated as RNAnimated,
   ScrollView,
   Platform,
-  Easing,
 } from 'react-native';
 import { useColorScheme } from 'nativewind';
 import { FontAwesome5 } from '@expo/vector-icons';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+  runOnJS,
+  Easing,
+  interpolate,
+} from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '../../constants/designTokens';
@@ -185,10 +192,17 @@ export default function DateTimePickerSheet({
   const [viewYear, setViewYear] = useState(initialMonth.getFullYear());
   const [viewMonth, setViewMonth] = useState(initialMonth.getMonth());
 
-  // Animation
-  const slideAnim = useRef(new RNAnimated.Value(0)).current;
-  const backdropAnim = useRef(new RNAnimated.Value(0)).current;
+  // Animation (reanimated — runs on UI thread for 60+ FPS)
+  const progress = useSharedValue(0);
   const [modalVisible, setModalVisible] = useState(false);
+
+  const backdropStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(progress.value, [0, 1], [0, 0.45]),
+  }));
+
+  const sheetStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: interpolate(progress.value, [0, 1], [600, 0]) }],
+  }));
 
   useEffect(() => {
     if (visible) {
@@ -198,63 +212,25 @@ export default function DateTimePickerSheet({
       setViewYear(base.getFullYear());
       setViewMonth(base.getMonth());
       setModalVisible(true);
-      // Animate in
-      RNAnimated.parallel([
-        RNAnimated.spring(slideAnim, {
-          toValue: 1,
-          damping: 24,
-          stiffness: 300,
-          mass: 0.8,
-          useNativeDriver: true,
-        }),
-        RNAnimated.timing(backdropAnim, {
-          toValue: 1,
-          duration: 250,
-          useNativeDriver: true,
-        }),
-      ]).start();
+      progress.value = withSpring(1, { damping: 28, stiffness: 340, mass: 0.7 });
     } else {
-      // Animate out
-      RNAnimated.parallel([
-        RNAnimated.spring(slideAnim, {
-          toValue: 0,
-          damping: 24,
-          stiffness: 300,
-          mass: 0.8,
-          useNativeDriver: true,
-        }),
-        RNAnimated.timing(backdropAnim, {
-          toValue: 0,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-      ]).start(() => {
-        setModalVisible(false);
+      progress.value = withTiming(0, { duration: 200, easing: Easing.out(Easing.cubic) }, (finished) => {
+        if (finished) runOnJS(setModalVisible)(false);
       });
     }
   }, [visible]);
 
-  // Shared dismiss animation — resolves after sheet slides out
   const animateOut = useCallback((): Promise<void> => {
     return new Promise((resolve) => {
-      RNAnimated.parallel([
-        RNAnimated.timing(slideAnim, {
-          toValue: 0,
-          duration: 220,
-          easing: Easing.in(Easing.cubic),
-          useNativeDriver: true,
-        }),
-        RNAnimated.timing(backdropAnim, {
-          toValue: 0,
-          duration: 180,
-          useNativeDriver: true,
-        }),
-      ]).start(() => {
+      const onDone = () => {
         setModalVisible(false);
         resolve();
+      };
+      progress.value = withTiming(0, { duration: 200, easing: Easing.out(Easing.cubic) }, (finished) => {
+        if (finished) runOnJS(onDone)();
       });
     });
-  }, [slideAnim, backdropAnim]);
+  }, [progress]);
 
   const handleClose = useCallback(() => {
     animateOut().then(() => onClose());
@@ -331,11 +307,6 @@ export default function DateTimePickerSheet({
   const headerColor = isDark ? '#f5f5f5' : '#222';
   const subtleColor = isDark ? '#888' : '#717171';
 
-  const translateY = slideAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [600, 0],
-  });
-
   if (!modalVisible && !visible) return null;
 
   return (
@@ -348,25 +319,25 @@ export default function DateTimePickerSheet({
     >
       <View style={styles.overlay}>
         {/* Backdrop */}
-        <RNAnimated.View
+        <Animated.View
           style={[
             styles.backdrop,
-            { opacity: backdropAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 0.45] }) },
+            backdropStyle,
           ]}
         >
           <Pressable style={StyleSheet.absoluteFill} onPress={handleClose} />
-        </RNAnimated.View>
+        </Animated.View>
 
         {/* Sheet */}
-        <RNAnimated.View
+        <Animated.View
           style={[
             styles.sheet,
             {
               backgroundColor: sheetBg,
-              transform: [{ translateY }],
               paddingBottom: Math.max(insets.bottom, 20),
               maxHeight: '88%',
             },
+            sheetStyle,
           ]}
         >
           {/* Handle */}
@@ -532,7 +503,7 @@ export default function DateTimePickerSheet({
               </Text>
             </Pressable>
           </View>
-        </RNAnimated.View>
+        </Animated.View>
       </View>
     </Modal>
   );
