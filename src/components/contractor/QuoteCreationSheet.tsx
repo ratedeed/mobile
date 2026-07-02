@@ -32,6 +32,19 @@ function toISODateLocal(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
+/** Convert "11:30 AM" / "7:00 PM" to minutes since midnight for comparison */
+function parseTimeToMinutes(t: string): number | null {
+  if (!t) return null;
+  const m = /^(\d{1,2}):(\d{2})\s*(AM|PM)$/i.exec(t.trim());
+  if (!m) return null;
+  let hour = Number(m[1]);
+  const minute = Number(m[2]);
+  const period = m[3].toUpperCase();
+  if (period === 'PM' && hour < 12) hour += 12;
+  if (period === 'AM' && hour === 12) hour = 0;
+  return hour * 60 + minute;
+}
+
 function formatDisplayDate(iso: string): string {
   if (!iso) return '';
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
@@ -184,11 +197,18 @@ export default function QuoteCreationSheet({
   const subtotal = total - platformFee;
   const isMilestone = total >= 5000;
 
+  // On the same day, end time must be after start time
+  const isSameDay = startDate && endDate && startDate === endDate;
+  const startMins = parseTimeToMinutes(startTime);
+  const endMins = parseTimeToMinutes(endTime);
+  const timeOrderValid = !(isSameDay && startMins !== null && endMins !== null && endMins <= startMins);
+
   const isValid = projectName.trim() && 
     description.trim().length >= 10 && 
     startDate.trim() && 
     endDate.trim() && 
     new Date(endDate) >= new Date(startDate) &&
+    timeOrderValid &&
     lineItems.some(item => item.description.trim() && item.amount.trim() && parseFloat(item.amount) > 0);
 
   function calculateDuration(startDateStr: string, endDateStr: string) {
@@ -226,16 +246,50 @@ export default function QuoteCreationSheet({
           setEndDate('');
           setEndTime('');
         }
+        // If same day and start time now after end time, clear end time
+        if (endTime && v === endDate) {
+          const sMins = parseTimeToMinutes(startTime);
+          const eMins = parseTimeToMinutes(endTime);
+          if (sMins !== null && eMins !== null && eMins <= sMins) {
+            setEndTime('');
+          }
+        }
         break;
       case 'endDate':
         setEndDate(v);
+        // If same day and end time is before start time, clear end time
+        if (endTime && v === startDate) {
+          const sMins = parseTimeToMinutes(startTime);
+          const eMins = parseTimeToMinutes(endTime);
+          if (sMins !== null && eMins !== null && eMins <= sMins) {
+            setEndTime('');
+          }
+        }
         break;
       case 'startTime':
         setStartTime(v);
+        // If same day and new start time is after end time, clear end time
+        if (endTime && startDate === endDate) {
+          const sMins = parseTimeToMinutes(v);
+          const eMins = parseTimeToMinutes(endTime);
+          if (sMins !== null && eMins !== null && eMins <= sMins) {
+            setEndTime('');
+          }
+        }
         break;
-      case 'endTime':
+      case 'endTime': {
+        // Reject if same day and end time <= start time
+        if (startDate === endDate && startTime) {
+          const sMins = parseTimeToMinutes(startTime);
+          const eMins = parseTimeToMinutes(v);
+          if (sMins !== null && eMins !== null && eMins <= sMins) {
+            Alert.alert('Invalid Time', 'End time must be after the start time.');
+            return;
+          }
+        }
         setEndTime(v);
         break;
+      }
     }
   };
 
