@@ -1516,21 +1516,21 @@ export default function ContractorEditProfileModal({ visible, onClose, onProfile
             </View>
           </View>
         </KeyboardAvoidingView>
-      </Modal>
 
-      <DateTimePickerSheet
-        visible={timePickerVisible}
-        onClose={() => setTimePickerVisible(false)}
-        mode="time"
-        title={showTimePicker ? `Select ${showTimePicker.type === 'open' ? 'Opening' : 'Closing'} Time for ${showTimePicker.day}` : ''}
-        value={showTimePicker ? hours[showTimePicker.day]?.[showTimePicker.type] : ''}
-        timeSlots={TIME_OPTIONS}
-        onConfirm={(val) => {
-          if (!showTimePicker) return;
-          const { day, type } = showTimePicker;
-          setHours({ ...hours, [day]: { ...hours[day], [type]: val } });
-        }}
-      />
+        <DateTimePickerSheet
+          visible={timePickerVisible}
+          onClose={() => setTimePickerVisible(false)}
+          mode="time"
+          title={showTimePicker ? `Select ${showTimePicker.type === 'open' ? 'Opening' : 'Closing'} Time for ${showTimePicker.day}` : ''}
+          value={showTimePicker ? hours[showTimePicker.day]?.[showTimePicker.type] : ''}
+          timeSlots={TIME_OPTIONS}
+          onConfirm={(val) => {
+            if (!showTimePicker) return;
+            const { day, type } = showTimePicker;
+            setHours({ ...hours, [day]: { ...hours[day], [type]: val } });
+          }}
+        />
+      </Modal>
     </>
   );
 }

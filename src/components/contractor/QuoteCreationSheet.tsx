@@ -745,17 +745,17 @@ export default function QuoteCreationSheet({
           </Pressable>
         </View>
       </KeyboardAvoidingView>
-    </Modal>
 
-    <DateTimePickerSheet
-      visible={pickerVisible}
-      onClose={closePicker}
-      mode={pickerProps?.mode ?? 'date'}
-      title={pickerProps?.title ?? ''}
-      value={pickerProps?.value}
-      onConfirm={handlePickerConfirm}
-      minDate={pickerProps?.minDate}
-    />
+      <DateTimePickerSheet
+        visible={pickerVisible}
+        onClose={closePicker}
+        mode={pickerProps?.mode ?? 'date'}
+        title={pickerProps?.title ?? ''}
+        value={pickerProps?.value}
+        onConfirm={handlePickerConfirm}
+        minDate={pickerProps?.minDate}
+      />
+    </Modal>
     </>
   );
 }
