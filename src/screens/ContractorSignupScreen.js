@@ -6,7 +6,6 @@ import {
   Text,
   TextInput,
   Alert,
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   Dimensions,
@@ -20,6 +19,7 @@ import { contractorSignup } from '../api';
 import { auth } from '../firebaseConfig';
 import { createUserWithEmailAndPassword, sendEmailVerification, deleteUser } from 'firebase/auth';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BouncingDotsLoader } from '../components/common';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -481,7 +481,7 @@ const ContractorSignupScreen = () => {
               />
               {isSearchingAddress && (
                 <View className="absolute right-4 top-10">
-                  <ActivityIndicator size="small" color="#4F46E5" />
+                  <BouncingDotsLoader size="small" color="#4F46E5" />
                 </View>
               )}
               {addressSuggestions.length > 0 && (
@@ -630,7 +630,7 @@ const ContractorSignupScreen = () => {
                 className="flex-[2] bg-indigo-600 py-4 rounded-xl items-center shadow-lg shadow-indigo-500/20"
               >
                 {loading ? (
-                  <ActivityIndicator size="small" color="#fff" />
+                  <BouncingDotsLoader size="small" color="#fff" />
                 ) : (
                   <Text className="text-white font-bold text-base">Create Account</Text>
                 )}

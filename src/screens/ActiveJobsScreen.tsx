@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { View, Text, Pressable, ScrollView, Image, ActivityIndicator, SafeAreaView, RefreshControl, Alert, useColorScheme } from 'react-native';
+import { View, Text, Pressable, ScrollView, Image, SafeAreaView, RefreshControl, Alert, useColorScheme } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { SvgImage } from '../components/common/SvgImage';
+import { BouncingDotsLoader } from '../components/common';
 import { getUserQuotes, cancelJob, cancelDispute, updateQuoteStatus } from '../utils/apiClient';
 import { getProfileImageUrl, isSvgUrl } from '../utils/avatarUtils';
 import { useAuth } from '../context/AuthContext';
@@ -161,7 +162,7 @@ export default function ActiveJobsScreen() {
   if (loading && !refreshing) {
     return (
       <View className="flex-1 bg-white dark:bg-neutral-950 items-center justify-center">
-        <ActivityIndicator size="large" color="#171717" />
+        <BouncingDotsLoader size="large" color="#171717" />
       </View>
     );
   }

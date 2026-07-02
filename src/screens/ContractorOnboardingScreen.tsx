@@ -8,7 +8,6 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
   Alert,
   Dimensions,
   useColorScheme,
@@ -28,6 +27,7 @@ import { uploadToCloudinary, CLOUDINARY_FOLDERS } from '../utils/cloudinary';
 import { Linking } from 'react-native';
 import { requestPhotoLibraryPermission } from '../utils/permissions';
 import { parsePriceRange, formatPriceRange } from '../utils/price';
+import { BouncingDotsLoader } from '../components/common';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -389,7 +389,7 @@ export default function ContractorOnboardingScreen() {
   if (loadingProfile) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: isDark ? '#171717' : '#ffffff' }}>
-        <ActivityIndicator size="large" color="#4F46E5" />
+        <BouncingDotsLoader size="large" color="#4F46E5" />
       </View>
     );
   }
@@ -693,7 +693,7 @@ export default function ContractorOnboardingScreen() {
                 </Text>
                 {stripeStatusLoading ? (
                   <View className="bg-white/20 rounded-xl px-6 py-3 flex-row items-center" style={{ gap: 8 }}>
-                    <ActivityIndicator color="white" size="small" />
+                    <BouncingDotsLoader color="white" size="small" />
                     <Text className="text-white font-bold text-sm">Checking status…</Text>
                   </View>
                 ) : stripeStatus?.chargesEnabled ? (
@@ -710,7 +710,7 @@ export default function ContractorOnboardingScreen() {
                   >
                     {isStripeConnecting ? (
                       <>
-                        <ActivityIndicator color={isDark ? "#fff" : "#171717"} size="small" />
+                        <BouncingDotsLoader color={isDark ? "#fff" : "#171717"} size="small" />
                         <Text className="text-neutral-900 dark:text-white font-bold text-sm">Pending…</Text>
                       </>
                     ) : (
@@ -775,7 +775,7 @@ export default function ContractorOnboardingScreen() {
               style={{ gap: 8, opacity: saving ? 0.5 : 1 }}
             >
               {saving ? (
-                <ActivityIndicator color={isDark ? "#171717" : "white"} size="small" />
+                <BouncingDotsLoader color={isDark ? "#171717" : "white"} size="small" />
               ) : (
                 <>
                   <Text className="text-white dark:text-neutral-900 font-bold text-sm">Continue</Text>
@@ -791,7 +791,7 @@ export default function ContractorOnboardingScreen() {
               style={{ gap: 8, opacity: saving ? 0.5 : 1 }}
             >
               {saving ? (
-                <ActivityIndicator color="white" size="small" />
+                <BouncingDotsLoader color="white" size="small" />
               ) : (
                 <>
                   <FontAwesome5 name="check" size={14} color="white" />

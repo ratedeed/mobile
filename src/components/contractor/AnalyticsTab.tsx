@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, useColorScheme } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, useColorScheme } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
+import { BouncingDotsLoader } from '../common';
 
 type DateRange = 'week' | 'month' | 'quarter' | 'year';
 
@@ -229,7 +230,7 @@ export default function AnalyticsTab({ jobs, quotes, reviews, profile, loading, 
   if (loading) {
     return (
       <View className="items-center justify-center py-12">
-        <ActivityIndicator size="large" color="#4F46E5" />
+        <BouncingDotsLoader size="large" color="#4F46E5" />
       </View>
     );
   }

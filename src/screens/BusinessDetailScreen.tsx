@@ -4,7 +4,6 @@ import {
   ScrollView,
   Image,
   Pressable,
-  ActivityIndicator,
   Alert,
   RefreshControl,
   Share,
@@ -38,6 +37,7 @@ import ServiceAreaMap from '../components/common/ServiceAreaMap';
 import { useAuth } from '../context/AuthContext';
 import GuestPrompt from '../components/GuestPrompt';
 import LazyImage from '../components/common/LazyImage';
+import { BouncingDotsLoader } from '../components/common';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -1318,7 +1318,7 @@ const BusinessDetailScreen: React.FC = () => {
               onChangeText={setReportReason}
             />
             <Pressable onPress={handleReport} className="bg-red-500 py-4 rounded-xl items-center">
-              {reportSubmitting ? <ActivityIndicator color="#fff" /> : <Text className="text-white font-bold">Submit Report</Text>}
+              {reportSubmitting ? <BouncingDotsLoader color="#fff" /> : <Text className="text-white font-bold">Submit Report</Text>}
             </Pressable>
           </View>
         </View>
@@ -1359,7 +1359,7 @@ const BusinessDetailScreen: React.FC = () => {
                 className="border-2 border-dashed border-neutral-300 rounded-xl p-6 items-center justify-center mb-4"
               >
                 {claimDocumentUploading ? (
-                  <ActivityIndicator size="small" color="#4F46E5" />
+                  <BouncingDotsLoader size="small" color="#4F46E5" />
                 ) : (
                   <>
                     <FontAwesome5 name="cloud-upload-alt" size={24} color="#a3a3a3" />
@@ -1388,7 +1388,7 @@ const BusinessDetailScreen: React.FC = () => {
               className={`py-3.5 rounded-xl items-center ${!claimDocumentFile || claimSubmitting ? 'bg-indigo-300' : 'bg-indigo-600'}`}
             >
               {claimSubmitting ? (
-                <ActivityIndicator size="small" color="#fff" />
+                <BouncingDotsLoader size="small" color="#fff" />
               ) : (
                 <Text className="text-white font-bold text-sm">Submit Claim Request</Text>
               )}

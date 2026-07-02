@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import { View } from 'react-native';
 import { SvgXml } from 'react-native-svg';
+import { BouncingDotsLoader } from './BouncingDotsLoader';
 
 // Global cache to store cleaned SVG XML strings
 const svgCache: Record<string, string> = {};
@@ -71,7 +72,7 @@ export const SvgImage = ({ uri, width = '100%', height = '100%', style, preserve
   if (!xml) {
     return (
       <View style={[{ width, height, backgroundColor: '#f5f5f5', alignItems: 'center', justifyContent: 'center' }, style]}>
-        <ActivityIndicator size="small" color="#a3a3a3" />
+        <BouncingDotsLoader size="small" color="#a3a3a3" />
       </View>
     );
   }

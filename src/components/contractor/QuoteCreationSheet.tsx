@@ -5,7 +5,6 @@ import {
   TextInput,
   Pressable,
   ScrollView,
-  ActivityIndicator,
   Modal,
   KeyboardAvoidingView,
   Platform,
@@ -15,6 +14,7 @@ import {
 import { FontAwesome5 } from '@expo/vector-icons';
 import { createQuoteFromChat, getStripeAccountStatus, getPlatformFeePercent } from '../../utils/apiClient';
 import { SvgImage } from '../common/SvgImage';
+import { BouncingDotsLoader } from '../common';
 import { getProfileImageUrl, isSvgUrl } from '../../utils/avatarUtils';
 import * as ImagePicker from 'expo-image-picker';
 import { uploadToCloudinary, CLOUDINARY_FOLDERS } from '../../utils/cloudinary';
@@ -404,7 +404,7 @@ export default function QuoteCreationSheet({
             />
             {isSearchingAddress && (
               <View className="absolute right-3 top-9">
-                <ActivityIndicator size="small" color="#4F46E5" />
+                <BouncingDotsLoader size="small" color="#4F46E5" />
               </View>
             )}
             {addressSuggestions.length > 0 && (
@@ -648,7 +648,7 @@ export default function QuoteCreationSheet({
             style={{ gap: 6 }}
           >
             {submitting ? (
-              <ActivityIndicator size="small" color="#fff" />
+              <BouncingDotsLoader size="small" color="#fff" />
             ) : (
               <>
                 <FontAwesome5 name="paper-plane" size={12} color={isValid && !stripeLoading && isStripeConnected ? '#fff' : '#a3a3a3'} />

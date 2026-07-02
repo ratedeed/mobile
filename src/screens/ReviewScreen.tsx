@@ -5,7 +5,6 @@ import {
   TextInput,
   Pressable,
   Alert,
-  ActivityIndicator,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
@@ -15,6 +14,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { submitReview, getJobById, getQuote } from '../api';
 import HapticFeedback from '../utils/haptics';
+import { BouncingDotsLoader } from '../components/common';
 
 const STARS = [1, 2, 3, 4, 5];
 
@@ -133,7 +133,7 @@ export default function ReviewScreen() {
       >
         {loadingJob && (
           <View className="mb-4 flex-row items-center">
-            <ActivityIndicator size="small" color="#4F46E5" />
+            <BouncingDotsLoader size="small" color="#4F46E5" />
             <Text className="text-xs text-neutral-400 ml-2">Loading contractor info...</Text>
           </View>
         )}
@@ -206,7 +206,7 @@ export default function ReviewScreen() {
           }`}
         >
           {submitting ? (
-            <ActivityIndicator size="small" color="#fff" />
+            <BouncingDotsLoader size="small" color="#fff" />
           ) : (
             <Text className="text-white font-bold text-base">Submit Review</Text>
           )}

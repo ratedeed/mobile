@@ -4,7 +4,6 @@ import {
   Text,
   TextInput,
   Pressable,
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   Alert,
@@ -13,6 +12,7 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { resetPassword } from '../utils/apiClient';
+import { BouncingDotsLoader } from '../components/common';
 
 export default function ResetPasswordScreen() {
   const isDark = useColorScheme() === 'dark';
@@ -158,7 +158,7 @@ export default function ResetPasswordScreen() {
           }`}
         >
           {status === 'loading' ? (
-            <ActivityIndicator size="small" color="#fff" />
+            <BouncingDotsLoader size="small" color="#fff" />
           ) : (
             <Text className="text-white font-bold text-base">Reset Password</Text>
           )}

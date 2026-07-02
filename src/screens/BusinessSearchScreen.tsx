@@ -5,7 +5,6 @@ import {
   ScrollView,
   Pressable,
   Image,
-  ActivityIndicator,
   TextInput,
   RefreshControl,
   Text,

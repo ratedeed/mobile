@@ -6,7 +6,6 @@ import {
   Pressable,
   Image,
   TextInput,
-  ActivityIndicator,
   Alert,
   TouchableOpacity,
   KeyboardAvoidingView,
@@ -21,6 +20,7 @@ import { uploadToCloudinary, CLOUDINARY_FOLDERS } from '../utils/cloudinary';
 import { useAuth } from '../context/AuthContext';
 import { requestPhotoLibraryPermission } from '../utils/permissions';
 import { VerifiedBadge } from './common/VerifiedBadge';
+import { BouncingDotsLoader } from './common';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const isSmallScreen = SCREEN_WIDTH < 768;
@@ -692,7 +692,7 @@ export default function ContractorEditProfileModal({ visible, onClose, onProfile
               <View style={{ flex: 1, backgroundColor: COLORS.background, position: 'relative' }}>
                 {loading ? (
                   <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-                    <ActivityIndicator size="large" color={COLORS.primary} />
+                    <BouncingDotsLoader size="large" color={COLORS.primary} />
                     <Text style={{ marginTop: 12, fontSize: 14, color: COLORS.textSecondary }}>
                       Loading your profile…
                     </Text>
@@ -787,7 +787,7 @@ export default function ContractorEditProfileModal({ visible, onClose, onProfile
                           />
                           {isSearchingAddress && (
                             <View style={{ position: 'absolute', right: 12, top: 32 }}>
-                              <ActivityIndicator size="small" color="#4F46E5" />
+                              <BouncingDotsLoader size="small" color="#4F46E5" />
                             </View>
                           )}
                           {addressSuggestions.length > 0 && (
@@ -1494,7 +1494,7 @@ export default function ContractorEditProfileModal({ visible, onClose, onProfile
                               }}
                             >
                               {isSubmittingVerification ? (
-                                <ActivityIndicator size="small" color="#fff" />
+                                <BouncingDotsLoader size="small" color="#fff" />
                               ) : (
                                 <Text
                                   style={{
@@ -1561,7 +1561,7 @@ export default function ContractorEditProfileModal({ visible, onClose, onProfile
                     }}
                   >
                     {saving ? (
-                      <ActivityIndicator size="small" color="#fff" />
+                      <BouncingDotsLoader size="small" color="#fff" />
                     ) : (
                       <>
                         <FontAwesome5 name="check" size={12} color="#fff" />

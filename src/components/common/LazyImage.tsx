@@ -6,9 +6,9 @@ import {
   Animated,
   TouchableOpacity,
   Text,
-  ActivityIndicator,
 } from 'react-native';
 import { Colors, Spacing, Radii } from '../../constants/designTokens';
+import { BouncingDotsLoader } from './BouncingDotsLoader';
 
 interface LazyImageProps {
   uri: string;
@@ -69,7 +69,7 @@ const LazyImage: React.FC<LazyImageProps> = ({
     >
       {placeholderSource && !loaded && !error && (
         <View style={[styles.placeholder, { borderRadius }]}>
-          <ActivityIndicator color={Colors.neutral400} />
+          <BouncingDotsLoader color={Colors.neutral400} />
         </View>
       )}
 

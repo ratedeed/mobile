@@ -6,7 +6,6 @@ import {
   Text,
   StyleSheet,
   Alert,
-  ActivityIndicator,
 } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { API_BASE_URL } from '../config';

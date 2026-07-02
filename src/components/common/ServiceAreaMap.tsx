@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, ActivityIndicator, StyleSheet, Platform } from 'react-native';
+import { View, Text, StyleSheet, Platform } from 'react-native';
+import { BouncingDotsLoader } from './BouncingDotsLoader';
 import MapView, { Marker, Polygon } from 'react-native-maps';
 import { FontAwesome5 } from '@expo/vector-icons';
 
@@ -353,7 +354,7 @@ export default function ServiceAreaMap({
   if (!center) {
     return (
       <View style={[styles.container, { height }]} className="bg-neutral-100 items-center justify-center rounded-2xl">
-        <ActivityIndicator size="small" color="#6366f1" />
+        <BouncingDotsLoader size="small" color="#6366f1" />
         <Text className="text-xs text-neutral-400 mt-2">Loading map...</Text>
       </View>
     );

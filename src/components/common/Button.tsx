@@ -2,7 +2,6 @@ import React, { useRef } from 'react';
 import {
   TouchableOpacity,
   Text,
-  ActivityIndicator,
   Animated,
   ViewStyle,
   TextStyle,
@@ -12,6 +11,7 @@ import {
   StyleProp
 } from 'react-native';
 import { Colors, Spacing, Radii } from '../../constants/designTokens';
+import { BouncingDotsLoader } from './BouncingDotsLoader';
 
 type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
 type ButtonSize = 'sm' | 'md' | 'lg';
@@ -138,7 +138,7 @@ const Button: React.FC<ButtonProps> = ({
       {...props}
     >
       {loading ? (
-        <ActivityIndicator color={getSpinnerColor()} size="small" />
+        <BouncingDotsLoader color={getSpinnerColor()} size="small" />
       ) : (
         <>
           {leftIcon && <View style={styles.leftIconContainer}>{leftIcon}</View>}

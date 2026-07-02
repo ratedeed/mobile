@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, ScrollView, RefreshControl, ActivityIndicator, Pressable, FlatList } from 'react-native';
+import { View, Text, ScrollView, RefreshControl, Pressable, FlatList } from 'react-native';
 import { useColorScheme } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';

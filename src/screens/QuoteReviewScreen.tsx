@@ -4,7 +4,6 @@ import {
   View,
   Text,
   Pressable,
-  ActivityIndicator,
   ScrollView,
   Image,
   KeyboardAvoidingView,
@@ -15,6 +14,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { getQuote, updateQuoteStatus } from '../api';
 import HapticFeedback from '../utils/haptics';
+import { BouncingDotsLoader } from '../components/common';
 
 export default function QuoteReviewScreen() {
   const colorScheme = useColorScheme();
@@ -164,7 +164,7 @@ export default function QuoteReviewScreen() {
   if (loading) {
     return (
       <View className="flex-1 bg-white dark:bg-neutral-900 items-center justify-center">
-        <ActivityIndicator size="large" color="#4F46E5" />
+        <BouncingDotsLoader size="large" color="#4F46E5" />
         <Text className="text-sm text-neutral-500 dark:text-neutral-400 dark:text-neutral-500 mt-3">Loading quote...</Text>
       </View>
     );
@@ -459,7 +459,7 @@ export default function QuoteReviewScreen() {
             style={{ gap: 8 }}
           >
             {actionLoading === 'accept' ? (
-              <ActivityIndicator size="small" color="#fff" />
+              <BouncingDotsLoader size="small" color="#fff" />
             ) : null}
             <Text className={`font-bold text-sm ${isExpired ? 'text-neutral-500' : 'text-white'}`}>
               {quote.status === 'accepted' 
@@ -511,7 +511,7 @@ export default function QuoteReviewScreen() {
                 className="flex-1 py-3 rounded-xl items-center bg-neutral-900"
               >
                 {actionLoading === 'reject' ? (
-                  <ActivityIndicator size="small" color="#fff" />
+                  <BouncingDotsLoader size="small" color="#fff" />
                 ) : (
                   <Text className="text-sm font-semibold text-white">Decline</Text>
                 )}

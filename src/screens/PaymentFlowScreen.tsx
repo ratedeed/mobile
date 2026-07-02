@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Pressable, ScrollView, ActivityIndicator, Alert, Platform, StyleSheet, useColorScheme, AppState } from 'react-native';
+import { View, Text, Pressable, ScrollView, Alert, Platform, StyleSheet, useColorScheme, AppState } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,6 +8,7 @@ import { createCheckoutSession, createPaymentIntent, getQuote } from '../api';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useStripe, usePlatformPay, confirmPlatformPayPayment, PlatformPay, PlatformPayButton } from '@stripe/stripe-react-native';
 import HapticFeedback from '../utils/haptics';
+import { BouncingDotsLoader } from '../components/common';
 
 const STEP_LABELS = ['Review', 'Payment', 'Confirmed'];
 
@@ -304,7 +305,7 @@ export default function PaymentFlowScreen() {
   if (verifying) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: isDark ? '#09090B' : '#ffffff', padding: 24 }}>
-        <ActivityIndicator size="large" color="#4F46E5" />
+        <BouncingDotsLoader size="large" color="#4F46E5" />
         <Text style={{ marginTop: 16, color: isDark ? '#ffffff' : '#171717', fontSize: 18, fontWeight: 'bold', textAlign: 'center' }}>Confirming Payment...</Text>
         <Text style={{ marginTop: 8, color: isDark ? '#a3a3a3' : '#737373', fontSize: 14, textAlign: 'center', lineHeight: 20 }}>
           Please wait while we verify your transaction status. This should only take a few seconds.
@@ -316,7 +317,7 @@ export default function PaymentFlowScreen() {
   if (loadingPaymentIntent) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: isDark ? '#09090B' : '#ffffff' }}>
-        <ActivityIndicator size="large" color="#4F46E5" />
+        <BouncingDotsLoader size="large" color="#4F46E5" />
         <Text style={{ marginTop: 12, color: isDark ? '#a3a3a3' : '#737373', fontSize: 14, fontWeight: '500' }}>Initializing secure payment...</Text>
       </View>
     );
@@ -425,7 +426,7 @@ export default function PaymentFlowScreen() {
               }}
             >
               {paying ? (
-                <ActivityIndicator size="small" color="#fff" />
+                <BouncingDotsLoader size="small" color="#fff" />
               ) : (
                 <>
                   <FontAwesome5 name="lock" size={14} color="#fff" />
@@ -443,7 +444,7 @@ export default function PaymentFlowScreen() {
               }}
             >
               {paying || isPolling ? (
-                <ActivityIndicator size="small" color={isDark ? '#a3a3a3' : '#737373'} />
+                <BouncingDotsLoader size="small" color={isDark ? '#a3a3a3' : '#737373'} />
               ) : (
                 <FontAwesome5 name="sync" size={12} color={isDark ? '#a3a3a3' : '#737373'} />
               )}

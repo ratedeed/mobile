@@ -5,7 +5,6 @@ import {
   Pressable,
   Text,
   TextInput,
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   Linking,
@@ -20,6 +19,7 @@ import Toast from 'react-native-toast-message';
 import { useAuth } from '../context/AuthContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as AppleAuthentication from 'expo-apple-authentication';
+import { BouncingDotsLoader } from '../components/common';
 
 const LoginScreen = () => {
   const isDark = useColorScheme() === 'dark';
@@ -347,7 +347,7 @@ const LoginScreen = () => {
           >
             {loading ? (
               <View className="flex-row items-center" style={{ gap: 8 }}>
-                <ActivityIndicator size="small" color="#fff" />
+                <BouncingDotsLoader size="small" color="#fff" />
                 <Text className="text-sm font-semibold text-white">Logging in...</Text>
               </View>
             ) : (

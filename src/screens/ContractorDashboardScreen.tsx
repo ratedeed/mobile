@@ -8,7 +8,6 @@ import {
   ScrollView,
   Pressable,
   Alert,
-  ActivityIndicator,
   RefreshControl,
   Text,
   Image,
@@ -55,6 +54,7 @@ import { parsePriceRange } from '../utils/price';
 import { EmptyState } from '../components/common/EmptyState';
 import { VerifiedBadge } from '../components/common/VerifiedBadge';
 import { SkeletonLoader } from '../components/common/SkeletonLoader';
+import { BouncingDotsLoader } from '../components/common';
 
 const CURATED_TAGS = [
   'Before & After',
@@ -1385,7 +1385,7 @@ const ContractorDashboardScreen: React.FC = () => {
                                 }`}
                                 style={{ gap: 6 }}
                               >
-                                {replySubmitting && <ActivityIndicator size="small" color="#fff" style={{ marginRight: 4 }} />}
+                                {replySubmitting && <BouncingDotsLoader size="small" color="#fff" style={{ marginRight: 4 }} />}
                                 <Text className="text-[10px] font-semibold text-white">Submit</Text>
                               </Pressable>
                             </View>
@@ -1570,7 +1570,7 @@ const ContractorDashboardScreen: React.FC = () => {
                         >
                           {isStripeConnecting ? (
                             <>
-                              <ActivityIndicator size="small" color="#fff" />
+                              <BouncingDotsLoader size="small" color="#fff" />
                               <Text className="text-xs font-semibold text-white">Pending…</Text>
                             </>
                           ) : (
@@ -2019,7 +2019,7 @@ const ContractorDashboardScreen: React.FC = () => {
           style={{ gap: 8 }}
         >
           {postSubmitting ? (
-            <ActivityIndicator size="small" color="#fff" />
+            <BouncingDotsLoader size="small" color="#fff" />
           ) : (
             <FontAwesome5 name="paper-plane" size={12} color={postCaption.trim() ? '#fff' : '#a3a3a3'} />
           )}
@@ -2082,7 +2082,7 @@ const ContractorDashboardScreen: React.FC = () => {
           }`}
           style={{ gap: 8 }}
         >
-          {portfolioSubmitting && <ActivityIndicator size="small" color="#fff" />}
+          {portfolioSubmitting && <BouncingDotsLoader size="small" color="#fff" />}
           <Text className={`text-sm font-semibold ${portfolioItem.name.trim() ? 'text-white' : 'text-neutral-400 dark:text-neutral-500'}`}>
             {portfolioSubmitting ? 'Adding...' : 'Add Project'}
           </Text>
@@ -2162,7 +2162,7 @@ const ContractorDashboardScreen: React.FC = () => {
                 className="w-36 h-24 border-2 border-dashed border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 rounded-xl items-center justify-center mr-3"
               >
                 {imageLoading ? (
-                  <ActivityIndicator size="small" color="#4F46E5" />
+                  <BouncingDotsLoader size="small" color="#4F46E5" />
                 ) : (
                   <>
                     <FontAwesome5 name="plus" size={14} color="#a3a3a3" />
@@ -2292,7 +2292,7 @@ const ContractorDashboardScreen: React.FC = () => {
                       }`}
                     >
                       {isSubmittingVerification ? (
-                        <ActivityIndicator size="small" color="#fff" />
+                        <BouncingDotsLoader size="small" color="#fff" />
                       ) : (
                         <>
                           <FontAwesome5 name="shield-alt" size={14} color={editableData.licenseNumber.trim() && licenseDocUri ? "#fff" : "#a3a3a3"} />
@@ -2477,7 +2477,7 @@ const ContractorDashboardScreen: React.FC = () => {
                     />
                   {isSearchingAddress && (
                     <View className="absolute right-3 top-8">
-                      <ActivityIndicator size="small" color="#4F46E5" />
+                      <BouncingDotsLoader size="small" color="#4F46E5" />
                     </View>
                   )}
                   {addressSuggestions.length > 0 && (
@@ -2721,7 +2721,7 @@ const ContractorDashboardScreen: React.FC = () => {
             style={{ gap: 10 }}
           >
             {profileSaving ? (
-              <ActivityIndicator size="small" color="#fff" />
+              <BouncingDotsLoader size="small" color="#fff" />
             ) : (
               <FontAwesome5 name="save" size={16} color="#fff" />
             )}

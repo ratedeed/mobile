@@ -6,7 +6,6 @@ import {
   Pressable,
   Image,
   TextInput,
-  ActivityIndicator,
   Alert,
   TouchableOpacity,
   KeyboardAvoidingView,
@@ -20,6 +19,7 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getContractorProfile, updateContractorProfile, requestVerification } from '../api';
 import { VerifiedBadge } from '../components/common/VerifiedBadge';
+import { BouncingDotsLoader } from '../components/common';
 import { uploadToCloudinary, CLOUDINARY_FOLDERS } from '../utils/cloudinary';
 import { useAuth } from '../context/AuthContext';
 import { requestPhotoLibraryPermission } from '../utils/permissions';
@@ -377,7 +377,7 @@ export default function ContractorEditProfileScreen() {
   if (loading) {
     return (
       <View className="flex-1 bg-neutral-50 dark:bg-neutral-900 items-center justify-center">
-        <ActivityIndicator size="large" color="#4F46E5" />
+        <BouncingDotsLoader size="large" color="#4F46E5" />
       </View>
     );
   }
@@ -420,7 +420,7 @@ export default function ContractorEditProfileScreen() {
         <Text className="text-base font-bold text-neutral-900 dark:text-white">Edit Profile</Text>
         <TouchableOpacity onPress={handleSave} disabled={saving} className="bg-indigo-600 px-3 py-1.5 rounded-lg flex-row items-center">
           {saving ? (
-            <ActivityIndicator size="small" color="#fff" />
+            <BouncingDotsLoader size="small" color="#fff" />
           ) : (
             <>
               <FontAwesome5 name="save" size={12} color="#fff" solid />
@@ -511,7 +511,7 @@ export default function ContractorEditProfileScreen() {
                 className="w-36 h-24 border-2 border-dashed border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 rounded-xl items-center justify-center mr-3"
               >
                 {saving ? (
-                  <ActivityIndicator size="small" color="#4F46E5" />
+                  <BouncingDotsLoader size="small" color="#4F46E5" />
                 ) : (
                   <>
                     <FontAwesome5 name="plus" size={14} color="#a3a3a3" />
@@ -626,7 +626,7 @@ export default function ContractorEditProfileScreen() {
                       }`}
                     >
                       {isSubmittingVerification ? (
-                        <ActivityIndicator size="small" color="#fff" />
+                        <BouncingDotsLoader size="small" color="#fff" />
                       ) : (
                         <>
                           <FontAwesome5 name="shield-alt" size={14} color={verifLicenseNumber.trim() && licenseDocUri ? "#fff" : (isDark ? '#737373' : '#a3a3a3')} />
@@ -676,7 +676,7 @@ export default function ContractorEditProfileScreen() {
                       autoCorrect={false}
                     />
                     {isSearchingAddress && (
-                      <ActivityIndicator size="small" color="#4F46E5" />
+                      <BouncingDotsLoader size="small" color="#4F46E5" />
                     )}
                   </View>
                   {addressSuggestions.length > 0 && (

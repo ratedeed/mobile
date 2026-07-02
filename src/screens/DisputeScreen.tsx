@@ -5,7 +5,6 @@ import {
   TextInput,
   Pressable,
   Alert,
-  ActivityIndicator,
   ScrollView,
   Image,
   KeyboardAvoidingView,
@@ -20,6 +19,7 @@ import { uploadToCloudinary, CLOUDINARY_FOLDERS } from '../utils/cloudinary';
 import { requestPhotoLibraryPermission } from '../utils/permissions';
 import HapticFeedback from '../utils/haptics';
 import { useAuth } from '../context/AuthContext';
+import { BouncingDotsLoader } from '../components/common';
 
 const CATEGORIES = [
   { key: 'work_quality', label: 'Work Quality', icon: 'star-half-alt' },
@@ -295,7 +295,7 @@ export default function DisputeScreen() {
               className="w-24 h-24 rounded-xl border-2 border-dashed border-neutral-300 dark:border-neutral-600 items-center justify-center bg-neutral-50 dark:bg-neutral-800"
             >
               {uploading ? (
-                <ActivityIndicator size="small" color="#4F46E5" />
+                <BouncingDotsLoader size="small" color="#4F46E5" />
               ) : (
                 <View className="items-center" style={{ gap: 4 }}>
                   <FontAwesome5 name="camera" size={18} color="#a3a3a3" />
@@ -317,7 +317,7 @@ export default function DisputeScreen() {
           }`}
         >
           {submitting ? (
-            <ActivityIndicator size="small" color="#fff" />
+            <BouncingDotsLoader size="small" color="#fff" />
           ) : (
             <View className="flex-row items-center" style={{ gap: 8 }}>
               <FontAwesome5 name="gavel" size={14} color="#fff" />

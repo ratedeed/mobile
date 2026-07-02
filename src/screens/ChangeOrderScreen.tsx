@@ -5,7 +5,6 @@ import {
   TextInput,
   Pressable,
   Alert,
-  ActivityIndicator,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
@@ -15,6 +14,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { createChangeOrder, acceptChangeOrder, declineChangeOrder } from '../api';
 import { useAuth } from '../context/AuthContext';
+import { BouncingDotsLoader } from '../components/common';
 
 const sanitizeAmount = (text: string) => {
   let cleaned = text.replace(/[^0-9.]/g, '');
@@ -255,7 +255,7 @@ export default function ChangeOrderScreen() {
               }`}
             >
               {submitting ? (
-                <ActivityIndicator size="small" color="#fff" />
+                <BouncingDotsLoader size="small" color="#fff" />
               ) : (
                 <View className="flex-row items-center" style={{ gap: 8 }}>
                   <FontAwesome5 name="paper-plane" size={14} color="#fff" />
@@ -320,7 +320,7 @@ export default function ChangeOrderScreen() {
                   className="flex-1 py-3 border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/10 rounded-xl items-center"
                 >
                   {submitting ? (
-                    <ActivityIndicator size="small" color="#ef4444" />
+                    <BouncingDotsLoader size="small" color="#ef4444" />
                   ) : (
                     <Text className="text-red-600 dark:text-red-400 font-bold text-sm">Decline</Text>
                   )}
@@ -332,7 +332,7 @@ export default function ChangeOrderScreen() {
                   className="flex-1 py-3 bg-emerald-600 rounded-xl items-center"
                 >
                   {submitting ? (
-                    <ActivityIndicator size="small" color="#fff" />
+                    <BouncingDotsLoader size="small" color="#fff" />
                   ) : (
                     <Text className="text-white font-bold text-sm">Accept</Text>
                   )}

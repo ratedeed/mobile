@@ -3,12 +3,12 @@ import {
   View,
   Text,
   Pressable,
-  ActivityIndicator,
   useColorScheme,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { verifyEmailChange } from '../api';
+import { BouncingDotsLoader } from '../components/common';
 
 export default function VerifyEmailChangeScreen() {
   const isDark = useColorScheme() === 'dark';
@@ -52,7 +52,7 @@ export default function VerifyEmailChangeScreen() {
       {status === 'verifying' && (
         <>
           <View className="w-16 h-16 bg-neutral-50 dark:bg-neutral-800 rounded-full items-center justify-center mb-4">
-            <ActivityIndicator size="large" color="#4F46E5" />
+            <BouncingDotsLoader size="large" color="#4F46E5" />
           </View>
           <View className="items-center">
             <Text className="text-xl font-bold text-neutral-900 dark:text-white mb-1">Verifying Email</Text>

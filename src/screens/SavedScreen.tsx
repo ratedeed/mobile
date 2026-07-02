@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { EmptyState } from '../components/common/EmptyState';
+import { BouncingDotsLoader } from '../components/common';
 
 import {
   View,
@@ -8,7 +9,6 @@ import {
   ScrollView,
   Pressable,
   Image,
-  ActivityIndicator,
   RefreshControl,
   useColorScheme,
   FlatList,
@@ -253,7 +253,7 @@ const SavedScreen = () => {
   if (loading && !refreshing) {
     return (
       <View className="flex-1 bg-white dark:bg-neutral-950 items-center justify-center">
-        <ActivityIndicator size="large" color={isDark ? '#ffffff' : '#171717'} />
+        <BouncingDotsLoader size="large" color={isDark ? '#ffffff' : '#171717'} />
       </View>
     );
   }

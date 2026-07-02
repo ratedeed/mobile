@@ -9,7 +9,6 @@ import {
   RefreshControl,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
   useColorScheme,
   FlatList,
   Dimensions,
@@ -22,6 +21,7 @@ import { SvgImage } from '../components/common/SvgImage';
 import { CategoryIcon } from '../components/common/CategoryIcon';
 import { VerifiedBadge } from '../components/common/VerifiedBadge';
 import { Skeleton } from '../components/common/SkeletonLoader';
+import { BouncingDotsLoader } from '../components/common';
 import { browseContractors } from '../utils/apiClient';
 import { Contractor, RootStackParamList } from '../types';
 import { getCoverImageUrl, isSvgUrl } from '../utils/avatarUtils';
@@ -684,7 +684,7 @@ const HomeScreen = () => {
       <View className="items-center py-6 mb-20">
         {loadingMore ? (
           <View className="flex-row items-center" style={{ gap: 8 }}>
-            <ActivityIndicator size="small" color={isDark ? '#a3a3a3' : '#737373'} />
+            <BouncingDotsLoader size="small" color={isDark ? '#a3a3a3' : '#737373'} />
             <Text className="text-sm text-neutral-500 dark:text-neutral-400">Loading more...</Text>
           </View>
         ) : hasMore ? (

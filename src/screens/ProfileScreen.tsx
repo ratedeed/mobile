@@ -8,7 +8,6 @@ import {
   ScrollView,
   Pressable,
   Alert,
-  ActivityIndicator,
   Text,
   Image,
   RefreshControl,
@@ -32,6 +31,7 @@ import * as Sentry from '@sentry/react-native';
 import { User } from '../types';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { SvgImage } from '../components/common/SvgImage';
+import { BouncingDotsLoader } from '../components/common';
 import { getProfileImageUrl, isSvgUrl } from '../utils/avatarUtils';
 import { useColorScheme } from 'nativewind';
 
@@ -449,7 +449,7 @@ const ProfileScreen: React.FC = () => {
   if (loading) {
     return (
       <View className="flex-1 bg-neutral-50 dark:bg-neutral-950 items-center justify-center">
-        <ActivityIndicator size="large" color="#4F46E5" />
+        <BouncingDotsLoader size="large" color="#4F46E5" />
       </View>
     );
   }
@@ -623,7 +623,7 @@ const ProfileScreen: React.FC = () => {
         <StyledInput value={editData.zipCode} onChangeText={(t: string) => setEditData(p => ({ ...p, zipCode: t }))} keyboardType="numeric" maxLength={10} className="mb-6" />
 
         <Pressable onPress={handleSaveProfile} disabled={saving} className="w-full h-[52px] bg-neutral-900 dark:bg-neutral-100 rounded-xl items-center justify-center flex-row" style={{ gap: 8 }}>
-          {saving && <ActivityIndicator size="small" color={isDark ? '#171717' : '#ffffff'} />}
+          {saving && <BouncingDotsLoader size="small" color={isDark ? '#171717' : '#ffffff'} />}
           <Text className="text-[15px] font-semibold text-white dark:text-neutral-900">{saving ? 'Saving...' : 'Save Changes'}</Text>
         </Pressable>
       </SettingsSheet>
@@ -709,7 +709,7 @@ const ProfileScreen: React.FC = () => {
         <Text className="text-[13px] font-semibold text-neutral-500 dark:text-neutral-400 mb-2">Current Password</Text>
         <StyledInput value={emailPassword} onChangeText={setEmailPassword} secureTextEntry className="mb-6" placeholder="Enter current password" />
         <Pressable onPress={handleChangeEmail} disabled={emailSaving} className="w-full h-[52px] bg-neutral-900 dark:bg-neutral-100 rounded-xl items-center justify-center flex-row" style={{ gap: 8 }}>
-          {emailSaving && <ActivityIndicator size="small" color={isDark ? '#171717' : '#ffffff'} />}
+          {emailSaving && <BouncingDotsLoader size="small" color={isDark ? '#171717' : '#ffffff'} />}
           <Text className="text-[15px] font-semibold text-white dark:text-neutral-900">{emailSaving ? 'Sending...' : 'Send Verification Email'}</Text>
         </Pressable>
         <Text className="text-[13px] text-neutral-400 dark:text-neutral-500 text-center mt-4 leading-[18px]">We'll send a verification link to your new email address.</Text>
@@ -729,7 +729,7 @@ const ProfileScreen: React.FC = () => {
         <Text className="text-[13px] font-semibold text-neutral-500 dark:text-neutral-400 mb-2">Confirm New Password</Text>
         <StyledInput value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry className="mb-6" placeholder="Re-enter new password" />
         <Pressable onPress={handleChangePassword} disabled={pwSaving} className="w-full h-[52px] bg-neutral-900 dark:bg-neutral-100 rounded-xl items-center justify-center flex-row" style={{ gap: 8 }}>
-          {pwSaving && <ActivityIndicator size="small" color={isDark ? '#171717' : '#ffffff'} />}
+          {pwSaving && <BouncingDotsLoader size="small" color={isDark ? '#171717' : '#ffffff'} />}
           <Text className="text-[15px] font-semibold text-white dark:text-neutral-900">{pwSaving ? 'Updating...' : 'Change Password'}</Text>
         </Pressable>
       </SettingsSheet>
@@ -795,7 +795,7 @@ const ProfileScreen: React.FC = () => {
       <SettingsSheet title="Blocked Users" onClose={closeSheet} visible={activeSheet === 'blocked-users'}>
         {loadingBlocked ? (
           <View className="items-center py-10">
-            <ActivityIndicator size="small" color="#4F46E5" />
+            <BouncingDotsLoader size="small" color="#4F46E5" />
           </View>
         ) : blockedUsers.length === 0 ? (
           <View className="items-center py-10">

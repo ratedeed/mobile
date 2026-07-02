@@ -4,7 +4,6 @@ import {
   Text,
   ScrollView,
   Pressable,
-  ActivityIndicator,
   Alert,
   RefreshControl,
   Platform,
@@ -34,6 +33,7 @@ import HapticFeedback from '../utils/haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { uploadToCloudinary, CLOUDINARY_FOLDERS } from '../utils/cloudinary';
 import { requestPhotoLibraryPermission } from '../utils/permissions';
+import { BouncingDotsLoader } from '../components/common';
 
 type RootStackParamList = {
   JobDetail: { jobId: string };
@@ -327,7 +327,7 @@ export default function JobDetailScreen() {
   if (loading) {
     return (
       <View className="flex-1 bg-neutral-50 dark:bg-neutral-950 items-center justify-center">
-        <ActivityIndicator size="large" color="#4F46E5" />
+        <BouncingDotsLoader size="large" color="#4F46E5" />
       </View>
     );
   }
@@ -663,7 +663,7 @@ export default function JobDetailScreen() {
                     style={{ gap: 6 }}
                   >
                     {uploadProgressPhotoLoading ? (
-                      <ActivityIndicator size="small" color="#4F46E5" />
+                      <BouncingDotsLoader size="small" color="#4F46E5" />
                     ) : (
                       <>
                         <FontAwesome5 name="camera" size={12} color="#4F46E5" />
@@ -772,7 +772,7 @@ export default function JobDetailScreen() {
                   style={{ gap: 8 }}
                 >
                   {actionLoading === 'mark complete' ? (
-                    <ActivityIndicator size="small" color="#fff" />
+                      <BouncingDotsLoader size="small" color="#fff" />
                   ) : (
                     <FontAwesome5 name="check-circle" size={14} color="#fff" />
                   )}
@@ -857,7 +857,7 @@ export default function JobDetailScreen() {
                     style={{ gap: 8 }}
                   >
                     {actionLoading === 'release payment' ? (
-                      <ActivityIndicator size="small" color="#fff" />
+                    <BouncingDotsLoader size="small" color="#fff" />
                     ) : (
                       <FontAwesome5 name="dollar-sign" size={14} color="#fff" />
                     )}
@@ -996,7 +996,7 @@ export default function JobDetailScreen() {
                 style={{ gap: 8 }}
               >
                 {actionLoading === 'changeOrder' ? (
-                  <ActivityIndicator size="small" color="#fff" />
+                  <BouncingDotsLoader size="small" color="#fff" />
                 ) : (
                   <FontAwesome5
                     name="paper-plane"

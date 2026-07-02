@@ -4,7 +4,6 @@ import {
   ScrollView,
   FlatList,
   Pressable,
-  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -61,6 +60,7 @@ import ActionSheet from "../components/common/ActionSheet";
 import QuoteCreationSheet from "../components/contractor/QuoteCreationSheet";
 import HapticFeedback from "../utils/haptics";
 import { VerifiedBadge } from "../components/common/VerifiedBadge";
+import { BouncingDotsLoader } from "../components/common";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const REPORT_CATEGORIES = [
@@ -328,7 +328,7 @@ const ReportModal = ({ visible, onClose, userName, onReport }) => {
             className="px-5 pt-3 border-t border-neutral-100 dark:border-neutral-800"
           >
             <Pressable onPress={handleSubmit} disabled={submitting} className={`py-4 rounded-xl items-center ${submitting ? "bg-red-300 dark:bg-red-900/40" : "bg-red-500"}`}>
-              {submitting ? <ActivityIndicator size="small" color="white" /> : <Text className="text-white font-bold text-[15px]">Submit Report</Text>}
+              {submitting ? <BouncingDotsLoader size="small" color="white" /> : <Text className="text-white font-bold text-[15px]">Submit Report</Text>}
             </Pressable>
           </View>
         )}
@@ -1480,7 +1480,7 @@ const MessagesScreen = () => {
               ListFooterComponent={isOtherTyping ? <TypingIndicator name={chatName?.split(" ")[0]} /> : null}
               ListHeaderComponent={
                 loading ? (
-                  <View className="items-center py-10"><ActivityIndicator size="small" color="#818CF8" /></View>
+                  <View className="items-center py-10"><BouncingDotsLoader size="small" color="#818CF8" /></View>
                 ) : hasMoreMessages ? (
                   <View className="items-center py-4">
                     <Pressable
@@ -1489,7 +1489,7 @@ const MessagesScreen = () => {
                       className="px-3 py-1.5 bg-neutral-100 dark:bg-neutral-800 rounded-full active:opacity-60"
                     >
                       {loadingMoreMessages ? (
-                        <ActivityIndicator size="small" color="#818CF8" />
+                        <BouncingDotsLoader size="small" color="#818CF8" />
                       ) : (
                         <Text className="text-[12px] font-semibold text-neutral-600 dark:text-neutral-300">Load older messages</Text>
                       )}
@@ -1551,7 +1551,7 @@ const MessagesScreen = () => {
                 </Text>
               )}
               <Pressable onPress={handleSendMessage} disabled={(!newMessage.trim() && !pendingAttachment) || isUploading} className={`w-11 h-11 rounded-full items-center justify-center mb-0.5 ${newMessage.trim() || pendingAttachment ? "bg-indigo-600" : "bg-neutral-200 dark:bg-neutral-700"}`} style={newMessage.trim() || pendingAttachment ? { shadowColor: "#4F46E5", shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { height: 2 }, elevation: 3 } : undefined} accessibilityLabel="Send message" accessibilityRole="button">
-                {isUploading ? <ActivityIndicator size="small" color="white" /> : <FontAwesome5 name="paper-plane" size={14} color={newMessage.trim() || pendingAttachment ? "white" : (isDark ? "#737373" : "#a3a3a3")} />}
+                {isUploading ? <BouncingDotsLoader size="small" color="white" /> : <FontAwesome5 name="paper-plane" size={14} color={newMessage.trim() || pendingAttachment ? "white" : (isDark ? "#737373" : "#a3a3a3")} />}
               </Pressable>
             </View>
           </View>
