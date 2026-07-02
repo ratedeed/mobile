@@ -531,6 +531,9 @@ const MessagesScreen = () => {
           emitMessageRead(msg._id, currentUserId, selectedConvRef.current?.conversationId);
           refreshUnreadMessagesCount();
           refreshNotifications();
+          // The message we just rendered may also be the "last message" of
+          // its conversation — keep conversations list in sync.
+          loadConversations();
         }
       }
     };
@@ -735,10 +738,11 @@ const MessagesScreen = () => {
     }
     try {
       if (page === 1) {
-        // Mark conversation as read on backend — non-blocking so a failure
-        // here doesn't prevent the actual messages from loading.
+        // Mark conversation as read on backend, THEN refresh the bell
+        // badge and message count. Awaiting is important so the synthetic
+        // "new_message" notifications get cleared from the bell.
         const { markConversationAsRead } = await import("../api");
-        markConversationAsRead(conversationId).catch(() => {});
+        try { await markConversationAsRead(conversationId); } catch {}
         refreshUnreadMessagesCount();
         refreshNotifications();
       }
@@ -1126,7 +1130,21 @@ const MessagesScreen = () => {
   const handleSelectConversation = useCallback((item) => {
     HapticFeedback.selection();
     setSelectedConversation(item);
-  }, []);
+
+    // Optimistically clear the unread badge + conversation's unread count
+    // so the bell updates instantly while we sync with the backend.
+    const cId = item?.conversationId || item?._id;
+    if (cId) {
+      setConversations((prev) => prev[cId] ? { ...prev, [cId]: { ...prev[cId], unreadCount: 0 } } : prev);
+      refreshUnreadMessagesCount();
+      // Mark as read on backend and refresh the notification list so the
+      // synthetic "new_message" entries disappear from the bell.
+      import("../api").then(({ markConversationAsRead }) => {
+        markConversationAsRead(cId).catch(() => {});
+      });
+      refreshNotifications();
+    }
+  }, [refreshUnreadMessagesCount, refreshNotifications]);
 
   const renderMessageItem = useCallback(({ item: msg, index: idx }) => {
     if (msg.type === "system" || resolveId(msg.senderId || msg.sender) === "system") {
