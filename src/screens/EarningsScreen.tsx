@@ -161,14 +161,6 @@ export default function EarningsScreen() {
     );
   }, [cashingOut, earnings, loadData]);
 
-  if (loading) {
-    return (
-      <View className="flex-1 bg-white dark:bg-neutral-900 p-6 pt-16">
-        <SkeletonLoader type="list" count={4} />
-      </View>
-    );
-  }
-
   const availableBalance = (earnings?.availableBalance || 0) / 100;
   const pendingPayouts = (earnings?.pendingPayouts || 0) / 100;
   const pendingAvailableAt = earnings?.pendingAvailableAt || null;
@@ -334,6 +326,14 @@ export default function EarningsScreen() {
     ),
     []
   );
+
+  if (loading) {
+    return (
+      <View className="flex-1 bg-white dark:bg-neutral-900 p-6 pt-16">
+        <SkeletonLoader type="list" count={4} />
+      </View>
+    );
+  }
 
   return (
     <View className="flex-1 bg-neutral-50 dark:bg-neutral-800">
