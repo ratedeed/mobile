@@ -13,6 +13,7 @@ import {
   SectionListProps,
   NativeSyntheticEvent,
   NativeScrollEvent,
+  Platform,
 } from 'react-native';
 import { BouncingDotsLoader } from './BouncingDotsLoader';
 import { Colors } from '../../constants/designTokens';
@@ -107,6 +108,11 @@ function clampPull(raw: number): number {
   return Math.min(raw, INDICATOR_HEIGHT * 1.5);
 }
 
+/**
+ * Enhanced RefreshControl Maker
+ * Uses progressViewOffset={-1000} on Android to completely push the 
+ * native loading spinner out of the visible screen coordinates.
+ */
 function makeRefreshControl(refreshing: boolean, onRefresh: () => void) {
   return (
     <RefreshControl
@@ -115,6 +121,8 @@ function makeRefreshControl(refreshing: boolean, onRefresh: () => void) {
       tintColor={HIDDEN}
       colors={[HIDDEN]}
       progressBackgroundColor={HIDDEN}
+      // Pushes the Android native spinner off-screen so its shadow/circle doesn't overlap
+      progressViewOffset={Platform.OS === 'android' ? -1000 : undefined}
       title=""
       titleColor={HIDDEN}
     />
