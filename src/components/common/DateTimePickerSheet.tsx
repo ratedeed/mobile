@@ -339,7 +339,7 @@ export default function DateTimePickerSheet({
 
   const sheetCommonProps = {
     ref: sheetRef,
-    index: 0,
+    index: -1,
     enablePanDownToClose: true,
     backdropComponent: renderBackdrop,
     onChange: handleSheetChange,
