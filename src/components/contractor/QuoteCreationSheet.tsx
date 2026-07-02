@@ -15,6 +15,7 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import { createQuoteFromChat, getStripeAccountStatus, getPlatformFeePercent } from '../../utils/apiClient';
 import { SvgImage } from '../common/SvgImage';
 import { BouncingDotsLoader } from '../common';
+import DateTimePickerSheet from '../common/DateTimePickerSheet';
 import { getProfileImageUrl, isSvgUrl } from '../../utils/avatarUtils';
 import * as ImagePicker from 'expo-image-picker';
 import { uploadToCloudinary, CLOUDINARY_FOLDERS } from '../../utils/cloudinary';
@@ -23,6 +24,55 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import HapticFeedback from '../../utils/haptics';
 
 const CATEGORIES = ['Plumbers', 'Electricians', 'Painters', 'Landscapers', 'HVAC', 'Roofers', 'Carpenters', 'Cleaners', 'Handymen', 'Home Builders'];
+
+function toISODateLocal(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function formatDisplayDate(iso: string): string {
+  if (!iso) return '';
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if (!m) return iso;
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function SelectorField({
+  label,
+  value,
+  placeholder,
+  iconName,
+  onPress,
+}: {
+  label: string;
+  value: string;
+  placeholder: string;
+  iconName: string;
+  onPress: () => void;
+}) {
+  return (
+    <View>
+      <Text className="text-[12px] font-semibold text-neutral-700 dark:text-neutral-300 mb-1.5">{label}</Text>
+      <Pressable
+        onPress={onPress}
+        className="w-full flex-row items-center border border-neutral-200 dark:border-neutral-700 rounded-xl px-3 py-2.5 bg-white dark:bg-neutral-900"
+        style={{ gap: 8 }}
+      >
+        <FontAwesome5 name={iconName} size={12} color="#a3a3a3" />
+        <Text
+          className={`flex-1 text-[14px] ${value ? 'text-neutral-900 dark:text-neutral-50' : 'text-[#a3a3a3]'}`}
+          numberOfLines={1}
+        >
+          {value || placeholder}
+        </Text>
+        <FontAwesome5 name="chevron-down" size={10} color="#a3a3a3" />
+      </Pressable>
+    </View>
+  );
+}
 
 interface QuoteCreationSheetProps {
   visible: boolean;
@@ -48,7 +98,7 @@ export default function QuoteCreationSheet({
   const [projectName, setProjectName] = useState('');
   const [cat, setCat] = useState(category || services[0] || 'Plumbers');
   const [description, setDescription] = useState('');
-  const [startDate, setStartDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [startDate, setStartDate] = useState(() => toISODateLocal(new Date()));
   const [startTime, setStartTime] = useState('');
   const [endDate, setEndDate] = useState('');
   const [endTime, setEndTime] = useState('');
@@ -56,6 +106,8 @@ export default function QuoteCreationSheet({
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [activePicker, setActivePicker] = useState<null | 'startDate' | 'startTime' | 'endDate' | 'endTime'>(null);
+  const [pickerVisible, setPickerVisible] = useState(false);
 
   // Stripe Connection State
   const [stripeStatus, setStripeStatus] = useState<any>(null);
@@ -160,6 +212,42 @@ export default function QuoteCreationSheet({
     return '';
   }, [startDate, endDate]);
 
+  const openPicker = (which: 'startDate' | 'startTime' | 'endDate' | 'endTime') => {
+    setActivePicker(which);
+    setPickerVisible(true);
+  };
+  const closePicker = () => setPickerVisible(false);
+
+  const handlePickerConfirm = (v: string) => {
+    switch (activePicker) {
+      case 'startDate':
+        setStartDate(v);
+        if (endDate && new Date(endDate) < new Date(v)) {
+          setEndDate('');
+          setEndTime('');
+        }
+        break;
+      case 'endDate':
+        setEndDate(v);
+        break;
+      case 'startTime':
+        setStartTime(v);
+        break;
+      case 'endTime':
+        setEndTime(v);
+        break;
+    }
+  };
+
+  const pickerProps: { mode: 'date' | 'time'; title: string; value?: string; minDate?: string } | null = activePicker
+    ? {
+        startDate: { mode: 'date' as const, title: 'Select start date', value: startDate },
+        startTime: { mode: 'time' as const, title: 'Select start time', value: startTime },
+        endDate: { mode: 'date' as const, title: 'Select end date', value: endDate, minDate: startDate },
+        endTime: { mode: 'time' as const, title: 'Select end time', value: endTime },
+      }[activePicker]
+    : null;
+
   const searchAddress = (text: string) => {
     setJobAddress(text);
     if (addressSearchTimer.current) clearTimeout(addressSearchTimer.current);
@@ -255,7 +343,7 @@ export default function QuoteCreationSheet({
       setProjectName('');
       setCat(category || services[0] || 'Plumbers');
       setDescription('');
-      setStartDate(new Date().toISOString().split('T')[0]);
+      setStartDate(toISODateLocal(new Date()));
       setStartTime('');
       setEndDate('');
       setEndTime('');
@@ -459,39 +547,37 @@ export default function QuoteCreationSheet({
           <View className="mb-4">
             <View className="flex-row mb-3" style={{ gap: 10 }}>
               <View className="flex-1">
-                <Text className="text-[12px] font-semibold text-neutral-700 dark:text-neutral-300 mb-1.5">Start date</Text>
-                <TextInput
-                  value={startDate}
-                  onChangeText={setStartDate}
-                  placeholder="YYYY-MM-DD"
-                  placeholderTextColor="#a3a3a3"
-                  className="w-full border border-neutral-200 dark:border-neutral-700 rounded-xl px-3 py-2.5 text-[14px] text-neutral-900 dark:text-neutral-50 bg-white dark:bg-neutral-900"
+                <SelectorField
+                  label="Start date"
+                  value={startDate ? formatDisplayDate(startDate) : ''}
+                  placeholder="Select date"
+                  iconName="calendar"
+                  onPress={() => openPicker('startDate')}
                 />
-                <Text className="text-[12px] font-semibold text-neutral-700 dark:text-neutral-300 mt-2 mb-1.5">Start time</Text>
-                <TextInput
+                <View className="h-2.5" />
+                <SelectorField
+                  label="Start time"
                   value={startTime}
-                  onChangeText={setStartTime}
-                  placeholder="10:00 AM"
-                  placeholderTextColor="#a3a3a3"
-                  className="w-full border border-neutral-200 dark:border-neutral-700 rounded-xl px-3 py-2.5 text-[14px] text-neutral-900 dark:text-neutral-50 bg-white dark:bg-neutral-900"
+                  placeholder="Select time"
+                  iconName="clock"
+                  onPress={() => openPicker('startTime')}
                 />
               </View>
               <View className="flex-1">
-                <Text className="text-[12px] font-semibold text-neutral-700 dark:text-neutral-300 mb-1.5">End date</Text>
-                <TextInput
-                  value={endDate}
-                  onChangeText={setEndDate}
-                  placeholder="YYYY-MM-DD"
-                  placeholderTextColor="#a3a3a3"
-                  className="w-full border border-neutral-200 dark:border-neutral-700 rounded-xl px-3 py-2.5 text-[14px] text-neutral-900 dark:text-neutral-50 bg-white dark:bg-neutral-900"
+                <SelectorField
+                  label="End date"
+                  value={endDate ? formatDisplayDate(endDate) : ''}
+                  placeholder="Select date"
+                  iconName="calendar-check"
+                  onPress={() => openPicker('endDate')}
                 />
-                <Text className="text-[12px] font-semibold text-neutral-700 dark:text-neutral-300 mt-2 mb-1.5">End time</Text>
-                <TextInput
+                <View className="h-2.5" />
+                <SelectorField
+                  label="End time"
                   value={endTime}
-                  onChangeText={setEndTime}
-                  placeholder="5:00 PM"
-                  placeholderTextColor="#a3a3a3"
-                  className="w-full border border-neutral-200 dark:border-neutral-700 rounded-xl px-3 py-2.5 text-[14px] text-neutral-900 dark:text-neutral-50 bg-white dark:bg-neutral-900"
+                  placeholder="Select time"
+                  iconName="clock"
+                  onPress={() => openPicker('endTime')}
                 />
               </View>
             </View>
@@ -658,6 +744,16 @@ export default function QuoteCreationSheet({
           </Pressable>
         </View>
       </KeyboardAvoidingView>
+
+      <DateTimePickerSheet
+        visible={pickerVisible}
+        onClose={closePicker}
+        mode={pickerProps?.mode ?? 'date'}
+        title={pickerProps?.title ?? ''}
+        value={pickerProps?.value}
+        onConfirm={handlePickerConfirm}
+        minDate={pickerProps?.minDate}
+      />
     </Modal>
   );
 }
