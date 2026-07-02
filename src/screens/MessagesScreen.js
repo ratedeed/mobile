@@ -11,7 +11,6 @@ import {
   Image,
   TextInput,
   Animated,
-  RefreshControl,
   Modal,
   Linking,
   Keyboard,
@@ -60,7 +59,7 @@ import ActionSheet from "../components/common/ActionSheet";
 import QuoteCreationSheet from "../components/contractor/QuoteCreationSheet";
 import HapticFeedback from "../utils/haptics";
 import { VerifiedBadge } from "../components/common/VerifiedBadge";
-import { BouncingDotsLoader } from "../components/common";
+import { BouncingDotsLoader, BouncingRefreshFlatList } from "../components/common";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const REPORT_CATEGORIES = [
@@ -1419,7 +1418,7 @@ const MessagesScreen = () => {
             ) : filteredConversations.length === 0 ? (
               <EmptyInbox />
             ) : (
-              <FlatList data={filteredConversations} keyExtractor={(c) => c.conversationId || c._id} renderItem={({ item }) => <ConversationItem conv={item} currentUserId={currentUserId} onlineUsers={onlineUsers} onPress={handleSelectConversation} />} ItemSeparatorComponent={() => <View className="ml-[82px] border-b border-neutral-100 dark:border-neutral-800" />} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadConversations(true)} tintColor="#818CF8" />} contentContainerStyle={{ paddingBottom: 20 }} />
+              <BouncingRefreshFlatList data={filteredConversations} keyExtractor={(c) => c.conversationId || c._id} renderItem={({ item }) => <ConversationItem conv={item} currentUserId={currentUserId} onlineUsers={onlineUsers} onPress={handleSelectConversation} />} ItemSeparatorComponent={() => <View className="ml-[82px] border-b border-neutral-100 dark:border-neutral-800" />} refreshing={refreshing} onRefresh={() => loadConversations(true)} loaderColor="#818CF8" contentContainerStyle={{ paddingBottom: 20 }} />
             )}
           </View>
         ) : (

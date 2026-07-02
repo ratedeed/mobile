@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { EmptyState } from '../components/common/EmptyState';
-import { BouncingDotsLoader } from '../components/common';
+import { BouncingDotsLoader, BouncingRefreshFlatList } from '../components/common';
 
 import {
   View,
@@ -9,7 +9,6 @@ import {
   ScrollView,
   Pressable,
   Image,
-  RefreshControl,
   useColorScheme,
   FlatList,
   Alert,
@@ -315,7 +314,7 @@ const SavedScreen = () => {
             </ScrollView>
           </View>
 
-          <FlatList
+          <BouncingRefreshFlatList
             data={filtered}
             renderItem={renderContractorItem}
             keyExtractor={(item) => item._id || (item as any).id}
@@ -323,13 +322,9 @@ const SavedScreen = () => {
             columnWrapperStyle={{ justifyContent: 'space-between' }}
             contentContainerStyle={{ paddingBottom: 80 }}
             className="flex-1 px-4"
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={onRefresh}
-                tintColor={isDark ? '#ffffff' : '#171717'}
-              />
-            }
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            loaderColor={isDark ? '#ffffff' : '#171717'}
             showsVerticalScrollIndicator={false}
             windowSize={5}
             maxToRenderPerBatch={8}

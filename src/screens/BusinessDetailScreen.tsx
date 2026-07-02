@@ -5,7 +5,6 @@ import {
   Image,
   Pressable,
   Alert,
-  RefreshControl,
   Share,
   Text,
   TextInput,
@@ -37,7 +36,7 @@ import ServiceAreaMap from '../components/common/ServiceAreaMap';
 import { useAuth } from '../context/AuthContext';
 import GuestPrompt from '../components/GuestPrompt';
 import LazyImage from '../components/common/LazyImage';
-import { BouncingDotsLoader } from '../components/common';
+import { BouncingDotsLoader, BouncingRefreshScrollView } from '../components/common';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -536,11 +535,12 @@ const BusinessDetailScreen: React.FC = () => {
         </View>
       </View>
 
-      <ScrollView
+      <BouncingRefreshScrollView
         ref={scrollViewRef}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ flexGrow: 1 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
         onScroll={(e) => {
           const y = e.nativeEvent.contentOffset.y;
           setScrollY(y);
@@ -1158,7 +1158,7 @@ const BusinessDetailScreen: React.FC = () => {
 
           <View style={{ height: 100 }} />
         </View>
-      </ScrollView>
+      </BouncingRefreshScrollView>
 
       {/* Sticky Bottom CTA */}
       <View className="absolute bottom-0 left-0 right-0 bg-white/95 dark:bg-neutral-950/95 border-t border-neutral-100 dark:border-neutral-800 px-4 py-4 pb-8 flex-row items-center justify-between shadow-lg">

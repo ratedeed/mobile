@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, ScrollView, RefreshControl, Pressable, FlatList } from 'react-native';
+import { View, Text, ScrollView, Pressable, FlatList } from 'react-native';
 import { useColorScheme } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { getContractorEarnings } from '../api';
 import { getPlatformFeePercent } from '../utils/apiClient';
 import { SkeletonLoader } from '../components/common/SkeletonLoader';
+import { BouncingRefreshFlatList } from '../components/common';
 
 interface Transaction {
   _id: string;
@@ -277,14 +278,15 @@ export default function EarningsScreen() {
         <View className="w-8" />
       </View>
 
-      <FlatList
+      <BouncingRefreshFlatList
         data={transactions}
         renderItem={renderTransaction}
         keyExtractor={(item) => item._id}
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={renderEmpty}
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
         showsVerticalScrollIndicator={false}
         className="flex-1"
       />

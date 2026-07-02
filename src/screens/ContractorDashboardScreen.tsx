@@ -8,7 +8,6 @@ import {
   ScrollView,
   Pressable,
   Alert,
-  RefreshControl,
   Text,
   Image,
   TextInput,
@@ -54,7 +53,7 @@ import { parsePriceRange } from '../utils/price';
 import { EmptyState } from '../components/common/EmptyState';
 import { VerifiedBadge } from '../components/common/VerifiedBadge';
 import { SkeletonLoader } from '../components/common/SkeletonLoader';
-import { BouncingDotsLoader } from '../components/common';
+import { BouncingDotsLoader, BouncingRefreshScrollView } from '../components/common';
 
 const CURATED_TAGS = [
   'Before & After',
@@ -970,9 +969,10 @@ const ContractorDashboardScreen: React.FC = () => {
         </View>
       )}
 
-      <ScrollView
+      <BouncingRefreshScrollView
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
       >
         <View className="relative">
           <View className="h-48 w-full bg-neutral-200 overflow-hidden">
@@ -1895,7 +1895,7 @@ const ContractorDashboardScreen: React.FC = () => {
         </View>
 
         <View className="h-20" />
-      </ScrollView>
+      </BouncingRefreshScrollView>
 
       {/* ==================== CREATE POST SHEET ==================== */}
       <Sheet visible={showCreatePost} onClose={() => setShowCreatePost(false)} title="Create Post">

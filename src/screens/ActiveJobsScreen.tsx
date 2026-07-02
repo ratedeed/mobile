@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { View, Text, Pressable, ScrollView, Image, SafeAreaView, RefreshControl, Alert, useColorScheme } from 'react-native';
+import { View, Text, Pressable, ScrollView, Image, SafeAreaView, Alert, useColorScheme } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { SvgImage } from '../components/common/SvgImage';
-import { BouncingDotsLoader } from '../components/common';
+import { BouncingDotsLoader, BouncingRefreshScrollView } from '../components/common';
 import { getUserQuotes, cancelJob, cancelDispute, updateQuoteStatus } from '../utils/apiClient';
 import { getProfileImageUrl, isSvgUrl } from '../utils/avatarUtils';
 import { useAuth } from '../context/AuthContext';
@@ -204,10 +204,12 @@ export default function ActiveJobsScreen() {
         </View>
       </View>
 
-      <ScrollView
+      <BouncingRefreshScrollView
         className="flex-1 px-4 pt-2"
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#171717" />}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
+        loaderColor="#171717"
       >
         {error ? (
           <View className="items-center justify-center py-20 px-6">
@@ -399,7 +401,7 @@ export default function ActiveJobsScreen() {
           })
         )}
         <View className="h-6" />
-      </ScrollView>
+      </BouncingRefreshScrollView>
     </View>
   );
 }

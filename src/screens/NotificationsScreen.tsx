@@ -4,7 +4,6 @@ import {
   SectionList,
   Pressable,
   Text,
-  RefreshControl,
   Alert,
   StyleSheet,
   useColorScheme,
@@ -17,6 +16,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { SkeletonLoader } from '../components/common/SkeletonLoader';
 import { EmptyState } from '../components/common/EmptyState';
 import { SvgImage } from '../components/common/SvgImage';
+import { BouncingRefreshSectionList } from '../components/common';
 import { getProfileImageUrl, isSvgUrl, isRealImageUrl } from '../utils/avatarUtils';
 import { Colors, Shadows, Spacing, Radii, FontSizes, FontWeights } from '../constants/designTokens';
 
@@ -502,21 +502,16 @@ const NotificationsScreen: React.FC = () => {
         )}
       </View>
 
-      <SectionList
+      <BouncingRefreshSectionList
         sections={groupedNotifications}
         keyExtractor={(item, index) => item._id || `notif-${index}`}
         renderItem={renderNotification}
         renderSectionHeader={renderSectionHeader}
         stickySectionHeadersEnabled={false}
         contentContainerStyle={styles.listContent}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={Colors.primary500}
-            colors={[Colors.primary500]}
-          />
-        }
+        refreshing={refreshing}
+        onRefresh={onRefresh}
+        loaderColor={Colors.primary500}
       />
     </View>
   );

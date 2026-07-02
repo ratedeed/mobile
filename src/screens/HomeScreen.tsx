@@ -6,7 +6,6 @@ import {
   Image,
   Text,
   TextInput,
-  RefreshControl,
   KeyboardAvoidingView,
   Platform,
   useColorScheme,
@@ -21,7 +20,7 @@ import { SvgImage } from '../components/common/SvgImage';
 import { CategoryIcon } from '../components/common/CategoryIcon';
 import { VerifiedBadge } from '../components/common/VerifiedBadge';
 import { Skeleton } from '../components/common/SkeletonLoader';
-import { BouncingDotsLoader } from '../components/common';
+import { BouncingDotsLoader, BouncingRefreshFlatList } from '../components/common';
 import { browseContractors } from '../utils/apiClient';
 import { Contractor, RootStackParamList } from '../types';
 import { getCoverImageUrl, isSvgUrl } from '../utils/avatarUtils';
@@ -795,7 +794,7 @@ const HomeScreen = () => {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       className="flex-1 bg-white dark:bg-neutral-950"
     >
-      <FlatList
+      <BouncingRefreshFlatList
         key={activeCategory === 'all' ? 'single' : 'grid'}
         data={data}
         renderItem={renderListItem}
@@ -807,7 +806,8 @@ const HomeScreen = () => {
         ListHeaderComponent={renderHeader}
         ListFooterComponent={renderFooter}
         ListEmptyComponent={renderEmptyList}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
         showsVerticalScrollIndicator={false}
         className="flex-1"
         contentContainerStyle={{ paddingBottom: 20 }}

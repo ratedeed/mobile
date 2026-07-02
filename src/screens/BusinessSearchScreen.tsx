@@ -6,7 +6,6 @@ import {
   Pressable,
   Image,
   TextInput,
-  RefreshControl,
   Text,
   KeyboardAvoidingView,
   Platform,
@@ -24,6 +23,7 @@ import { getCoverImageUrl, isSvgUrl } from '../utils/avatarUtils';
 import { getFavorites, addFavorite, removeFavorite } from '../utils/favoritesStore';
 import { VerifiedBadge } from '../components/common/VerifiedBadge';
 import { SkeletonLoader } from '../components/common/SkeletonLoader';
+import { BouncingRefreshFlatList } from '../components/common';
 
 // Categories matching web version (same as HomeScreen)
 const CATEGORIES = [
@@ -478,14 +478,15 @@ const BusinessSearchScreen: React.FC = () => {
           </Pressable>
         </View>
       ) : displayResults.length > 0 ? (
-        <FlatList
+        <BouncingRefreshFlatList
           data={displayResults}
           renderItem={renderCard}
           keyExtractor={(item, index) => item._id || item.slug || index.toString()}
           numColumns={2}
           columnWrapperStyle={{ justifyContent: 'space-between' }}
           contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 100 }}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
           windowSize={5}
           maxToRenderPerBatch={8}
           removeClippedSubviews={Platform.OS === 'android'}

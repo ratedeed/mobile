@@ -1,15 +1,14 @@
 import React, { useRef, useState, useEffect } from 'react';
 import {
-  RefreshControl,
   View,
   StyleSheet,
   Animated,
   Text,
   ViewStyle,
-  ScrollView,
   ScrollViewProps,
 } from 'react-native';
 import { Colors, Spacing } from '../../constants/designTokens';
+import { BouncingRefreshScrollView } from './BouncingRefresh';
 
 interface PullToRefreshProps extends Omit<ScrollViewProps, 'refreshControl' | 'style'> {
   refreshing: boolean;
@@ -92,23 +91,16 @@ const PullToRefresh: React.FC<PullToRefreshProps> = ({
   return (
     <View style={[styles.container, style]}>
       {useScrollView ? (
-        <ScrollView
+        <BouncingRefreshScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={handleRefresh}
-              tintColor={tintColor}
-              colors={[tintColor]}
-              progressBackgroundColor={Colors.neutral50}
-              title={!refreshing ? title : undefined}
-            />
-          }
+          refreshing={refreshing}
+          onRefresh={handleRefresh}
+          loaderColor={tintColor}
           {...scrollViewProps}
         >
           {children}
-        </ScrollView>
+        </BouncingRefreshScrollView>
       ) : (
         children
       )}

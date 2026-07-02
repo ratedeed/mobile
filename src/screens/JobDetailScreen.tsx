@@ -5,7 +5,6 @@ import {
   ScrollView,
   Pressable,
   Alert,
-  RefreshControl,
   Platform,
   Linking,
   TextInput,
@@ -33,7 +32,7 @@ import HapticFeedback from '../utils/haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { uploadToCloudinary, CLOUDINARY_FOLDERS } from '../utils/cloudinary';
 import { requestPhotoLibraryPermission } from '../utils/permissions';
-import { BouncingDotsLoader } from '../components/common';
+import { BouncingDotsLoader, BouncingRefreshScrollView } from '../components/common';
 
 type RootStackParamList = {
   JobDetail: { jobId: string };
@@ -370,10 +369,12 @@ export default function JobDetailScreen() {
         <Text className="flex-1 text-[18px] font-bold text-neutral-900 dark:text-neutral-50 ml-2">Job Details</Text>
       </View>
 
-      <ScrollView
+      <BouncingRefreshScrollView
         className="flex-1"
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#4F46E5" />}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
+        loaderColor="#4F46E5"
       >
         <View className="px-5 py-4" style={{ gap: 20 }}>
           <View className="p-4 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
@@ -920,7 +921,7 @@ export default function JobDetailScreen() {
 
           <View className="h-8" />
         </View>
-      </ScrollView>
+      </BouncingRefreshScrollView>
 
       {showChangeOrder && (
         <View

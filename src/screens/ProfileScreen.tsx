@@ -10,7 +10,6 @@ import {
   Alert,
   Text,
   Image,
-  RefreshControl,
   TextInput,
   KeyboardAvoidingView,
   Platform,
@@ -31,7 +30,7 @@ import * as Sentry from '@sentry/react-native';
 import { User } from '../types';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { SvgImage } from '../components/common/SvgImage';
-import { BouncingDotsLoader } from '../components/common';
+import { BouncingDotsLoader, BouncingRefreshScrollView } from '../components/common';
 import { getProfileImageUrl, isSvgUrl } from '../utils/avatarUtils';
 import { useColorScheme } from 'nativewind';
 
@@ -484,7 +483,7 @@ const ProfileScreen: React.FC = () => {
 
   return (
     <View className="flex-1 bg-neutral-50 dark:bg-neutral-950" style={{ paddingTop: Math.max(insets.top, 12) }}>
-      <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#4F46E5" />}>
+      <BouncingRefreshScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" refreshing={refreshing} onRefresh={onRefresh} loaderColor="#4F46E5">
         {/* Profile Header */}
         <View className="px-6 pt-4 pb-2">
           <View className="flex-row items-center" style={{ gap: 20 }}>
@@ -575,7 +574,7 @@ const ProfileScreen: React.FC = () => {
             </Pressable>
           </View>
         </View>
-      </ScrollView>
+      </BouncingRefreshScrollView>
 
       {/* Sheets */}
       <SettingsSheet title="Edit Profile" onClose={closeSheet} visible={activeSheet === 'edit-profile'}>
