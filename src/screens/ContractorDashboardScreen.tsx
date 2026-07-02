@@ -911,8 +911,9 @@ const ContractorDashboardScreen: React.FC = () => {
   };
 
   // ---- Computed values ----
-  const totalEarnings = jobs.filter(j => j.status === 'completed_paid').reduce((sum, j) => sum + (j.totalAmount || j.amount || 0), 0);
-  const pendingEscrow = jobs.filter(j => ['funded_in_progress', 'partially_funded', 'completed_pending_release'].includes(j.status)).reduce((sum, j) => sum + (j.totalAmount || j.amount || 0), 0);
+  const jobAmount = (j: any) => j.totalAmount || j.amount || j.quote?.totalAmount || j.quote?.subtotal || j.amountFunded || 0;
+  const totalEarnings = jobs.filter(j => j.status === 'completed_paid').reduce((sum, j) => sum + jobAmount(j), 0);
+  const pendingEscrow = jobs.filter(j => ['funded_in_progress', 'partially_funded', 'completed_pending_release'].includes(j.status)).reduce((sum, j) => sum + jobAmount(j), 0);
   const activeJobsCount = jobs.filter(j => ['funded_in_progress', 'partially_funded', 'awaiting_payment'].includes(j.status)).length;
   const avgRating = reviews.length > 0 ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length : 0;
   const ratingBreakdown = [5, 4, 3, 2, 1].map(stars => ({
@@ -1866,8 +1867,8 @@ const ContractorDashboardScreen: React.FC = () => {
                         <Pressable key={job._id} onPress={() => navigation.navigate('JobDetail', { jobId: job._id })} className="bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-700 p-4 active:bg-neutral-50 dark:active:bg-neutral-800">
                           <View className="flex-row justify-between items-start">
                             <View>
-                              <Text className="text-sm font-semibold text-neutral-900 dark:text-white">{job.title || job.projectTitle || 'Job'}</Text>
-                              <Text className="text-sm text-neutral-600 dark:text-neutral-300">{formatCurrency((job.totalAmount || job.amount || 0) / 100)}</Text>
+                              <Text className="text-sm font-semibold text-neutral-900 dark:text-white">{job.title || job.projectTitle || job.quote?.projectTitle || job.quote?.projectName || 'Job'}</Text>
+                              <Text className="text-sm text-neutral-600 dark:text-neutral-300">{formatCurrency((job.totalAmount || job.amount || job.quote?.totalAmount || job.quote?.subtotal || job.amountFunded || 0) / 100)}</Text>
                             </View>
                             <View className="flex-row items-center" style={{ gap: 6 }}>
                               <StatusBadge status={job.status} />
