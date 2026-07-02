@@ -1163,7 +1163,7 @@ const MessagesScreen = () => {
           <View className={`${(msg.type === "quote" || msg.quoteId) && msg.quote ? (isMe ? "w-[90%]" : "w-[82%]") : "max-w-[78%]"} ${isMe ? "items-end" : "items-start"}`}>
             {(msg.type === "quote" || msg.quoteId) && msg.quote ? (
               <>
-                <View className="w-full bg-white dark:bg-neutral-800 rounded-2xl border border-neutral-200 dark:border-neutral-700 overflow-hidden" style={[{ shadowColor: "#000", shadowOpacity: isDark ? 0 : 0.04, shadowRadius: 10, shadowOffset: { height: 3 }, elevation: isDark ? 0 : 3 }, msg._isOptimistic && !msg._failed ? { opacity: 0.6 } : undefined]}>
+                <View className="w-full bg-white dark:bg-neutral-800 rounded-2xl border border-neutral-200 dark:border-neutral-700 overflow-hidden" style={[{ shadowColor: "#000", shadowOpacity: isDark ? 0 : 0.04, shadowRadius: 10, shadowOffset: { height: 3 }, elevation: isDark ? 0 : 3 }]}>
                   {/* Beautiful cover image */}
                   {(() => {
                     const cName = msg.quote?.contractor?.companyName || msg.quote?.contractor?.businessName || selectedConversation?.otherParticipant?.companyName || selectedConversation?.otherParticipant?.firstName || 'Contractor';
@@ -1280,18 +1280,18 @@ const MessagesScreen = () => {
                     )}
                     {msg._isOptimistic && !msg._failed && (
                       <View className="flex-row items-center mr-1" style={{ gap: 4 }}>
-                        <ActivityIndicator size="small" color="#9ca3af" style={{ transform: [{ scale: 0.6 }] }} />
-                        <Text className="text-[10px] text-neutral-400 font-medium">Sending...</Text>
+                        <ActivityIndicator size="small" color="#4F46E5" style={{ transform: [{ scale: 0.6 }] }} />
+                        <Text className="text-[10px] text-indigo-600 font-medium">Sending…</Text>
                       </View>
                     )}
                     <Text className="text-[10px] text-neutral-400 font-medium">{msg.timeStr || (msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "")}</Text>
-                    {isMe && !msg._isOptimistic && !msg._failed && <FontAwesome5 name={msg.read ? "check-double" : "check"} size={9} color={msg.read ? "#10b981" : "#c4b5fd"} solid={msg.read} />}
+                    {isMe && !msg._isOptimistic && !msg._failed && <FontAwesome5 name={msg.read ? "check-double" : "check"} size={9} color={msg.read ? "#4F46E5" : "#4F46E5"} solid={msg.read} />}
                   </View>
                 )}
               </>
             ) : (
               <>
-                <View className={`px-[16px] py-[11px] ${isMe ? `bg-neutral-900 ${msg.isFirstInGroup ? "rounded-2xl rounded-tr-md" : "rounded-2xl"}` : `bg-neutral-100 dark:bg-neutral-800 ${msg.isFirstInGroup ? "rounded-2xl rounded-tl-md" : "rounded-2xl"}`}`} style={[!isMe ? { shadowColor: isDark ? "transparent" : "#000", shadowOpacity: isDark ? 0 : 0.02, shadowRadius: 6, shadowOffset: { height: 1 }, elevation: isDark ? 0 : 1 } : undefined, msg._isOptimistic && !msg._failed ? { opacity: 0.6 } : undefined]}>
+                <View className={`px-[16px] py-[11px] ${isMe ? `bg-neutral-900 ${msg.isFirstInGroup ? "rounded-2xl rounded-tr-md" : "rounded-2xl"}` : `bg-neutral-100 dark:bg-neutral-800 ${msg.isFirstInGroup ? "rounded-2xl rounded-tl-md" : "rounded-2xl"}`}`} style={[!isMe ? { shadowColor: isDark ? "transparent" : "#000", shadowOpacity: isDark ? 0 : 0.02, shadowRadius: 6, shadowOffset: { height: 1 }, elevation: isDark ? 0 : 1 } : undefined]}>
                   {msg.attachmentUrl && isImageAttachment(msg.attachmentUrl) && <Pressable onPress={() => { setActiveImage(msg.attachmentUrl); setLightboxVisible(true); }} className="mb-1.5 -mx-[2px] -mt-[2px] overflow-hidden" style={{ borderRadius: msg.isFirstInGroup ? 14 : 16 }}><Image source={{ uri: msg.attachmentUrl }} style={{ width: 240, height: 180 }} resizeMode="cover" /></Pressable>}
                   {msg.attachmentUrl && !isImageAttachment(msg.attachmentUrl) && <Pressable onPress={() => Linking.openURL(msg.attachmentUrl)} className={`flex-row items-center p-2.5 rounded-xl mb-1.5 border ${isMe ? "bg-white/10 border-white/20" : "bg-neutral-50 dark:bg-neutral-700 border-neutral-200 dark:border-neutral-600"}`}><FontAwesome5 name="file-alt" size={14} color={isMe ? "white" : (isDark ? "#a3a3a3" : "#737373")} /><Text className={`text-[12px] ml-2 font-semibold ${isMe ? "text-white" : "text-neutral-600 dark:text-neutral-300"}`}>View Attachment</Text></Pressable>}
                   {msg.messageText ? <Text className={`text-[15px] leading-[22px] ${isMe ? "text-white" : "text-neutral-800 dark:text-neutral-100"}`}>{msg.messageText}</Text> : null}
@@ -1309,12 +1309,12 @@ const MessagesScreen = () => {
                     )}
                     {msg._isOptimistic && !msg._failed && (
                       <View className="flex-row items-center mr-1" style={{ gap: 4 }}>
-                        <ActivityIndicator size="small" color="#9ca3af" style={{ transform: [{ scale: 0.6 }] }} />
-                        <Text className="text-[10px] text-neutral-400 font-medium">Sending...</Text>
+                        <ActivityIndicator size="small" color="#4F46E5" style={{ transform: [{ scale: 0.6 }] }} />
+                        <Text className="text-[10px] text-indigo-600 font-medium">Sending…</Text>
                       </View>
                     )}
                     <Text className="text-[10px] text-neutral-400 font-medium">{msg.timeStr || (msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "")}</Text>
-                    {isMe && !msg._isOptimistic && !msg._failed && <FontAwesome5 name={msg.read ? "check-double" : "check"} size={9} color={msg.read ? "#10b981" : "#c4b5fd"} solid={msg.read} />}
+                    {isMe && !msg._isOptimistic && !msg._failed && <FontAwesome5 name={msg.read ? "check-double" : "check"} size={9} color={msg.read ? "#4F46E5" : "#4F46E5"} solid={msg.read} />}
                   </View>
                 )}
               </>
