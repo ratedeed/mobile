@@ -1285,7 +1285,7 @@ const MessagesScreen = () => {
                     </Pressable>
                   </View>
                 </View>
-                {(msg.isLastInGroup || msg._isOptimistic || msg._failed) && (
+                {(msg.isLastInGroup || msg._failed) && (
                   <View className={`flex-row items-center mt-1.5 px-1 ${isMe ? "justify-end" : "justify-start"}`} style={{ gap: 4 }}>
                     {msg._failed && (
                       <View className="flex-row items-center mr-1" style={{ gap: 4 }}>
@@ -1294,12 +1294,6 @@ const MessagesScreen = () => {
                         <Pressable onPress={() => handleRetryMessage(msg._id, msg.messageText, msg.attachmentUrl)}>
                           <Text className="text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold underline">Retry</Text>
                         </Pressable>
-                      </View>
-                    )}
-                    {msg._isOptimistic && !msg._failed && (
-                      <View className="flex-row items-center mr-1" style={{ gap: 4 }}>
-                        <ActivityIndicator size="small" color="#4F46E5" style={{ transform: [{ scale: 0.6 }] }} />
-                        <Text className="text-[10px] text-indigo-600 font-medium">Sending…</Text>
                       </View>
                     )}
                     <Text className="text-[10px] text-neutral-400 font-medium">{msg.timeStr || (msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "")}</Text>
@@ -1314,7 +1308,7 @@ const MessagesScreen = () => {
                   {msg.attachmentUrl && !isImageAttachment(msg.attachmentUrl) && <Pressable onPress={() => Linking.openURL(msg.attachmentUrl)} className={`flex-row items-center p-2.5 rounded-xl mb-1.5 border ${isMe ? "bg-white/10 border-white/20" : "bg-neutral-50 dark:bg-neutral-700 border-neutral-200 dark:border-neutral-600"}`}><FontAwesome5 name="file-alt" size={14} color={isMe ? "white" : (isDark ? "#a3a3a3" : "#737373")} /><Text className={`text-[12px] ml-2 font-semibold ${isMe ? "text-white" : "text-neutral-600 dark:text-neutral-300"}`}>View Attachment</Text></Pressable>}
                   {msg.messageText ? <Text className={`text-[15px] leading-[22px] ${isMe ? "text-white" : "text-neutral-800 dark:text-neutral-100"}`}>{msg.messageText}</Text> : null}
                 </View>
-                {(msg.isLastInGroup || msg._isOptimistic || msg._failed) && (
+                {(msg.isLastInGroup || msg._failed) && (
                   <View className={`flex-row items-center mt-1 px-1 ${isMe ? "justify-end" : "justify-start"}`} style={{ gap: 4 }}>
                     {msg._failed && (
                       <View className="flex-row items-center mr-1" style={{ gap: 4 }}>
@@ -1323,12 +1317,6 @@ const MessagesScreen = () => {
                         <Pressable onPress={() => handleRetryMessage(msg._id, msg.messageText, msg.attachmentUrl)}>
                           <Text className="text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold underline">Retry</Text>
                         </Pressable>
-                      </View>
-                    )}
-                    {msg._isOptimistic && !msg._failed && (
-                      <View className="flex-row items-center mr-1" style={{ gap: 4 }}>
-                        <ActivityIndicator size="small" color="#4F46E5" style={{ transform: [{ scale: 0.6 }] }} />
-                        <Text className="text-[10px] text-indigo-600 font-medium">Sending…</Text>
                       </View>
                     )}
                     <Text className="text-[10px] text-neutral-400 font-medium">{msg.timeStr || (msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "")}</Text>
