@@ -27,16 +27,23 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
+    paddingTop: 18,
+    overflow: 'hidden',
     zIndex: 999,
   },
-  dotsWrap: {
-    width: 60,
-    height: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
 });
+
+interface RefreshIndicatorProps {
+  indicatorRef: React.RefObject<View | null>;
+  color: string;
+}
+
+const RefreshIndicator: React.FC<RefreshIndicatorProps> = ({ indicatorRef, color }) => (
+  <View ref={indicatorRef} pointerEvents="none" style={styles.indicator}>
+    <BouncingDotsLoader size="small" color={color} />
+  </View>
+);
 
 function clampHeight(raw: number, refreshing: boolean): number {
   if (refreshing) return INDICATOR_HEIGHT;
@@ -168,11 +175,10 @@ function BouncingRefreshFlatListInner<ItemT = any>(
         onScrollBeginDrag={userOnScrollBeginDrag}
         scrollEventThrottle={16}
       />
-      <View ref={indicatorRef} pointerEvents="none" style={styles.indicator}>
-        <View style={styles.dotsWrap}>
-          <BouncingDotsLoader size="medium" color={loaderColor ?? Colors.primary500} />
-        </View>
-      </View>
+      <RefreshIndicator
+        indicatorRef={indicatorRef}
+        color={loaderColor ?? Colors.primary500}
+      />
     </View>
   );
 }
@@ -247,11 +253,10 @@ function BouncingRefreshScrollViewInner(
       >
         {children}
       </ScrollView>
-      <View ref={indicatorRef} pointerEvents="none" style={styles.indicator}>
-        <View style={styles.dotsWrap}>
-          <BouncingDotsLoader size="medium" color={loaderColor ?? Colors.primary500} />
-        </View>
-      </View>
+      <RefreshIndicator
+        indicatorRef={indicatorRef}
+        color={loaderColor ?? Colors.primary500}
+      />
     </View>
   );
 }
@@ -324,11 +329,10 @@ function BouncingRefreshSectionListInner<ItemT = any, SectionT = any>(
         onScrollBeginDrag={userOnScrollBeginDrag}
         scrollEventThrottle={16}
       />
-      <View ref={indicatorRef} pointerEvents="none" style={styles.indicator}>
-        <View style={styles.dotsWrap}>
-          <BouncingDotsLoader size="medium" color={loaderColor ?? Colors.primary500} />
-        </View>
-      </View>
+      <RefreshIndicator
+        indicatorRef={indicatorRef}
+        color={loaderColor ?? Colors.primary500}
+      />
     </View>
   );
 }
