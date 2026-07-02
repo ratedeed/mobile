@@ -7,12 +7,16 @@ import {
   Dimensions,
   StyleSheet,
   Easing,
-  AppState,
 } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { Svg, Text as SvgText, Defs, LinearGradient as SvgGradient, Stop, Rect } from 'react-native-svg';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+const ESCROW_BANNER_KEY = '@escrow_banner_dismissed_at';
+// Show the banner again after 7 days
+const DISMISS_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
 
 // ---- Animated Gradient Text Component (using SVG to avoid native MaskedView crashes) ----
 const AnimatedGradientText = ({ text }: { text: string }) => {
@@ -64,8 +68,6 @@ const AnimatedGradientText = ({ text }: { text: string }) => {
 };
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
-
-let hasShownEscrowBanner = false;
 
 export const EscrowTrustBanner = () => {
   const [visible, setVisible] = useState(false);
@@ -138,6 +140,9 @@ export const EscrowTrustBanner = () => {
   }, [slideAnim, opacityAnim, startHammerAnimation, text1Opacity, text1Y, text2Opacity, text2Y, text3Opacity, text3Y]);
 
   const dismiss = useCallback(() => {
+    // Persist dismissal timestamp so it doesn't show again for a while
+    AsyncStorage.setItem(ESCROW_BANNER_KEY, Date.now().toString()).catch(() => {});
+
     Animated.parallel([
       Animated.timing(slideAnim, {
         toValue: 300,
@@ -163,32 +168,34 @@ export const EscrowTrustBanner = () => {
   }, [slideAnim, opacityAnim, text1Opacity, text1Y, text2Opacity, text2Y, text3Opacity, text3Y, hammerRotate]);
 
   useEffect(() => {
-    // Initial display on app launch/mount
     let timer: any;
-    
-    // Show banner 1 second after launch
-    if (!hasShownEscrowBanner) {
-      timer = setTimeout(() => {
-        show();
-        hasShownEscrowBanner = true;
-      }, 3300);
-    }
 
-    const subscription = AppState.addEventListener('change', (nextAppState) => {
-      if (nextAppState === 'active' && !hasShownEscrowBanner) {
-        if (timer) clearTimeout(timer);
+    // Check AsyncStorage to see if we've already shown the banner recently
+    AsyncStorage.getItem(ESCROW_BANNER_KEY)
+      .then((val) => {
+        if (val) {
+          const dismissedAt = parseInt(val, 10);
+          if (!isNaN(dismissedAt) && Date.now() - dismissedAt < DISMISS_DURATION_MS) {
+            // Dismissed recently, don't show
+            return;
+          }
+        }
+        // Show banner after a short delay
         timer = setTimeout(() => {
           show();
-          hasShownEscrowBanner = true;
-        }, 3000);
-      }
-    });
+        }, 3300);
+      })
+      .catch(() => {
+        // On error reading storage, show the banner anyway
+        timer = setTimeout(() => {
+          show();
+        }, 3300);
+      });
 
     return () => {
-      clearTimeout(timer);
-      subscription.remove();
+      if (timer) clearTimeout(timer);
     };
-  }, [show, dismiss]);
+  }, [show]);
 
   if (!visible) return null;
 

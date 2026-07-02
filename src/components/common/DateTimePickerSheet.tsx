@@ -9,6 +9,7 @@ import {
   Animated as RNAnimated,
   ScrollView,
   Platform,
+  Easing,
 } from 'react-native';
 import { useColorScheme } from 'nativewind';
 import { FontAwesome5 } from '@expo/vector-icons';
@@ -233,9 +234,31 @@ export default function DateTimePickerSheet({
     }
   }, [visible]);
 
+  // Shared dismiss animation — resolves after sheet slides out
+  const animateOut = useCallback((): Promise<void> => {
+    return new Promise((resolve) => {
+      RNAnimated.parallel([
+        RNAnimated.timing(slideAnim, {
+          toValue: 0,
+          duration: 220,
+          easing: Easing.in(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        RNAnimated.timing(backdropAnim, {
+          toValue: 0,
+          duration: 180,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        setModalVisible(false);
+        resolve();
+      });
+    });
+  }, [slideAnim, backdropAnim]);
+
   const handleClose = useCallback(() => {
-    onClose();
-  }, [onClose]);
+    animateOut().then(() => onClose());
+  }, [animateOut, onClose]);
 
   const handleSelectDate = useCallback((d: Date) => {
     setSelectedDate(d);
@@ -248,16 +271,18 @@ export default function DateTimePickerSheet({
   }, []);
 
   const handleConfirm = useCallback(() => {
-    if (mode === 'date') {
-      if (!selectedDate) return;
-      onConfirm(toISODate(selectedDate));
-    } else {
-      if (!selectedTime) return;
-      onConfirm(selectedTime);
-    }
+    const val = mode === 'date'
+      ? (selectedDate ? toISODate(selectedDate) : null)
+      : selectedTime;
+    if (!val) return;
+
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    onClose();
-  }, [mode, selectedDate, selectedTime, onConfirm, onClose]);
+    // Animate out first, then fire callbacks so parent re-render doesn't fight the animation
+    animateOut().then(() => {
+      onConfirm(val);
+      onClose();
+    });
+  }, [mode, selectedDate, selectedTime, animateOut, onConfirm, onClose]);
 
   const handleClear = useCallback(() => {
     setSelectedDate(null);

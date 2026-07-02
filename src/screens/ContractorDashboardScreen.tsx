@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Clipboard from 'expo-clipboard';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import * as WebBrowser from 'expo-web-browser';
@@ -681,10 +682,17 @@ const ContractorDashboardScreen: React.FC = () => {
 
   // In-app notification: when Stripe marks the account as approved, surface it
   // once so the contractor doesn't have to dig through the dashboard to find out.
-  const [approvedAlertShown, setApprovedAlertShown] = useState(false);
+  // Persisted in AsyncStorage so it truly only shows once per device.
+  const [approvedAlertShown, setApprovedAlertShown] = useState(true); // default true to prevent flash
+  useEffect(() => {
+    AsyncStorage.getItem('@stripe_approved_alert_shown').then((val) => {
+      if (val !== 'true') setApprovedAlertShown(false);
+    }).catch(() => setApprovedAlertShown(false));
+  }, []);
   useEffect(() => {
     if (stripeStatus?.chargesEnabled && !approvedAlertShown) {
       setApprovedAlertShown(true);
+      AsyncStorage.setItem('@stripe_approved_alert_shown', 'true').catch(() => {});
       Alert.alert(
         "You're Approved!",
         'Your Stripe account is fully verified and ready to receive payments. You can now create and send quotes to clients.',
