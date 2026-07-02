@@ -21,6 +21,7 @@ import { useAuth } from '../context/AuthContext';
 import { requestPhotoLibraryPermission } from '../utils/permissions';
 import { VerifiedBadge } from './common/VerifiedBadge';
 import { BouncingDotsLoader } from './common';
+import DateTimePickerSheet from './common/DateTimePickerSheet';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const isSmallScreen = SCREEN_WIDTH < 768;
@@ -227,6 +228,7 @@ export default function ContractorEditProfileModal({ visible, onClose, onProfile
   const [serviceInput, setServiceInput] = useState('');
 
   const [showTimePicker, setShowTimePicker] = useState<{ day: string; type: 'open' | 'close' } | null>(null);
+  const [timePickerVisible, setTimePickerVisible] = useState(false);
   const [hours, setHours] = useState<Record<string, { open: string; close: string; isOpen: boolean }>>({});
 
   const searchAddress = (text: string) => {
@@ -536,67 +538,7 @@ export default function ContractorEditProfileModal({ visible, onClose, onProfile
 
 
 
-  const renderTimePicker = () => {
-    if (!showTimePicker) return null;
-    const { day, type } = showTimePicker;
-    const currentValue = type === 'open' ? hours[day]?.open : hours[day]?.close;
 
-    return (
-      <View
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.5)',
-          justifyContent: 'center',
-          alignItems: 'center',
-          zIndex: 9999,
-          elevation: 9999,
-        }}
-      >
-        <View style={{ width: '80%', backgroundColor: '#fff', borderRadius: 20, padding: 20, maxHeight: '70%' }}>
-          <Text style={{ fontSize: 18, fontWeight: '700', color: COLORS.dark, marginBottom: 16 }}>
-            Select {type === 'open' ? 'Opening' : 'Closing'} Time for {day}
-          </Text>
-          <ScrollView>
-            {TIME_OPTIONS.map((time) => (
-              <TouchableOpacity
-                key={time}
-                onPress={() => {
-                  setHours({ ...hours, [day]: { ...hours[day], [type]: time } });
-                  setShowTimePicker(null);
-                }}
-                style={{
-                  paddingVertical: 15,
-                  borderBottomWidth: 1,
-                  borderBottomColor: COLORS.borderLight,
-                  backgroundColor: currentValue === time ? COLORS.primaryLight : 'transparent',
-                }}
-              >
-                <Text
-                  style={{
-                    fontSize: 16,
-                    color: currentValue === time ? COLORS.primary : COLORS.textPrimary,
-                    fontWeight: currentValue === time ? '600' : '400',
-                  }}
-                >
-                  {time}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-          <TouchableOpacity
-            onPress={() => setShowTimePicker(null)}
-            style={{ marginTop: 16, padding: 12, alignItems: 'center' }}
-          >
-            <Text style={{ color: COLORS.primary, fontWeight: '700' }}>Cancel</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-  };
 
   const renderAccordionHeader = (tabId: TabId, title: string, icon: string) => (
     <TouchableOpacity
@@ -1043,7 +985,7 @@ export default function ContractorEditProfileModal({ visible, onClose, onProfile
                                   {hours[day]?.isOpen ? (
                                     <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 8 }}>
                                       <TouchableOpacity
-                                        onPress={() => setShowTimePicker({ day, type: 'open' })}
+                                        onPress={() => { setShowTimePicker({ day, type: 'open' }); setTimePickerVisible(true); }}
                                         style={{
                                           flex: 1,
                                           borderWidth: 1,
@@ -1061,7 +1003,7 @@ export default function ContractorEditProfileModal({ visible, onClose, onProfile
                                       </TouchableOpacity>
                                       <Text style={{ fontSize: 13, color: COLORS.textSecondary }}>to</Text>
                                       <TouchableOpacity
-                                        onPress={() => setShowTimePicker({ day, type: 'close' })}
+                                        onPress={() => { setShowTimePicker({ day, type: 'close' }); setTimePickerVisible(true); }}
                                         style={{
                                           flex: 1,
                                           borderWidth: 1,
@@ -1574,8 +1516,21 @@ export default function ContractorEditProfileModal({ visible, onClose, onProfile
             </View>
           </View>
         </KeyboardAvoidingView>
-        {renderTimePicker()}
       </Modal>
+
+      <DateTimePickerSheet
+        visible={timePickerVisible}
+        onClose={() => setTimePickerVisible(false)}
+        mode="time"
+        title={showTimePicker ? `Select ${showTimePicker.type === 'open' ? 'Opening' : 'Closing'} Time for ${showTimePicker.day}` : ''}
+        value={showTimePicker ? hours[showTimePicker.day]?.[showTimePicker.type] : ''}
+        timeSlots={TIME_OPTIONS}
+        onConfirm={(val) => {
+          if (!showTimePicker) return;
+          const { day, type } = showTimePicker;
+          setHours({ ...hours, [day]: { ...hours[day], [type]: val } });
+        }}
+      />
     </>
   );
 }
