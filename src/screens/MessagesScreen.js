@@ -349,7 +349,7 @@ const ConversationItem = React.memo(function ConversationItem({ conv, currentUse
   const lastMsgTime = conv.lastMessage?.createdAt || "";
 
   return (
-    <Pressable onPress={onPress} className="flex-row items-center px-5 py-3.5 active:bg-neutral-50 dark:active:bg-neutral-800" style={{ gap: 14 }}>
+    <Pressable onPress={() => onPress(conv)} className="flex-row items-center px-5 py-3.5 active:bg-neutral-50 dark:active:bg-neutral-800" style={{ gap: 14 }}>
       <View className="relative shrink-0">
         {isSvgUrl(avatarUrl) ? (
           <View className="w-[54px] h-[54px] rounded-full overflow-hidden"><SvgImage uri={avatarUrl} width="100%" height="100%" /></View>
