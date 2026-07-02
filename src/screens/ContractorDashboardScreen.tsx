@@ -677,6 +677,14 @@ const ContractorDashboardScreen: React.FC = () => {
       getStripeAccountStatus()
         .then((status) => { if (status) setStripeStatus(status); })
         .catch(() => {});
+      // Keep financial stats fresh (e.g. after returning from Earnings/withdrawal
+      // or after a job status transition).
+      getContractorEarnings()
+        .then((e) => { if (e) setEarnings(e); })
+        .catch(() => {});
+      getContractorJobs()
+        .then((j) => { if (Array.isArray(j)) setJobs(j); })
+        .catch(() => {});
     }, [])
   );
 
@@ -1618,26 +1626,51 @@ const ContractorDashboardScreen: React.FC = () => {
                   <View className="flex-row" style={{ gap: 8 }}>
                     <View className="flex-1 bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-700 p-4">
                       <View className="flex-row items-center" style={{ gap: 4 }}>
-                        <FontAwesome5 name="dollar-sign" size={12} color="#059669" />
-                        <Text className="text-xs text-neutral-500 dark:text-neutral-400 dark:text-neutral-500 font-medium">Total Earnings</Text>
+                        <FontAwesome5 name="wallet" size={12} color="#059669" />
+                        <Text className="text-xs text-neutral-500 dark:text-neutral-400 dark:text-neutral-500 font-medium">Available</Text>
                       </View>
-                      <Text className="text-xl font-bold text-neutral-900 dark:text-white mt-1">{formatCurrency(totalEarnings / 100)}</Text>
+                      <Text className="text-xl font-bold text-neutral-900 dark:text-white mt-1">{formatCurrency(((_earnings?.availableBalance ?? 0)) / 100)}</Text>
+                      <Text className="text-[10px] text-neutral-400 dark:text-neutral-500 mt-0.5">Withdrawable now</Text>
                     </View>
                     <View className="flex-1 bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-700 p-4">
                       <View className="flex-row items-center" style={{ gap: 4 }}>
-                        <FontAwesome5 name="clock" size={12} color="#d97706" />
-                        <Text className="text-xs text-neutral-500 dark:text-neutral-400 dark:text-neutral-500 font-medium">Pending</Text>
+                        <FontAwesome5 name="shield-alt" size={12} color="#d97706" />
+                        <Text className="text-xs text-neutral-500 dark:text-neutral-400 dark:text-neutral-500 font-medium">In Escrow</Text>
                       </View>
                       <Text className="text-xl font-bold text-neutral-900 dark:text-white mt-1">{formatCurrency(pendingEscrow / 100)}</Text>
+                      <Text className="text-[10px] text-neutral-400 dark:text-neutral-500 mt-0.5">Pending release</Text>
                     </View>
                     <View className="flex-1 bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-700 p-4">
                       <View className="flex-row items-center" style={{ gap: 4 }}>
-                        <FontAwesome5 name="briefcase" size={12} color="#4F46E5" />
-                        <Text className="text-xs text-neutral-500 dark:text-neutral-400 dark:text-neutral-500 font-medium">Active Jobs</Text>
+                        <FontAwesome5 name="chart-line" size={12} color="#4F46E5" />
+                        <Text className="text-xs text-neutral-500 dark:text-neutral-400 dark:text-neutral-500 font-medium">Total Earned</Text>
                       </View>
-                      <Text className="text-xl font-bold text-neutral-900 dark:text-white mt-1">{activeJobsCount}</Text>
+                      <Text className="text-xl font-bold text-neutral-900 dark:text-white mt-1">{formatCurrency(((_earnings?.totalEarned ?? totalEarnings)) / 100)}</Text>
+                      <Text className="text-[10px] text-neutral-400 dark:text-neutral-500 mt-0.5">Lifetime (net)</Text>
                     </View>
                   </View>
+
+                  {/* Withdraw / View Earnings */}
+                  <Pressable
+                    onPress={() => navigation.navigate('EarningsScreen')}
+                    className="mt-3 flex-row items-center justify-between bg-neutral-900 dark:bg-neutral-100 rounded-xl px-4 py-3.5"
+                    style={{ gap: 8 }}
+                  >
+                    <View className="flex-row items-center" style={{ gap: 10 }}>
+                      <View className="w-9 h-9 rounded-lg bg-white/10 dark:bg-neutral-900/10 items-center justify-center">
+                        <FontAwesome5 name="wallet" size={14} color="#fff" />
+                      </View>
+                      <View>
+                        <Text className="text-sm font-bold text-white dark:text-neutral-900">Earnings & Withdrawals</Text>
+                        <Text className="text-[11px] text-neutral-400 dark:text-neutral-500">
+                          {_earnings?.availableBalance
+                            ? `Available: ${formatCurrency(_earnings.availableBalance / 100)} · Tap to withdraw`
+                            : 'View balance, payouts & transactions'}
+                        </Text>
+                      </View>
+                    </View>
+                    <FontAwesome5 name="chevron-right" size={12} color={isDark ? '#a3a3a3' : '#fff'} />
+                  </Pressable>
                 </View>
               )}
 
@@ -1817,7 +1850,14 @@ const ContractorDashboardScreen: React.FC = () => {
               {/* Jobs */}
               {paymentSubTab === 'jobs' && (
                 <View>
-                  <Text className="text-base font-semibold text-neutral-900 dark:text-white mb-3">Active Jobs</Text>
+                  <View className="flex-row items-center justify-between mb-3">
+                    <Text className="text-base font-semibold text-neutral-900 dark:text-white">Active Jobs</Text>
+                    {activeJobsCount > 0 && (
+                      <View className="bg-indigo-50 dark:bg-indigo-950/40 px-2 py-0.5 rounded-full">
+                        <Text className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400">{activeJobsCount}</Text>
+                      </View>
+                    )}
+                  </View>
                   {jobs.length === 0 ? (
                     <EmptyState icon="briefcase" title="No jobs yet" message="Jobs will appear here when work begins" />
                   ) : (
