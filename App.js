@@ -1,7 +1,6 @@
 import React, { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { View, Platform } from 'react-native';
 import { useColorScheme } from 'nativewind';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -219,7 +218,6 @@ function App() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <BottomSheetModalProvider>
       <SafeAreaProvider>
         <ErrorBoundary>
           <StripeProvider publishableKey={STRIPE_PUBLISHABLE_KEY || ''} merchantIdentifier="merchant.com.ratedeed.app">
@@ -237,7 +235,6 @@ function App() {
           </StripeProvider>
         </ErrorBoundary>
       </SafeAreaProvider>
-      </BottomSheetModalProvider>
     </GestureHandlerRootView>
   );
 }
