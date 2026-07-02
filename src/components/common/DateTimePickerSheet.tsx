@@ -243,7 +243,10 @@ export default function DateTimePickerSheet({
       setSelectedDate(valueDate);
       setSelectedTime(timeSlots ? (value ?? null) : selectedTimeNorm);
       setScrollIndex(0);
-      sheetRef.current?.present();
+      const timer = setTimeout(() => {
+        sheetRef.current?.present();
+      }, 16);
+      return () => clearTimeout(timer);
     } else {
       sheetRef.current?.dismiss();
     }
@@ -319,6 +322,7 @@ export default function DateTimePickerSheet({
 
   const sheetCommonProps = {
     ref: sheetRef,
+    index: -1,
     enablePanDownToClose: true,
     backdropComponent: renderBackdrop,
     onChange: handleSheetChange,
