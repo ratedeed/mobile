@@ -1,8 +1,7 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import {
   Animated,
   FlatList,
-  RefreshControl,
   ScrollView,
   SectionList,
   StyleSheet,
@@ -15,61 +14,12 @@ import {
 import { BouncingDotsLoader } from './BouncingDotsLoader';
 import { Colors } from '../../constants/designTokens';
 
-const REFRESH_HEIGHT = 64;
-
-const TRANSPARENT = 'rgba(0,0,0,0)';
-
-interface RefreshOverlayProps {
-  refreshing: boolean;
-  color?: string;
-}
-
-const RefreshOverlay: React.FC<RefreshOverlayProps> = ({ refreshing, color }) => {
-  const height = useRef(new Animated.Value(0)).current;
-  const opacity = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    if (refreshing) {
-      Animated.parallel([
-        Animated.timing(height, {
-          toValue: REFRESH_HEIGHT,
-          duration: 180,
-          useNativeDriver: false,
-        }),
-        Animated.timing(opacity, {
-          toValue: 1,
-          duration: 180,
-          useNativeDriver: false,
-        }),
-      ]).start();
-    } else {
-      Animated.parallel([
-        Animated.timing(opacity, {
-          toValue: 0,
-          duration: 140,
-          useNativeDriver: false,
-        }),
-        Animated.timing(height, {
-          toValue: 0,
-          duration: 140,
-          useNativeDriver: false,
-        }),
-      ]).start();
-    }
-  }, [refreshing, height, opacity]);
-
-  return (
-    <Animated.View
-      pointerEvents="none"
-      style={[styles.overlay, { height, opacity }]}
-    >
-      <BouncingDotsLoader size="medium" color={color ?? Colors.primary500} />
-    </Animated.View>
-  );
-};
+const INDICATOR_HEIGHT = 64;
+const THRESHOLD = 60;
 
 const styles = StyleSheet.create({
-  overlay: {
+  container: { flex: 1 },
+  indicator: {
     position: 'absolute',
     top: 0,
     left: 0,
@@ -80,6 +30,95 @@ const styles = StyleSheet.create({
   },
 });
 
+interface CommonProps {
+  refreshing: boolean;
+  onRefresh: () => void;
+  loaderColor?: string;
+  style?: StyleProp<ViewStyle>;
+}
+
+function usePullState(refreshing: boolean, onRefresh: () => void) {
+  const pull = useRef(new Animated.Value(0)).current;
+  const pullValue = useRef(0);
+  const canTrigger = useRef(true);
+
+  const onUserScroll = useCallback(
+    (y: number, userHandler?: (e: any) => void, e?: any) => {
+      if (refreshing) {
+        if (pullValue.current !== INDICATOR_HEIGHT) {
+          pullValue.current = INDICATOR_HEIGHT;
+          pull.setValue(INDICATOR_HEIGHT);
+        }
+      } else if (y < 0) {
+        const raw = -y;
+        const damped = raw <= THRESHOLD ? raw : THRESHOLD + (raw - THRESHOLD) * 0.5;
+        const clamped = Math.min(damped, 120);
+        if (Math.abs(clamped - pullValue.current) > 0.5) {
+          pullValue.current = clamped;
+          pull.setValue(clamped);
+        }
+      } else {
+        if (pullValue.current !== 0) {
+          pullValue.current = 0;
+          pull.setValue(0);
+        }
+      }
+      userHandler?.(e);
+    },
+    [refreshing, pull],
+  );
+
+  const onUserScrollEndDrag = useCallback(
+    (userHandler?: (e: any) => void, e?: any) => {
+      if (refreshing) {
+        userHandler?.(e);
+        return;
+      }
+      if (canTrigger.current && pullValue.current >= THRESHOLD) {
+        onRefresh();
+      } else {
+        Animated.spring(pull, {
+          toValue: 0,
+          useNativeDriver: false,
+          friction: 7,
+          tension: 40,
+        }).start();
+        pullValue.current = 0;
+      }
+      userHandler?.(e);
+    },
+    [refreshing, onRefresh, pull],
+  );
+
+  useEffect(() => {
+    if (refreshing) {
+      Animated.timing(pull, {
+        toValue: INDICATOR_HEIGHT,
+        duration: 200,
+        useNativeDriver: false,
+      }).start();
+      pullValue.current = INDICATOR_HEIGHT;
+      canTrigger.current = false;
+    } else {
+      Animated.timing(pull, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: false,
+      }).start();
+      pullValue.current = 0;
+      canTrigger.current = true;
+    }
+  }, [refreshing, pull]);
+
+  const opacity = pull.interpolate({
+    inputRange: [0, INDICATOR_HEIGHT],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
+
+  return { pull, opacity, onUserScroll, onUserScrollEndDrag };
+}
+
 interface BouncingRefreshFlatListProps<ItemT = any>
   extends Omit<FlatListProps<ItemT>, 'refreshControl' | 'style'> {
   refreshing: boolean;
@@ -88,29 +127,57 @@ interface BouncingRefreshFlatListProps<ItemT = any>
   style?: StyleProp<ViewStyle>;
 }
 
-function BouncingRefreshFlatList<ItemT = any>(
+function BouncingRefreshFlatListInner<ItemT = any>(
   props: BouncingRefreshFlatListProps<ItemT>,
   ref: React.Ref<FlatList<ItemT>>,
 ) {
-  const { refreshing, onRefresh, loaderColor, style, ...rest } = props;
+  const {
+    refreshing,
+    onRefresh,
+    loaderColor,
+    style,
+    onScroll,
+    onScrollBeginDrag,
+    onScrollEndDrag,
+    ...rest
+  } = props;
+
+  const { pull, opacity, onUserScroll, onUserScrollEndDrag } = usePullState(
+    refreshing,
+    onRefresh,
+  );
+
+  const handleScroll = useCallback(
+    (e: any) => onUserScroll(e.nativeEvent.contentOffset.y, onScroll, e),
+    [onUserScroll, onScroll],
+  );
+
+  const handleScrollEndDrag = useCallback(
+    (e: any) => onUserScrollEndDrag(onScrollEndDrag, e),
+    [onUserScrollEndDrag, onScrollEndDrag],
+  );
+
+  const handleScrollBeginDrag = useCallback(
+    (e: any) => onScrollBeginDrag?.(e),
+    [onScrollBeginDrag],
+  );
+
   return (
-    <View style={[{ flex: 1 }, style]}>
+    <View style={[styles.container, style]}>
       <FlatList<ItemT>
         ref={ref}
         {...(rest as FlatListProps<ItemT>)}
-        style={[{ flex: 1 }]}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={TRANSPARENT}
-            colors={[TRANSPARENT]}
-            progressBackgroundColor={TRANSPARENT}
-            title=""
-          />
-        }
+        onScroll={handleScroll}
+        onScrollBeginDrag={handleScrollBeginDrag}
+        onScrollEndDrag={handleScrollEndDrag}
+        scrollEventThrottle={16}
       />
-      <RefreshOverlay refreshing={refreshing} color={loaderColor} />
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.indicator, { height: pull, opacity }]}
+      >
+        <BouncingDotsLoader size="medium" color={loaderColor ?? Colors.primary500} />
+      </Animated.View>
     </View>
   );
 }
@@ -123,31 +190,60 @@ interface BouncingRefreshScrollViewProps
   style?: StyleProp<ViewStyle>;
 }
 
-function BouncingRefreshScrollView(
+function BouncingRefreshScrollViewInner(
   props: BouncingRefreshScrollViewProps,
   ref: React.Ref<ScrollView>,
 ) {
-  const { refreshing, onRefresh, loaderColor, style, children, ...rest } = props;
+  const {
+    refreshing,
+    onRefresh,
+    loaderColor,
+    style,
+    onScroll,
+    onScrollBeginDrag,
+    onScrollEndDrag,
+    children,
+    ...rest
+  } = props;
+
+  const { pull, opacity, onUserScroll, onUserScrollEndDrag } = usePullState(
+    refreshing,
+    onRefresh,
+  );
+
+  const handleScroll = useCallback(
+    (e: any) => onUserScroll(e.nativeEvent.contentOffset.y, onScroll, e),
+    [onUserScroll, onScroll],
+  );
+
+  const handleScrollEndDrag = useCallback(
+    (e: any) => onUserScrollEndDrag(onScrollEndDrag, e),
+    [onUserScrollEndDrag, onScrollEndDrag],
+  );
+
+  const handleScrollBeginDrag = useCallback(
+    (e: any) => onScrollBeginDrag?.(e),
+    [onScrollBeginDrag],
+  );
+
   return (
-    <View style={[{ flex: 1 }, style]}>
+    <View style={[styles.container, style]}>
       <ScrollView
         ref={ref}
         {...(rest as React.ComponentProps<typeof ScrollView>)}
-        style={[{ flex: 1 }]}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={TRANSPARENT}
-            colors={[TRANSPARENT]}
-            progressBackgroundColor={TRANSPARENT}
-            title=""
-          />
-        }
+        onScroll={handleScroll}
+        onScrollBeginDrag={handleScrollBeginDrag}
+        onScrollEndDrag={handleScrollEndDrag}
+        scrollEventThrottle={16}
       >
         {children}
       </ScrollView>
-      <RefreshOverlay refreshing={refreshing} color={loaderColor} />
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.indicator, { height: pull, opacity }]}
+      >
+        <BouncingDotsLoader size="medium" color={loaderColor ?? Colors.primary500} />
+      </Animated.View>
     </View>
   );
 }
@@ -160,45 +256,78 @@ interface BouncingRefreshSectionListProps<ItemT = any, SectionT = any>
   style?: StyleProp<ViewStyle>;
 }
 
-function BouncingRefreshSectionList<ItemT = any, SectionT = any>(
+function BouncingRefreshSectionListInner<ItemT = any, SectionT = any>(
   props: BouncingRefreshSectionListProps<ItemT, SectionT>,
   ref: React.Ref<SectionList<ItemT, SectionT>>,
 ) {
-  const { refreshing, onRefresh, loaderColor, style, ...rest } = props;
+  const {
+    refreshing,
+    onRefresh,
+    loaderColor,
+    style,
+    onScroll,
+    onScrollBeginDrag,
+    onScrollEndDrag,
+    ...rest
+  } = props;
+
+  const { pull, opacity, onUserScroll, onUserScrollEndDrag } = usePullState(
+    refreshing,
+    onRefresh,
+  );
+
+  const handleScroll = useCallback(
+    (e: any) => onUserScroll(e.nativeEvent.contentOffset.y, onScroll, e),
+    [onUserScroll, onScroll],
+  );
+
+  const handleScrollEndDrag = useCallback(
+    (e: any) => onUserScrollEndDrag(onScrollEndDrag, e),
+    [onUserScrollEndDrag, onScrollEndDrag],
+  );
+
+  const handleScrollBeginDrag = useCallback(
+    (e: any) => onScrollBeginDrag?.(e),
+    [onScrollBeginDrag],
+  );
+
   return (
-    <View style={[{ flex: 1 }, style]}>
+    <View style={[styles.container, style]}>
       <SectionList<ItemT, SectionT>
         ref={ref}
         {...(rest as SectionListProps<ItemT, SectionT>)}
-        style={[{ flex: 1 }]}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={TRANSPARENT}
-            colors={[TRANSPARENT]}
-            progressBackgroundColor={TRANSPARENT}
-            title=""
-          />
-        }
+        onScroll={handleScroll}
+        onScrollBeginDrag={handleScrollBeginDrag}
+        onScrollEndDrag={handleScrollEndDrag}
+        scrollEventThrottle={16}
       />
-      <RefreshOverlay refreshing={refreshing} color={loaderColor} />
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.indicator, { height: pull, opacity }]}
+      >
+        <BouncingDotsLoader size="medium" color={loaderColor ?? Colors.primary500} />
+      </Animated.View>
     </View>
   );
 }
 
-const ForwardedFlatList = React.forwardRef(BouncingRefreshFlatList) as <ItemT = any>(
+const BouncingRefreshFlatList = React.forwardRef(BouncingRefreshFlatListInner) as <ItemT = any>(
   p: BouncingRefreshFlatListProps<ItemT> & { ref?: React.Ref<FlatList<ItemT>> },
 ) => React.ReactElement;
 
-const ForwardedScrollView = React.forwardRef(BouncingRefreshScrollView);
+const BouncingRefreshScrollView = React.forwardRef(BouncingRefreshScrollViewInner);
 
-const ForwardedSectionList = React.forwardRef(BouncingRefreshSectionList) as <ItemT = any, SectionT = any>(
-  p: BouncingRefreshSectionListProps<ItemT, SectionT> & { ref?: React.Ref<SectionList<ItemT, SectionT>> },
+const BouncingRefreshSectionList = React.forwardRef(BouncingRefreshSectionListInner) as <
+  ItemT = any,
+  SectionT = any,
+>(
+  p: BouncingRefreshSectionListProps<ItemT, SectionT> & {
+    ref?: React.Ref<SectionList<ItemT, SectionT>>;
+  },
 ) => React.ReactElement;
 
 export {
-  ForwardedFlatList as BouncingRefreshFlatList,
-  ForwardedScrollView as BouncingRefreshScrollView,
-  ForwardedSectionList as BouncingRefreshSectionList,
+  BouncingRefreshFlatList,
+  BouncingRefreshScrollView,
+  BouncingRefreshSectionList,
 };
