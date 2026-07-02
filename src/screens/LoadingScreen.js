@@ -144,7 +144,7 @@ const LoadingScreen = () => {
       })
     ]).start();
 
-    // Dots bouncing (Airbnb-style wave: translateY + scale + opacity, staggered)
+    // Dots bouncing (staggered wave: translateY + scale + opacity)
     const BOUNCE_DURATION = 1200;
     const animateDot = (anim, delay) => {
       Animated.sequence([
@@ -238,7 +238,7 @@ const LoadingScreen = () => {
         </Animated.View>
       </View>
 
-      {/* Bouncing dots — Airbnb-style wave */}
+      {/* Bouncing dots — staggered wave */}
       <Animated.View style={[styles.dotsContainer, { opacity: dotsOpacity }]}>
         <View style={styles.dotsWrapper}>
           <Animated.View style={[styles.dot, { backgroundColor: dotColor }, getDotStyle(dot1)]} />
