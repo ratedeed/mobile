@@ -335,15 +335,39 @@ export default function ServiceAreaMap({
         toolbarEnabled={false}
         mapType={Platform.OS === 'ios' ? 'mutedStandard' : 'standard'}
       >
-        {zipAreas.map((za) => (
-          <Polygon
-            key={za.zip}
-            coordinates={za.coords}
-            fillColor={za.isPrimary ? 'rgba(79, 70, 229, 0.35)' : 'rgba(79, 70, 229, 0.25)'}
-            strokeColor="#4F46E5"
-            strokeWidth={2}
-          />
-        ))}
+        {zipAreas.map((za) => {
+          const avgLat = za.coords.reduce((s, c) => s + c.latitude, 0) / za.coords.length;
+          const avgLng = za.coords.reduce((s, c) => s + c.longitude, 0) / za.coords.length;
+
+          return (
+            <React.Fragment key={za.zip}>
+              <Polygon
+                coordinates={za.coords}
+                fillColor={za.isPrimary ? 'rgba(79, 70, 229, 0.35)' : 'rgba(79, 70, 229, 0.25)'}
+                strokeColor="#4F46E5"
+                strokeWidth={2}
+              />
+              {za.zip && (
+                <Marker
+                  coordinate={{ latitude: avgLat, longitude: avgLng }}
+                  tracksViewChanges={false}
+                >
+                  <Text style={{
+                    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+                    fontSize: 11,
+                    fontWeight: '800',
+                    color: '#312E81',
+                    textShadowColor: 'rgba(255, 255, 255, 1)',
+                    textShadowOffset: { width: 0, height: 0 },
+                    textShadowRadius: 6,
+                  }}>
+                    {za.zip}
+                  </Text>
+                </Marker>
+              )}
+            </React.Fragment>
+          );
+        })}
 
         {hasBusinessLocation && (
           <Marker
