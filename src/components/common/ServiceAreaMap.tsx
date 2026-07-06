@@ -419,36 +419,51 @@ export default function ServiceAreaMap({
         showsBuildings={false}
         showsIndoors={false}
         toolbarEnabled={false}
-        mapType={Platform.OS === 'ios' ? 'mutedStandard' : 'standard'}
+        mapType="standard"
       >
         {zipAreas.map((za) => {
           const avgLat = za.coords.reduce((s, c) => s + c.latitude, 0) / za.coords.length;
           const avgLng = za.coords.reduce((s, c) => s + c.longitude, 0) / za.coords.length;
 
+          // Offset ZIP badge slightly north (+0.0035 lat) so contractor location pin never covers it
+          const labelLat = avgLat + 0.0035;
+
           return (
             <React.Fragment key={za.zip}>
               <Polygon
                 coordinates={za.coords}
-                fillColor={za.isPrimary ? 'rgba(79, 70, 229, 0.35)' : 'rgba(79, 70, 229, 0.28)'}
+                fillColor="rgba(99, 102, 241, 0.40)"
                 strokeColor="#4F46E5"
-                strokeWidth={2.5}
+                strokeWidth={3}
               />
               {za.zip && (
                 <Marker
-                  coordinate={{ latitude: avgLat, longitude: avgLng }}
+                  coordinate={{ latitude: labelLat, longitude: avgLng }}
                   tracksViewChanges={false}
+                  anchor={{ x: 0.5, y: 1 }}
                 >
-                  <Text style={{
-                    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
-                    fontSize: 11,
-                    fontWeight: '800',
-                    color: '#312E81',
-                    textShadowColor: 'rgba(255, 255, 255, 1)',
-                    textShadowOffset: { width: 0, height: 0 },
-                    textShadowRadius: 6,
+                  <View style={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    paddingHorizontal: 6,
+                    paddingVertical: 2,
+                    borderRadius: 6,
+                    borderWidth: 1,
+                    borderColor: 'rgba(79, 70, 229, 0.4)',
+                    shadowColor: '#000',
+                    shadowOpacity: 0.15,
+                    shadowRadius: 3,
+                    shadowOffset: { width: 0, height: 1 },
+                    elevation: 3,
                   }}>
-                    {za.zip}
-                  </Text>
+                    <Text style={{
+                      fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+                      fontSize: 10,
+                      fontWeight: '800',
+                      color: '#4F46E5',
+                    }}>
+                      {za.zip}
+                    </Text>
+                  </View>
                 </Marker>
               )}
             </React.Fragment>
@@ -459,6 +474,7 @@ export default function ServiceAreaMap({
           <Marker
             coordinate={{ latitude: center.lat, longitude: center.lng }}
             tracksViewChanges={false}
+            anchor={{ x: 0.5, y: 0.5 }}
           >
             <View style={{
               width: 36, height: 36,
@@ -466,7 +482,7 @@ export default function ServiceAreaMap({
               borderRadius: 18,
               alignItems: 'center', justifyContent: 'center',
               shadowColor: '#4F46E5', shadowOpacity: 0.4, shadowRadius: 12, shadowOffset: { width: 0, height: 2 },
-              elevation: 5,
+              elevation: 6,
               borderWidth: 3, borderColor: 'white'
             }}>
               <FontAwesome5 name="map-marker-alt" size={14} color="white" solid />
