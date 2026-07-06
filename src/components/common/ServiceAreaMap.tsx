@@ -150,7 +150,26 @@ async function fetchBoundariesFast(zips: any[]): Promise<ZipArea[]> {
     }
   } catch {}
 
-  // 2. Direct State GeoJSON Fallback
+  // 2. Direct Static CDN Fallback (from ratedeed.com)
+  try {
+    const cdnUrl = `https://www.ratedeed.com/data/us_zips_geo.json`;
+    const cdnRes = await fetch(cdnUrl);
+    if (cdnRes.ok) {
+      const cdnData = await cdnRes.json();
+      for (const zip of validZips) {
+        const rec = cdnData[zip];
+        if (rec && rec.poly && Array.isArray(rec.poly)) {
+          const coords = rec.poly.map((pt: any) => ({ latitude: pt[0], longitude: pt[1] }));
+          if (coords.length >= 3) {
+            results.push({ zip, coords });
+          }
+        }
+      }
+      if (results.length > 0) return results;
+    }
+  } catch {}
+
+  // 3. Direct State GeoJSON Fallback
   for (const zip of validZips) {
     try {
       const prefix = zip.substring(0, 2);

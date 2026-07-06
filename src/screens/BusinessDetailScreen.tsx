@@ -460,7 +460,7 @@ const BusinessDetailScreen: React.FC = () => {
           top: 0,
           paddingTop: insets.top > 0 ? insets.top + 8 : 12,
           backgroundColor: scrollY > 100 
-            ? (isDark ? 'rgba(23, 23, 23, 0.95)' : 'rgba(255, 255, 255, 0.95)') 
+            ? (isDark ? '#171717' : '#ffffff') 
             : 'transparent',
           borderBottomWidth: scrollY > 100 ? 1 : 0,
           borderBottomColor: isDark ? '#262626' : '#e5e5e5',
