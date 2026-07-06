@@ -10,7 +10,7 @@ interface ServiceAreaMapProps {
   locationName?: string;
   latitude?: number;
   longitude?: number;
-  zipCodes?: string[];
+  zipCodes?: (string | number | any)[];
   zipGeoData?: any[];
   height?: number;
 }
@@ -60,6 +60,29 @@ const ZIP_PREFIX_TO_STATE: Record<string, string> = {
 };
 
 const mobileStateCache = new Map<string, any[]>();
+let globalMobileCdnCache: Record<string, any> | null = null;
+
+async function fetchCdnDataset(): Promise<Record<string, any> | null> {
+  if (globalMobileCdnCache) return globalMobileCdnCache;
+  try {
+    const res = await fetch(`https://www.ratedeed.com/data/us_zips_geo.json`);
+    if (res.ok) {
+      globalMobileCdnCache = await res.json();
+      return globalMobileCdnCache;
+    }
+  } catch {}
+  return null;
+}
+
+function distanceKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 
 function simplifyRing(coords: number[][], factor: number = 5): number[][] {
   if (coords.length <= 10) return coords;
@@ -109,7 +132,12 @@ async function geocodeLocation(query: string): Promise<{ lat: number; lng: numbe
   return null;
 }
 
-async function fetchBoundariesFast(zips: any[]): Promise<ZipArea[]> {
+async function fetchBoundariesFast(
+  zips: any[],
+  fallbackLocationName?: string,
+  lat?: number,
+  lng?: number
+): Promise<ZipArea[]> {
   const results: ZipArea[] = [];
   const validZips: string[] = [];
 
@@ -128,34 +156,39 @@ async function fetchBoundariesFast(zips: any[]): Promise<ZipArea[]> {
     }
   });
 
-  if (validZips.length === 0) return results;
+  // Extract 5-digit zip code from fallbackLocationName if present (e.g. "Detroit, MI 48226")
+  if (validZips.length === 0 && fallbackLocationName) {
+    const match = fallbackLocationName.match(/\b\d{5}\b/);
+    if (match) validZips.push(match[0]);
+  }
 
-  // 1. Try Backend API first
-  try {
-    const apiUrl = `${API_BASE_URL}/api/zip-boundaries?zips=${validZips.join(',')}`;
-    const res = await fetch(apiUrl);
-    if (res.ok) {
-      const data = await res.json();
-      if (data?.boundaries && Array.isArray(data.boundaries)) {
-        for (const b of data.boundaries) {
-          if (b.polygon && Array.isArray(b.polygon)) {
-            const coords = b.polygon.map((pt: any) => ({ latitude: pt[0], longitude: pt[1] }));
-            if (coords.length >= 3) {
-              results.push({ zip: b.code, coords });
+  // 1. Try Backend API first if validZips present
+  if (validZips.length > 0) {
+    try {
+      const apiUrl = `${API_BASE_URL}/api/zip-boundaries?zips=${validZips.join(',')}`;
+      const res = await fetch(apiUrl);
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.boundaries && Array.isArray(data.boundaries)) {
+          for (const b of data.boundaries) {
+            if (b.polygon && Array.isArray(b.polygon)) {
+              const coords = b.polygon.map((pt: any) => ({ latitude: pt[0], longitude: pt[1] }));
+              if (coords.length >= 3) {
+                results.push({ zip: b.code, coords });
+              }
             }
           }
+          if (results.length > 0) return results;
         }
-        if (results.length > 0) return results;
       }
-    }
-  } catch {}
+    } catch {}
+  }
 
   // 2. Direct Static CDN Fallback (from ratedeed.com)
-  try {
-    const cdnUrl = `https://www.ratedeed.com/data/us_zips_geo.json`;
-    const cdnRes = await fetch(cdnUrl);
-    if (cdnRes.ok) {
-      const cdnData = await cdnRes.json();
+  const cdnData = await fetchCdnDataset();
+  if (cdnData) {
+    // If validZips available, extract directly
+    if (validZips.length > 0) {
       for (const zip of validZips) {
         const rec = cdnData[zip];
         if (rec && rec.poly && Array.isArray(rec.poly)) {
@@ -167,7 +200,41 @@ async function fetchBoundariesFast(zips: any[]): Promise<ZipArea[]> {
       }
       if (results.length > 0) return results;
     }
-  } catch {}
+
+    // Spatial lat/long reverse lookup if validZips was empty
+    let targetLat = lat;
+    let targetLng = lng;
+    if ((!targetLat || !targetLng) && fallbackLocationName) {
+      const geo = await geocodeLocation(fallbackLocationName);
+      if (geo) {
+        targetLat = geo.lat;
+        targetLng = geo.lng;
+      }
+    }
+
+    if (targetLat && targetLng) {
+      let closestCode = '95110';
+      let minDist = Infinity;
+      for (const code of Object.keys(cdnData)) {
+        const rec = cdnData[code];
+        if (rec?.lat && rec?.lng) {
+          const d = distanceKm(targetLat, targetLng, rec.lat, rec.lng);
+          if (d < minDist) {
+            minDist = d;
+            closestCode = code;
+          }
+        }
+      }
+      const targetRec = cdnData[closestCode];
+      if (targetRec && targetRec.poly && Array.isArray(targetRec.poly)) {
+        const coords = targetRec.poly.map((pt: any) => ({ latitude: pt[0], longitude: pt[1] }));
+        if (coords.length >= 3) {
+          results.push({ zip: closestCode, coords });
+          return results;
+        }
+      }
+    }
+  }
 
   // 3. Direct State GeoJSON Fallback
   for (const zip of validZips) {
@@ -239,11 +306,11 @@ export default function ServiceAreaMap({
     return () => { cancelled = true; };
   }, [latitude, longitude, locationName]);
 
-  // Load Zip Code Boundary Polygons
+  // Load Zip Code Boundary Polygons with 3-Tier Resolution
   useEffect(() => {
     setHasError(false);
 
-    // 1. Check if prefilled zipGeoData exists
+    // 1. Check if prefilled zipGeoData with valid polygon coordinates exists
     if (zipGeoData && zipGeoData.length > 0) {
       const prefilled: ZipArea[] = [];
       for (const zc of zipGeoData) {
@@ -272,13 +339,11 @@ export default function ServiceAreaMap({
       }
     }
 
-    // 2. Fetch boundary polygons for zipCodes
-    if (!zipCodes.length) { setZipAreas([]); return; }
     let cancelled = false;
 
     (async () => {
       try {
-        const fetched = await fetchBoundariesFast(zipCodes);
+        const fetched = await fetchBoundariesFast(zipCodes, locationName, latitude, longitude);
         if (!cancelled) {
           setZipAreas(fetched);
           if (fetched.length > 0 && !center) {
@@ -293,20 +358,22 @@ export default function ServiceAreaMap({
     })();
 
     return () => { cancelled = true; };
-  }, [zipCodes.join(','), JSON.stringify(zipGeoData || [])]);
+  }, [JSON.stringify(zipCodes || []), locationName, latitude, longitude, JSON.stringify(zipGeoData || [])]);
 
   // Adjust camera to fit all zip boundary polygons
   useEffect(() => {
-    if (mapRef.current) {
+    if (mapRef.current && zipAreas.length > 0) {
       const allCoords = zipAreas.flatMap(za => za.coords);
       if (hasBusinessLocation && center) {
         allCoords.push({ latitude: center.lat, longitude: center.lng });
       }
       if (allCoords.length > 0) {
-        mapRef.current.fitToCoordinates(allCoords, {
-          edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
-          animated: true,
-        });
+        setTimeout(() => {
+          mapRef.current?.fitToCoordinates(allCoords, {
+            edgePadding: { top: 40, right: 40, bottom: 40, left: 40 },
+            animated: true,
+          });
+        }, 300);
       }
     }
   }, [zipAreas, hasBusinessLocation, center]);
@@ -362,9 +429,9 @@ export default function ServiceAreaMap({
             <React.Fragment key={za.zip}>
               <Polygon
                 coordinates={za.coords}
-                fillColor={za.isPrimary ? 'rgba(79, 70, 229, 0.35)' : 'rgba(79, 70, 229, 0.25)'}
+                fillColor={za.isPrimary ? 'rgba(79, 70, 229, 0.35)' : 'rgba(79, 70, 229, 0.28)'}
                 strokeColor="#4F46E5"
-                strokeWidth={2}
+                strokeWidth={2.5}
               />
               {za.zip && (
                 <Marker
