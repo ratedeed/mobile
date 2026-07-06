@@ -21,89 +21,55 @@ interface ZipArea {
   isPrimary?: boolean;
 }
 
-// Zip code prefix → state file mapping (first 2 digits of zip → state)
-const ZIP_PREFIX_TO_STATE: Record<string, string> = {
-  "00": "ma_massachusetts", "01": "ma_massachusetts", "02": "ma_massachusetts",
-  "03": "nh_new_hampshire", "04": "me_maine", "05": "vt_vermont",
-  "06": "ct_connecticut", "07": "nj_new_jersey", "08": "nj_new_jersey",
-  "09": "puerto_rico", "10": "ny_new_york", "11": "ny_new_york",
-  "12": "ny_new_york", "13": "ny_new_york", "14": "ny_new_york",
-  "15": "pa_pennsylvania", "16": "pa_pennsylvania", "17": "pa_pennsylvania",
-  "18": "pa_pennsylvania", "19": "pa_pennsylvania", "20": "md_maryland",
-  "21": "md_maryland", "22": "va_virginia", "23": "va_virginia",
-  "24": "wv_west_virginia", "25": "wv_west_virginia", "26": "wv_west_virginia",
-  "27": "nc_north_carolina", "28": "nc_north_carolina", "29": "sc_south_carolina",
-  "30": "ge_georgia", "31": "ge_georgia", "32": "fl_florida",
-  "33": "fl_florida", "34": "fl_florida", "35": "al_alabama",
-  "36": "al_alabama", "37": "tn_tennessee", "38": "tn_tennessee",
-  "39": "ms_mississippi", "40": "ky_kentucky", "41": "ky_kentucky",
-  "42": "ky_kentucky", "43": "oh_ohio", "44": "oh_ohio",
-  "45": "oh_ohio", "46": "in_indiana", "47": "in_indiana",
-  "48": "mi_michigan", "49": "mi_michigan", "50": "ia_iowa",
-  "51": "ia_iowa", "52": "ia_iowa", "53": "wi_wisconsin",
-  "54": "wi_wisconsin", "55": "mn_minnesota", "56": "mn_minnesota",
-  "57": "sd_south_dakota", "58": "nd_north_dakota", "59": "mt_montana",
-  "60": "il_illinois", "61": "il_illinois", "62": "il_illinois",
-  "63": "mo_missouri", "64": "mo_missouri", "65": "mo_missouri",
-  "66": "ks_kansas", "67": "ks_kansas", "68": "ne_nebraska",
-  "69": "ne_nebraska", "70": "la_louisiana", "71": "la_louisiana",
-  "72": "ar_arkansas", "73": "ar_arkansas", "74": "ok_oklahoma",
-  "75": "tx_texas", "76": "tx_texas", "77": "tx_texas",
-  "78": "tx_texas", "79": "tx_texas", "80": "co_colorado",
-  "81": "co_colorado", "82": "wy_wyoming", "83": "wy_wyoming",
-  "84": "ut_utah", "85": "az_arizona", "86": "az_arizona",
-  "87": "nm_new_mexico", "88": "nm_new_mexico", "89": "nv_nevada",
-  "90": "ca_california", "91": "ca_california", "92": "ca_california",
-  "93": "ca_california", "94": "ca_california", "95": "ca_california",
-  "96": "hi_hawaii", "97": "or_oregon", "98": "wa_washington",
-  "99": "wa_washington",
-};
+const zipMemoryCache = new Map<string, ZipArea[]>();
 
-const mobileStateCache = new Map<string, any[]>();
-let globalMobileCdnCache: Record<string, any> | null = null;
+/**
+ * Normalizes raw polygon coordinate arrays from any common format:
+ *  - Simple:        [[lat, lng], [lat, lng], ...]
+ *  - GeoJSON:       [[lng, lat], [lng, lat], ...]        ← auto-detected & swapped
+ *  - Nested ring:   [[[lng, lat], [lng, lat], ...]]      ← unwrapped
+ *  - String values: [["34.1", "-118.4"], ...]             ← converted to Number
+ *
+ * Returns {latitude, longitude}[] guaranteed to have numeric, valid values.
+ */
+function normalizePolygonCoords(raw: any[]): { latitude: number; longitude: number }[] {
+  if (!raw || !Array.isArray(raw) || raw.length === 0) return [];
 
-async function fetchCdnDataset(): Promise<Record<string, any> | null> {
-  if (globalMobileCdnCache) return globalMobileCdnCache;
-  try {
-    const res = await fetch(`https://www.ratedeed.com/data/us_zips_geo.json`);
-    if (res.ok) {
-      globalMobileCdnCache = await res.json();
-      return globalMobileCdnCache;
-    }
-  } catch {}
-  return null;
-}
-
-function distanceKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLng = ((lng2 - lng1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
-function simplifyRing(coords: number[][], factor: number = 5): number[][] {
-  if (coords.length <= 10) return coords;
-  const simplified = coords.filter((_, i) => i % factor === 0);
-  if (simplified[0] !== simplified[simplified.length - 1]) {
-    simplified.push(simplified[0]);
+  // Unwrap nested ring format: [[[...]]] → [[...]]
+  let ring = raw;
+  while (
+    Array.isArray(ring) &&
+    ring.length > 0 &&
+    Array.isArray(ring[0]) &&
+    Array.isArray(ring[0][0])
+  ) {
+    ring = ring[0];
   }
-  return simplified;
-}
 
-async function fetchStateGeoJSON(stateFile: string): Promise<any[]> {
-  if (mobileStateCache.has(stateFile)) {
-    return mobileStateCache.get(stateFile)!;
-  }
-  const url = `https://raw.githubusercontent.com/OpenDataDE/State-zip-code-GeoJSON/master/${stateFile}_zip_codes_geo.min.json`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error('State fetch failed');
-  const data = await res.json();
-  const features = data.features || [];
-  mobileStateCache.set(stateFile, features);
-  return features;
+  return ring
+    .filter((pt: any) => Array.isArray(pt) && pt.length >= 2)
+    .map((pt: any) => {
+      const v0 = Number(pt[0]);
+      const v1 = Number(pt[1]);
+
+      if (isNaN(v0) || isNaN(v1)) return null;
+
+      // GeoJSON standard is [longitude, latitude].
+      // If |v0| > 90 it MUST be a longitude (latitudes only go -90..90).
+      // For US coords, longitudes are -60..-150 so |v0| > 90 → swap.
+      const lat = Math.abs(v0) > 90 ? v1 : v0;
+      const lng = Math.abs(v0) > 90 ? v0 : v1;
+
+      return { latitude: lat, longitude: lng };
+    })
+    .filter(
+      (c: any): c is { latitude: number; longitude: number } =>
+        c !== null &&
+        !isNaN(c.latitude) &&
+        !isNaN(c.longitude) &&
+        Math.abs(c.latitude) <= 90 &&
+        Math.abs(c.longitude) <= 180
+    );
 }
 
 async function geocodeLocation(query: string): Promise<{ lat: number; lng: number } | null> {
@@ -132,13 +98,31 @@ async function geocodeLocation(query: string): Promise<{ lat: number; lng: numbe
   return null;
 }
 
+/**
+ * Parse the "boundaries" array from either our API or the production fallback.
+ * Both return the same shape: { boundaries: [{ code, polygon }] }
+ */
+function parseBoundariesResponse(data: any): ZipArea[] {
+  const results: ZipArea[] = [];
+  if (!data?.boundaries || !Array.isArray(data.boundaries)) return results;
+
+  for (const b of data.boundaries) {
+    if (!b.polygon || !Array.isArray(b.polygon)) continue;
+
+    const coords = normalizePolygonCoords(b.polygon);
+    if (coords.length >= 3) {
+      results.push({ zip: b.code || b.zip || 'ZIP', coords });
+    }
+  }
+  return results;
+}
+
 async function fetchBoundariesFast(
   zips: any[],
   fallbackLocationName?: string,
   lat?: number,
   lng?: number
 ): Promise<ZipArea[]> {
-  const results: ZipArea[] = [];
   const validZips: string[] = [];
 
   (zips || []).forEach((z: any) => {
@@ -156,106 +140,78 @@ async function fetchBoundariesFast(
     }
   });
 
-  // Extract 5-digit zip code from fallbackLocationName if present (e.g. "Detroit, MI 48226")
   if (validZips.length === 0 && fallbackLocationName) {
     const match = fallbackLocationName.match(/\b\d{5}\b/);
     if (match) validZips.push(match[0]);
   }
 
-  // 1. Try Backend API first if validZips present
-  if (validZips.length > 0) {
-    try {
-      const apiUrl = `${API_BASE_URL}/api/zip-boundaries?zips=${validZips.join(',')}`;
-      const res = await fetch(apiUrl);
-      if (res.ok) {
-        const data = await res.json();
-        if (data?.boundaries && Array.isArray(data.boundaries)) {
-          for (const b of data.boundaries) {
-            if (b.polygon && Array.isArray(b.polygon)) {
-              const coords = b.polygon.map((pt: any) => ({ latitude: pt[0], longitude: pt[1] }));
-              if (coords.length >= 3) {
-                results.push({ zip: b.code, coords });
-              }
-            }
-          }
-          if (results.length > 0) return results;
-        }
-      }
-    } catch {}
+  const cacheKey = validZips.join(',') || `${fallbackLocationName}_${lat}_${lng}`;
+  if (zipMemoryCache.has(cacheKey)) {
+    return zipMemoryCache.get(cacheKey)!;
   }
 
-  // 2. Direct Static CDN Fallback (from ratedeed.com)
-  const cdnData = await fetchCdnDataset();
-  if (cdnData) {
-    // If validZips available, extract directly
-    if (validZips.length > 0) {
-      for (const zip of validZips) {
-        const rec = cdnData[zip];
-        if (rec && rec.poly && Array.isArray(rec.poly)) {
-          const coords = rec.poly.map((pt: any) => ({ latitude: pt[0], longitude: pt[1] }));
-          if (coords.length >= 3) {
-            results.push({ zip, coords });
-          }
-        }
-      }
-      if (results.length > 0) return results;
-    }
-
-    // Spatial lat/long reverse lookup if validZips was empty
-    let targetLat = lat;
-    let targetLng = lng;
-    if ((!targetLat || !targetLng) && fallbackLocationName) {
-      const geo = await geocodeLocation(fallbackLocationName);
-      if (geo) {
-        targetLat = geo.lat;
-        targetLng = geo.lng;
-      }
-    }
-
-    if (targetLat && targetLng) {
-      let closestCode = '95110';
-      let minDist = Infinity;
-      for (const code of Object.keys(cdnData)) {
-        const rec = cdnData[code];
-        if (rec?.lat && rec?.lng) {
-          const d = distanceKm(targetLat, targetLng, rec.lat, rec.lng);
-          if (d < minDist) {
-            minDist = d;
-            closestCode = code;
-          }
-        }
-      }
-      const targetRec = cdnData[closestCode];
-      if (targetRec && targetRec.poly && Array.isArray(targetRec.poly)) {
-        const coords = targetRec.poly.map((pt: any) => ({ latitude: pt[0], longitude: pt[1] }));
-        if (coords.length >= 3) {
-          results.push({ zip: closestCode, coords });
+  // 1. Try configured API URL (Primary) — zip-based
+  if (validZips.length > 0) {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/zip-boundaries?zips=${validZips.join(',')}`);
+      if (res.ok) {
+        const results = parseBoundariesResponse(await res.json());
+        if (results.length > 0) {
+          zipMemoryCache.set(cacheKey, results);
           return results;
         }
       }
-    }
-  }
+    } catch {}
 
-  // 3. Direct State GeoJSON Fallback
-  for (const zip of validZips) {
+    // 2. Fallback to production server
     try {
-      const prefix = zip.substring(0, 2);
-      const stateFile = ZIP_PREFIX_TO_STATE[prefix] || "ca_california";
-      const features = await fetchStateGeoJSON(stateFile);
-      const feature = features.find((f: any) => String(f.properties?.ZCTA5CE10) === zip);
-      if (feature?.geometry) {
-        const geom = feature.geometry;
-        const rawCoords = geom.type === 'Polygon' ? geom.coordinates[0] : geom.coordinates[0]?.[0];
-        if (rawCoords && rawCoords.length >= 3) {
-          const simplified = simplifyRing(rawCoords, 5);
-          const coords = simplified.map((pt: any) => ({ latitude: pt[1], longitude: pt[0] }));
-          results.push({ zip, coords });
+      const res = await fetch(`https://www.ratedeed.com/api/zip-boundaries?zips=${validZips.join(',')}`);
+      if (res.ok) {
+        const results = parseBoundariesResponse(await res.json());
+        if (results.length > 0) {
+          zipMemoryCache.set(cacheKey, results);
+          return results;
         }
       }
     } catch {}
   }
 
-  return results;
+  // 3. Spatial lookup fallback
+  let targetLat = lat;
+  let targetLng = lng;
+  if ((!targetLat || !targetLng) && fallbackLocationName) {
+    const geo = await geocodeLocation(fallbackLocationName);
+    if (geo) {
+      targetLat = geo.lat;
+      targetLng = geo.lng;
+    }
+  }
+
+  if (targetLat && targetLng) {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/zip-boundaries?lat=${targetLat}&lng=${targetLng}`);
+      if (res.ok) {
+        const results = parseBoundariesResponse(await res.json());
+        if (results.length > 0) {
+          zipMemoryCache.set(cacheKey, results);
+          return results;
+        }
+      }
+    } catch {}
+
+    try {
+      const res = await fetch(`https://www.ratedeed.com/api/zip-boundaries?lat=${targetLat}&lng=${targetLng}`);
+      if (res.ok) {
+        const results = parseBoundariesResponse(await res.json());
+        if (results.length > 0) {
+          zipMemoryCache.set(cacheKey, results);
+          return results;
+        }
+      }
+    } catch {}
+  }
+
+  return [];
 }
 
 export default function ServiceAreaMap({
@@ -276,93 +232,99 @@ export default function ServiceAreaMap({
     latitude && longitude ? true : false
   );
   const [hasError, setHasError] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isMapReady, setIsMapReady] = useState(false);
 
-  // Geocode business location
-  useEffect(() => {
-    let cancelled = false;
-    setHasError(false);
-    (async () => {
-      try {
-        let coords: { lat: number; lng: number } | null = null;
-        if (latitude && longitude) {
-          coords = { lat: latitude, lng: longitude };
-        } else if (locationName) {
-          coords = await geocodeLocation(locationName);
-        }
-        if (!cancelled) {
-          if (coords) {
-            setCenter(coords);
-            setHasBusinessLocation(true);
-          } else {
-            setHasBusinessLocation(false);
-          }
-        }
-      } catch {
-        if (!cancelled) {
-          setHasBusinessLocation(false);
-        }
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [latitude, longitude, locationName]);
-
-  // Load Zip Code Boundary Polygons with 3-Tier Resolution
+  // Load Zip Code Boundary Polygons
   useEffect(() => {
     setHasError(false);
+    setIsLoading(true);
 
-    // 1. Check if prefilled zipGeoData with valid polygon coordinates exists
+    // Prefilled zipGeoData check
     if (zipGeoData && zipGeoData.length > 0) {
       const prefilled: ZipArea[] = [];
       for (const zc of zipGeoData) {
-        if (!zc) continue;
-        if (zc.polygon) {
-          const geom = zc.polygon;
-          let rawRing: any[] | null = null;
-          if (Array.isArray(geom)) rawRing = geom;
-          else if (geom.type === 'Polygon' && geom.coordinates?.[0]) rawRing = geom.coordinates[0];
-          else if (geom.type === 'MultiPolygon' && geom.coordinates?.[0]?.[0]) rawRing = geom.coordinates[0][0];
+        if (!zc || !zc.polygon) continue;
+        const geom = zc.polygon;
+        let rawRing: any[] | null = null;
 
-          if (rawRing) {
-            const coords = rawRing.map((pt: any) => {
-              if (Array.isArray(pt)) return { latitude: pt[0] > 180 || pt[0] < -180 ? pt[1] : pt[0], longitude: pt[0] > 180 || pt[0] < -180 ? pt[0] : pt[1] };
-              return { latitude: pt.lat || pt.latitude, longitude: pt.lng || pt.longitude };
-            });
-            if (coords.length >= 3) {
-              prefilled.push({ zip: zc.zip, coords, isPrimary: zc.isPrimary });
-            }
+        if (Array.isArray(geom)) {
+          rawRing = geom;
+        } else if (geom.type === 'Polygon' && geom.coordinates?.[0]) {
+          rawRing = geom.coordinates[0];
+        } else if (geom.type === 'MultiPolygon' && geom.coordinates?.[0]?.[0]) {
+          rawRing = geom.coordinates[0][0];
+        }
+
+        if (rawRing) {
+          const coords = normalizePolygonCoords(rawRing);
+          if (coords.length >= 3) {
+            prefilled.push({ zip: zc.zip, coords, isPrimary: zc.isPrimary });
           }
         }
       }
       if (prefilled.length > 0) {
         setZipAreas(prefilled);
+        if (!center) {
+          const avgLat = prefilled[0].coords.reduce((s, c) => s + c.latitude, 0) / prefilled[0].coords.length;
+          const avgLng = prefilled[0].coords.reduce((s, c) => s + c.longitude, 0) / prefilled[0].coords.length;
+          setCenter({ lat: avgLat, lng: avgLng });
+        }
+        setIsLoading(false);
         return;
       }
     }
 
-    let cancelled = false;
-
     (async () => {
       try {
         const fetched = await fetchBoundariesFast(zipCodes, locationName, latitude, longitude);
-        if (!cancelled) {
+        if (fetched && fetched.length > 0) {
           setZipAreas(fetched);
-          if (fetched.length > 0 && !center) {
+          if (!center) {
             const avgLat = fetched[0].coords.reduce((s, c) => s + c.latitude, 0) / fetched[0].coords.length;
             const avgLng = fetched[0].coords.reduce((s, c) => s + c.longitude, 0) / fetched[0].coords.length;
             setCenter({ lat: avgLat, lng: avgLng });
           }
+        } else if (locationName && !center) {
+          const geo = await geocodeLocation(locationName);
+          if (geo) setCenter(geo);
         }
       } catch {
-        if (!cancelled) setHasError(true);
+        setHasError(true);
+      } finally {
+        setIsLoading(false);
       }
     })();
-
-    return () => { cancelled = true; };
   }, [JSON.stringify(zipCodes || []), locationName, latitude, longitude, JSON.stringify(zipGeoData || [])]);
+
+  // Geocode business location if needed
+  useEffect(() => {
+    if (!center && locationName) {
+      (async () => {
+        const geo = await geocodeLocation(locationName);
+        if (geo) {
+          setCenter(geo);
+          setHasBusinessLocation(true);
+        }
+      })();
+    }
+  }, [locationName, center]);
+
+  // Set up ready timer fallback in case onMapReady doesn't fire
+  useEffect(() => {
+    if (!isLoading && center) {
+      const timer = setTimeout(() => {
+        setIsMapReady(true);
+      }, 1000);
+      return () => clearTimeout(timer);
+    } else {
+      setIsMapReady(false);
+    }
+  }, [isLoading, center]);
 
   // Adjust camera to fit all zip boundary polygons
   useEffect(() => {
-    if (mapRef.current && zipAreas.length > 0) {
+    if (mapRef.current && isMapReady && zipAreas.length > 0) {
       const allCoords = zipAreas.flatMap(za => za.coords);
       if (hasBusinessLocation && center) {
         allCoords.push({ latitude: center.lat, longitude: center.lng });
@@ -376,7 +338,7 @@ export default function ServiceAreaMap({
         }, 300);
       }
     }
-  }, [zipAreas, hasBusinessLocation, center]);
+  }, [zipAreas, hasBusinessLocation, center, isMapReady]);
 
   if (hasError) {
     return (
@@ -387,7 +349,7 @@ export default function ServiceAreaMap({
     );
   }
 
-  if (!center) {
+  if (isLoading || !center) {
     return (
       <View style={[styles.container, { height }]} className="bg-neutral-100 items-center justify-center rounded-2xl">
         <BouncingDotsLoader size="small" color="#4F46E5" />
@@ -420,27 +382,52 @@ export default function ServiceAreaMap({
         showsIndoors={false}
         toolbarEnabled={false}
         mapType="standard"
+        onMapReady={() => setIsMapReady(true)}
       >
-        {zipAreas.map((za) => {
-          const avgLat = za.coords.reduce((s, c) => s + c.latitude, 0) / za.coords.length;
-          const avgLng = za.coords.reduce((s, c) => s + c.longitude, 0) / za.coords.length;
+        {isMapReady && (
+          <>
+            {zipAreas.map((za) => {
+              // STRICT DATA SCRUB: Force every coordinate to be a valid Float.
+              // Polygons will silently crash the draw call if they receive a string.
+              const safeCoords = za.coords
+                .map(c => ({
+                  latitude: parseFloat(String(c.latitude)),
+                  longitude: parseFloat(String(c.longitude))
+                }))
+                .filter(c => !isNaN(c.latitude) && !isNaN(c.longitude)); // Remove corrupted points
 
-          // Offset ZIP badge slightly north (+0.0035 lat) so contractor location pin never covers it
-          const labelLat = avgLat + 0.0035;
+              // Polygons MUST have at least 3 valid points to render a shape
+              if (safeCoords.length < 3) return null;
 
-          return (
-            <React.Fragment key={za.zip}>
-              <Polygon
-                coordinates={za.coords}
-                fillColor="rgba(99, 102, 241, 0.40)"
-                strokeColor="#4F46E5"
-                strokeWidth={3}
-              />
-              {za.zip && (
+              return (
+                <Polygon
+                  key={`poly-${za.zip}`}
+                  coordinates={safeCoords}
+                  // Use 8-digit Hex instead of rgba() for better Android compatibility
+                  // #6366F1 = Indigo, 66 = ~40% Opacity
+                  fillColor="#6366F166"
+                  strokeColor="#4F46E5"
+                  strokeWidth={Platform.OS === 'android' ? 2 : 3} // Thinner stroke on Android prevents rendering artifacts
+                  zIndex={1}
+                  geodesic={true} // Helps the map engine draw smooth lines on spherical projections
+                />
+              );
+            })}
+
+            {zipAreas.map((za) => {
+              if (!za.zip) return null;
+
+              const avgLat = za.coords.reduce((s, c) => s + c.latitude, 0) / za.coords.length;
+              const avgLng = za.coords.reduce((s, c) => s + c.longitude, 0) / za.coords.length;
+              const labelLat = avgLat + 0.0035;
+
+              return (
                 <Marker
+                  key={`marker-${za.zip}`}
                   coordinate={{ latitude: labelLat, longitude: avgLng }}
                   tracksViewChanges={false}
                   anchor={{ x: 0.5, y: 1 }}
+                  zIndex={2}
                 >
                   <View style={{
                     backgroundColor: 'rgba(255, 255, 255, 0.95)',
@@ -465,29 +452,30 @@ export default function ServiceAreaMap({
                     </Text>
                   </View>
                 </Marker>
-              )}
-            </React.Fragment>
-          );
-        })}
+              );
+            })}
 
-        {hasBusinessLocation && (
-          <Marker
-            coordinate={{ latitude: center.lat, longitude: center.lng }}
-            tracksViewChanges={false}
-            anchor={{ x: 0.5, y: 0.5 }}
-          >
-            <View style={{
-              width: 36, height: 36,
-              backgroundColor: '#4F46E5',
-              borderRadius: 18,
-              alignItems: 'center', justifyContent: 'center',
-              shadowColor: '#4F46E5', shadowOpacity: 0.4, shadowRadius: 12, shadowOffset: { width: 0, height: 2 },
-              elevation: 6,
-              borderWidth: 3, borderColor: 'white'
-            }}>
-              <FontAwesome5 name="map-marker-alt" size={14} color="white" solid />
-            </View>
-          </Marker>
+            {hasBusinessLocation && (
+              <Marker
+                coordinate={{ latitude: center.lat, longitude: center.lng }}
+                tracksViewChanges={false}
+                anchor={{ x: 0.5, y: 0.5 }}
+                zIndex={3}
+              >
+                <View style={{
+                  width: 36, height: 36,
+                  backgroundColor: '#4F46E5',
+                  borderRadius: 18,
+                  alignItems: 'center', justifyContent: 'center',
+                  shadowColor: '#4F46E5', shadowOpacity: 0.4, shadowRadius: 12, shadowOffset: { width: 0, height: 2 },
+                  elevation: 6,
+                  borderWidth: 3, borderColor: 'white'
+                }}>
+                  <FontAwesome5 name="map-marker-alt" size={14} color="white" solid />
+                </View>
+              </Marker>
+            )}
+          </>
         )}
       </MapView>
     </View>
