@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, ScrollView, Pressable, FlatList, Alert } from 'react-native';
 import { useColorScheme } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { getContractorEarnings } from '../api';
 import { getPlatformFeePercent, requestPayout } from '../utils/apiClient';
@@ -78,6 +79,7 @@ function getTransactionColor(type: string) {
 export default function EarningsScreen() {
   const isDark = useColorScheme() === 'dark';
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const [earnings, setEarnings] = useState<EarningsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -357,12 +359,19 @@ export default function EarningsScreen() {
   return (
     <View className="flex-1 bg-neutral-50 dark:bg-neutral-800">
       {/* Header */}
-      <View className="bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-700 px-4 py-3 flex-row items-center">
-        <Pressable onPress={() => navigation.goBack()} className="w-8 h-8 items-center justify-center">
-          <FontAwesome5 name="chevron-left" size={18} color={isDark ? '#ffffff' : '#171717'} />
+      <View 
+        style={{ paddingTop: insets.top > 0 ? insets.top : 8 }}
+        className="bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-700 px-4 pb-3 pt-3 flex-row items-center"
+      >
+        <Pressable 
+          onPress={() => navigation.goBack()} 
+          className="w-10 h-10 items-center justify-center -ml-2 rounded-full"
+          hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
+        >
+          <FontAwesome5 name="chevron-left" size={20} color={isDark ? '#ffffff' : '#171717'} />
         </Pressable>
-        <Text className="flex-1 text-sm font-bold text-neutral-900 dark:text-white text-center">Earnings</Text>
-        <View className="w-8" />
+        <Text className="flex-1 text-base font-bold text-neutral-900 dark:text-white text-center">Earnings</Text>
+        <View className="w-10" />
       </View>
 
       <BouncingRefreshFlatList
