@@ -15,6 +15,8 @@ import {
   Linking,
   KeyboardAvoidingView,
   Platform,
+  Animated,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import {
@@ -295,6 +297,43 @@ const getJobDate = (j: any) => {
   if (!raw) return null;
   const d = new Date(raw);
   return isNaN(d.getTime()) ? null : d;
+};
+
+const ScaleButton = ({ children, onPress, className, style, activeScale = 0.96 }: any) => {
+  const scale = React.useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = () => {
+    Animated.spring(scale, {
+      toValue: activeScale,
+      useNativeDriver: true,
+      speed: 50,
+      bounciness: 10,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(scale, {
+      toValue: 1,
+      useNativeDriver: true,
+      speed: 50,
+      bounciness: 10,
+    }).start();
+  };
+
+  return (
+    <TouchableWithoutFeedback
+      onPress={onPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+    >
+      <Animated.View
+        className={className}
+        style={[style, { transform: [{ scale }] }]}
+      >
+        {children}
+      </Animated.View>
+    </TouchableWithoutFeedback>
+  );
 };
 
 // ================================================================
@@ -1114,12 +1153,9 @@ const ContractorDashboardScreen: React.FC = () => {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} className="px-4">
             <View className="flex-row" style={{ gap: 0 }}>
               {TABS.map(tab => (
-                <Pressable
+                <ScaleButton
                   key={tab.key}
                   onPress={() => setActiveTab(tab.key)}
-                  style={({ pressed }) => ({
-                    transform: [{ scale: pressed ? 0.96 : 1 }]
-                  })}
                   className="relative px-4 py-3"
                 >
                   <Text className={`text-sm font-semibold whitespace-nowrap ${activeTab === tab.key ? "text-indigo-600" : "text-neutral-500 dark:text-neutral-400 dark:text-neutral-500"}`}>
@@ -1128,7 +1164,7 @@ const ContractorDashboardScreen: React.FC = () => {
                   {activeTab === tab.key && (
                     <View className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 rounded-t-full" />
                   )}
-                </Pressable>
+                </ScaleButton>
               ))}
             </View>
           </ScrollView>
@@ -1148,12 +1184,12 @@ const ContractorDashboardScreen: React.FC = () => {
                   You have {jobs.filter((j: any) => ['funded_in_progress', 'partially_funded'].includes(j.status)).length} active jobs and {conversations.filter(c => c.unreadCount > 0).length} unread conversations.
                 </Text>
                 <View className="flex-row mt-4" style={{ gap: 8 }}>
-                  <Pressable onPress={() => setActiveTab('calendar')} className="bg-indigo-600 px-4 py-2 rounded-lg">
+                  <ScaleButton onPress={() => setActiveTab('calendar')} className="bg-indigo-600 px-4 py-2 rounded-lg">
                     <Text className="text-xs font-bold text-white">View Schedule</Text>
-                  </Pressable>
-                  <Pressable onPress={() => { setActiveTab('payments'); setPaymentSubTab('overview'); }} className="bg-white/10 border border-white/20 px-4 py-2 rounded-lg">
+                  </ScaleButton>
+                  <ScaleButton onPress={() => { setActiveTab('payments'); setPaymentSubTab('overview'); }} className="bg-white/10 border border-white/20 px-4 py-2 rounded-lg">
                     <Text className="text-xs font-bold text-white">Earnings</Text>
-                  </Pressable>
+                  </ScaleButton>
                 </View>
               </View>
 
