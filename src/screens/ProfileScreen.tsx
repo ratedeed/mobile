@@ -16,6 +16,7 @@ import {
   Linking,
   Modal,
   Animated,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -200,6 +201,26 @@ const ProfileScreen: React.FC = () => {
   const [hapticsEnabled, setHapticsEnabled] = useState<boolean>(true);
   const [defaultZip, setDefaultZip] = useState('');
   const [stats, setStats] = useState({ reviews: 0, messages: 0, projects: 0 });
+
+  const dashboardScale = useRef(new Animated.Value(1)).current;
+
+  const handleDashboardPressIn = () => {
+    Animated.spring(dashboardScale, {
+      toValue: 0.96,
+      useNativeDriver: true,
+      speed: 50,
+      bounciness: 10,
+    }).start();
+  };
+
+  const handleDashboardPressOut = () => {
+    Animated.spring(dashboardScale, {
+      toValue: 1,
+      useNativeDriver: true,
+      speed: 50,
+      bounciness: 10,
+    }).start();
+  };
 
   useEffect(() => {
     if (user?.zipCode) {
@@ -513,10 +534,22 @@ const ProfileScreen: React.FC = () => {
               </Text>
               <Text className="text-[15px] text-neutral-400 dark:text-neutral-500">{user?.email || ''}</Text>
               {(user?.role === 'contractor' || user?.role === 'admin') && (
-                <Pressable onPress={() => navigation.navigate('ContractorDashboard')} className="mt-2 self-start flex-row items-center py-2 px-4 bg-neutral-900 dark:bg-neutral-100 rounded-xl" style={{ gap: 8 }}>
-                  <FontAwesome5 name="briefcase" size={11} color={isDark ? '#171717' : '#ffffff'} />
-                  <Text className="text-[13px] font-semibold text-white dark:text-neutral-900">Contractor Dashboard</Text>
-                </Pressable>
+                <TouchableWithoutFeedback
+                  onPress={() => navigation.navigate('ContractorDashboard')}
+                  onPressIn={handleDashboardPressIn}
+                  onPressOut={handleDashboardPressOut}
+                >
+                  <Animated.View
+                    className="mt-2 self-start flex-row items-center py-2 px-4 bg-neutral-900 dark:bg-neutral-100 rounded-xl"
+                    style={{
+                      gap: 8,
+                      transform: [{ scale: dashboardScale }]
+                    }}
+                  >
+                    <FontAwesome5 name="briefcase" size={11} color={isDark ? '#171717' : '#ffffff'} />
+                    <Text className="text-[13px] font-semibold text-white dark:text-neutral-900">Contractor Dashboard</Text>
+                  </Animated.View>
+                </TouchableWithoutFeedback>
               )}
             </View>
           </View>
