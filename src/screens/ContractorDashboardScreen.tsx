@@ -24,8 +24,7 @@ import {
   unlikePost,
   deletePost,
   getContractorEarnings,
-  getContractorLeads,
-  updateLeadStatus,
+  fetchConversations,
   getContractorQuotes,
   getContractorJobs,
   getStripeConnectUrl,
@@ -150,12 +149,10 @@ const getMobileTagIcon = (tag: string) => {
 };
 
 const TABS = [
-  { key: 'posts', label: 'Posts' },
-  { key: 'about', label: 'About Us' },
-  { key: 'services', label: 'Services' },
-  { key: 'portfolio', label: 'Portfolio' },
-  { key: 'reviews', label: 'Reviews' },
-  { key: 'payments', label: 'Payments & Jobs' },
+  { key: 'today', label: 'Today' },
+  { key: 'calendar', label: 'Calendar' },
+  { key: 'profile', label: 'Public Profile' },
+  { key: 'payments', label: 'Earnings & Jobs' },
   { key: 'analytics', label: 'Analytics' },
   { key: 'promote', label: 'Promote' },
 ];
@@ -269,6 +266,37 @@ function Sheet({ visible, onClose, title, children }: { visible: boolean; onClos
   );
 }
 
+const getOtherParticipant = (conv: any, currentUserId: string | null) => {
+  if (!conv || !conv.participants || !currentUserId) return null;
+  return conv.participants.find((p: any) => {
+    const id = p._id || p.id;
+    return id !== currentUserId;
+  }) || conv.otherParticipant || conv.participant2User || null;
+};
+
+const getDisplayName = (user: any) => {
+  if (!user) return 'Homeowner';
+  if (user.companyName || user.businessName) {
+    return user.companyName || user.businessName;
+  }
+  const first = user.firstName || '';
+  const last = user.lastName || '';
+  const fullName = `${first} ${last}`.trim();
+  return fullName || user.name || 'Homeowner';
+};
+
+const resolveParticipantAvatar = (user: any) => {
+  if (!user) return '';
+  return user.profilePicture || user.profileImage || user.avatar || '';
+};
+
+const getJobDate = (j: any) => {
+  const raw = j.quote?.estimatedStartDate || j.quote?.startDate || j.startDate || j.date || j.createdAt;
+  if (!raw) return null;
+  const d = new Date(raw);
+  return isNaN(d.getTime()) ? null : d;
+};
+
 // ================================================================
 // Main Component
 // ================================================================
@@ -279,16 +307,19 @@ const ContractorDashboardScreen: React.FC = () => {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const [realContractorId, setRealContractorId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState('posts');
+  const [activeTab, setActiveTab] = useState('today');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [paymentSubTab, setPaymentSubTab] = useState('overview');
+  const [profileSubTab, setProfileSubTab] = useState<'posts' | 'about' | 'services' | 'portfolio' | 'reviews'>('posts');
+  const [calendarDate, setCalendarDate] = useState(() => new Date());
+  const [selectedDay, setSelectedDay] = useState<number | null>(() => new Date().getDate());
 
   const [posts, setPosts] = useState<any[]>([]);
   const [reviews, setReviews] = useState<any[]>([]);
   const [portfolio, setPortfolio] = useState<any[]>([]);
   const [_earnings, setEarnings] = useState<any>(null);
-  const [leads, setLeads] = useState<any[]>([]);
+  const [conversations, setConversations] = useState<any[]>([]);
   const [quotes, setQuotes] = useState<any[]>([]);
   const [jobs, setJobs] = useState<any[]>([]);
   const [stripeStatus, setStripeStatus] = useState<any>(null);
@@ -440,15 +471,7 @@ const ContractorDashboardScreen: React.FC = () => {
     }
   };
 
-  const handleUpdateLeadStatus = async (leadId: string, status: 'new' | 'contacted' | 'quoted' | 'archived') => {
-    try {
-      await updateLeadStatus(leadId, status);
-      Alert.alert('Success', `Lead status updated to ${status}`);
-      loadData();
-    } catch (e: any) {
-      Alert.alert('Error', e?.message || 'Failed to update lead status');
-    }
-  };
+
 
   const handleRespondToReview = async (reviewId: string) => {
     if (!replyText.trim()) {
@@ -521,19 +544,19 @@ const ContractorDashboardScreen: React.FC = () => {
       setOnboardingComplete(profile.onboardingComplete === true);
 
       // 2. Now fetch everything else using that REAL ID
-      const [postsData, reviewsData, portfolioData, earningsData, leadsData, quotesData, jobsData, stripeData] = await Promise.all([
+      const [postsData, reviewsData, portfolioData, earningsData, conversationsData, quotesData, jobsData, stripeData] = await Promise.all([
         fetchContractorPosts(cid).catch(() => ({ posts: [] })),
         fetchContractorReviews(cid).catch(() => []),
         getPortfolio(cid).catch(() => []),
         getContractorEarnings().catch(() => null),
-        getContractorLeads().catch(() => []),
+        fetchConversations().catch(() => []),
         getContractorQuotes().catch(() => []),
         getContractorJobs().catch(() => []),
         getStripeAccountStatus().catch(() => ({ connected: false })),
       ]);
 
       setEarnings(earningsData);
-      setLeads(Array.isArray(leadsData) ? leadsData : []);
+      setConversations(Array.isArray(conversationsData) ? conversationsData : []);
       setQuotes(Array.isArray(quotesData) ? quotesData : []);
       setJobs(Array.isArray(jobsData) ? jobsData : []);
       setStripeStatus(stripeData);
@@ -991,76 +1014,100 @@ const ContractorDashboardScreen: React.FC = () => {
         refreshing={refreshing}
         onRefresh={onRefresh}
       >
-        <View className="relative">
-          <View className="h-48 w-full bg-neutral-200 overflow-hidden">
-            {bannerUrl ? (
-              isSvgUrl(bannerUrl) ? (
-                <SvgImage key={bannerUrl} uri={bannerUrl} width="100%" height="100%" />
-              ) : (
-                <Image key={bannerUrl} source={{ uri: bannerUrl }} className="w-full h-full" resizeMode="cover" />
-              )
-            ) : (
-              <View className="absolute inset-0 bg-neutral-300" />
-            )}
-            <View className="absolute inset-0 bg-black/10" />
-            <Pressable 
-              onPress={() => handleUpdateImage("banner")} 
-              className="absolute top-4 left-4 bg-white dark:bg-neutral-900/90 px-3 py-1.5 rounded-lg flex-row items-center shadow-sm"
-              style={{ gap: 6, zIndex: 50 }}
-            >
-              <FontAwesome5 name="camera" size={12} color={isDark ? "#a3a3a3" : "#404040"} />
-              <Text className="text-[10px] font-bold text-neutral-800 dark:text-neutral-100">Edit Cover</Text>
-            </Pressable>
-
-            <Pressable
-              onPress={() => setShowEditProfile(true)}
-              className="absolute top-4 right-4 bg-white dark:bg-neutral-900/90 px-3 py-1.5 rounded-lg flex-row items-center shadow-sm"
-              style={{ gap: 6, zIndex: 50 }}
-            >
-              <FontAwesome5 name="pen" size={10} color={isDark ? "#d4d4d4" : "#525252"} />
-              <Text className="text-xs font-semibold text-neutral-800 dark:text-neutral-100">Edit Profile</Text>
-            </Pressable>
-          </View>
-
-          {/* Profile Card Overlap */}
-          <View className="mx-4 -mt-10 bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-100 dark:border-neutral-800 shadow-sm p-4 relative z-10">
-            <View className="flex-row items-end" style={{ gap: 16 }}>
-              <View className="w-20 h-20 rounded-2xl border-4 border-white overflow-hidden bg-neutral-200 shadow-sm -mt-10 relative">
-                {avatarUrl ? (
-                  isSvgUrl(avatarUrl) ? (
-                    <SvgImage key={avatarUrl} uri={avatarUrl} width="100%" height="100%" />
+        {activeTab === 'profile' ? (
+          <View>
+            <View className="relative">
+              <View className="h-48 w-full bg-neutral-200 overflow-hidden">
+                {bannerUrl ? (
+                  isSvgUrl(bannerUrl) ? (
+                    <SvgImage key={bannerUrl} uri={bannerUrl} width="100%" height="100%" />
                   ) : (
-                    <Image key={avatarUrl} source={{ uri: avatarUrl }} className="w-full h-full" resizeMode="cover" />
+                    <Image key={bannerUrl} source={{ uri: bannerUrl }} className="w-full h-full" resizeMode="cover" />
                   )
                 ) : (
-                  <FontAwesome5 name="user" size={24} color="#a3a3a3" style={{ position: "absolute", top: 24, left: 24 }} />
+                  <View className="absolute inset-0 bg-neutral-300" />
                 )}
+                <View className="absolute inset-0 bg-black/10" />
                 <Pressable 
-                  onPress={() => handleUpdateImage("avatar")} 
-                  className="absolute inset-0 bg-black/10 items-center justify-center"
+                  onPress={() => handleUpdateImage("banner")} 
+                  className="absolute top-4 left-4 bg-white dark:bg-neutral-900/90 px-3 py-1.5 rounded-lg flex-row items-center shadow-sm"
+                  style={{ gap: 6, zIndex: 50 }}
                 >
-                  <FontAwesome5 name="camera" size={12} color="#fff" />
+                  <FontAwesome5 name="camera" size={12} color={isDark ? "#a3a3a3" : "#404040"} />
+                  <Text className="text-[10px] font-bold text-neutral-800 dark:text-neutral-100">Edit Cover</Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => setShowEditProfile(true)}
+                  className="absolute top-4 right-4 bg-white dark:bg-neutral-900/90 px-3 py-1.5 rounded-lg flex-row items-center shadow-sm"
+                  style={{ gap: 6, zIndex: 50 }}
+                >
+                  <FontAwesome5 name="pen" size={10} color={isDark ? "#d4d4d4" : "#525252"} />
+                  <Text className="text-xs font-semibold text-neutral-800 dark:text-neutral-100">Edit Profile</Text>
                 </Pressable>
               </View>
-              <View className="flex-1 pb-1">
-                <View className="flex-row items-center" style={{ gap: 6 }}>
-                  <Text className="text-xl font-bold text-neutral-900 dark:text-white">{contractorName || "My Business"}</Text>
-                </View>
-                <View className="flex-row items-center mt-1" style={{ gap: 8 }}>
-                  <StarRating rating={avgRating} />
-                  <Text className="text-xs text-neutral-500 dark:text-neutral-400 dark:text-neutral-500 font-medium">{reviews.length} reviews</Text>
+
+              {/* Profile Card Overlap */}
+              <View className="mx-4 -mt-10 bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-100 dark:border-neutral-800 shadow-sm p-4 relative z-10">
+                <View className="flex-row items-end" style={{ gap: 16 }}>
+                  <View className="w-20 h-20 rounded-2xl border-4 border-white overflow-hidden bg-neutral-200 shadow-sm -mt-10 relative">
+                    {avatarUrl ? (
+                      isSvgUrl(avatarUrl) ? (
+                        <SvgImage key={avatarUrl} uri={avatarUrl} width="100%" height="100%" />
+                      ) : (
+                        <Image key={avatarUrl} source={{ uri: avatarUrl }} className="w-full h-full" resizeMode="cover" />
+                      )
+                    ) : (
+                      <FontAwesome5 name="user" size={24} color="#a3a3a3" style={{ position: "absolute", top: 24, left: 24 }} />
+                    )}
+                    <Pressable 
+                      onPress={() => handleUpdateImage("avatar")} 
+                      className="absolute inset-0 bg-black/10 items-center justify-center"
+                    >
+                      <FontAwesome5 name="camera" size={12} color="#fff" />
+                    </Pressable>
+                  </View>
+                  <View className="flex-1 pb-1">
+                    <View className="flex-row items-center" style={{ gap: 6 }}>
+                      <Text className="text-xl font-bold text-neutral-900 dark:text-white">{contractorName || "My Business"}</Text>
+                    </View>
+                    <View className="flex-row items-center mt-1" style={{ gap: 8 }}>
+                      <StarRating rating={avgRating} />
+                      <Text className="text-xs text-neutral-500 dark:text-neutral-400 font-medium">{reviews.length} reviews</Text>
+                    </View>
+                  </View>
                 </View>
               </View>
             </View>
-          </View>
-        </View>
 
-        {/* ==================== Profile Info (Removed as it's now in the overlap card) ==================== */}
-        <View className="px-4 mt-4">
-          <Text className="text-sm text-neutral-600 dark:text-neutral-300 leading-5" numberOfLines={3}>
-            {editableData.description || "No description added yet."}
-          </Text>
-        </View>
+            {/* Profile Info Description */}
+            <View className="px-4 mt-4">
+              <Text className="text-sm text-neutral-600 dark:text-neutral-300 leading-5" numberOfLines={3}>
+                {editableData.description || "No description added yet."}
+              </Text>
+            </View>
+          </View>
+        ) : (
+          <View className="px-4 pt-4 pb-2 flex-row items-center justify-between">
+            <View>
+              <Text className="text-2xl font-bold text-neutral-900 dark:text-white">
+                {TABS.find(t => t.key === activeTab)?.label}
+              </Text>
+              <Text className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                {contractorName || 'My Business'}
+              </Text>
+            </View>
+            {avatarUrl ? (
+              <Image source={{ uri: avatarUrl }} className="w-10 h-10 rounded-full border border-neutral-200 dark:border-neutral-700" />
+            ) : (
+              <View className="w-10 h-10 bg-indigo-50 dark:bg-indigo-950 rounded-full items-center justify-center border border-neutral-200 dark:border-neutral-700">
+                <Text className="text-sm font-bold text-indigo-600 dark:text-indigo-400">
+                  {contractorName ? contractorName.charAt(0) : 'B'}
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
 
         {/* ==================== Tab Navigation ==================== */}
         <View className="mt-4 border-b border-neutral-200 dark:border-neutral-700">
@@ -1087,8 +1134,406 @@ const ContractorDashboardScreen: React.FC = () => {
         {/* ==================== Tab Content ==================== */}
         <View className="px-4 py-6">
 
-          {/* TAB: Posts */}
-          {activeTab === 'posts' && (
+          {/* TAB: Today */}
+          {activeTab === 'today' && (
+            <View style={{ gap: 16 }}>
+              {/* Operational Overview */}
+              <View className="bg-neutral-900 dark:bg-neutral-950 rounded-2xl p-5 overflow-hidden relative shadow-sm">
+                <Text className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Operational Overview</Text>
+                <Text className="text-xl font-bold text-white mt-1">Hello, {contractorName || 'Pro'} 👋</Text>
+                <Text className="text-xs text-neutral-300 mt-2 leading-relaxed">
+                  You have {jobs.filter((j: any) => ['funded_in_progress', 'partially_funded'].includes(j.status)).length} active jobs and {conversations.filter(c => c.unreadCount > 0).length} unread conversations.
+                </Text>
+                <View className="flex-row mt-4" style={{ gap: 8 }}>
+                  <Pressable onPress={() => setActiveTab('calendar')} className="bg-indigo-600 px-4 py-2 rounded-lg">
+                    <Text className="text-xs font-bold text-white">View Schedule</Text>
+                  </Pressable>
+                  <Pressable onPress={() => { setActiveTab('payments'); setPaymentSubTab('overview'); }} className="bg-white/10 border border-white/20 px-4 py-2 rounded-lg">
+                    <Text className="text-xs font-bold text-white">Earnings</Text>
+                  </Pressable>
+                </View>
+              </View>
+
+              {/* Trust & Verification Onboarding Status checklist */}
+              {(!onboardingComplete || licenseStatus !== 'approved' || !stripeStatus?.chargesEnabled) && (
+                <View className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 rounded-2xl p-4">
+                  <View className="flex-row items-center" style={{ gap: 8 }}>
+                    <FontAwesome5 name="exclamation-circle" size={14} color="#d97706" />
+                    <Text className="text-sm font-bold text-amber-800 dark:text-amber-400">Action Required</Text>
+                  </View>
+                  <Text className="text-xs text-amber-700 dark:text-amber-300/80 mt-1 leading-relaxed">
+                    Complete your profile verification to build trust and receive payouts from clients.
+                  </Text>
+                  <View className="mt-3" style={{ gap: 8 }}>
+                    {!stripeStatus?.chargesEnabled && (
+                      <Pressable onPress={() => { setActiveTab('payments'); setPaymentSubTab('overview'); }} className="flex-row items-center justify-between bg-white dark:bg-neutral-900 p-3 rounded-xl border border-amber-200 dark:border-amber-900/40">
+                        <View className="flex-row items-center" style={{ gap: 8 }}>
+                          <FontAwesome5 name="credit-card" size={12} color="#d97706" />
+                          <Text className="text-xs font-bold text-neutral-800 dark:text-neutral-200">Connect Stripe Account</Text>
+                        </View>
+                        <FontAwesome5 name="chevron-right" size={10} color="#d97706" />
+                      </Pressable>
+                    )}
+                    {licenseStatus !== 'approved' && (
+                      <Pressable onPress={() => setShowEditProfile(true)} className="flex-row items-center justify-between bg-white dark:bg-neutral-900 p-3 rounded-xl border border-amber-200 dark:border-amber-900/40">
+                        <View className="flex-row items-center" style={{ gap: 8 }}>
+                          <FontAwesome5 name="id-card" size={12} color="#d97706" />
+                          <Text className="text-xs font-bold text-neutral-800 dark:text-neutral-200">Verify CSLB License</Text>
+                        </View>
+                        <FontAwesome5 name="chevron-right" size={10} color="#d97706" />
+                      </Pressable>
+                    )}
+                  </View>
+                </View>
+              )}
+
+              {/* KPI Cards Grid */}
+              <View className="flex-row flex-wrap" style={{ marginHorizontal: -4 }}>
+                <Pressable onPress={() => { setActiveTab('payments'); setPaymentSubTab('jobs'); }} className="w-1/2 p-1">
+                  <View className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 flex-col justify-between" style={{ minHeight: 90 }}>
+                    <View className="flex-row items-center justify-between">
+                      <Text className="text-[10px] font-semibold text-neutral-500 uppercase">Active Jobs</Text>
+                      <FontAwesome5 name="briefcase" size={12} color="#6366f1" />
+                    </View>
+                    <Text className="text-2xl font-bold text-neutral-900 dark:text-white mt-2">
+                      {jobs.filter((j: any) => ['funded_in_progress', 'partially_funded'].includes(j.status)).length}
+                    </Text>
+                  </View>
+                </Pressable>
+                <Pressable onPress={() => navigation.navigate('Messages' as never)} className="w-1/2 p-1">
+                  <View className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 flex-col justify-between" style={{ minHeight: 90 }}>
+                    <View className="flex-row items-center justify-between">
+                      <Text className="text-[10px] font-semibold text-neutral-500 uppercase">Unread Chats</Text>
+                      <FontAwesome5 name="comment-dots" size={12} color="#10b981" />
+                    </View>
+                    <Text className="text-2xl font-bold text-emerald-600 mt-2">
+                      {conversations.filter(c => c.unreadCount > 0).length}
+                    </Text>
+                  </View>
+                </Pressable>
+                <Pressable onPress={() => { setActiveTab('payments'); setPaymentSubTab('quotes'); }} className="w-1/2 p-1">
+                  <View className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 flex-col justify-between" style={{ minHeight: 90 }}>
+                    <View className="flex-row items-center justify-between">
+                      <Text className="text-[10px] font-semibold text-neutral-500 uppercase">Quotes Sent</Text>
+                      <FontAwesome5 name="file-invoice-dollar" size={12} color="#f59e0b" />
+                    </View>
+                    <Text className="text-2xl font-bold text-neutral-900 dark:text-white mt-2">
+                      {quotes.length}
+                    </Text>
+                  </View>
+                </Pressable>
+                <Pressable onPress={() => { setActiveTab('payments'); setPaymentSubTab('overview'); }} className="w-1/2 p-1">
+                  <View className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 flex-col justify-between" style={{ minHeight: 90 }}>
+                    <View className="flex-row items-center justify-between">
+                      <Text className="text-[10px] font-semibold text-neutral-500 uppercase">Total Revenue</Text>
+                      <FontAwesome5 name="wallet" size={12} color="#ec4899" />
+                    </View>
+                    <Text className="text-xl font-bold text-neutral-900 dark:text-white mt-2 truncate">
+                      ${((_earnings?.totalEarned || 0) / 100).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                    </Text>
+                  </View>
+                </Pressable>
+              </View>
+
+              {/* Recent Chats Section */}
+              <View className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4">
+                <View className="flex-row items-center justify-between mb-3">
+                  <Text className="text-sm font-bold text-neutral-900 dark:text-white">Recent Chats</Text>
+                  <Pressable onPress={() => navigation.navigate('Messages' as never)}>
+                    <Text className="text-xs font-bold text-indigo-600 dark:text-indigo-400">View Inbox</Text>
+                  </Pressable>
+                </View>
+
+                {(() => {
+                  const recentChats = conversations
+                    .map(c => {
+                      const other = getOtherParticipant(c, currentUserId);
+                      return {
+                        ...c,
+                        otherParticipant: other,
+                        displayName: getDisplayName(other),
+                      };
+                    })
+                    .sort((a, b) => {
+                      const da = new Date(a.updatedAt || a.createdAt || 0).getTime();
+                      const db = new Date(b.updatedAt || b.createdAt || 0).getTime();
+                      return db - da;
+                    })
+                    .slice(0, 3);
+
+                  if (recentChats.length === 0) {
+                    return (
+                      <Text className="text-xs text-neutral-400 dark:text-neutral-500 text-center py-4">No recent conversations.</Text>
+                    );
+                  }
+
+                  return (
+                    <View style={{ gap: 10 }}>
+                      {recentChats.map(c => {
+                        const otherPic = resolveParticipantAvatar(c.otherParticipant);
+                        return (
+                          <Pressable
+                            key={c.conversationId || c._id}
+                            onPress={() => {
+                              const otherId = c.otherParticipant?._id || c.otherParticipant?.id;
+                              if (otherId) {
+                                navigation.navigate('ChatScreen', {
+                                  recipientId: otherId,
+                                  recipientName: c.displayName,
+                                } as any);
+                              }
+                            }}
+                            className="flex-row items-center bg-neutral-50 dark:bg-neutral-800/40 p-3 rounded-xl border border-neutral-100 dark:border-neutral-800/60"
+                            style={{ gap: 10 }}
+                          >
+                            {otherPic ? (
+                              <Image source={{ uri: otherPic }} className="w-8 h-8 rounded-full" />
+                            ) : (
+                              <View className="w-8 h-8 bg-indigo-100 dark:bg-indigo-950 rounded-full items-center justify-center">
+                                <Text className="text-xs font-bold text-indigo-600 dark:text-indigo-400">
+                                  {c.displayName ? c.displayName.charAt(0) : 'U'}
+                                </Text>
+                              </View>
+                            )}
+                            <View className="flex-1 min-w-0">
+                              <View className="flex-row justify-between items-center">
+                                <Text className="text-xs font-bold text-neutral-800 dark:text-neutral-200 truncate" numberOfLines={1}>
+                                  {c.displayName}
+                                </Text>
+                                <Text className="text-[8px] text-neutral-400">{formatDate(c.updatedAt || c.createdAt)}</Text>
+                              </View>
+                              <Text className="text-[10px] text-neutral-500 dark:text-neutral-400 truncate mt-0.5" numberOfLines={1}>
+                                {c.lastMessage?.messageText || 'Tap to view conversation'}
+                              </Text>
+                            </View>
+                            {c.unreadCount > 0 && (
+                              <View className="w-2 h-2 bg-indigo-600 rounded-full" />
+                            )}
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  );
+                })()}
+              </View>
+
+              {/* Upcoming Schedule */}
+              <View className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4">
+                <View className="flex-row items-center justify-between mb-3">
+                  <Text className="text-sm font-bold text-neutral-900 dark:text-white">Upcoming Schedule</Text>
+                  <Pressable onPress={() => setActiveTab('calendar')}>
+                    <Text className="text-xs font-bold text-indigo-600 dark:text-indigo-400">View Calendar</Text>
+                  </Pressable>
+                </View>
+
+                {(() => {
+                  const upcomingJobs = jobs
+                    .filter((j: any) => {
+                      const d = getJobDate(j);
+                      return d && d.getTime() >= new Date().setHours(0, 0, 0, 0);
+                    })
+                    .sort((a: any, b: any) => {
+                      const da = getJobDate(a)?.getTime() || 0;
+                      const db = getJobDate(b)?.getTime() || 0;
+                      return da - db;
+                    })
+                    .slice(0, 2);
+
+                  if (upcomingJobs.length === 0) {
+                    return (
+                      <Text className="text-xs text-neutral-400 dark:text-neutral-500 text-center py-4">No upcoming jobs scheduled.</Text>
+                    );
+                  }
+
+                  return (
+                    <View style={{ gap: 10 }}>
+                      {upcomingJobs.map((j: any) => {
+                        const date = getJobDate(j);
+                        return (
+                          <View key={j._id} className="flex-row items-center bg-neutral-50 dark:bg-neutral-800/40 p-3 rounded-xl border border-neutral-100 dark:border-neutral-800/60" style={{ gap: 12 }}>
+                            <View className="bg-indigo-50 dark:bg-indigo-950/60 px-2.5 py-1.5 rounded-xl items-center justify-center" style={{ minWidth: 42 }}>
+                              <Text className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase">
+                                {date?.toLocaleDateString('en-US', { month: 'short' })}
+                              </Text>
+                              <Text className="text-sm font-black text-indigo-700 dark:text-indigo-300 mt-0.5">
+                                {date?.getDate()}
+                              </Text>
+                            </View>
+                            <View className="flex-1 min-w-0">
+                              <Text className="text-xs font-bold text-neutral-800 dark:text-neutral-200 truncate">{j.title || 'Project'}</Text>
+                              <Text className="text-[10px] text-neutral-500 dark:text-neutral-400 mt-0.5 truncate">
+                                Client: {j.user ? `${j.user.firstName || ''} ${j.user.lastName || ''}`.trim() : 'Homeowner'}
+                              </Text>
+                            </View>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  );
+                })()}
+              </View>
+            </View>
+          )}
+
+          {/* TAB: Calendar */}
+          {activeTab === 'calendar' && (() => {
+
+
+            const year = calendarDate.getFullYear();
+            const month = calendarDate.getMonth();
+            const monthName = calendarDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+            const firstDayOffset = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+            const nextMonth = () => {
+              setCalendarDate(new Date(year, month + 1, 1));
+              setSelectedDay(null);
+            };
+            const prevMonth = () => {
+              setCalendarDate(new Date(year, month - 1, 1));
+              setSelectedDay(null);
+            };
+
+            const getJobsForDay = (day: number) => {
+              return (jobs || []).filter(job => {
+                const d = getJobDate(job);
+                if (!d) return false;
+                return d.getFullYear() === year && d.getMonth() === month && d.getDate() === day;
+              });
+            };
+
+            const selectedDateJobs = selectedDay ? getJobsForDay(selectedDay) : [];
+
+            // Generate calendar cell grid items
+            const cells = [];
+            for (let i = 0; i < firstDayOffset; i++) {
+              cells.push({ key: `empty-${i}`, day: null });
+            }
+            for (let d = 1; d <= daysInMonth; d++) {
+              cells.push({ key: `day-${d}`, day: d });
+            }
+
+            return (
+              <View className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4">
+                {/* Header Month / Arrows */}
+                <View className="flex-row items-center justify-between mb-4 px-1">
+                  <Text className="text-base font-bold text-neutral-900 dark:text-white">{monthName}</Text>
+                  <View className="flex-row" style={{ gap: 12 }}>
+                    <Pressable onPress={prevMonth} className="p-2 bg-neutral-50 dark:bg-neutral-800 rounded-lg">
+                      <FontAwesome5 name="chevron-left" size={10} color={isDark ? "#d4d4d4" : "#404040"} />
+                    </Pressable>
+                    <Pressable onPress={nextMonth} className="p-2 bg-neutral-50 dark:bg-neutral-800 rounded-lg">
+                      <FontAwesome5 name="chevron-right" size={10} color={isDark ? "#d4d4d4" : "#404040"} />
+                    </Pressable>
+                  </View>
+                </View>
+
+                {/* Days of Week Headers */}
+                <View className="flex-row mb-2">
+                  {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((lbl, idx) => (
+                    <Text key={idx} className="flex-1 text-center text-[10px] font-bold text-neutral-400">
+                      {lbl}
+                    </Text>
+                  ))}
+                </View>
+
+                {/* Monthly Date Grid */}
+                <View className="flex-row flex-wrap">
+                  {cells.map((cell, idx) => {
+                    const isSelected = cell.day === selectedDay;
+                    const hasJobs = cell.day ? getJobsForDay(cell.day).length > 0 : false;
+                    const isToday = cell.day && new Date().getFullYear() === year && new Date().getMonth() === month && new Date().getDate() === cell.day;
+
+                    return (
+                      <Pressable
+                        key={cell.key}
+                        onPress={() => cell.day && setSelectedDay(cell.day)}
+                        disabled={!cell.day}
+                        className="w-[14.28%] aspect-square items-center justify-center p-0.5"
+                      >
+                        {cell.day && (
+                          <View className={`w-8 h-8 rounded-full items-center justify-center relative ${
+                            isSelected ? 'bg-indigo-600' : isToday ? 'border border-indigo-600' : ''
+                          }`}>
+                            <Text className={`text-xs font-bold ${
+                              isSelected ? 'text-white' : isToday ? 'text-indigo-600' : 'text-neutral-700 dark:text-neutral-300'
+                            }`}>
+                              {cell.day}
+                            </Text>
+                            {hasJobs && (
+                              <View className={`absolute bottom-1 w-1 h-1 rounded-full ${
+                                isSelected ? 'bg-white' : 'bg-indigo-600'
+                              }`} />
+                            )}
+                          </View>
+                        )}
+                      </Pressable>
+                    );
+                  })}
+                </View>
+
+                {/* Day Details List */}
+                <View className="mt-5 pt-4 border-t border-neutral-100 dark:border-neutral-800">
+                  <Text className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-3">
+                    {selectedDay ? `Schedule for ${calendarDate.toLocaleString('en-US', { month: 'short' })} ${selectedDay}` : 'Select a day'}
+                  </Text>
+                  {selectedDateJobs.length === 0 ? (
+                    <Text className="text-xs text-neutral-400 dark:text-neutral-500 py-4 text-center">No projects scheduled for this day.</Text>
+                  ) : (
+                    <View style={{ gap: 8 }}>
+                      {selectedDateJobs.map((j: any) => (
+                        <View key={j._id} className="bg-neutral-50 dark:bg-neutral-800/40 p-3 rounded-xl border border-neutral-100 dark:border-neutral-800/60 flex-row justify-between items-center">
+                          <View className="flex-1 min-w-0 mr-2">
+                            <Text className="text-xs font-bold text-neutral-800 dark:text-neutral-200 truncate">{j.title || 'Project'}</Text>
+                            <Text className="text-[10px] text-neutral-500 dark:text-neutral-400 mt-0.5 truncate">
+                              Client: {j.user ? `${j.user.firstName || ''} ${j.user.lastName || ''}`.trim() : 'Homeowner'}
+                            </Text>
+                          </View>
+                          <View className="px-2 py-1 bg-indigo-50 dark:bg-indigo-950/60 rounded">
+                            <Text className="text-[9px] font-bold text-indigo-600 dark:text-indigo-400 uppercase">
+                              {j.status?.replace(/_/g, ' ')}
+                            </Text>
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              </View>
+            );
+          })()}
+
+          {/* TAB: Public Profile */}
+          {activeTab === 'profile' && (
+            <View style={{ gap: 16 }}>
+              {/* Secondary Sub-tabs */}
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-2">
+                <View className="flex-row" style={{ gap: 6 }}>
+                  {[
+                    { key: 'posts', label: 'Posts' },
+                    { key: 'about', label: 'About Us' },
+                    { key: 'services', label: 'Services' },
+                    { key: 'portfolio', label: 'Portfolio' },
+                    { key: 'reviews', label: 'Reviews' },
+                  ].map(subTab => (
+                    <Pressable
+                      key={subTab.key}
+                      onPress={() => setProfileSubTab(subTab.key as any)}
+                      className={`px-3 py-1.5 rounded-full ${
+                        profileSubTab === subTab.key ? 'bg-neutral-900' : 'bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700'
+                      }`}
+                    >
+                      <Text className={`text-xs font-semibold ${profileSubTab === subTab.key ? 'text-white' : 'text-neutral-600 dark:text-neutral-300'}`}>
+                        {subTab.label}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </ScrollView>
+
+              {/* Sub-tab content */}
+              {profileSubTab === 'posts' && (
             <View style={{ gap: 16 }}>
               {/* Create Post Card */}
               <Pressable onPress={() => { setPostCategory(contractorCategory); setShowCreatePost(true); }} className="bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-700 p-4">
@@ -1185,9 +1630,7 @@ const ContractorDashboardScreen: React.FC = () => {
               )}
             </View>
           )}
-
-          {/* TAB: About Us */}
-          {activeTab === 'about' && (
+          {profileSubTab === 'about' && (
             <View style={{ gap: 16 }}>
               <View className="bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-700 p-5">
                 <Text className="text-base font-semibold text-neutral-900 dark:text-white mb-3">About Us</Text>
@@ -1239,9 +1682,7 @@ const ContractorDashboardScreen: React.FC = () => {
               </View>
             </View>
           )}
-
-          {/* TAB: Services */}
-          {activeTab === 'services' && (
+          {profileSubTab === 'services' && (
             <View>
               <Text className="text-base font-semibold text-neutral-900 dark:text-white mb-4">Services Offered</Text>
               {editableData.servicesOffered.length === 0 ? (
@@ -1271,9 +1712,7 @@ const ContractorDashboardScreen: React.FC = () => {
               )}
             </View>
           )}
-
-          {/* TAB: Portfolio */}
-          {activeTab === 'portfolio' && (
+          {profileSubTab === 'portfolio' && (
             <View>
               <View className="flex-row items-center justify-between mb-4">
                 <Text className="text-base font-semibold text-neutral-900 dark:text-white">Portfolio</Text>
@@ -1318,9 +1757,7 @@ const ContractorDashboardScreen: React.FC = () => {
               )}
             </View>
           )}
-
-          {/* TAB: Reviews */}
-          {activeTab === 'reviews' && (
+          {profileSubTab === 'reviews' && (
             <View style={{ gap: 16 }}>
               {/* Overall Rating */}
               <View className="bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-700 p-5 flex-row items-center" style={{ gap: 24 }}>
@@ -1424,6 +1861,8 @@ const ContractorDashboardScreen: React.FC = () => {
               )}
             </View>
           )}
+            </View>
+          )}
 
           {/* TAB: Payments & Jobs */}
           {activeTab === 'payments' && (
@@ -1433,7 +1872,6 @@ const ContractorDashboardScreen: React.FC = () => {
                 <View className="flex-row" style={{ gap: 6 }}>
                   {[
                     { key: 'overview', label: 'Overview' },
-                    { key: 'leads', label: 'Leads', count: leads.length },
                     { key: 'quotes', label: 'Quotes' },
                     { key: 'jobs', label: 'Jobs' },
                   ].map(tab => (
@@ -1448,13 +1886,6 @@ const ContractorDashboardScreen: React.FC = () => {
                       <Text className={`text-xs font-semibold ${paymentSubTab === tab.key ? 'text-white' : 'text-neutral-600 dark:text-neutral-300'}`}>
                         {tab.label}
                       </Text>
-                      {(tab.count ?? 0) > 0 && (
-                        <View className={`px-1.5 py-0.5 rounded-full ${paymentSubTab === tab.key ? 'bg-white dark:bg-neutral-900/20' : 'bg-indigo-100'}`}>
-                          <Text className={`text-[10px] font-bold ${paymentSubTab === tab.key ? 'text-white' : 'text-indigo-700'}`}>
-                            {tab.count}
-                          </Text>
-                        </View>
-                      )}
                     </Pressable>
                   ))}
                 </View>
@@ -1674,155 +2105,6 @@ const ContractorDashboardScreen: React.FC = () => {
                   </Pressable>
                 </View>
               )}
-
-              {/* Leads */}
-              {paymentSubTab === 'leads' && (() => {
-                const displayedLeads = leads.filter(lead => {
-                  const isArchived = lead.status === 'archived';
-                  return leadFilter === 'active' ? !isArchived : isArchived;
-                });
-
-                return (
-                  <View>
-                    {/* Header & Filter Bar */}
-                    <View className="flex-row items-center justify-between mb-3">
-                      <Text className="text-base font-semibold text-neutral-900 dark:text-white">Inquiries</Text>
-                      <View className="flex-row bg-neutral-100 dark:bg-neutral-800 rounded-lg p-0.5" style={{ gap: 2 }}>
-                        <Pressable
-                          onPress={() => setLeadFilter('active')}
-                          className={`px-3 py-1 rounded-md ${leadFilter === 'active' ? 'bg-white dark:bg-neutral-700 shadow-sm' : ''}`}
-                        >
-                          <Text className={`text-xs font-semibold ${leadFilter === 'active' ? 'text-neutral-900 dark:text-white' : 'text-neutral-500 dark:text-neutral-400'}`}>
-                            Active
-                          </Text>
-                        </Pressable>
-                        <Pressable
-                          onPress={() => setLeadFilter('archived')}
-                          className={`px-3 py-1 rounded-md ${leadFilter === 'archived' ? 'bg-white dark:bg-neutral-700 shadow-sm' : ''}`}
-                        >
-                          <Text className={`text-xs font-semibold ${leadFilter === 'archived' ? 'text-neutral-900 dark:text-white' : 'text-neutral-500 dark:text-neutral-400'}`}>
-                            Archived
-                          </Text>
-                        </Pressable>
-                      </View>
-                    </View>
-
-                    {displayedLeads.length === 0 ? (
-                      <EmptyState
-                        icon="users"
-                        title={leadFilter === 'active' ? "No active inquiries" : "No archived inquiries"}
-                        message={leadFilter === 'active' ? "When homeowners reach out, their inquiries will appear here" : "Archived inquiries will appear here"}
-                      />
-                    ) : (
-                      <View style={{ gap: 10 }}>
-                        {displayedLeads.map(lead => (
-                          <View key={lead._id} className="bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-700 p-4">
-                            <View className="flex-row justify-between items-start">
-                              <View className="flex-1 mr-2">
-                                <Text className="text-sm font-semibold text-neutral-900 dark:text-white">{lead.projectTitle || 'New Inquiry'}</Text>
-                                <Text className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-                                  From: {lead.user ? `${lead.user.firstName || ''} ${lead.user.lastName || ''}`.trim() : 'Homeowner'}
-                                </Text>
-                              </View>
-                              <Text className="text-xs text-neutral-400 dark:text-neutral-500 shrink-0">{formatDate(lead.createdAt)}</Text>
-                            </View>
-
-                            {lead.description && (
-                              <Text className="text-sm text-neutral-600 dark:text-neutral-300 mt-2">{lead.description}</Text>
-                            )}
-
-                            {/* Contact Preference & Status */}
-                            <View className="flex-row flex-wrap items-center mt-3" style={{ gap: 6 }}>
-                              {lead.contactPreference && (
-                                <View className="bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900 px-2 py-0.5 rounded-full">
-                                  <Text className="text-[10px] font-bold text-indigo-700 dark:text-indigo-400 uppercase tracking-wider">
-                                    {lead.contactPreference}
-                                  </Text>
-                                </View>
-                              )}
-                              <StatusBadge status={lead.status || 'new'} />
-                            </View>
-
-                            {/* Action Buttons */}
-                            <View className="flex-row flex-wrap items-center mt-4 border-t border-neutral-100 dark:border-neutral-800 pt-3" style={{ gap: 8 }}>
-                              {leadFilter === 'active' ? (
-                                <>
-                                  {lead.status === 'new' && (
-                                    <Pressable
-                                      onPress={() => handleUpdateLeadStatus(lead._id, 'contacted')}
-                                      className="flex-1 min-w-[120px] flex-row justify-center items-center py-2 border border-violet-200 dark:border-violet-800 rounded-lg bg-violet-50/50 dark:bg-violet-950/20"
-                                      style={{ gap: 6 }}
-                                    >
-                                      <FontAwesome5 name="check" size={10} color="#7c3aed" />
-                                      <Text className="text-[11px] font-bold text-violet-700 dark:text-violet-400">Mark Contacted</Text>
-                                    </Pressable>
-                                  )}
-                                  <Pressable
-                                    onPress={() => handleUpdateLeadStatus(lead._id, 'archived')}
-                                    className="flex-1 min-w-[80px] flex-row justify-center items-center py-2 bg-neutral-100 dark:bg-neutral-800 rounded-lg"
-                                    style={{ gap: 6 }}
-                                  >
-                                    <FontAwesome5 name="archive" size={10} color={isDark ? '#d4d4d4' : '#525252'} />
-                                    <Text className="text-[11px] font-semibold text-neutral-700 dark:text-neutral-300">Archive</Text>
-                                  </Pressable>
-                                  <Pressable
-                                    onPress={() => {
-                                      const recipientId = lead.user?._id;
-                                      const recipientName = lead.user ? `${lead.user.firstName || ''} ${lead.user.lastName || ''}`.trim() : 'Homeowner';
-                                      if (recipientId) {
-                                        navigation.navigate('ChatScreen', {
-                                          recipientId,
-                                          recipientName,
-                                        } as any);
-                                      } else {
-                                        Alert.alert('Error', 'User ID is not available.');
-                                      }
-                                    }}
-                                    className="flex-1 min-w-[80px] flex-row justify-center items-center py-2 bg-neutral-100 dark:bg-neutral-800 rounded-lg"
-                                    style={{ gap: 6 }}
-                                  >
-                                    <FontAwesome5 name="comment" size={10} color={isDark ? '#d4d4d4' : '#525252'} />
-                                    <Text className="text-[11px] font-semibold text-neutral-700 dark:text-neutral-300">Message</Text>
-                                  </Pressable>
-                                  <Pressable
-                                    onPress={() => {
-                                      const recipientId = lead.user?._id;
-                                      const recipientName = lead.user ? `${lead.user.firstName || ''} ${lead.user.lastName || ''}`.trim() : 'Homeowner';
-                                      if (recipientId) {
-                                        navigation.navigate('ChatScreen', {
-                                          recipientId,
-                                          recipientName,
-                                          openQuoteSheet: true,
-                                        } as any);
-                                      } else {
-                                        Alert.alert('Error', 'User ID is not available.');
-                                      }
-                                    }}
-                                    className="flex-1 min-w-[100px] flex-row justify-center items-center py-2 bg-indigo-600 rounded-lg"
-                                    style={{ gap: 6 }}
-                                  >
-                                    <FontAwesome5 name="file-invoice-dollar" size={10} color="#ffffff" />
-                                    <Text className="text-[11px] font-bold text-white">Create Quote</Text>
-                                  </Pressable>
-                                </>
-                              ) : (
-                                <Pressable
-                                  onPress={() => handleUpdateLeadStatus(lead._id, 'new')}
-                                  className="flex-1 flex-row justify-center items-center py-2 border border-neutral-200 dark:border-neutral-700 rounded-lg"
-                                  style={{ gap: 6 }}
-                                >
-                                  <FontAwesome5 name="undo" size={10} color={isDark ? '#d4d4d4' : '#525252'} />
-                                  <Text className="text-[11px] font-semibold text-neutral-700 dark:text-neutral-300">Restore Lead</Text>
-                                </Pressable>
-                              )}
-                            </View>
-                          </View>
-                        ))}
-                      </View>
-                    )}
-                  </View>
-                );
-              })()}
 
               {/* Quotes */}
               {paymentSubTab === 'quotes' && (
