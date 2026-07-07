@@ -1122,7 +1122,7 @@ const BusinessDetailScreen: React.FC = () => {
                       onPress={() => {
                         navigation.push('BusinessDetail' as any, { id: scId } as any);
                       }}
-                      className="w-36 bg-transparent active:scale-[0.98]"
+                      className="w-40 bg-transparent active:scale-[0.98]"
                     >
                       <View style={{ aspectRatio: 1 }} className="relative rounded-2xl overflow-hidden bg-neutral-100 dark:bg-neutral-850 mb-2.5 shadow-sm">
                         {isSvgUrl(scCover) ? (
