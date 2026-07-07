@@ -842,9 +842,9 @@ const HomeScreen = () => {
         columnWrapperStyle={
           activeCategory === 'all' ? undefined : { justifyContent: 'space-between', paddingHorizontal: 16 }
         }
-        ListHeaderComponent={renderHeader}
-        ListFooterComponent={renderFooter}
-        ListEmptyComponent={renderEmptyList}
+        ListHeaderComponent={renderHeader()}
+        ListFooterComponent={renderFooter()}
+        ListEmptyComponent={renderEmptyList()}
         refreshing={refreshing}
         onRefresh={onRefresh}
         showsVerticalScrollIndicator={false}
