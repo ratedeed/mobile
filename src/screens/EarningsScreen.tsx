@@ -259,7 +259,9 @@ export default function EarningsScreen() {
             )}
           </Pressable>
           {availableBalance <= 0 && (
-            <Text className="text-[11px] text-neutral-500 mt-3 leading-4">No withdrawable balance yet. After a homeowner releases escrow, funds take ~2 business days to settle via Stripe before they appear here. First-time payouts may take 7–14 days while Stripe verifies your account.</Text>
+            <Text className="text-[11px] text-neutral-500 mt-3 leading-normal">
+              Funds settle ~2 business days after client release. First-time payouts take 7-14 days.
+            </Text>
           )}
         </View>
 
@@ -277,8 +279,8 @@ export default function EarningsScreen() {
             <Text className="text-[12px] text-amber-800 dark:text-amber-300 leading-4">• Pending → Available: unlocks automatically on the date shown</Text>
             <Text className="text-[12px] text-amber-800 dark:text-amber-300 leading-4">• Available → Bank: 1–3 business days after you withdraw</Text>
           </View>
-          <Text className="text-[11px] text-amber-700 dark:text-amber-400 leading-4 mt-2">
-            First-time payouts may take 7–14 days while Stripe verifies your account. Missing info in your Stripe account can pause payouts — check your Stripe dashboard if anything is on hold.
+          <Text className="text-[11px] text-amber-700 dark:text-amber-400 leading-normal mt-2">
+            Note: First-time payouts take 7-14 days. Ensure your Stripe profile has no pending verifications or holds.
           </Text>
         </View>
 
