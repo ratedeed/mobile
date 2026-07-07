@@ -27,6 +27,7 @@ import { getCoverImageUrl, isSvgUrl } from '../utils/avatarUtils';
 import { getFavorites, addFavorite, removeFavorite } from '../utils/favoritesStore';
 import { useAuth } from '../context/AuthContext';
 import GuestPrompt from '../components/GuestPrompt';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type Category = {
   id: string;
@@ -374,6 +375,11 @@ const HomeScreen = () => {
         expansionTier: result?.expansionTier
       });
 
+      // Persist ZIP code for subsequent app launches
+      if (zip && /^\d{5}$/.test(zip.trim())) {
+        AsyncStorage.setItem('ratedeed-detected-zip', zip.trim()).catch(() => {});
+      }
+
       if (mountedRef.current) {
         if (append) {
           setAllContractors((prev) => {
@@ -428,9 +434,42 @@ const HomeScreen = () => {
     await loadContractors(zip, 1, false, 'all');
   }, [loadContractors]);
 
+  const fetchLocationAndDataInBackground = useCallback(async (currentZip: string) => {
+    try {
+      const response = await fetch('https://free.freeipapi.com/api/json');
+      const data = await response.json();
+      const zip = data.zipCode || null;
+      if (zip && zip !== currentZip && mountedRef.current) {
+        setIpZipCode(zip);
+        setSearchZip(zip);
+        await loadContractors(zip, 1, false, 'all');
+      }
+    } catch {
+      // Ignore background errors
+    }
+  }, [loadContractors]);
+
   useEffect(() => {
-    fetchLocationAndData();
-  }, [fetchLocationAndData]);
+    const initializeLocation = async () => {
+      try {
+        const savedZip = await AsyncStorage.getItem('ratedeed-detected-zip');
+        if (savedZip && /^\d{5}$/.test(savedZip.trim())) {
+          const zip = savedZip.trim();
+          if (mountedRef.current) {
+            setSearchZip(zip);
+            setIpZipCode(zip);
+          }
+          await loadContractors(zip, 1, false, 'all');
+          fetchLocationAndDataInBackground(zip);
+        } else {
+          await fetchLocationAndData();
+        }
+      } catch {
+        await fetchLocationAndData();
+      }
+    };
+    initializeLocation();
+  }, [fetchLocationAndData, fetchLocationAndDataInBackground, loadContractors]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
