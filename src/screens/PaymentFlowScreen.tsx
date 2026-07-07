@@ -363,104 +363,132 @@ export default function PaymentFlowScreen() {
 
       <ScrollView style={{ flex: 1, paddingHorizontal: 16 }}>
         {/* Step 0: Review */}
-        {currentStep === 0 && (
-          <View style={{ gap: 12 }}>
-            <View style={{ backgroundColor: 'white', borderRadius: 16, borderWidth: 1, borderColor: '#e5e5e5', padding: 16 }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <View>
-                  <Text style={{ fontSize: 14, fontWeight: 'bold', color: isDark ? '#ffffff' : '#171717' }}>{contractorName}</Text>
-                  <Text style={{ fontSize: 12, color: isDark ? '#a3a3a3' : '#737373' }}>Service Fee Included</Text>
+        {currentStep === 0 && (() => {
+          const baseAmount = (route.params?.totalAmount || 0) * 100;
+          const processingFee = Math.max(0, paymentAmount - baseAmount);
+
+          return (
+            <View style={{ gap: 12 }}>
+              <View style={{ backgroundColor: isDark ? '#171717' : 'white', borderRadius: 16, borderWidth: 1, borderColor: isDark ? '#262626' : '#e5e5e5', padding: 16, gap: 12 }}>
+                <Text style={{ fontSize: 14, fontWeight: 'bold', color: isDark ? '#ffffff' : '#171717', borderBottomWidth: 1, borderBottomColor: isDark ? '#262626' : '#f5f5f5', paddingBottom: 8 }}>Payment Breakdown</Text>
+                
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <Text style={{ fontSize: 13, color: isDark ? '#a3a3a3' : '#737373' }}>
+                    {route.params?.isMilestone ? 'Milestone Amount' : 'Base Amount'}
+                  </Text>
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: isDark ? '#ffffff' : '#171717' }}>
+                    ${(baseAmount / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </Text>
                 </View>
-                <Text style={{ fontSize: 18, fontWeight: 'bold', color: isDark ? '#ffffff' : '#171717' }}>${(paymentAmount / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
+
+                <View style={{ gap: 2 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                    <Text style={{ fontSize: 13, color: isDark ? '#a3a3a3' : '#737373' }}>Stripe Processing Fee</Text>
+                    <Text style={{ fontSize: 13, fontWeight: '600', color: isDark ? '#ffffff' : '#171717' }}>
+                      ${(processingFee / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </Text>
+                  </View>
+                  <Text style={{ fontSize: 10, color: isDark ? '#737373' : '#a3a3a3', lineHeight: 14 }}>
+                    Charged by Stripe payment processor. Ratedeed does not keep this fee.
+                  </Text>
+                </View>
+
+                <View style={{ borderTopWidth: 1, borderTopColor: isDark ? '#262626' : '#e5e5e5', paddingTop: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <View>
+                    <Text style={{ fontSize: 14, fontWeight: 'bold', color: isDark ? '#ffffff' : '#171717' }}>{contractorName}</Text>
+                    <Text style={{ fontSize: 11, color: isDark ? '#a3a3a3' : '#737373' }}>Service Fee Included</Text>
+                  </View>
+                  <Text style={{ fontSize: 18, fontWeight: 'bold', color: isDark ? '#ffffff' : '#171717' }}>${(paymentAmount / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
+                </View>
               </View>
-            </View>
 
-            {route.params?.isMilestone && (
-              <View style={{ backgroundColor: isDark ? '#1e1b4b' : '#f5f3ff', borderWidth: 1, borderColor: isDark ? '#312e81' : '#ddd6fe', borderRadius: 16, padding: 16 }}>
-                <Text style={{ fontSize: 11, fontWeight: 'bold', color: '#6366f1', textTransform: 'uppercase', letterSpacing: 0.5 }}>Milestone Escrow Payment</Text>
-                <Text style={{ fontSize: 13, fontWeight: 'bold', color: isDark ? '#ffffff' : '#1f2937', marginTop: 4 }}>
-                  {quoteDescription}
-                </Text>
+              {route.params?.isMilestone && (
+                <View style={{ backgroundColor: isDark ? '#1e1b4b' : '#f5f3ff', borderWidth: 1, borderColor: isDark ? '#312e81' : '#ddd6fe', borderRadius: 16, padding: 16 }}>
+                  <Text style={{ fontSize: 11, fontWeight: 'bold', color: '#6366f1', textTransform: 'uppercase', letterSpacing: 0.5 }}>Milestone Escrow Payment</Text>
+                  <Text style={{ fontSize: 13, fontWeight: 'bold', color: isDark ? '#ffffff' : '#1f2937', marginTop: 4 }}>
+                    {quoteDescription}
+                  </Text>
+                </View>
+              )}
+
+              <View style={{ backgroundColor: '#171717', borderRadius: 16, padding: 24, alignItems: 'center' }}>
+                <Text style={{ fontSize: 12, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: 1 }}>Total Amount</Text>
+                <Text style={{ fontSize: 30, fontWeight: 'bold', color: 'white', marginTop: 4 }}>${(paymentAmount / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
               </View>
-            )}
 
-            <View style={{ backgroundColor: '#171717', borderRadius: 16, padding: 24, alignItems: 'center' }}>
-              <Text style={{ fontSize: 12, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: 1 }}>Total Amount</Text>
-              <Text style={{ fontSize: 30, fontWeight: 'bold', color: 'white', marginTop: 4 }}>${(paymentAmount / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
-            </View>
-
-            <View style={{ backgroundColor: '#ecfdf5', borderWidth: 1, borderColor: '#a7f3d0', borderRadius: 16, padding: 16, flexDirection: 'row', gap: 12 }}>
-              <FontAwesome5 name="shield-alt" size={18} color="#059669" />
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#065f46' }}>Escrow Protection</Text>
-                <Text style={{ fontSize: 12, color: '#047857', marginTop: 4, lineHeight: 18 }}>
-                  Your payment will be held in escrow. Funds are only released when you confirm the job is complete.
-                </Text>
+              <View style={{ backgroundColor: '#ecfdf5', borderWidth: 1, borderColor: '#a7f3d0', borderRadius: 16, padding: 16, flexDirection: 'row', gap: 12 }}>
+                <FontAwesome5 name="shield-alt" size={18} color="#059669" />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#065f46' }}>Escrow Protection</Text>
+                  <Text style={{ fontSize: 12, color: '#047857', marginTop: 4, lineHeight: 18 }}>
+                    Your payment will be held in escrow. Funds are only released when you confirm the job is complete.
+                  </Text>
+                </View>
               </View>
-            </View>
 
-            {applePayAvailable && (
-              <PlatformPayButton
-                type={PlatformPay.ButtonType.Pay}
-                onPress={handleApplePay}
-                style={styles.applePayBtn}
-              />
-            )}
-
-            <View style={{ height: 12, alignItems: 'center', justifyContent: 'center' }}>
               {applePayAvailable && (
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <View style={{ flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: '#e5e5e5' }} />
-                  <Text style={{ fontSize: 11, color: '#a3a3a3', fontWeight: '500' }}>OR</Text>
-                  <View style={{ flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: '#e5e5e5' }} />
-                </View>
+                <PlatformPayButton
+                  type={PlatformPay.ButtonType.Pay}
+                  onPress={handleApplePay}
+                  style={styles.applePayBtn}
+                />
               )}
-            </View>
 
-            <Pressable
-              onPress={handlePayment}
-              disabled={paying || paymentAmount <= 0}
-              style={{
-                width: '100%', paddingVertical: 14, borderRadius: 12, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, marginTop: 16,
-                backgroundColor: (paying || paymentAmount <= 0) ? '#d4d4d4' : '#4F46E5'
-              }}
-            >
-              {paying ? (
-                <BouncingDotsLoader size="small" color="#fff" />
-              ) : (
-                <>
-                  <FontAwesome5 name="lock" size={14} color="#fff" />
-                  <Text style={{ fontSize: 16, fontWeight: 'bold', color: 'white' }}>Secure Checkout</Text>
-                </>
-              )}
-            </Pressable>
-            
-            <Pressable
-              onPress={() => startPollingPaymentStatus(true)}
-              disabled={paying || isPolling}
-              style={{
-                width: '100%', paddingVertical: 14, borderRadius: 12, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, marginTop: 12,
-                backgroundColor: (paying || isPolling) ? '#f5f5f5' : '#f4f4f5', borderWidth: 1, borderColor: '#e4e4e7'
-              }}
-            >
-              {paying || isPolling ? (
-                <BouncingDotsLoader size="small" color={isDark ? '#a3a3a3' : '#737373'} />
-              ) : (
-                <FontAwesome5 name="sync" size={12} color={isDark ? '#a3a3a3' : '#737373'} />
-              )}
-              <Text style={{ fontSize: 14, fontWeight: '600', color: isDark ? '#a3a3a3' : '#52525b' }}>
-                {paying || isPolling ? 'Verifying...' : 'Verify Payment Status'}
-              </Text>
-            </Pressable>
-            
-            <View style={{ alignItems: 'center', marginTop: 16 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <FontAwesome5 name="stripe" size={32} color="#6366F1" />
-                <Text style={{ fontSize: 10, color: '#a3a3a3', fontWeight: '500' }}>PCI Compliant Checkout</Text>
+              <View style={{ height: 12, alignItems: 'center', justifyContent: 'center' }}>
+                {applePayAvailable && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <View style={{ flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: '#e5e5e5' }} />
+                    <Text style={{ fontSize: 11, color: '#a3a3a3', fontWeight: '500' }}>OR</Text>
+                    <View style={{ flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: '#e5e5e5' }} />
+                  </View>
+                )}
+              </View>
+
+              <Pressable
+                onPress={handlePayment}
+                disabled={paying || paymentAmount <= 0}
+                style={{
+                  width: '100%', paddingVertical: 14, borderRadius: 12, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, marginTop: 16,
+                  backgroundColor: (paying || paymentAmount <= 0) ? '#d4d4d4' : '#4F46E5'
+                }}
+              >
+                {paying ? (
+                  <BouncingDotsLoader size="small" color="#fff" />
+                ) : (
+                  <>
+                    <FontAwesome5 name="lock" size={14} color="#fff" />
+                    <Text style={{ fontSize: 16, fontWeight: 'bold', color: 'white' }}>Secure Checkout</Text>
+                  </>
+                )}
+              </Pressable>
+              
+              <Pressable
+                onPress={() => startPollingPaymentStatus(true)}
+                disabled={paying || isPolling}
+                style={{
+                  width: '100%', paddingVertical: 14, borderRadius: 12, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, marginTop: 12,
+                  backgroundColor: (paying || isPolling) ? '#f5f5f5' : '#f4f4f5', borderWidth: 1, borderColor: '#e4e4e7'
+                }}
+              >
+                {paying || isPolling ? (
+                  <BouncingDotsLoader size="small" color={isDark ? '#a3a3a3' : '#737373'} />
+                ) : (
+                  <FontAwesome5 name="sync" size={12} color={isDark ? '#a3a3a3' : '#737373'} />
+                )}
+                <Text style={{ fontSize: 14, fontWeight: '600', color: isDark ? '#a3a3a3' : '#52525b' }}>
+                  {paying || isPolling ? 'Verifying...' : 'Verify Payment Status'}
+                </Text>
+              </Pressable>
+              
+              <View style={{ alignItems: 'center', marginTop: 16 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <FontAwesome5 name="stripe" size={32} color="#6366F1" />
+                  <Text style={{ fontSize: 10, color: '#a3a3a3', fontWeight: '500' }}>PCI Compliant Checkout</Text>
+                </View>
               </View>
             </View>
-          </View>
-        )}
+          );
+        })()}
 
         {/* Step 2: Confirmed */}
         {currentStep === 2 && (
