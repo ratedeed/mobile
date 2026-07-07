@@ -239,23 +239,23 @@ export default function EarningsScreen() {
             </View>
           </View>
           <Text className="text-4xl font-bold text-white">{formatCurrency(availableBalance)}</Text>
-          {availableBalance > 0 && (
-            <Pressable
-              onPress={handleCashOut}
-              disabled={cashingOut}
-              className="mt-4 py-3 rounded-xl items-center justify-center flex-row"
-              style={{ gap: 8, backgroundColor: cashingOut ? '#3f3f46' : '#4F46E5' }}
-            >
-              {cashingOut ? (
-                <BouncingDotsLoader size="small" color="#fff" />
-              ) : (
-                <>
-                  <FontAwesome5 name="arrow-up" size={13} color="#fff" />
-                  <Text className="text-sm font-bold text-white">Withdraw to Bank</Text>
-                </>
-              )}
-            </Pressable>
-          )}
+          <Pressable
+            onPress={handleCashOut}
+            disabled={cashingOut || availableBalance <= 0}
+            className="mt-4 py-3 rounded-xl items-center justify-center flex-row"
+            style={{ gap: 8, backgroundColor: (availableBalance > 0 && !cashingOut) ? '#4F46E5' : '#27272A' }}
+          >
+            {cashingOut ? (
+              <BouncingDotsLoader size="small" color="#fff" />
+            ) : (
+              <>
+                <FontAwesome5 name="arrow-up" size={13} color={(availableBalance > 0) ? '#fff' : '#737373'} />
+                <Text className={`text-sm font-bold ${(availableBalance > 0) ? 'text-white' : 'text-neutral-500'}`}>
+                  {availableBalance <= 0 ? 'No Funds to Withdraw' : 'Withdraw to Bank'}
+                </Text>
+              </>
+            )}
+          </Pressable>
           {availableBalance <= 0 && (
             <Text className="text-[11px] text-neutral-500 mt-3 leading-4">No withdrawable balance yet. After a homeowner releases escrow, funds take ~2 business days to settle via Stripe before they appear here. First-time payouts may take 7–14 days while Stripe verifies your account.</Text>
           )}
