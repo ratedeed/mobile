@@ -259,7 +259,6 @@ const HomeScreen = () => {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [showGuestPrompt, setShowGuestPrompt] = useState(false);
-  const [isLocationReady, setIsLocationReady] = useState(false);
   
   const mountedRef = useRef(true);
   const isFetchingRef = useRef(false);
@@ -467,8 +466,6 @@ const HomeScreen = () => {
         }
       } catch {
         await fetchLocationAndData();
-      } finally {
-        if (mountedRef.current) setIsLocationReady(true);
       }
     };
     initializeLocation();
@@ -830,10 +827,6 @@ const HomeScreen = () => {
     if ('_id' in item) return item._id;
     return item.id;
   };
-
-  if (!isLocationReady) {
-    return <View className="flex-1 bg-white dark:bg-neutral-950" />;
-  }
 
   return (
     <KeyboardAvoidingView
