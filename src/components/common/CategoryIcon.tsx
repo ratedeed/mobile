@@ -253,7 +253,7 @@ export const CategoryIcon = memo(function CategoryIcon({
       );
       timer = setTimeout(() => {
         categoryEntrancePlayed = true;
-      }, 100);
+      }, 2000);
     }
 
     // ── Start Idle Float after entrance ──
