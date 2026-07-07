@@ -1108,7 +1108,7 @@ const BusinessDetailScreen: React.FC = () => {
           {similarContractors.length > 0 && (
             <View className="mt-8 pt-6 border-t border-neutral-100 dark:border-neutral-800">
               <Text className="text-lg font-bold text-neutral-900 dark:text-neutral-50 mb-3">Similar contractors</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
                 {similarContractors.map((sc, i) => {
                   const scName = sc.companyName || sc.businessName || 'Contractor';
                   const scRating = sc.averageRating || sc.rating || 0;
@@ -1122,9 +1122,9 @@ const BusinessDetailScreen: React.FC = () => {
                       onPress={() => {
                         navigation.push('BusinessDetail' as any, { id: scId } as any);
                       }}
-                      className="w-40 bg-white dark:bg-neutral-900 rounded-xl border border-neutral-100 dark:border-neutral-800 overflow-hidden"
+                      className="w-36 bg-transparent active:scale-[0.98]"
                     >
-                      <View style={{ aspectRatio: 1 }}>
+                      <View style={{ aspectRatio: 1 }} className="relative rounded-2xl overflow-hidden bg-neutral-100 dark:bg-neutral-850 mb-2.5 shadow-sm">
                         {isSvgUrl(scCover) ? (
                           <View className="w-full h-full">
                             <SvgImage uri={scCover} width="100%" height="100%" />
@@ -1133,20 +1133,20 @@ const BusinessDetailScreen: React.FC = () => {
                           <Image source={{ uri: scCover }} className="w-full h-full" resizeMode="cover" />
                         )}
                         {sc.isVerified && (
-                          <View className="absolute top-1.5 left-1.5">
+                          <View className="absolute top-2 left-2">
                             <VerifiedBadge size="sm" variant="glass" />
                           </View>
                         )}
                       </View>
-                      <View className="p-2">
-                        <Text className="text-xs font-semibold text-neutral-900 dark:text-neutral-50 leading-tight" numberOfLines={1}>{scName}</Text>
-                        <View className="flex-row items-center mt-0.5" style={{ gap: 2 }}>
-                          <FontAwesome5 name="star" solid size={8} color="#eab308" />
-                          <Text className="text-[10px] font-semibold text-neutral-700 dark:text-neutral-300">{scRating.toFixed(1)}</Text>
-                          <Text className="text-[10px] text-neutral-400">({scReviews})</Text>
+                      <View className="px-0.5">
+                        <Text className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-50 leading-snug" numberOfLines={1}>{scName}</Text>
+                        <View className="flex-row items-center mt-0.5" style={{ gap: 4 }}>
+                          <FontAwesome5 name="star" solid size={10} color="#eab308" />
+                          <Text className="text-xs font-bold text-neutral-800 dark:text-neutral-200">{scRating.toFixed(1)}</Text>
+                          <Text className="text-xs text-neutral-400">({scReviews})</Text>
                         </View>
                         {!!scLocation && (
-                          <Text className="text-[10px] text-neutral-500 dark:text-neutral-400 mt-0.5" numberOfLines={1}>{scLocation}</Text>
+                          <Text className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5" numberOfLines={1}>{scLocation}</Text>
                         )}
                       </View>
                     </Pressable>
