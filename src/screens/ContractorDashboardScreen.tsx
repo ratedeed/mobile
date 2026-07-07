@@ -1117,6 +1117,9 @@ const ContractorDashboardScreen: React.FC = () => {
                 <Pressable
                   key={tab.key}
                   onPress={() => setActiveTab(tab.key)}
+                  style={({ pressed }) => ({
+                    transform: [{ scale: pressed ? 0.96 : 1 }]
+                  })}
                   className="relative px-4 py-3"
                 >
                   <Text className={`text-sm font-semibold whitespace-nowrap ${activeTab === tab.key ? "text-indigo-600" : "text-neutral-500 dark:text-neutral-400 dark:text-neutral-500"}`}>
@@ -1520,6 +1523,9 @@ const ContractorDashboardScreen: React.FC = () => {
                     <Pressable
                       key={subTab.key}
                       onPress={() => setProfileSubTab(subTab.key as any)}
+                      style={({ pressed }) => ({
+                        transform: [{ scale: pressed ? 0.96 : 1 }]
+                      })}
                       className={`px-3 py-1.5 rounded-full ${
                         profileSubTab === subTab.key ? 'bg-neutral-900' : 'bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700'
                       }`}

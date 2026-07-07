@@ -1,8 +1,15 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { createStackNavigator, CardStyleInterpolators } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { FontAwesome5 } from '@expo/vector-icons';
-import { Image, View, TouchableOpacity, Text as RNText, Alert } from 'react-native';
+import { 
+  Image, 
+  View, 
+  TouchableOpacity, 
+  Text as RNText, 
+  Alert, 
+  Animated, 
+  TouchableWithoutFeedback 
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useColorScheme } from 'nativewind';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -50,110 +57,152 @@ import ErrorBoundary from '../components/ErrorBoundary';
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
-// Local ErrorBoundary Wrappers for Fragile Screens
-const SafeHomeScreen = (props) => (
+// --- HOCs & Custom Hooks ---
+
+const withErrorBoundary = (Component) => (props) => (
   <ErrorBoundary>
-    <HomeScreen {...props} />
-  </ErrorBoundary>
-);
-const SafeMessagesScreen = (props) => (
-  <ErrorBoundary>
-    <MessagesScreen {...props} />
-  </ErrorBoundary>
-);
-const SafeBusinessDetailScreen = (props) => (
-  <ErrorBoundary>
-    <BusinessDetailScreen {...props} />
-  </ErrorBoundary>
-);
-const SafeJobDetailScreen = (props) => (
-  <ErrorBoundary>
-    <JobDetailScreen {...props} />
-  </ErrorBoundary>
-);
-const SafePaymentFlowScreen = (props) => (
-  <ErrorBoundary>
-    <PaymentFlowScreen {...props} />
-  </ErrorBoundary>
-);
-const SafeReviewScreen = (props) => (
-  <ErrorBoundary>
-    <ReviewScreen {...props} />
-  </ErrorBoundary>
-);
-const SafeDisputeScreen = (props) => (
-  <ErrorBoundary>
-    <DisputeScreen {...props} />
-  </ErrorBoundary>
-);
-const SafeQuoteReviewScreen = (props) => (
-  <ErrorBoundary>
-    <QuoteReviewScreen {...props} />
+    <Component {...props} />
   </ErrorBoundary>
 );
 
-// ---- Custom Center Tab Button ----
-const JobsTabBarButton = ({ onPress }) => (
-  <TouchableOpacity
-    onPress={onPress}
-    activeOpacity={0.8}
-    style={{
-      top: -24,
-      justifyContent: 'center',
-      alignItems: 'center',
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: 0.2,
-      shadowRadius: 10,
-      elevation: 8
-    }}
-  >
-    <View
-      style={{
-        width: 68,
-        height: 68,
-        borderRadius: 34,
-        backgroundColor: '#171717',
-        justifyContent: 'center',
-        alignItems: 'center',
-        gap: 2
-      }}
-    >
-      <Briefcase size={28} color="#FFF" weight="fill" />
-      <RNText style={{ color: '#FFF', fontSize: 10, fontWeight: '700' }}>Jobs</RNText>
-    </View>
-  </TouchableOpacity>
-);
+const useScaleAnimation = () => {
+  const scale = useRef(new Animated.Value(1)).current;
 
-const screenOptions = {
-  headerStyle: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#E4E4E7',
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  headerTitleStyle: {
-    fontWeight: '600',
-    fontSize: 18,
-  },
-  headerTintColor: '#2563EB',
-  headerBackTitleVisible: false,
-  cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
-  gestureEnabled: true,
-  gestureDirection: 'horizontal',
+  const handlePressIn = () => {
+    Animated.spring(scale, {
+      toValue: 0.94,
+      useNativeDriver: true,
+      speed: 50,
+      bounciness: 10,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(scale, {
+      toValue: 1,
+      useNativeDriver: true,
+      speed: 50,
+      bounciness: 10,
+    }).start();
+  };
+
+  return { scale, handlePressIn, handlePressOut };
 };
+
+// --- Components ---
+
+const NotificationBadge = ({ count, isDark }) => {
+  if (!count || count <= 0) return null;
+
+  return (
+    <View style={{ 
+      position: 'absolute', 
+      right: -6, 
+      top: -6, 
+      backgroundColor: '#EF4444', 
+      borderRadius: 9, 
+      minWidth: 18, 
+      height: 18, 
+      justifyContent: 'center', 
+      alignItems: 'center',
+      borderWidth: 2,
+      borderColor: isDark ? '#09090B' : '#FFFFFF',
+      paddingHorizontal: 2
+    }}>
+      <RNText style={{ color: 'white', fontSize: 9, fontWeight: '700' }}>
+        {count > 9 ? '9+' : count}
+      </RNText>
+    </View>
+  );
+};
+
+// Custom Center Tab Button
+const JobsTabBarButton = ({ onPress, style }) => {
+  const { scale, handlePressIn, handlePressOut } = useScaleAnimation();
+
+  return (
+    <TouchableWithoutFeedback
+      onPress={onPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+    >
+      <Animated.View
+        style={[
+          style,
+          {
+            flex: 1,
+            justifyContent: 'center',
+            alignItems: 'center',
+          },
+          {
+            top: -24,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 8 },
+            shadowOpacity: 0.2,
+            shadowRadius: 10,
+            elevation: 8,
+            transform: [{ scale }]
+          }
+        ]}
+      >
+        <View
+          style={{
+            width: 68,
+            height: 68,
+            borderRadius: 34,
+            backgroundColor: '#171717',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: 2
+          }}
+        >
+          <Briefcase size={28} color="#FFF" weight="fill" />
+          <RNText style={{ color: '#FFF', fontSize: 10, fontWeight: '700' }}>Jobs</RNText>
+        </View>
+      </Animated.View>
+    </TouchableWithoutFeedback>
+  );
+};
+
+// Standard Tab Button
+const TabBarButton = ({ children, onPress, style }) => {
+  const { scale, handlePressIn, handlePressOut } = useScaleAnimation();
+
+  return (
+    <TouchableWithoutFeedback
+      onPress={onPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+    >
+      <Animated.View 
+        style={[
+          style, 
+          { 
+            flex: 1, 
+            justifyContent: 'center', 
+            alignItems: 'center', 
+            transform: [{ scale }] 
+          }
+        ]}
+      >
+        {children}
+      </Animated.View>
+    </TouchableWithoutFeedback>
+  );
+};
+
+// --- Navigators ---
 
 function MainTabNavigator() {
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
-  const { userRole } = useAuth();
   const { unreadCount, unreadMessagesCount } = useNotifications();
 
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
-        tabBarIcon: ({ focused, color, size }) => {
+        tabBarIcon: ({ focused, color }) => {
           const weight = focused ? 'fill' : 'regular';
           if (route.name === 'Explore') {
             return <MagnifyingGlass size={24} color={color} weight={focused ? 'bold' : 'regular'} />;
@@ -166,6 +215,7 @@ function MainTabNavigator() {
           }
           return null;
         },
+        tabBarButton: (props) => <TabBarButton {...props} />,
         tabBarActiveTintColor: isDark ? '#FAFAFA' : '#171717',
         tabBarInactiveTintColor: isDark ? '#A1A1AA' : '#737373',
         tabBarStyle: {
@@ -188,7 +238,7 @@ function MainTabNavigator() {
     >
       <Tab.Screen
         name="Explore"
-        component={SafeHomeScreen}
+        component={withErrorBoundary(HomeScreen)}
         options={({ navigation }) => ({
           title: 'Explore',
           headerShown: true,
@@ -205,7 +255,9 @@ function MainTabNavigator() {
                 source={require('../../assets/favicon.png')}
                 style={{ width: 28, height: 28, marginRight: 8, borderRadius: 6 }}
               />
-              <Typography variant="h4" style={{ color: isDark ? '#FAFAFA' : '#09090B' }}>Ratedeed</Typography>
+              <Typography variant="h4" style={{ color: isDark ? '#FAFAFA' : '#09090B' }}>
+                Ratedeed
+              </Typography>
             </View>
           ),
           headerTitle: '',
@@ -216,28 +268,7 @@ function MainTabNavigator() {
             >
               <View>
                 <Bell size={22} color={isDark ? '#FAFAFA' : '#09090B'} />
-                {unreadCount > 0 && (
-                  <View 
-                    style={{ 
-                      position: 'absolute', 
-                      right: -6, 
-                      top: -6, 
-                      backgroundColor: '#EF4444', 
-                      borderRadius: 9, 
-                      minWidth: 18, 
-                      height: 18, 
-                      justifyContent: 'center', 
-                      alignItems: 'center',
-                      borderWidth: 2,
-                      borderColor: isDark ? '#09090B' : '#FFFFFF',
-                      paddingHorizontal: 2
-                    }}
-                  >
-                    <RNText style={{ color: 'white', fontSize: 9, fontWeight: '700' }}>
-                      {unreadCount > 9 ? '9+' : unreadCount}
-                    </RNText>
-                  </View>
-                )}
+                <NotificationBadge count={unreadCount} isDark={isDark} />
               </View>
             </TouchableOpacity>
           ),
@@ -252,13 +283,13 @@ function MainTabNavigator() {
         name="Jobs"
         component={ActiveJobsScreen}
         options={{
-          title: '', // Hide label for the center button as it's built-in
+          title: '',
           tabBarButton: (props) => <JobsTabBarButton {...props} />
         }}
       />
       <Tab.Screen
         name="Messages"
-        component={SafeMessagesScreen}
+        component={withErrorBoundary(MessagesScreen)}
         options={{ 
           title: 'Messages',
           tabBarBadge: unreadMessagesCount > 0 ? unreadMessagesCount : undefined,
@@ -282,35 +313,37 @@ function MainTabNavigator() {
 export default function MainNavigator() {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
-  const { userRole, isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAuth();
   const navigation = useNavigation();
 
   useEffect(() => {
     if (!isAuthenticated) {
       const currentRoute = navigation.getCurrentRoute();
-      if (currentRoute) {
-        const protectedScreens = [
-          'ContractorDashboard',
-          'ContractorOnboarding',
-          'ContractorEditProfile',
-          'EarningsScreen',
-          'PaymentFlow',
-          'ReviewScreen',
-          'DisputeScreen',
-          'ChangeOrderScreen'
-        ];
-        if (protectedScreens.includes(currentRoute.name)) {
-          Alert.alert(
-            'Session Expired',
-            'Your session has expired or you have been signed out. Please sign in again.',
-            [{ text: 'OK', onPress: () => {
+      const protectedScreens = [
+        'ContractorDashboard',
+        'ContractorOnboarding',
+        'ContractorEditProfile',
+        'EarningsScreen',
+        'PaymentFlow',
+        'ReviewScreen',
+        'DisputeScreen',
+        'ChangeOrderScreen'
+      ];
+      
+      if (currentRoute && protectedScreens.includes(currentRoute.name)) {
+        Alert.alert(
+          'Session Expired',
+          'Your session has expired or you have been signed out. Please sign in again.',
+          [{ 
+            text: 'OK', 
+            onPress: () => {
               navigation.reset({
                 index: 0,
                 routes: [{ name: 'Main' }],
               });
-            }}]
-          );
-        }
+            }
+          }]
+        );
       }
     }
   }, [isAuthenticated, navigation]);
@@ -353,23 +386,24 @@ export default function MainNavigator() {
   return (
     <Stack.Navigator screenOptions={dynamicScreenOptions}>
       <Stack.Screen name="Main" component={MainTabNavigator} options={{ headerShown: false }} />
-      <Stack.Screen name="BusinessDetail" component={SafeBusinessDetailScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="BusinessDetail" component={withErrorBoundary(BusinessDetailScreen)} options={{ headerShown: false }} />
       <Stack.Screen name="ContractorDashboard" component={ContractorDashboardScreen} options={{ title: '' }} />
       <Stack.Screen name="ContractorOnboarding" component={ContractorOnboardingScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ContractorEditProfile" component={ContractorEditProfileScreen} options={{ headerShown: false }} />
       <Stack.Screen name="EarningsScreen" component={EarningsScreen} options={{ title: 'Earnings', headerShown: false }} />
       <Stack.Screen name="Notifications" component={NotificationsScreen} />
-      <Stack.Screen name="ChatScreen" component={SafeMessagesScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="ChatScreen" component={withErrorBoundary(MessagesScreen)} options={{ headerShown: false }} />
       <Stack.Screen name="ActiveJobs" component={ActiveJobsScreen} options={{ title: '', headerShown: false }} />
-      <Stack.Screen name="PaymentFlow" component={SafePaymentFlowScreen} options={{ title: '', headerShown: false }} />
-      <Stack.Screen name="ReviewScreen" component={SafeReviewScreen} options={{ title: 'Leave a Review' }} />
-      <Stack.Screen name="DisputeScreen" component={SafeDisputeScreen} options={{ title: 'File a Dispute' }} />
+      <Stack.Screen name="PaymentFlow" component={withErrorBoundary(PaymentFlowScreen)} options={{ title: '', headerShown: false }} />
+      <Stack.Screen name="ReviewScreen" component={withErrorBoundary(ReviewScreen)} options={{ title: 'Leave a Review' }} />
+      <Stack.Screen name="DisputeScreen" component={withErrorBoundary(DisputeScreen)} options={{ title: 'File a Dispute' }} />
       <Stack.Screen name="ChangeOrderScreen" component={ChangeOrderScreen} options={{ title: 'Change Order' }} />
-      <Stack.Screen name="JobDetail" component={SafeJobDetailScreen} options={{ title: '', headerShown: false }} />
+      <Stack.Screen name="JobDetail" component={withErrorBoundary(JobDetailScreen)} options={{ title: '', headerShown: false }} />
       <Stack.Screen name="BusinessSearch" component={BusinessSearchScreen} options={{ title: '', headerShown: false }} />
-      <Stack.Screen name="QuoteReview" component={SafeQuoteReviewScreen} options={{ title: 'Review Quote' }} />
+      <Stack.Screen name="QuoteReview" component={withErrorBoundary(QuoteReviewScreen)} options={{ title: 'Review Quote' }} />
       <Stack.Screen name="VerifyEmailChange" component={VerifyEmailChangeScreen} options={{ title: 'Verify Email', headerShown: false }} />
       <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} options={{ title: 'Set New Password', headerShown: false }} />
+      
       {/* Auth screens available within Main stack for guest browsing flow */}
       <Stack.Screen name="Login" component={LoginScreen} options={{ title: 'Sign In', headerShown: false }} />
       <Stack.Screen name="Register" component={RegisterScreen} options={{ title: 'Create Account' }} />
