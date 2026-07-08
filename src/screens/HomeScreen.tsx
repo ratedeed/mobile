@@ -9,8 +9,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   useColorScheme,
-  FlatList,
-  Dimensions,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -50,10 +48,6 @@ const CATEGORIES: Category[] = [
 ];
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
-type FlatListItem = Contractor | Category;
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const CARD_WIDTH = SCREEN_WIDTH * 0.425;
 
 // ---- In-Memory Cache Implementation ----
 type CacheEntry = {
@@ -113,7 +107,7 @@ const startPrefetch = () => {
       ]);
       const zip = cachedZip || ipZip || '10001';
 
-      const filters = { zip, page: 1, limit: 200 };
+      const filters = { zip, page: 1, limit: 30 };
       const result: any = await browseContractors(filters);
       const list = extractList(result);
 
@@ -433,8 +427,7 @@ const HomeScreen = () => {
 
     // 2. Network Fetch
     try {
-      const pageLimit = categoryId === 'all' ? 200 : 30;
-      const filters: Record<string, any> = { zip: zip || undefined, page: pageNum, limit: pageLimit };
+      const filters: Record<string, any> = { zip: zip || undefined, page: pageNum, limit: 30 };
       if (categoryId && categoryId !== 'all') {
         const cat = CATEGORIES.find(c => c.id === categoryId);
         if (cat) filters.type = cat.label;
@@ -626,82 +619,18 @@ const HomeScreen = () => {
   }, [navigation]);
 
   const handleLoadMore = useCallback(() => {
-    if (activeCategory === 'all') return;
     if (!loadingMore && hasMore && !loading && !isFetchingRef.current) {
       loadContractors(searchZip || null, page + 1, true, activeCategory);
     }
   }, [activeCategory, loadingMore, hasMore, loading, page, searchZip, loadContractors]);
 
   const renderListItem = useCallback(
-    ({ item }: { item: FlatListItem }) => {
-      if (activeCategory === 'all') {
-        const cat = item as Category;
-        const catContractors = allContractors
-          .filter((c) => matchesCategory(c, cat.id, cat.label))
-          .slice(0, 8);
-
-        return (
-          <View key={cat.id} className="flex-col px-4 mb-10" style={{ gap: 16 }}>
-            <View className="flex-row items-center justify-between">
-              <Text className="text-xl font-bold text-neutral-900 dark:text-neutral-50">{cat.label}</Text>
-              <Pressable
-                onPress={() => {
-                  HapticFeedback.selection();
-                  setActiveCategory(cat.id);
-                  loadContractors(searchZip || null, 1, false, cat.id);
-                }}
-                className="w-8 h-8 items-center justify-center rounded-full bg-neutral-100 dark:bg-neutral-800"
-              >
-                <FontAwesome5 name="arrow-right" size={12} color={isDark ? '#a3a3a3' : '#6b7280'} />
-              </Pressable>
-            </View>
-            {catContractors.length > 0 ? (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                decelerationRate="fast"
-                snapToInterval={CARD_WIDTH + 12}
-                snapToAlignment="start"
-                contentContainerStyle={{ paddingHorizontal: 16 }}
-                className="-mx-4"
-              >
-                {catContractors.map((c) => (
-                  <View key={c._id} style={{ width: CARD_WIDTH, marginRight: 12 }}>
-                    <ListingCard
-                      listing={c}
-                      isFavorite={favorites.has(c._id)}
-                      onToggleFavorite={toggleFav}
-                      detectedZip={ipZipCode}
-                      onPress={handleContractorPress}
-                    />
-                  </View>
-                ))}
-              </ScrollView>
-            ) : (
-              <View className="bg-neutral-50 dark:bg-neutral-900/50 rounded-2xl p-6 border border-dashed border-neutral-200 dark:border-neutral-800 items-center justify-center py-8">
-                <Text className="text-sm font-medium text-neutral-400 dark:text-neutral-500">No local {cat.label.toLowerCase()} available</Text>
-                <Pressable
-                  onPress={() => {
-                    HapticFeedback.selection();
-                    setActiveCategory(cat.id);
-                    loadContractors(searchZip || null, 1, false, cat.id);
-                  }}
-                  className="mt-2"
-                >
-                  <Text className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">Search wider area</Text>
-                </Pressable>
-              </View>
-            )}
-          </View>
-        );
-      }
-
-      const contractor = item as Contractor;
+    ({ item }: { item: Contractor }) => {
       return (
         <View className="w-[48%] mb-4">
           <ListingCard
-            listing={contractor}
-            isFavorite={favorites.has(contractor._id)}
+            listing={item}
+            isFavorite={favorites.has(item._id)}
             onToggleFavorite={toggleFav}
             detectedZip={ipZipCode}
             onPress={handleContractorPress}
@@ -709,7 +638,7 @@ const HomeScreen = () => {
         </View>
       );
     },
-    [activeCategory, allContractors, favorites, ipZipCode, isDark, handleContractorPress, toggleFav, loadContractors, searchZip]
+    [favorites, ipZipCode, handleContractorPress, toggleFav]
   );
 
   const renderHeader = useCallback(
@@ -820,9 +749,6 @@ const HomeScreen = () => {
   );
 
   const renderFooter = useCallback(() => {
-    if (activeCategory === 'all') {
-      return <View className="h-20" />;
-    }
     if (allContractors.length === 0) return null;
     return (
       <View className="items-center py-6 mb-20">
@@ -845,42 +771,23 @@ const HomeScreen = () => {
         )}
       </View>
     );
-  }, [activeCategory, allContractors.length, loadingMore, hasMore, isDark, handleLoadMore]);
+  }, [allContractors.length, loadingMore, hasMore, isDark, handleLoadMore]);
 
   const renderEmptyList = useCallback(() => {
     if (loading) {
       return (
         <View className="px-4 pt-4">
-          {activeCategory === 'all' ? (
-            Array.from({ length: 4 }).map((_, i) => (
-              <View key={i} className="mb-8">
-                <Skeleton width="40%" height={24} borderRadius={6} />
-                <View className="flex-row justify-between mt-3">
-                  {[0, 1].map(j => (
-                    <View key={j} className="w-[48%]">
-                      <Skeleton width="100%" height={150} borderRadius={12} />
-                      <View className="mt-2" style={{ gap: 6 }}>
-                        <Skeleton width="75%" height={14} />
-                        <Skeleton width="50%" height={12} />
-                      </View>
-                    </View>
-                  ))}
+          <View className="flex-row flex-wrap justify-between">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <View key={i} className="w-[48%] mb-4">
+                <Skeleton width="100%" height={150} borderRadius={12} />
+                <View className="mt-2" style={{ gap: 6 }}>
+                  <Skeleton width="75%" height={14} />
+                  <Skeleton width="50%" height={12} />
                 </View>
               </View>
-            ))
-          ) : (
-            <View className="flex-row flex-wrap justify-between">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <View key={i} className="w-[48%] mb-4">
-                  <Skeleton width="100%" height={150} borderRadius={12} />
-                  <View className="mt-2" style={{ gap: 6 }}>
-                    <Skeleton width="75%" height={14} />
-                    <Skeleton width="50%" height={12} />
-                  </View>
-                </View>
-              ))}
-            </View>
-          )}
+            ))}
+          </View>
         </View>
       );
     }
@@ -907,7 +814,7 @@ const HomeScreen = () => {
         </Text>
       </View>
     );
-  }, [activeCategory, loading, loadError]);
+  }, [loading, loadError]);
 
   const filtered = useMemo(() => {
     let list = allContractors;
@@ -922,17 +829,11 @@ const HomeScreen = () => {
     return list;
   }, [allContractors, activeCategory, searchName]);
 
-  const data = useMemo((): FlatListItem[] => {
-    if (activeCategory === 'all') {
-      return allContractors.length === 0 ? [] : CATEGORIES.filter(cat => cat.id !== 'all');
-    }
+  const data = useMemo((): Contractor[] => {
     return filtered;
-  }, [activeCategory, allContractors.length, filtered]);
+  }, [filtered]);
 
-  const keyExtractor = (item: FlatListItem) => {
-    if ('_id' in item) return item._id;
-    return item.id;
-  };
+  const keyExtractor = (item: Contractor) => item._id;
 
   return (
     <KeyboardAvoidingView
@@ -940,14 +841,11 @@ const HomeScreen = () => {
       className="flex-1 bg-white dark:bg-neutral-950"
     >
       <BouncingRefreshFlatList
-        key={activeCategory === 'all' ? 'single' : 'grid'}
         data={data}
         renderItem={renderListItem}
         keyExtractor={keyExtractor}
-        numColumns={activeCategory === 'all' ? 1 : 2}
-        columnWrapperStyle={
-          activeCategory === 'all' ? undefined : { justifyContent: 'space-between', paddingHorizontal: 16 }
-        }
+        numColumns={2}
+        columnWrapperStyle={{ justifyContent: 'space-between', paddingHorizontal: 16 }}
         ListHeaderComponent={renderHeader()}
         ListFooterComponent={renderFooter()}
         ListEmptyComponent={renderEmptyList()}
