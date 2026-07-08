@@ -77,9 +77,9 @@ const extractList = (result: unknown): Contractor[] => {
 };
 
 // --- Startup Prefetch (Parallelized with Auth/Splash) ---
-let initialZipPromise: Promise<string | null> | null = null;
-let cachedZipPromise: Promise<string | null> | null = null;
-let prefetchPromise: Promise<{
+export let initialZipPromise: Promise<string | null> | null = null;
+export let cachedZipPromise: Promise<string | null> | null = null;
+export let prefetchPromise: Promise<{
   zip: string;
   data: Contractor[];
   pages: number;
