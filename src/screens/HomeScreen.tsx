@@ -113,7 +113,7 @@ const startPrefetch = () => {
       ]);
       const zip = cachedZip || ipZip || '10001';
 
-      const filters = { zip, page: 1, limit: 30 };
+      const filters = { zip, page: 1, limit: 200 };
       const result: any = await browseContractors(filters);
       const list = extractList(result);
 
@@ -433,7 +433,8 @@ const HomeScreen = () => {
 
     // 2. Network Fetch
     try {
-      const filters: Record<string, any> = { zip: zip || undefined, page: pageNum, limit: 30 };
+      const pageLimit = categoryId === 'all' ? 200 : 30;
+      const filters: Record<string, any> = { zip: zip || undefined, page: pageNum, limit: pageLimit };
       if (categoryId && categoryId !== 'all') {
         const cat = CATEGORIES.find(c => c.id === categoryId);
         if (cat) filters.type = cat.label;
