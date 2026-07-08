@@ -10,7 +10,6 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import MainNavigator from './src/navigation/MainNavigator';
 import LoadingScreen from './src/screens/LoadingScreen';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
-import { prefetchPromise } from './src/screens/HomeScreen';
 import { ContractorProvider } from './src/context/ContractorContext';
 import { NotificationsProvider } from './src/context/NotificationsContext';
 import { StripeProvider } from '@stripe/stripe-react-native';
@@ -170,21 +169,8 @@ function AppNavigator({ splashComplete }) {
   );
 }
 
-function AppContent({ splashComplete, setSplashComplete }) {
-  const { isAuthenticated, isLoading: authLoading, userId } = useAuth();
-  const [prefetchDone, setPrefetchDone] = React.useState(false);
-
-  useEffect(() => {
-    if (prefetchPromise) {
-      prefetchPromise.then(() => {
-        setPrefetchDone(true);
-      }).catch(() => {
-        setPrefetchDone(true);
-      });
-    } else {
-      setPrefetchDone(true);
-    }
-  }, []);
+function AppContent({ splashComplete }) {
+  const { isAuthenticated, isLoading, userId } = useAuth();
 
   useEffect(() => {
     if (isAuthenticated && userId) {
@@ -192,27 +178,19 @@ function AppContent({ splashComplete, setSplashComplete }) {
     }
   }, [isAuthenticated, userId]);
 
-  const isAppReady = !authLoading && prefetchDone;
+  if (isLoading) {
+    return (
+      <>
+        <StatusBar style="auto" />
+        <LoadingScreen />
+      </>
+    );
+  }
 
   return (
-    <View style={{ flex: 1 }}>
-      {/* Render NavigationContainer when authLoading is done, keeping it covered by splash screen */}
-      {!authLoading ? (
-        <NavigationContainer linking={linking}>
-          <AppNavigator splashComplete={splashComplete} />
-        </NavigationContainer>
-      ) : (
-        <LoadingScreen />
-      )}
-
-      {!splashComplete && (
-        <AnimatedSplashScreen 
-          onComplete={() => setSplashComplete(true)} 
-          minDuration={800} 
-          isReady={isAppReady}
-        />
-      )}
-    </View>
+    <NavigationContainer linking={linking}>
+      <AppNavigator splashComplete={splashComplete} />
+    </NavigationContainer>
   );
 }
 
@@ -246,8 +224,11 @@ function App() {
             <AuthProvider>
               <NotificationsProvider>
                 <ContractorProvider>
-                  <AppContent splashComplete={splashComplete} setSplashComplete={setSplashComplete} />
+                  <AppContent splashComplete={splashComplete} />
                   <OfflineBanner isVisible={!isConnected} />
+                  {!splashComplete && (
+                    <AnimatedSplashScreen onComplete={() => setSplashComplete(true)} minDuration={800} />
+                  )}
                 </ContractorProvider>
               </NotificationsProvider>
             </AuthProvider>

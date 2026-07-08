@@ -10,7 +10,7 @@ const LOGO_COLOR = '#4F46E5'; // Indigo-600
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
-const AnimatedSplashScreen = ({ onComplete, minDuration = 2800, isReady = true }) => {
+const AnimatedSplashScreen = ({ onComplete, minDuration = 2800 }) => {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
   const splashBgColor = isDark ? '#171717' : '#ffffff';
@@ -27,29 +27,6 @@ const AnimatedSplashScreen = ({ onComplete, minDuration = 2800, isReady = true }
   const pulse2Opacity = useRef(new Animated.Value(0)).current;
 
   const fadeAnim = useRef(new Animated.Value(1)).current; // For the entire overlay
-  const [minTimeElapsed, setMinTimeElapsed] = useState(false);
-  const fadeStarted = useRef(false);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setMinTimeElapsed(true);
-    }, minDuration);
-    return () => clearTimeout(timer);
-  }, [minDuration]);
-
-  useEffect(() => {
-    if (minTimeElapsed && isReady && !fadeStarted.current) {
-      fadeStarted.current = true;
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 500,
-        useNativeDriver: true,
-        easing: Easing.inOut(Easing.ease),
-      }).start(() => {
-        onComplete();
-      });
-    }
-  }, [minTimeElapsed, isReady, onComplete]);
 
   useEffect(() => {
     // Hide the native splash screen immediately, as our identical-looking animated view is now ready.
@@ -124,6 +101,20 @@ const AnimatedSplashScreen = ({ onComplete, minDuration = 2800, isReady = true }
 
     createPulse(pulse1Scale, pulse1Opacity, 300, 1.4, 1.6, 0.5);
     createPulse(pulse2Scale, pulse2Opacity, 600, 1.8, 2.0, 0.3);
+
+    // Fade out entire splash screen at the end
+    const timer = setTimeout(() => {
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 500,
+        useNativeDriver: true,
+        easing: Easing.inOut(Easing.ease),
+      }).start(() => {
+        onComplete();
+      });
+    }, minDuration);
+
+    return () => clearTimeout(timer);
   }, []);
 
   return (
