@@ -227,7 +227,7 @@ function App() {
                   <AppContent splashComplete={splashComplete} />
                   <OfflineBanner isVisible={!isConnected} />
                   {!splashComplete && (
-                    <AnimatedSplashScreen onComplete={() => setSplashComplete(true)} minDuration={1500} />
+                    <AnimatedSplashScreen onComplete={() => setSplashComplete(true)} minDuration={800} />
                   )}
                 </ContractorProvider>
               </NotificationsProvider>

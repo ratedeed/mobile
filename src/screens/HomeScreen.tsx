@@ -76,6 +76,82 @@ const extractList = (result: unknown): Contractor[] => {
   return [];
 };
 
+// --- Startup Prefetch (Parallelized with Auth/Splash) ---
+let initialZipPromise: Promise<string | null> | null = null;
+let cachedZipPromise: Promise<string | null> | null = null;
+let prefetchPromise: Promise<{
+  zip: string;
+  data: Contractor[];
+  pages: number;
+  isExpanded: boolean;
+  expansionTier: number;
+} | null> | null = null;
+
+const startPrefetch = () => {
+  if (prefetchPromise) return prefetchPromise;
+
+  // 1. Geolocation fetch in parallel
+  initialZipPromise = (async () => {
+    try {
+      const response = await fetch('https://free.freeipapi.com/api/json');
+      const data = await response.json();
+      return data.zipCode || null;
+    } catch {
+      return null;
+    }
+  })();
+
+  // 2. Cached ZIP fetch in parallel
+  cachedZipPromise = AsyncStorage.getItem('ratedeed-detected-zip').catch(() => null);
+
+  // 3. Prefetch browse request
+  prefetchPromise = (async () => {
+    try {
+      const [cachedZip, ipZip] = await Promise.all([
+        cachedZipPromise,
+        initialZipPromise,
+      ]);
+      const zip = cachedZip || ipZip || '10001';
+
+      const filters = { zip, page: 1, limit: 30 };
+      const result: any = await browseContractors(filters);
+      const list = extractList(result);
+
+      const cacheKey = `${zip}_all_1`;
+      contractorCache.set(cacheKey, {
+        data: list,
+        timestamp: Date.now(),
+        pages: result?.pages || 1,
+        isExpanded: result?.isExpanded,
+        expansionTier: result?.expansionTier
+      });
+
+      if (ipZip && ipZip !== cachedZip) {
+        AsyncStorage.setItem('ratedeed-detected-zip', ipZip).catch(() => {});
+      } else if (!cachedZip && ipZip) {
+        AsyncStorage.setItem('ratedeed-detected-zip', ipZip).catch(() => {});
+      }
+
+      return {
+        zip,
+        data: list,
+        pages: result?.pages || 1,
+        isExpanded: result?.isExpanded,
+        expansionTier: result?.expansionTier
+      };
+    } catch (err) {
+      if (__DEV__) console.warn('Prefetch contractors failed:', err);
+      return null;
+    }
+  })();
+
+  return prefetchPromise;
+};
+
+// Start prefetching immediately upon module load
+startPrefetch();
+
+
 const deriveLocation = (c: Contractor): string => {
   const city = c.contactInfo?.city || '';
   const state = c.contactInfo?.state || '';
@@ -357,7 +433,7 @@ const HomeScreen = () => {
 
     // 2. Network Fetch
     try {
-      const filters: Record<string, any> = { zip: zip || undefined, page: pageNum, limit: 500 };
+      const filters: Record<string, any> = { zip: zip || undefined, page: pageNum, limit: 30 };
       if (categoryId && categoryId !== 'all') {
         const cat = CATEGORIES.find(c => c.id === categoryId);
         if (cat) filters.type = cat.label;
@@ -423,15 +499,20 @@ const HomeScreen = () => {
   const fetchLocationAndData = useCallback(async () => {
     let zip: string | null = null;
     try {
-      const response = await fetch('https://free.freeipapi.com/api/json');
-      const data = await response.json();
-      zip = data.zipCode || null;
-      if (mountedRef.current) setIpZipCode(zip);
+      const cached = await AsyncStorage.getItem('ratedeed-detected-zip');
+      if (cached && /^\d{5}$/.test(cached.trim())) {
+        zip = cached.trim();
+      } else {
+        const response = await fetch('https://free.freeipapi.com/api/json');
+        const data = await response.json();
+        zip = data.zipCode || null;
+      }
+      if (mountedRef.current) setIpZipCode(zip || '10001');
     } catch {
       if (mountedRef.current) setIpZipCode('10001');
       zip = '10001';
     }
-    await loadContractors(zip, 1, false, 'all');
+    await loadContractors(zip || '10001', 1, false, 'all');
   }, [loadContractors]);
 
   const fetchLocationAndDataInBackground = useCallback(async (currentZip: string) => {
@@ -450,26 +531,50 @@ const HomeScreen = () => {
   }, [loadContractors]);
 
   useEffect(() => {
+    let active = true;
     const initializeLocation = async () => {
       try {
-        const savedZip = await AsyncStorage.getItem('ratedeed-detected-zip');
-        if (savedZip && /^\d{5}$/.test(savedZip.trim())) {
-          const zip = savedZip.trim();
-          if (mountedRef.current) {
-            setSearchZip(zip);
-            setIpZipCode(zip);
+        setLoading(true);
+        const prefetched = await prefetchPromise;
+        if (!active) return;
+
+        if (prefetched) {
+          const { zip, data, pages, isExpanded, expansionTier } = prefetched;
+          setSearchZip(zip);
+          setIpZipCode(zip);
+          setAllContractors(data);
+          setPage(1);
+          setHasMore(1 < pages);
+          setLoadError(false);
+          
+          if (isExpanded) {
+            if (expansionTier === 2) setNearbyLabel('Showing nearby cities');
+            else if (expansionTier === 3) setNearbyLabel('Showing nearby cities & region');
+          } else {
+            setNearbyLabel('');
           }
-          await loadContractors(zip, 1, false, 'all');
-          fetchLocationAndDataInBackground(zip);
+          setLoading(false);
+
+          // Silently trigger background update if IP ZIP differs from what was cached/prefetched
+          const cachedZip = await cachedZipPromise;
+          const ipZip = await initialZipPromise;
+          if (ipZip && ipZip !== cachedZip) {
+            fetchLocationAndDataInBackground(cachedZip || '');
+          }
         } else {
           await fetchLocationAndData();
         }
       } catch {
-        await fetchLocationAndData();
+        if (active) {
+          await fetchLocationAndData();
+        }
       }
     };
     initializeLocation();
-  }, [fetchLocationAndData, fetchLocationAndDataInBackground, loadContractors]);
+    return () => {
+      active = false;
+    };
+  }, [fetchLocationAndData, fetchLocationAndDataInBackground]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);

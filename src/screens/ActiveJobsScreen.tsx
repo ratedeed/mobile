@@ -194,13 +194,13 @@ export default function ActiveJobsScreen() {
       </View>
 
       {/* Escrow Banner */}
-      <View className="mx-4 mt-4 bg-emerald-50 border border-emerald-100 rounded-xl p-3 flex-row items-center" style={{ gap: 12 }}>
-        <View className="w-10 h-10 rounded-full bg-emerald-100 items-center justify-center">
+      <View className="mx-4 mt-4 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 rounded-xl p-3 flex-row items-center" style={{ gap: 12 }}>
+        <View className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/30 items-center justify-center">
           <FontAwesome5 name="shield-alt" size={18} color="#059669" />
         </View>
         <View className="flex-1">
-          <Text className="text-sm font-bold text-emerald-900">Your money is safe in escrow</Text>
-          <Text className="text-xs text-emerald-700 leading-4">Funds are only released to the contractor once you approve the work.</Text>
+          <Text className="text-sm font-bold text-emerald-900 dark:text-emerald-300">Your money is safe in escrow</Text>
+          <Text className="text-xs text-emerald-700 dark:text-emerald-400 leading-4">Funds are only released to the contractor once you approve the work.</Text>
         </View>
       </View>
 
