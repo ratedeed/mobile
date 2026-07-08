@@ -12,7 +12,7 @@ import {
   FlatList,
   Dimensions,
 } from 'react-native';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation, useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { FontAwesome5 } from '@expo/vector-icons';
 import HapticFeedback from '../utils/haptics';
@@ -398,6 +398,9 @@ const HomeScreen = () => {
   const isDark = useColorScheme() === 'dark';
   const { isAuthenticated } = useAuth();
   
+  const flatListRef = useRef<any>(null);
+  useScrollToTop(flatListRef);
+  
   const [ipZipCode, setIpZipCode] = useState<string | null>(null);
   const [allContractors, setAllContractors] = useState<Contractor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -421,6 +424,8 @@ const HomeScreen = () => {
       setSearchZip((prev) => prev || ipZipCode);
     }
   }, [ipZipCode]);
+
+
 
   useFocusEffect(
     useCallback(() => {
@@ -572,6 +577,17 @@ const HomeScreen = () => {
       }
     }
   }, []);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('tabPress' as any, (e: any) => {
+      if (activeCategory !== 'all') {
+        e.preventDefault();
+        setActiveCategory('all');
+        loadContractors(searchZip || null, 1, false, 'all');
+      }
+    });
+    return unsubscribe;
+  }, [navigation, activeCategory, searchZip, loadContractors]);
 
   const fetchLocationAndData = useCallback(async () => {
     let zip: string | null = null;
@@ -969,6 +985,7 @@ const HomeScreen = () => {
       className="flex-1 bg-white dark:bg-neutral-950"
     >
       <BouncingRefreshFlatList
+        ref={flatListRef}
         key={activeCategory === 'all' ? 'single' : 'grid'}
         data={data}
         renderItem={renderListItem}
