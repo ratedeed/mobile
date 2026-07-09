@@ -203,7 +203,7 @@ const ListingCard = memo(({ listing, isFavorite, onToggleFavorite, detectedZip, 
       onPress={() => onPress(listing)}
       accessibilityLabel={`View ${listing.companyName || listing.businessName || 'contractor'} details`}
       accessibilityRole="button"
-      style={{ overflow: 'visible' }}
+      style={({ pressed }) => ({ overflow: 'visible', transform: [{ scale: pressed ? 0.98 : 1 }] })}
     >
       <View className="relative rounded-xl overflow-hidden bg-neutral-100 dark:bg-neutral-900 aspect-square">
         {isSvgUrl(coverImage) ? (

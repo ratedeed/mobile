@@ -91,7 +91,7 @@ const ListingCard = React.memo(({
   const distance = (listing as any).distance;
 
   return (
-    <Pressable className="mb-4" onPress={onPress} style={{ overflow: 'visible' }}>
+    <Pressable className="mb-4" onPress={onPress} style={({ pressed }) => ({ overflow: 'visible', transform: [{ scale: pressed ? 0.98 : 1 }] })}>
       <View className="relative rounded-xl overflow-hidden bg-neutral-100 dark:bg-neutral-900 aspect-square">
         {isSvgUrl(coverImage) ? (
           <View className="absolute inset-0 w-full h-full">

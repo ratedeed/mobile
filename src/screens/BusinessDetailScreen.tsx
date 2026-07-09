@@ -1215,6 +1215,7 @@ const BusinessDetailScreen: React.FC = () => {
           {(c.contactInfo?.phoneNumber || (c as any).phone) && (
             <Pressable
               onPress={() => Linking.openURL(`tel:${c.contactInfo?.phoneNumber || (c as any).phone}`)}
+              style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.96 : 1 }] })}
               className="w-12 h-12 items-center justify-center bg-emerald-50 dark:bg-emerald-950 rounded-xl"
             >
               <FontAwesome5 name="phone" size={18} color="#059669" />
@@ -1235,6 +1236,7 @@ const BusinessDetailScreen: React.FC = () => {
                 } as any);
               }
             }}
+            style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.96 : 1 }] })}
             className="w-12 h-12 items-center justify-center bg-neutral-100 dark:bg-neutral-800 rounded-xl"
           >
             <FontAwesome5 name="comment" size={18} color={isDark ? '#ffffff' : '#171717'} />
@@ -1248,6 +1250,7 @@ const BusinessDetailScreen: React.FC = () => {
               }
               setIsQuoteModalVisible(true);
             }}
+            style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.96 : 1 }] })}
             className="bg-indigo-600 px-6 py-3.5 rounded-2xl shadow-indigo-300"
           >
             <Text className="text-white font-bold">Request Quote</Text>
