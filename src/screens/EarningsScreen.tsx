@@ -258,8 +258,16 @@ export default function EarningsScreen() {
               </>
             )}
           </Pressable>
+
+          <View className="mt-4 pt-3 border-t border-neutral-800 flex-row items-center" style={{ gap: 8 }}>
+            <FontAwesome5 name="check-circle" size={12} color="#10B981" />
+            <Text className="text-[11px] text-neutral-400 font-medium">
+              Auto-payouts via Stripe Connect (2-3 business days)
+            </Text>
+          </View>
+
           {availableBalance <= 0 && (
-            <Text className="text-[11px] text-neutral-500 mt-3 leading-normal">
+            <Text className="text-[11px] text-neutral-500 mt-2 leading-normal">
               Funds settle ~2 business days after client release. First-time payouts take 7-14 days.
             </Text>
           )}
