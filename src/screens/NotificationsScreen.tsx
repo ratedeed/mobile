@@ -268,6 +268,12 @@ const NotificationsScreen: React.FC = () => {
       if (slug) {
         navigation.navigate('BusinessDetail', { slug });
       }
+    } else if (path.startsWith('/post/')) {
+      if (userRole === 'contractor' || userRole === 'admin') {
+        navigation.navigate('ContractorDashboard', { initialTab: 'profile' });
+      } else {
+        navigation.navigate('Home');
+      }
     } else if (path.startsWith('/payment/')) {
       const quoteId = path.split('/')[2];
       if (quoteId) {
