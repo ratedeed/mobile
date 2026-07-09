@@ -986,7 +986,7 @@ const HomeScreen = () => {
     >
       <BouncingRefreshFlatList
         ref={flatListRef}
-        key={activeCategory === 'all' ? 'single' : 'grid'}
+        key={activeCategory === 'all' ? 'single' : `grid-${activeCategory}-${searchZip}`}
         data={data}
         renderItem={renderListItem}
         keyExtractor={keyExtractor}
