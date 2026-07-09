@@ -258,7 +258,8 @@ const NotificationsScreen: React.FC = () => {
       }
     } else if (path.startsWith('/contractor-dashboard')) {
       if (userRole === 'contractor' || userRole === 'admin') {
-        navigation.navigate('ContractorDashboard');
+        const isPaymentsTab = path.includes('tab=payments');
+        navigation.navigate('ContractorDashboard', isPaymentsTab ? { initialTab: 'payments' } : undefined);
       } else {
         navigation.navigate('Profile');
       }
