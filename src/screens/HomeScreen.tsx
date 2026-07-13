@@ -106,11 +106,13 @@ const startPrefetch = () => {
   // 3. Prefetch browse request
   prefetchPromise = (async () => {
     try {
-      const [cachedZip, ipZip] = await Promise.all([
-        cachedZipPromise,
-        initialZipPromise,
-      ]);
-      const zip = cachedZip || ipZip || '10001';
+      const cachedZip = await cachedZipPromise;
+      let zip = cachedZip;
+
+      if (!zip) {
+        const ipZip = await initialZipPromise;
+        zip = ipZip || '10001';
+      }
 
       const filters = { zip, page: 1, limit: 30 };
       const result: any = await browseContractors(filters);
@@ -125,10 +127,12 @@ const startPrefetch = () => {
         expansionTier: result?.expansionTier
       });
 
-      if (ipZip && ipZip !== cachedZip) {
-        AsyncStorage.setItem('ratedeed-detected-zip', ipZip).catch(() => {});
-      } else if (!cachedZip && ipZip) {
-        AsyncStorage.setItem('ratedeed-detected-zip', ipZip).catch(() => {});
+      if (initialZipPromise) {
+        initialZipPromise.then((ipZip) => {
+          if (ipZip && ipZip !== cachedZip) {
+            AsyncStorage.setItem('ratedeed-detected-zip', ipZip).catch(() => {});
+          }
+        }).catch(() => {});
       }
 
       return {
@@ -418,9 +422,31 @@ const HomeScreen = () => {
   
   const mountedRef = useRef(true);
   const isFetchingRef = useRef(false);
+  const isUserEditedRef = useRef(false);
+
+  // Load cached ZIP code instantly on mount to populate the search bar immediately
+  useEffect(() => {
+    let active = true;
+    const loadCached = async () => {
+      try {
+        const cached = await AsyncStorage.getItem('ratedeed-detected-zip');
+        if (cached && /^\d{5}$/.test(cached.trim()) && active && !isUserEditedRef.current) {
+          const zip = cached.trim();
+          setSearchZip(zip);
+          setIpZipCode(zip);
+        }
+      } catch (err) {
+        // ignore
+      }
+    };
+    loadCached();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
-    if (ipZipCode) {
+    if (ipZipCode && !isUserEditedRef.current) {
       setSearchZip((prev) => prev || ipZipCode);
     }
   }, [ipZipCode]);
@@ -596,31 +622,25 @@ const HomeScreen = () => {
       if (cached && /^\d{5}$/.test(cached.trim())) {
         zip = cached.trim();
       } else {
-        const response = await fetch('https://free.freeipapi.com/api/json');
-        const data = await response.json();
-        zip = data.zipCode || null;
+        const ipZip = await initialZipPromise;
+        zip = ipZip || null;
       }
-      if (mountedRef.current) setIpZipCode(zip || '10001');
+      if (mountedRef.current) {
+        setIpZipCode(zip || '10001');
+        if (!isUserEditedRef.current) {
+          setSearchZip(zip || '10001');
+        }
+      }
     } catch {
-      if (mountedRef.current) setIpZipCode('10001');
+      if (mountedRef.current) {
+        setIpZipCode('10001');
+        if (!isUserEditedRef.current) {
+          setSearchZip('10001');
+        }
+      }
       zip = '10001';
     }
     await loadContractors(zip || '10001', 1, false, 'all');
-  }, [loadContractors]);
-
-  const fetchLocationAndDataInBackground = useCallback(async (currentZip: string) => {
-    try {
-      const response = await fetch('https://free.freeipapi.com/api/json');
-      const data = await response.json();
-      const zip = data.zipCode || null;
-      if (zip && zip !== currentZip && mountedRef.current) {
-        setIpZipCode(zip);
-        setSearchZip(zip);
-        await loadContractors(zip, 1, false, 'all');
-      }
-    } catch {
-      // Ignore background errors
-    }
   }, [loadContractors]);
 
   useEffect(() => {
@@ -633,7 +653,9 @@ const HomeScreen = () => {
 
         if (prefetched) {
           const { zip, data, pages, isExpanded, expansionTier } = prefetched;
-          setSearchZip(zip);
+          if (!isUserEditedRef.current) {
+            setSearchZip(zip);
+          }
           setIpZipCode(zip);
           setAllContractors(data);
           setPage(1);
@@ -652,7 +674,11 @@ const HomeScreen = () => {
           const cachedZip = await cachedZipPromise;
           const ipZip = await initialZipPromise;
           if (ipZip && ipZip !== cachedZip) {
-            fetchLocationAndDataInBackground(cachedZip || '');
+            if (active && !isUserEditedRef.current) {
+              setIpZipCode(ipZip);
+              setSearchZip(ipZip);
+              await loadContractors(ipZip, 1, false, 'all');
+            }
           }
         } else {
           await fetchLocationAndData();
@@ -667,7 +693,7 @@ const HomeScreen = () => {
     return () => {
       active = false;
     };
-  }, [fetchLocationAndData, fetchLocationAndDataInBackground]);
+  }, [fetchLocationAndData]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -773,14 +799,20 @@ const HomeScreen = () => {
                 placeholder="Zip code"
                 placeholderTextColor="#a3a3a3"
                 value={searchZip}
-                onChangeText={(text) => setSearchZip(text.replace(/[^0-9]/g, ''))}
+                onChangeText={(text) => {
+                  isUserEditedRef.current = true;
+                  setSearchZip(text.replace(/[^0-9]/g, ''));
+                }}
                 onSubmitEditing={() => loadContractors(searchZip || null, 1, false, activeCategory)}
                 keyboardType="numeric"
                 maxLength={5}
               />
               {searchZip ? (
                 <Pressable
-                  onPress={() => setSearchZip('')}
+                  onPress={() => {
+                    isUserEditedRef.current = true;
+                    setSearchZip('');
+                  }}
                   className="p-2"
                   accessibilityLabel="Clear zip code"
                   accessibilityRole="button"

@@ -24,6 +24,7 @@ import { getFavorites, addFavorite, removeFavorite } from '../utils/favoritesSto
 import { VerifiedBadge } from '../components/common/VerifiedBadge';
 import { SkeletonLoader } from '../components/common/SkeletonLoader';
 import { BouncingRefreshFlatList } from '../components/common';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Categories matching web version (same as HomeScreen)
 const CATEGORIES = [
@@ -217,9 +218,20 @@ const BusinessSearchScreen: React.FC = () => {
 
   // Sync route params (deep links) to screen state
   useEffect(() => {
-    if (query !== undefined) {
+    if (query !== undefined && query !== '') {
       setSearchZip(query);
       setDebouncedZip(query);
+    } else {
+      // Load cached ZIP code instantly if no query is passed
+      AsyncStorage.getItem('ratedeed-detected-zip')
+        .then((cached) => {
+          if (cached && /^\d{5}$/.test(cached.trim())) {
+            const zip = cached.trim();
+            setSearchZip(zip);
+            setDebouncedZip(zip);
+          }
+        })
+        .catch(() => {});
     }
     if (routeName !== undefined) {
       setSearchName(routeName);
