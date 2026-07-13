@@ -673,7 +673,7 @@ const HomeScreen = () => {
           // Silently trigger background update if IP ZIP differs from what was cached/prefetched
           const cachedZip = await cachedZipPromise;
           const ipZip = await initialZipPromise;
-          if (ipZip && ipZip !== cachedZip) {
+          if (ipZip && ipZip !== zip) {
             if (active && !isUserEditedRef.current) {
               setIpZipCode(ipZip);
               setSearchZip(ipZip);
