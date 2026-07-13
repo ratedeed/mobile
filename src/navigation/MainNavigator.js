@@ -65,6 +65,16 @@ const withErrorBoundary = (Component) => (props) => (
   </ErrorBoundary>
 );
 
+// --- Wrapped Screen Components with Error Boundary ---
+const HomeScreenWithErrorBoundary = withErrorBoundary(HomeScreen);
+const MessagesScreenWithErrorBoundary = withErrorBoundary(MessagesScreen);
+const BusinessDetailScreenWithErrorBoundary = withErrorBoundary(BusinessDetailScreen);
+const PaymentFlowScreenWithErrorBoundary = withErrorBoundary(PaymentFlowScreen);
+const ReviewScreenWithErrorBoundary = withErrorBoundary(ReviewScreen);
+const DisputeScreenWithErrorBoundary = withErrorBoundary(DisputeScreen);
+const JobDetailScreenWithErrorBoundary = withErrorBoundary(JobDetailScreen);
+const QuoteReviewScreenWithErrorBoundary = withErrorBoundary(QuoteReviewScreen);
+
 const useScaleAnimation = () => {
   const scale = useRef(new Animated.Value(1)).current;
 
@@ -238,7 +248,7 @@ function MainTabNavigator() {
     >
       <Tab.Screen
         name="Explore"
-        component={withErrorBoundary(HomeScreen)}
+        component={HomeScreenWithErrorBoundary}
         options={({ navigation }) => ({
           title: 'Explore',
           headerShown: true,
@@ -289,7 +299,7 @@ function MainTabNavigator() {
       />
       <Tab.Screen
         name="Messages"
-        component={withErrorBoundary(MessagesScreen)}
+        component={MessagesScreenWithErrorBoundary}
         options={{ 
           title: 'Messages',
           tabBarBadge: unreadMessagesCount > 0 ? unreadMessagesCount : undefined,
@@ -386,21 +396,21 @@ export default function MainNavigator() {
   return (
     <Stack.Navigator screenOptions={dynamicScreenOptions}>
       <Stack.Screen name="Main" component={MainTabNavigator} options={{ headerShown: false }} />
-      <Stack.Screen name="BusinessDetail" component={withErrorBoundary(BusinessDetailScreen)} options={{ headerShown: false }} />
+      <Stack.Screen name="BusinessDetail" component={BusinessDetailScreenWithErrorBoundary} options={{ headerShown: false }} />
       <Stack.Screen name="ContractorDashboard" component={ContractorDashboardScreen} options={{ title: '' }} />
       <Stack.Screen name="ContractorOnboarding" component={ContractorOnboardingScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ContractorEditProfile" component={ContractorEditProfileScreen} options={{ headerShown: false }} />
       <Stack.Screen name="EarningsScreen" component={EarningsScreen} options={{ title: 'Earnings', headerShown: false }} />
       <Stack.Screen name="Notifications" component={NotificationsScreen} />
-      <Stack.Screen name="ChatScreen" component={withErrorBoundary(MessagesScreen)} options={{ headerShown: false }} />
-      <Stack.Screen name="ActiveJobs" component={ActiveJobsScreen} options={{ title: '', headerShown: false }} />
-      <Stack.Screen name="PaymentFlow" component={withErrorBoundary(PaymentFlowScreen)} options={{ title: '', headerShown: false }} />
-      <Stack.Screen name="ReviewScreen" component={withErrorBoundary(ReviewScreen)} options={{ title: 'Leave a Review' }} />
-      <Stack.Screen name="DisputeScreen" component={withErrorBoundary(DisputeScreen)} options={{ title: 'File a Dispute' }} />
+      <Stack.Screen name="ChatScreen" component={MessagesScreenWithErrorBoundary} options={{ headerShown: false }} />
+      <Stack.Screen name="ActiveJobs" strokeWidth={2.5} component={ActiveJobsScreen} options={{ title: '', headerShown: false }} />
+      <Stack.Screen name="PaymentFlow" component={PaymentFlowScreenWithErrorBoundary} options={{ title: '', headerShown: false }} />
+      <Stack.Screen name="ReviewScreen" component={ReviewScreenWithErrorBoundary} options={{ title: 'Leave a Review' }} />
+      <Stack.Screen name="DisputeScreen" component={DisputeScreenWithErrorBoundary} options={{ title: 'File a Dispute' }} />
       <Stack.Screen name="ChangeOrderScreen" component={ChangeOrderScreen} options={{ title: 'Change Order' }} />
-      <Stack.Screen name="JobDetail" component={withErrorBoundary(JobDetailScreen)} options={{ title: '', headerShown: false }} />
+      <Stack.Screen name="JobDetail" component={JobDetailScreenWithErrorBoundary} options={{ title: '', headerShown: false }} />
       <Stack.Screen name="BusinessSearch" component={BusinessSearchScreen} options={{ title: '', headerShown: false }} />
-      <Stack.Screen name="QuoteReview" component={withErrorBoundary(QuoteReviewScreen)} options={{ title: 'Review Quote' }} />
+      <Stack.Screen name="QuoteReview" component={QuoteReviewScreenWithErrorBoundary} options={{ title: 'Review Quote' }} />
       <Stack.Screen name="VerifyEmailChange" component={VerifyEmailChangeScreen} options={{ title: 'Verify Email', headerShown: false }} />
       <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} options={{ title: 'Set New Password', headerShown: false }} />
       
