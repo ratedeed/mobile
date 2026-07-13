@@ -533,8 +533,12 @@ const HomeScreen = () => {
       }
     } else {
       // No cache found, show loading spinner
-      if (pageNum === 1) setLoading(true);
-      else setLoadingMore(true);
+      if (pageNum === 1) {
+        setAllContractors([]);
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
     }
     
     setLoadError(false);
@@ -763,8 +767,10 @@ const HomeScreen = () => {
             handleContractorPress={handleContractorPress}
             onSeeAll={() => {
               HapticFeedback.selection();
-              setActiveCategory(cat.id);
-              loadContractors(searchZip || null, 1, false, cat.id);
+              requestAnimationFrame(() => {
+                setActiveCategory(cat.id);
+                loadContractors(searchZip || null, 1, false, cat.id);
+              });
             }}
             isDark={isDark}
           />
@@ -886,8 +892,10 @@ const HomeScreen = () => {
                 index={i}
                 onClick={() => {
                   HapticFeedback.selection();
-                  setActiveCategory(cat.id);
-                  loadContractors(searchZip || null, 1, false, cat.id);
+                  requestAnimationFrame(() => {
+                    setActiveCategory(cat.id);
+                    loadContractors(searchZip || null, 1, false, cat.id);
+                  });
                 }}
               />
             ))}
