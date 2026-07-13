@@ -230,7 +230,7 @@ export const CategoryIcon = memo(function CategoryIcon({
   const cfg3D = icon3D[name] || icon3D.grid;
 
   // ── Animation Values ──
-  const progress = useSharedValue(0); // 0 to 1 for entrance
+  const progress = useSharedValue(categoryEntrancePlayed ? 1 : 0); // 0 to 1 for entrance
   const floatVal = useSharedValue(0); // for idle floating
   const pressScale = useSharedValue(1);
 
