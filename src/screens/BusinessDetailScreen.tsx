@@ -127,7 +127,7 @@ const BusinessDetailScreen: React.FC = () => {
   const [guestAction, setGuestAction] = useState('do that');
   const scrollViewRef = useRef<ScrollView>(null);
   const flatListRef = useRef<FlatList>(null);
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, userId } = useAuth();
 
   const handleClaimDocumentPick = async () => {
     try {
@@ -482,20 +482,22 @@ const BusinessDetailScreen: React.FC = () => {
         </View>
 
         <View className="flex-row" style={{ gap: 8 }}>
-          <Pressable
-            onPress={() => {
-              const recipientUserId = extractId(c.user) || c._id || id;
-              if (recipientUserId) {
-                navigation.navigate('ChatScreen', {
-                  recipientId: recipientUserId,
-                  recipientName: c.companyName || c.businessName || 'Contractor',
-                } as any);
-              }
-            }}
-            className="w-8 h-8 items-center justify-center bg-white/90 dark:bg-neutral-800/90 rounded-full shadow-sm"
-          >
-            <FontAwesome5 name="comment" size={14} color={isDark ? "#ffffff" : "#171717"} />
-          </Pressable>
+          {!!c.user && userId !== extractId(c.user) && (
+            <Pressable
+              onPress={() => {
+                const recipientUserId = extractId(c.user) || c._id || id;
+                if (recipientUserId) {
+                  navigation.navigate('ChatScreen', {
+                    recipientId: recipientUserId,
+                    recipientName: c.companyName || c.businessName || 'Contractor',
+                  } as any);
+                }
+              }}
+              className="w-8 h-8 items-center justify-center bg-white/90 dark:bg-neutral-800/90 rounded-full shadow-sm"
+            >
+              <FontAwesome5 name="comment" size={14} color={isDark ? "#ffffff" : "#171717"} />
+            </Pressable>
+          )}
           <Pressable
             onPress={handleShare}
             className="w-8 h-8 items-center justify-center bg-white dark:bg-neutral-950 rounded-full shadow-sm"
@@ -1221,26 +1223,28 @@ const BusinessDetailScreen: React.FC = () => {
               <FontAwesome5 name="phone" size={18} color="#059669" />
             </Pressable>
           )}
-          <Pressable
-            onPress={() => {
-              if (!isAuthenticated) {
-                setGuestAction('message this contractor');
-                setShowGuestPrompt(true);
-                return;
-              }
-              const recipientUserId = extractId(c.user) || c._id || id;
-              if (recipientUserId) {
-                navigation.navigate('ChatScreen', {
-                  recipientId: recipientUserId,
-                  recipientName: c.companyName || c.businessName || 'Contractor',
-                } as any);
-              }
-            }}
-            style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.96 : 1 }] })}
-            className="w-12 h-12 items-center justify-center bg-neutral-100 dark:bg-neutral-800 rounded-xl"
-          >
-            <FontAwesome5 name="comment" size={18} color={isDark ? '#ffffff' : '#171717'} />
-          </Pressable>
+          {!!c.user && userId !== extractId(c.user) && (
+            <Pressable
+              onPress={() => {
+                if (!isAuthenticated) {
+                  setGuestAction('message this contractor');
+                  setShowGuestPrompt(true);
+                  return;
+                }
+                const recipientUserId = extractId(c.user) || c._id || id;
+                if (recipientUserId) {
+                  navigation.navigate('ChatScreen', {
+                    recipientId: recipientUserId,
+                    recipientName: c.companyName || c.businessName || 'Contractor',
+                  } as any);
+                }
+              }}
+              style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.96 : 1 }] })}
+              className="w-12 h-12 items-center justify-center bg-neutral-100 dark:bg-neutral-800 rounded-xl"
+            >
+              <FontAwesome5 name="comment" size={18} color={isDark ? '#ffffff' : '#171717'} />
+            </Pressable>
+          )}
           <Pressable
             onPress={() => {
               if (!isAuthenticated) {
