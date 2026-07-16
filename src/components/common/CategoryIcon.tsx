@@ -355,3 +355,4 @@ export const CategoryIcon = memo(function CategoryIcon({
 });
 
 export default CategoryIcon;
+
