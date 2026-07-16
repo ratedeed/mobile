@@ -12,6 +12,20 @@ const dateRangeLabels: Record<DateRange, string> = {
   year: 'This Year',
 };
 
+const formatCurrency = (amount: number) => {
+  if (amount % 1 === 0) {
+    return `$${amount.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+  }
+  return `$${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
+
+const formatChartValue = (value: number) => {
+  if (value >= 1000) {
+    return `$${(value / 1000).toFixed(1)}k`;
+  }
+  return `$${value.toFixed(0)}`;
+};
+
 interface AnalyticsTabProps {
   jobs: any[];
   quotes: any[];
@@ -344,7 +358,7 @@ export default function AnalyticsTab({ jobs, quotes, reviews, profile, loading, 
                 >
                   {isSelected && (
                     <View className="bg-neutral-900 rounded-md px-2 py-1 mb-1">
-                      <Text className="text-[9px] text-white font-bold">${(d.value / 1000).toFixed(1)}k</Text>
+                      <Text className="text-[9px] text-white font-bold">{formatChartValue(d.value)}</Text>
                     </View>
                   )}
                   <View className="w-full rounded-t-md" style={{ height: `${barHeight}%`, backgroundColor: isSelected ? '#4F46E5' : '#6366f1', opacity: isSelected ? 1 : 0.7 }} />
@@ -437,7 +451,7 @@ export default function AnalyticsTab({ jobs, quotes, reviews, profile, loading, 
         <View className="bg-white dark:bg-neutral-900 rounded-xl p-4 border border-neutral-100 dark:border-neutral-700">
           <View className="flex-row items-center justify-between mb-3">
             <Text className="text-sm font-bold text-neutral-900 dark:text-white">Revenue by Service</Text>
-            <Text className="text-[10px] text-neutral-400 dark:text-neutral-500 font-medium">${(totalServiceRevenue / 1000).toFixed(1)}k total</Text>
+            <Text className="text-[10px] text-neutral-400 dark:text-neutral-500 font-medium">{formatCurrency(totalServiceRevenue)} total</Text>
           </View>
           <View style={{ gap: 10 }}>
             {serviceBreakdown.map((service: any) => {
@@ -447,7 +461,7 @@ export default function AnalyticsTab({ jobs, quotes, reviews, profile, loading, 
                   <View className="flex-row items-center justify-between mb-1">
                     <Text className="text-xs font-medium text-neutral-700 dark:text-neutral-300 flex-1" numberOfLines={1}>{service.name}</Text>
                     <View className="flex-row items-center" style={{ gap: 6 }}>
-                      <Text className="text-xs font-bold text-neutral-900 dark:text-white">${(service.amount / 1000).toFixed(1)}k</Text>
+                      <Text className="text-xs font-bold text-neutral-900 dark:text-white">{formatCurrency(service.amount)}</Text>
                       <Text className="text-[9px] text-neutral-400 dark:text-neutral-500 w-7 text-right">{pct}%</Text>
                     </View>
                   </View>
@@ -485,7 +499,7 @@ export default function AnalyticsTab({ jobs, quotes, reviews, profile, loading, 
                     <Text className="text-[10px] text-neutral-500 dark:text-neutral-400">Last: {client.lastProject}</Text>
                   </View>
                 </View>
-                <Text className="text-sm font-bold text-neutral-900 dark:text-white">${(client.total / 1000).toFixed(1)}k</Text>
+                <Text className="text-sm font-bold text-neutral-900 dark:text-white">{formatCurrency(client.total)}</Text>
               </View>
             ))}
           </View>

@@ -2221,7 +2221,10 @@ const ContractorDashboardScreen: React.FC = () => {
               reviews={reviews}
               profile={editableData}
               loading={loading}
-              onViewAllJobs={() => setActiveTab('jobs')}
+              onViewAllJobs={() => {
+                setActiveTab('payments');
+                setPaymentSubTab('jobs');
+              }}
             />
           )}
 
