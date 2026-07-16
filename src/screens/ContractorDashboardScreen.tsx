@@ -1282,9 +1282,12 @@ const ContractorDashboardScreen: React.FC = () => {
               <View className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4">
                 <View className="flex-row items-center justify-between mb-3">
                   <Text className="text-sm font-bold text-neutral-900 dark:text-white">Recent Chats</Text>
-                  <Pressable onPress={() => navigation.navigate('Messages' as never)}>
+                  <ScaleButton
+                    onPress={() => navigation.navigate('Messages' as never)}
+                    className="bg-indigo-50 dark:bg-indigo-950/40 px-2.5 py-1 rounded-lg"
+                  >
                     <Text className="text-xs font-bold text-indigo-600 dark:text-indigo-400">View Inbox</Text>
-                  </Pressable>
+                  </ScaleButton>
                 </View>
 
                 {(() => {
@@ -1364,9 +1367,12 @@ const ContractorDashboardScreen: React.FC = () => {
               <View className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4">
                 <View className="flex-row items-center justify-between mb-3">
                   <Text className="text-sm font-bold text-neutral-900 dark:text-white">Upcoming Schedule</Text>
-                  <Pressable onPress={() => setActiveTab('calendar')}>
+                  <ScaleButton
+                    onPress={() => setActiveTab('calendar')}
+                    className="bg-indigo-50 dark:bg-indigo-950/40 px-2.5 py-1 rounded-lg"
+                  >
                     <Text className="text-xs font-bold text-indigo-600 dark:text-indigo-400">View Calendar</Text>
-                  </Pressable>
+                  </ScaleButton>
                 </View>
 
                 {(() => {
