@@ -1201,7 +1201,11 @@ const ContractorDashboardScreen: React.FC = () => {
                     <Text className="text-sm font-bold text-amber-800 dark:text-amber-400">Action Required</Text>
                   </View>
                   <Text className="text-xs text-amber-700 dark:text-amber-300/80 mt-1 leading-relaxed">
-                    Complete your profile verification to build trust and receive payouts from clients.
+                    {!stripeStatus?.chargesEnabled && licenseStatus !== 'approved'
+                      ? "Connect your Stripe account to receive payouts, and verify your license to build trust with clients."
+                      : !stripeStatus?.chargesEnabled
+                      ? "Connect your Stripe account to receive payouts from clients."
+                      : "Verify your license to build trust with clients and get a Verified Pro badge."}
                   </Text>
                   <View className="mt-3" style={{ gap: 8 }}>
                     {!stripeStatus?.chargesEnabled && (
