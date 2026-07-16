@@ -26,6 +26,10 @@ const formatChartValue = (value: number) => {
   return `$${value.toFixed(0)}`;
 };
 
+const getJobAmount = (j: any) => {
+  return j.totalAmount || j.amount || j.quote?.totalAmount || j.quote?.subtotal || j.amountFunded || 0;
+};
+
 interface AnalyticsTabProps {
   jobs: any[];
   quotes: any[];
@@ -100,7 +104,7 @@ export default function AnalyticsTab({ jobs, quotes, reviews, profile, loading, 
 
   const kpiData = useMemo(() => {
     const completedJobs = filteredJobs.filter((j: any) => isCompletedJob(j.status));
-    const totalRevenue = completedJobs.reduce((sum: number, j: any) => sum + (j.totalAmount || j.amount || 0), 0) / 100;
+    const totalRevenue = completedJobs.reduce((sum: number, j: any) => sum + getJobAmount(j), 0) / 100;
     const activeJobsList = filteredJobs.filter((j: any) => !isCompletedJob(j.status) && !['cancelled', 'refunded', 'rejected', 'declined'].includes(j.status));
     const avgRating = profile?.averageRating || profile?.rating || 0;
     const reviewCount = profile?.reviewCount || filteredReviews.length || 0;
@@ -156,7 +160,7 @@ export default function AnalyticsTab({ jobs, quotes, reviews, profile, loading, 
         const date = new Date(dateStr);
         const monthName = months[date.getMonth()];
         if (monthlyData[monthName] !== undefined) {
-          monthlyData[monthName] += (j.totalAmount || j.amount || 0) / 100;
+          monthlyData[monthName] += getJobAmount(j) / 100;
         }
       }
     });
@@ -168,7 +172,7 @@ export default function AnalyticsTab({ jobs, quotes, reviews, profile, loading, 
     const breakdown: Record<string, number> = {};
     completedJobs.forEach((j: any) => {
       const category = j.category || j.serviceType || 'General Service';
-      breakdown[category] = (breakdown[category] || 0) + (j.totalAmount || j.amount || 0) / 100;
+      breakdown[category] = (breakdown[category] || 0) + getJobAmount(j) / 100;
     });
     const colors = ['#6366f1', '#8b5cf6', '#a78bfa', '#c4b5fd', '#ddd6fe'];
     const res = Object.entries(breakdown).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name, amount], index) => ({
@@ -184,7 +188,7 @@ export default function AnalyticsTab({ jobs, quotes, reviews, profile, loading, 
       const name = j.client?.firstName ? `${j.client.firstName} ${j.client.lastName || ''}`.trim() : j.user?.firstName ? `${j.user.firstName} ${j.user.lastName || ''}`.trim() : 'Unknown Client';
       if (!clients[name]) clients[name] = { name, jobs: 0, total: 0, lastProject: '', avatar: '👤' };
       clients[name].jobs += 1;
-      clients[name].total += (j.totalAmount || j.amount || 0) / 100;
+      clients[name].total += getJobAmount(j) / 100;
       const dateStr = j.updatedAt || j.createdAt;
       if (dateStr) {
         const date = new Date(dateStr);

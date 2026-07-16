@@ -1243,7 +1243,7 @@ const ContractorDashboardScreen: React.FC = () => {
                     </Text>
                   </View>
                 </Pressable>
-                <Pressable onPress={() => navigation.navigate('Messages' as never)} className="w-1/2 p-1">
+                <Pressable onPress={() => navigation.navigate('Main', { screen: 'Messages' } as any)} className="w-1/2 p-1">
                   <View className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 flex-col justify-between" style={{ minHeight: 90 }}>
                     <View className="flex-row items-center justify-between">
                       <Text className="text-[10px] font-semibold text-neutral-500 uppercase">Unread Chats</Text>
@@ -1283,7 +1283,7 @@ const ContractorDashboardScreen: React.FC = () => {
                 <View className="flex-row items-center justify-between mb-3">
                   <Text className="text-sm font-bold text-neutral-900 dark:text-white">Recent Chats</Text>
                   <ScaleButton
-                    onPress={() => navigation.navigate('Messages' as never)}
+                    onPress={() => navigation.navigate('Main', { screen: 'Messages' } as any)}
                     className="bg-indigo-50 dark:bg-indigo-950/40 px-2.5 py-1 rounded-lg"
                   >
                     <Text className="text-xs font-bold text-indigo-600 dark:text-indigo-400">View Inbox</Text>
