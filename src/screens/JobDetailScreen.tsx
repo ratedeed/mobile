@@ -10,6 +10,7 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Image,
+  Modal,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -90,6 +91,7 @@ export default function JobDetailScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [feePercent, setFeePercent] = useState(5);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -701,7 +703,7 @@ export default function JobDetailScreen() {
               {job.progressPhotos && job.progressPhotos.length > 0 ? (
                 <View className="flex-row flex-wrap" style={{ gap: 8 }}>
                   {job.progressPhotos.map((url: string, i: number) => (
-                    <Pressable key={i} onPress={() => Linking.openURL(url)}>
+                    <Pressable key={i} onPress={() => setPreviewImage(url)}>
                       <View className="w-20 h-20 rounded-lg bg-neutral-100 dark:bg-neutral-800 items-center justify-center overflow-hidden border border-neutral-200 dark:border-neutral-700">
                         <Image source={{ uri: url }} style={{ width: '100%', height: '100%', resizeMode: 'cover' }} />
                       </View>
@@ -1039,6 +1041,44 @@ export default function JobDetailScreen() {
           </KeyboardAvoidingView>
         </View>
       )}
+
+      {/* Image Preview Modal */}
+      <Modal
+        visible={!!previewImage}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setPreviewImage(null)}
+      >
+        <Pressable
+          style={{ flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.9)', justifyContent: 'center', alignItems: 'center' }}
+          onPress={() => setPreviewImage(null)}
+        >
+          {previewImage && (
+            <View style={{ width: '90%', height: '70%', justifyContent: 'center', alignItems: 'center' }}>
+              <Image
+                source={{ uri: previewImage }}
+                style={{ width: '100%', height: '100%', resizeMode: 'contain' }}
+              />
+              <Pressable
+                onPress={() => setPreviewImage(null)}
+                style={{
+                  position: 'absolute',
+                  top: -40,
+                  right: 10,
+                  backgroundColor: 'rgba(255,255,255,0.2)',
+                  width: 36,
+                  height: 36,
+                  borderRadius: 18,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <FontAwesome5 name="times" size={16} color="#fff" />
+              </Pressable>
+            </View>
+          )}
+        </Pressable>
+      </Modal>
     </View>
   );
 }
