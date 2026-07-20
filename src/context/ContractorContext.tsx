@@ -34,20 +34,19 @@ export const ContractorProvider: React.FC<{ children: ReactNode }> = ({ children
     try {
       const results = await Promise.allSettled([
         apiClient.getContractorProfile(),
-        apiClient.getContractorLeads(),
         apiClient.getContractorQuotes(),
         apiClient.getContractorJobs(),
         apiClient.getContractorEarnings()
       ]);
 
-      const [profileResult, leadsResult, quotesResult, jobsResult, earningsResult] = results;
+      const [profileResult, quotesResult, jobsResult, earningsResult] = results;
 
       if (profileResult.status === 'fulfilled') {
         setContractorProfile(profileResult.value);
       } else {
         setError(profileResult.reason?.message || 'Failed to load profile');
       }
-      if (leadsResult.status === 'fulfilled') setLeads(leadsResult.value);
+      setLeads([]);
       if (quotesResult.status === 'fulfilled') setQuotes(quotesResult.value);
       if (jobsResult.status === 'fulfilled') setJobs(jobsResult.value);
       if (earningsResult.status === 'fulfilled') setEarnings(earningsResult.value);

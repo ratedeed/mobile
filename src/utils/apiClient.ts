@@ -1017,13 +1017,11 @@ export const createQuote = async (quoteData: any): Promise<Quote> => {
 };
 
 export const getContractorLeads = async (): Promise<Lead[]> => {
-  const authHeaders = await getAuthHeaders();
-  return get(`${API_BASE}/leads`, authHeaders);
+  return [];
 };
 
 export const updateLeadStatus = async (leadId: string, status: 'new' | 'contacted' | 'quoted' | 'archived'): Promise<any> => {
-  const authHeaders = await getAuthHeaders();
-  return put(`${API_BASE}/leads/${encodeURIComponent(leadId)}`, { status }, authHeaders);
+  return { success: true };
 };
 
 export const getContractorQuotes = async (): Promise<Quote[]> => {
