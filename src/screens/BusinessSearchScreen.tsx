@@ -17,7 +17,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { SvgImage } from '../components/common/SvgImage';
 import { CategoryIcon } from '../components/common/CategoryIcon';
-import { browseContractors } from '../api';
+import { browseContractors, aiSearchContractors } from '../api';
 import { Contractor } from '../types';
 import { getCoverImageUrl, isSvgUrl } from '../utils/avatarUtils';
 import { getFavorites, addFavorite, removeFavorite } from '../utils/favoritesStore';
@@ -196,6 +196,7 @@ const BusinessSearchScreen: React.FC = () => {
   const [activeCategory, setActiveCategory] = useState(
     searchType === 'category' ? (query || 'all') : 'all'
   );
+  const [useAiAssist, setUseAiAssist] = useState(false);
   const [contractors, setContractors] = useState<Contractor[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -281,7 +282,13 @@ const BusinessSearchScreen: React.FC = () => {
         if (cat) filters.type = cat.label;
       }
 
-      const data: any = await browseContractors(filters);
+      let data: any;
+      if (useAiAssist) {
+        const queryText = name.trim() || (activeCategory !== 'all' ? (CATEGORIES.find(c => c.id === activeCategory)?.label || '') : 'Contractor');
+        data = await aiSearchContractors(queryText, zip.trim());
+      } else {
+        data = await browseContractors(filters);
+      }
       
       // Prevent race conditions: check if the query parameters changed while fetching
       const currentZip = (zipOverride !== undefined ? zipOverride : debouncedZip) || '';
@@ -392,7 +399,7 @@ const BusinessSearchScreen: React.FC = () => {
               value={searchName}
               onChangeText={text => { setSearchName(text); setActiveCategory('all'); }}
               onSubmitEditing={handleSearchSubmit}
-              placeholder="Contractor name..."
+              placeholder={useAiAssist ? "Describe what you need fixed..." : "Contractor name..."}
               placeholderTextColor="#a3a3a3"
               className="bg-neutral-100 dark:bg-neutral-900 dark:text-neutral-50 rounded-full pl-10 pr-9 py-2.5 text-sm"
             />
@@ -403,6 +410,22 @@ const BusinessSearchScreen: React.FC = () => {
               </Pressable>
             ) : null}
           </View>
+
+          {/* AI Assist Button */}
+          <Pressable
+            onPress={() => setUseAiAssist(!useAiAssist)}
+            className={`flex-row items-center px-3 py-2.5 rounded-full border shrink-0 ${
+              useAiAssist
+                ? 'bg-indigo-600 border-indigo-600'
+                : 'bg-neutral-100 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800'
+            }`}
+            style={{ gap: 4 }}
+          >
+            <FontAwesome5 name="magic" size={12} color={useAiAssist ? '#ffffff' : '#6366f1'} />
+            <Text className={`text-xs font-bold ${useAiAssist ? 'text-white' : 'text-indigo-600 dark:text-indigo-400'}`}>
+              AI Assist
+            </Text>
+          </Pressable>
 
           {/* Search Button */}
           <Pressable
