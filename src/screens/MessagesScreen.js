@@ -726,6 +726,14 @@ const MessagesScreen = () => {
     }
   }, [route.params?.openQuoteSheet, selectedConversation, userRole, navigation]);
 
+  // Pre-fill initial message if passed from Quote Request
+  useEffect(() => {
+    if (route.params?.initialMessage) {
+      setNewMessage(route.params.initialMessage);
+      navigation.setParams({ initialMessage: undefined });
+    }
+  }, [route.params?.initialMessage, navigation]);
+
   // ─── Load messages ─────────────────────────────────────────────────────────
   const loadMessages = useCallback(async (conversationId, page = 1) => {
     if (!conversationId) return;

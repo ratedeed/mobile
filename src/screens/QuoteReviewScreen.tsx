@@ -468,7 +468,7 @@ export default function QuoteReviewScreen() {
                   ? 'Quote Expired' 
                   : actionLoading === 'accept' 
                     ? 'Accepting...' 
-                    : `Accept & Pay $${Number(amountToPayInDollars).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                    : `${firstMilestone ? 'Accept & Pay Deposit' : 'Accept & Pay'} $${Number(amountToPayInDollars).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
             </Text>
             {actionLoading !== 'accept' && !isExpired && <FontAwesome5 name="arrow-right" size={12} color="#fff" />}
           </Pressable>
