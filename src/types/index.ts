@@ -507,7 +507,7 @@ export type RootStackParamList = {
   Profile: undefined;
   BusinessDetail: { id?: string; slug?: string };
   ContractorDashboard: undefined;
-  ChatScreen: { conversationId?: string; recipientId?: string; recipientName?: string };
+  ChatScreen: { conversationId?: string; recipientId?: string; recipientName?: string; initialMessage?: string };
   Notifications: undefined;
   BusinessSearch: { query?: string; searchType?: string; category?: string };
   ReviewForm: { contractorId: string };

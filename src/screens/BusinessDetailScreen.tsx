@@ -24,7 +24,7 @@ import HapticFeedback from '../utils/haptics';
 import { SvgImage } from '../components/common/SvgImage';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
-import { fetchContractorDetails, fetchContractorPosts, createLead, fetchContractorReviews, extractId, browseContractors, post as apiPost, submitClaim, getContractorBySlug, checkOnlineStatus, onUserOnlineStatus, offUserOnlineStatus } from '../api';
+import { fetchContractorDetails, fetchContractorPosts, fetchContractorReviews, extractId, browseContractors, post as apiPost, submitClaim, getContractorBySlug, checkOnlineStatus, onUserOnlineStatus, offUserOnlineStatus } from '../api';
 import { API_BASE_URL } from '../config';
 import { uploadToCloudinary, CLOUDINARY_FOLDERS } from '../utils/cloudinary';
 import { requestPhotoLibraryPermission } from '../utils/permissions';
@@ -298,16 +298,15 @@ const BusinessDetailScreen: React.FC = () => {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
-    try {
-      const contractorId = contractor?._id || id;
-      await createLead({ contractorId, projectTitle: quoteProjectTitle, description: quoteDescription, contactPreference: quoteContactPreference });
-      Alert.alert('Success', 'Quote request sent!');
-      setIsQuoteModalVisible(false);
-      setQuoteProjectTitle('');
-      setQuoteDescription('');
-    } catch {
-      Alert.alert('Error', 'Failed to send quote request');
-    }
+    const contractorId = contractor?._id || id;
+    setIsQuoteModalVisible(false);
+    navigation.navigate('ChatScreen', {
+      recipientId: contractorId,
+      recipientName: contractor?.companyName || contractor?.businessName || 'Contractor',
+      initialMessage: `Project Quote Request: ${quoteProjectTitle}\n\n${quoteDescription}`
+    });
+    setQuoteProjectTitle('');
+    setQuoteDescription('');
   };
 
   const handleReport = async () => {
