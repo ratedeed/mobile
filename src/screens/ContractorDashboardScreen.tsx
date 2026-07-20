@@ -657,7 +657,7 @@ const ContractorDashboardScreen: React.FC = () => {
       setEditableData({
         slug: profile.slug || "",
         description: profile.description || "",
-        pricing: profile.pricing || "",
+        pricing: profile.pricingInfo || profile.pricing || profile.priceRange || "",
         certifications: profile.certifications || "",
         servicesOffered: normalizedServices,
         phone,
@@ -914,7 +914,8 @@ const ContractorDashboardScreen: React.FC = () => {
 
       const updateData: any = {
         description: editableData.description || undefined,
-        pricing: '',
+        pricing: editableData.pricing || undefined,
+        pricingInfo: editableData.pricing || undefined,
         certifications: Array.isArray(editableData.certifications) ? editableData.certifications : editableData.certifications?.split(",").map((s: string) => s.trim()).filter(Boolean) || [],
         zipCodesCovered: editableData.zipCodes.length > 0 ? editableData.zipCodes : undefined,
         licenseNumber: editableData.licenseNumber || undefined,

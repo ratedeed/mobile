@@ -92,6 +92,8 @@ export interface Contractor {
   description?: string;
   bio?: string;
   pricing?: string;
+  pricingInfo?: string;
+  priceRange?: string;
   certifications?: string[];
   yearsInBusiness?: number;
   businessHours?: Record<string, any>;
