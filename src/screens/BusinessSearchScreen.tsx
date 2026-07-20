@@ -197,6 +197,7 @@ const BusinessSearchScreen: React.FC = () => {
     searchType === 'category' ? (query || 'all') : 'all'
   );
   const [useAiAssist, setUseAiAssist] = useState(false);
+  const SHOW_AI_ASSIST_TOGGLE = false; // Set to true when ready to launch AI Assist to public users
   const [contractors, setContractors] = useState<Contractor[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -411,21 +412,23 @@ const BusinessSearchScreen: React.FC = () => {
             ) : null}
           </View>
 
-          {/* AI Assist Button */}
-          <Pressable
-            onPress={() => setUseAiAssist(!useAiAssist)}
-            className={`flex-row items-center px-3 py-2.5 rounded-full border shrink-0 ${
-              useAiAssist
-                ? 'bg-indigo-600 border-indigo-600'
-                : 'bg-neutral-100 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800'
-            }`}
-            style={{ gap: 4 }}
-          >
-            <FontAwesome5 name="magic" size={12} color={useAiAssist ? '#ffffff' : '#6366f1'} />
-            <Text className={`text-xs font-bold ${useAiAssist ? 'text-white' : 'text-indigo-600 dark:text-indigo-400'}`}>
-              AI Assist
-            </Text>
-          </Pressable>
+          {/* AI Assist Button (Hidden until ready to launch) */}
+          {SHOW_AI_ASSIST_TOGGLE && (
+            <Pressable
+              onPress={() => setUseAiAssist(!useAiAssist)}
+              className={`flex-row items-center px-3 py-2.5 rounded-full border shrink-0 ${
+                useAiAssist
+                  ? 'bg-indigo-600 border-indigo-600'
+                  : 'bg-neutral-100 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800'
+              }`}
+              style={{ gap: 4 }}
+            >
+              <FontAwesome5 name="magic" size={12} color={useAiAssist ? '#ffffff' : '#6366f1'} />
+              <Text className={`text-xs font-bold ${useAiAssist ? 'text-white' : 'text-indigo-600 dark:text-indigo-400'}`}>
+                AI Assist
+              </Text>
+            </Pressable>
+          )}
 
           {/* Search Button */}
           <Pressable
