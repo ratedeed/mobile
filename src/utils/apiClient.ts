@@ -1128,9 +1128,9 @@ export const getCloudinarySignature = async (folder: string): Promise<any> => {
   return post(`${API_BASE}/users/cloudinary-sign`, { folder }, authHeaders);
 };
 
-export const createLead = async (leadData: any): Promise<any> => {
+export const aiSearchContractors = async (query: string, zip?: string, limit?: number): Promise<any> => {
   const authHeaders = await getAuthHeaders();
-  return post(`${API_BASE}/leads`, leadData, authHeaders);
+  return post(`${API_BASE}/contractors/ai-search`, { query, zip, limit }, authHeaders);
 };
 
 export const requestEmailChange = async (newEmail: string, currentPassword: string): Promise<any> => {
