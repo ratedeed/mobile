@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, useColorScheme } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, useColorScheme, Share, Alert } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { BouncingDotsLoader } from '../common';
 
@@ -242,8 +242,39 @@ export default function AnalyticsTab({ jobs, quotes, reviews, profile, loading, 
     return res;
   }, [filteredJobs, filteredQuotes]);
 
-  const totalServiceRevenue = serviceBreakdown.reduce((sum, s) => sum + s.amount, 0);
-  const maxEarning = Math.max(...earningsData.map(d => d.value), 1000);
+  const totalServiceRevenue = serviceBreakdown.reduce((sum: number, s: any) => sum + s.amount, 0);
+  const maxEarning = Math.max(...earningsData.map((d: any) => d.value), 1000);
+
+  const handleExportTaxCSV = async () => {
+    const completedJobs = (jobs || []).filter((j: any) => isCompletedJob(j.status));
+    if (completedJobs.length === 0) {
+      Alert.alert('No Completed Jobs', 'No completed jobs available to export for tax reports yet.');
+      return;
+    }
+
+    let csv = 'Job ID,Date Completed,Client Name,Service Category,Gross Amount (USD),Platform Fee (USD),Net Payout (USD),Status\n';
+    completedJobs.forEach((j: any) => {
+      const jobId = j._id || j.id || '';
+      const date = j.completedAt ? new Date(j.completedAt).toISOString().split('T')[0] : (j.updatedAt ? new Date(j.updatedAt).toISOString().split('T')[0] : '');
+      const clientName = (j.client?.firstName ? `${j.client.firstName} ${j.client.lastName || ''}` : (j.user?.firstName ? `${j.user.firstName} ${j.user.lastName || ''}` : 'Client')).replace(/,/g, '');
+      const category = (j.category || j.serviceType || 'General Service').replace(/,/g, '');
+      const gross = (getJobAmount(j) / 100).toFixed(2);
+      const platformFee = ((j.platformFee || 0) / 100).toFixed(2);
+      const net = ((getJobAmount(j) - (j.platformFee || 0)) / 100).toFixed(2);
+      const status = j.status || 'completed';
+
+      csv += `"${jobId}","${date}","${clientName}","${category}",${gross},${platformFee},${net},"${status}"\n`;
+    });
+
+    try {
+      await Share.share({
+        title: 'RateDeed Tax & Earnings Report',
+        message: csv,
+      });
+    } catch (err: any) {
+      Alert.alert('Export Error', err?.message || 'Failed to share CSV report');
+    }
+  };
 
   if (loading) {
     return (
@@ -257,31 +288,42 @@ export default function AnalyticsTab({ jobs, quotes, reviews, profile, loading, 
     <ScrollView showsVerticalScrollIndicator={false} nestedScrollEnabled>
       <View style={{ gap: 12 }}>
 
-        {/* Date Range Selector */}
-        <View className="relative">
+        {/* Header Controls: Export Tax CSV + Date Range Selector */}
+        <View className="flex-row items-center justify-between z-50">
           <TouchableOpacity
-            onPress={() => setShowDropdown(!showDropdown)}
-            className="self-end flex-row items-center bg-neutral-100 dark:bg-neutral-800 rounded-lg px-3 py-1.5"
-            style={{ gap: 4 }}
+            onPress={handleExportTaxCSV}
+            className="flex-row items-center bg-neutral-900 dark:bg-neutral-50 rounded-lg px-3 py-1.5"
+            style={{ gap: 6 }}
           >
-            <Text className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">{dateRangeLabels[dateRange]}</Text>
-            <FontAwesome5 name="chevron-down" size={9} color={isDark ? "#a3a3a3" : "#525252"} />
+            <FontAwesome5 name="file-download" size={10} color={isDark ? "#171717" : "#ffffff"} />
+            <Text className="text-xs font-bold text-white dark:text-neutral-900">Export Tax CSV</Text>
           </TouchableOpacity>
-          {showDropdown && (
-            <View className="absolute right-0 top-full mt-1 bg-white dark:bg-neutral-900 rounded-xl shadow-lg border border-neutral-200 dark:border-neutral-700 z-50 py-1 min-w-[140px]" style={{ elevation: 8 }}>
-              {(['week', 'month', 'quarter', 'year'] as DateRange[]).map((key) => (
-                <TouchableOpacity
-                  key={key}
-                  onPress={() => { setDateRange(key); setShowDropdown(false); }}
-                  className={`px-3 py-2 ${dateRange === key ? 'bg-indigo-50 dark:bg-indigo-900/20' : ''}`}
-                >
-                  <Text className={`text-xs font-medium ${dateRange === key ? 'text-indigo-600 dark:text-indigo-400' : 'text-neutral-700 dark:text-neutral-300'}`}>
-                    {dateRangeLabels[key]}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
+
+          <View className="relative">
+            <TouchableOpacity
+              onPress={() => setShowDropdown(!showDropdown)}
+              className="flex-row items-center bg-neutral-100 dark:bg-neutral-800 rounded-lg px-3 py-1.5"
+              style={{ gap: 4 }}
+            >
+              <Text className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">{dateRangeLabels[dateRange]}</Text>
+              <FontAwesome5 name="chevron-down" size={9} color={isDark ? "#a3a3a3" : "#525252"} />
+            </TouchableOpacity>
+            {showDropdown && (
+              <View className="absolute right-0 top-full mt-1 bg-white dark:bg-neutral-900 rounded-xl shadow-lg border border-neutral-200 dark:border-neutral-700 z-50 py-1 min-w-[140px]" style={{ elevation: 8 }}>
+                {(['week', 'month', 'quarter', 'year'] as DateRange[]).map((key) => (
+                  <TouchableOpacity
+                    key={key}
+                    onPress={() => { setDateRange(key); setShowDropdown(false); }}
+                    className={`px-3 py-2 ${dateRange === key ? 'bg-indigo-50 dark:bg-indigo-900/20' : ''}`}
+                  >
+                    <Text className={`text-xs font-medium ${dateRange === key ? 'text-indigo-600 dark:text-indigo-400' : 'text-neutral-700 dark:text-neutral-300'}`}>
+                      {dateRangeLabels[key]}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </View>
         </View>
 
         {/* KPI Cards */}
@@ -350,7 +392,7 @@ export default function AnalyticsTab({ jobs, quotes, reviews, profile, loading, 
             <FontAwesome5 name="chart-bar" size={14} color={isDark ? "#737373" : "#a3a3a3"} />
           </View>
           <View className="flex-row items-end justify-between" style={{ height: 130, gap: 8 }}>
-            {earningsData.map((d, i) => {
+            {earningsData.map((d: any, i: number) => {
               const barHeight = maxEarning > 0 ? Math.max((d.value / maxEarning) * 100, 4) : 4;
               const isSelected = selectedBar === i;
               return (
