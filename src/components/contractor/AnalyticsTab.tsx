@@ -258,9 +258,25 @@ export default function AnalyticsTab({ jobs, quotes, reviews, profile, loading, 
       const date = j.completedAt ? new Date(j.completedAt).toISOString().split('T')[0] : (j.updatedAt ? new Date(j.updatedAt).toISOString().split('T')[0] : '');
       const clientName = (j.client?.firstName ? `${j.client.firstName} ${j.client.lastName || ''}` : (j.user?.firstName ? `${j.user.firstName} ${j.user.lastName || ''}` : 'Client')).replace(/,/g, '');
       const category = (j.category || j.serviceType || 'General Service').replace(/,/g, '');
-      const gross = (getJobAmount(j) / 100).toFixed(2);
-      const platformFee = ((j.platformFee || 0) / 100).toFixed(2);
-      const net = ((getJobAmount(j) - (j.platformFee || 0)) / 100).toFixed(2);
+      let rawGrossCents = getJobAmount(j);
+      if (j._normalized && rawGrossCents < 100) {
+        rawGrossCents = rawGrossCents * 100;
+      }
+      const grossVal = rawGrossCents / 100;
+      const gross = grossVal.toFixed(2);
+      
+      let feeVal = 0;
+      if (j.quote && (typeof j.quote.serviceFee === 'number' || typeof j.quote.platformFee === 'number')) {
+        const qFee = j.quote.serviceFee ?? j.quote.platformFee;
+        feeVal = qFee > grossVal ? qFee / 100 : qFee;
+      } else if (typeof j.platformFee === 'number' && j.platformFee > 0) {
+        feeVal = j.platformFee > grossVal ? j.platformFee / 100 : j.platformFee;
+      } else {
+        feeVal = grossVal * 0.05;
+      }
+      
+      const platformFee = feeVal.toFixed(2);
+      const net = Math.max(0, grossVal - feeVal).toFixed(2);
       const status = j.status || 'completed';
 
       csv += `"${jobId}","${date}","${clientName}","${category}",${gross},${platformFee},${net},"${status}"\n`;

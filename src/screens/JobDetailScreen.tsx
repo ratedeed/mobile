@@ -522,25 +522,32 @@ export default function JobDetailScreen() {
                 </View>
               ))}
               <View className="h-px bg-neutral-200 dark:bg-neutral-700 my-2" />
-              <View className="flex-row justify-between py-1">
-                <Text className="text-[12px] text-neutral-500 dark:text-neutral-400">Subtotal</Text>
-                <Text className="text-[12px] font-medium text-neutral-700 dark:text-neutral-300">
-                  {formatCurrency(
-                    quote.subtotal || quote.lineItems?.reduce((s: number, i: any) => s + (i.amount || 0), 0) || 0
-                  )}
-                </Text>
-              </View>
               {(() => {
-                const subtotalVal = quote.subtotal || quote.lineItems?.reduce((s: number, i: any) => s + (i.amount || 0), 0) || 0;
-                const serviceFeeVal = quote.serviceFee || Math.round((quote.totalAmount || 0) * (feePercent / 100));
-                const displayFeePercent = subtotalVal > 0 ? Math.round((serviceFeeVal / subtotalVal) * 100) : feePercent;
+                const totalCents = quote.totalAmount || quote.total || 0;
+                const totalVal = totalCents > 0 && totalCents < 100 ? totalCents * 100 : totalCents;
+                const serviceFeeVal = (quote.serviceFee && quote.serviceFee > 0)
+                  ? (quote.serviceFee < 100 && totalVal >= 100 ? quote.serviceFee * 100 : quote.serviceFee)
+                  : Math.round(totalVal * (feePercent / 100));
+                const subtotalVal = (quote.subtotal && quote.subtotal > 0)
+                  ? (quote.subtotal < 100 && totalVal >= 100 ? quote.subtotal * 100 : quote.subtotal)
+                  : Math.max(0, totalVal - serviceFeeVal);
+                const displayFeePercent = totalVal > 0 ? Math.round((serviceFeeVal / totalVal) * 100) || feePercent : feePercent;
+
                 return (
-                  <View className="flex-row justify-between py-1">
-                    <Text className="text-[12px] text-neutral-500 dark:text-neutral-400">Platform fee ({displayFeePercent}%)</Text>
-                    <Text className="text-[12px] text-neutral-500 dark:text-neutral-400">
-                      {formatCurrency(serviceFeeVal)}
-                    </Text>
-                  </View>
+                  <>
+                    <View className="flex-row justify-between py-1">
+                      <Text className="text-[12px] text-neutral-500 dark:text-neutral-400">Subtotal</Text>
+                      <Text className="text-[12px] font-medium text-neutral-700 dark:text-neutral-300">
+                        {formatCurrency(subtotalVal)}
+                      </Text>
+                    </View>
+                    <View className="flex-row justify-between py-1">
+                      <Text className="text-[12px] text-neutral-500 dark:text-neutral-400">Platform fee ({displayFeePercent}%)</Text>
+                      <Text className="text-[12px] text-neutral-500 dark:text-neutral-400">
+                        {formatCurrency(serviceFeeVal)}
+                      </Text>
+                    </View>
+                  </>
                 );
               })()}
               <View className="h-px bg-neutral-200 dark:bg-neutral-700 my-2" />
