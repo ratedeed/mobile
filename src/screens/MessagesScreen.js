@@ -60,6 +60,8 @@ import QuoteCreationSheet from "../components/contractor/QuoteCreationSheet";
 import HapticFeedback from "../utils/haptics";
 import { VerifiedBadge } from "../components/common/VerifiedBadge";
 import { BouncingDotsLoader, BouncingRefreshFlatList } from "../components/common";
+import ReportModal from "../components/chat/ReportModal";
+import ConversationItem from "../components/chat/ConversationItem";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const REPORT_CATEGORIES = [
@@ -279,105 +281,6 @@ const EmptyInbox = () => (
     <Text className="text-sm text-neutral-400 dark:text-neutral-500 text-center leading-5">When you connect with contractors, your conversations will appear here.</Text>
   </View>
 );
-
-// ─── Report Modal ─────────────────────────────────────────────────────────────
-const ReportModal = ({ visible, onClose, userName, onReport }) => {
-  const [selected, setSelected] = useState(null);
-  const [details, setDetails] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const insets = useSafeAreaInsets();
-
-  const handleSubmit = async () => {
-    if (!selected) return;
-    setSubmitting(true);
-    try { await onReport(selected, details); setSelected(null); setDetails(""); onClose(); } finally { setSubmitting(false); }
-  };
-
-  return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      <View className="flex-1 bg-white dark:bg-neutral-950">
-        <View
-          style={{ paddingTop: Platform.OS === 'android' ? (insets.top || 16) : 12 }}
-          className="px-5 pb-4 border-b border-neutral-100 dark:border-neutral-800 flex-row items-center justify-between"
-        >
-          <Text className="text-lg font-bold text-neutral-900 dark:text-white">Report</Text>
-          <Pressable onPress={onClose} className="p-1"><FontAwesome5 name="times" size={18} color={isDark ? "#a3a3a3" : "#737373"} /></Pressable>
-        </View>
-        <Text className="px-5 pt-5 pb-2 text-sm text-neutral-500 dark:text-neutral-400">Why are you reporting {userName}?</Text>
-        <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 40 }}>
-          {REPORT_CATEGORIES.map((cat) => (
-            <Pressable key={cat} onPress={() => setSelected(cat)} className="flex-row items-center px-5 py-4 border-b border-neutral-100 dark:border-neutral-800" style={{ gap: 12 }}>
-              <View className={`w-5 h-5 rounded-full border-2 items-center justify-center ${selected === cat ? "border-red-500 bg-red-500" : "border-neutral-300 dark:border-neutral-600"}`}>
-                {selected === cat && <FontAwesome5 name="check" size={9} color="white" />}
-              </View>
-              <Text className={`text-[15px] ${selected === cat ? "text-neutral-900 dark:text-white font-semibold" : "text-neutral-700 dark:text-neutral-300"}`}>{cat}</Text>
-            </Pressable>
-          ))}
-          {selected && (
-            <View className="px-5 pt-5">
-              <Text className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-2">Additional details (optional)</Text>
-              <TextInput className="bg-neutral-50 dark:bg-neutral-800 rounded-xl px-4 py-3 text-sm min-h-[80px] text-neutral-900 dark:text-white" placeholder="Tell us more..." placeholderTextColor={isDark ? "#9ca3af" : "#a3a3a3"} value={details} onChangeText={setDetails} multiline textAlignVertical="top" />
-            </View>
-          )}
-        </ScrollView>
-        {selected && (
-          <View
-            style={{ paddingBottom: Math.max(insets.bottom, 12) }}
-            className="px-5 pt-3 border-t border-neutral-100 dark:border-neutral-800"
-          >
-            <Pressable onPress={handleSubmit} disabled={submitting} className={`py-4 rounded-xl items-center ${submitting ? "bg-red-300 dark:bg-red-900/40" : "bg-red-500"}`}>
-              {submitting ? <BouncingDotsLoader size="small" color="white" /> : <Text className="text-white font-bold text-[15px]">Submit Report</Text>}
-            </Pressable>
-          </View>
-        )}
-      </View>
-    </Modal>
-  );
-};
-
-// ─── Conversation Item ────────────────────────────────────────────────────────
-const ConversationItem = React.memo(function ConversationItem({ conv, currentUserId, onlineUsers, onPress }) {
-  const other = conv.otherParticipant;
-  const displayName = getParticipantDisplayName(other) || "Unknown";
-  const avatarUrl = getProfileImageUrl(displayName, other?.profilePicture || "", other?.category);
-  const isOnline = onlineUsers[other?._id] || false;
-  const hasAttachment = conv.lastMessage?.attachmentUrl;
-  const isImage = hasAttachment && /\.(jpg|jpeg|png|gif|webp)$/i.test(conv.lastMessage.attachmentUrl);
-  const lastMsgText = conv.lastMessage?.messageText || (hasAttachment ? (isImage ? "📷 Photo" : "📎 Attachment") : "No messages yet");
-  const lastMsgTime = conv.lastMessage?.createdAt || "";
-
-  return (
-    <Pressable onPress={() => onPress(conv)} className="flex-row items-center px-5 py-3.5 active:bg-neutral-50 dark:active:bg-neutral-800" style={{ gap: 14 }}>
-      <View className="relative shrink-0">
-        {isSvgUrl(avatarUrl) ? (
-          <View className="w-[54px] h-[54px] rounded-full overflow-hidden"><SvgImage uri={avatarUrl} width="100%" height="100%" /></View>
-        ) : (
-          <Image source={{ uri: avatarUrl }} className="w-[54px] h-[54px] rounded-full bg-neutral-100 dark:bg-neutral-700" />
-        )}
-        {isOnline && <View className="absolute bottom-0.5 right-0.5 w-4 h-4 bg-emerald-500 rounded-full border-[2.5px] border-white dark:border-neutral-900" />}
-      </View>
-      <View className="flex-1 min-w-0">
-        <View className="flex-row items-center justify-between">
-          <View className="flex-row items-center flex-1" style={{ gap: 5 }}>
-            <Text className={`text-[15px] truncate ${conv.unreadCount > 0 ? "font-bold text-neutral-900 dark:text-white" : "font-semibold text-neutral-800 dark:text-neutral-300"}`} numberOfLines={1}>{displayName}</Text>
-            {other?.role === "contractor" && (other?.isVerified || other?.isTopRated) && <VerifiedBadge size={13} animate={false} />}
-          </View>
-          <Text className={`text-[11px] shrink-0 ml-3 ${conv.unreadCount > 0 ? "text-indigo-600 font-semibold" : "text-neutral-400 dark:text-neutral-500"}`}>{lastMsgTime ? formatRelativeTime(lastMsgTime) : ""}</Text>
-        </View>
-        <View className="flex-row items-center mt-1" style={{ gap: 6 }}>
-          <Text className={`text-[13px] flex-1 truncate ${conv.unreadCount > 0 ? "text-neutral-700 dark:text-neutral-300 font-medium" : "text-neutral-400 dark:text-neutral-500"}`} numberOfLines={1}>{lastMsgText}</Text>
-          {conv.unreadCount > 0 && (
-            <View className="bg-indigo-600 min-w-[20px] h-[20px] rounded-full items-center justify-center px-1.5">
-              <Text className="text-white text-[10px] font-bold">{conv.unreadCount}</Text>
-            </View>
-          )}
-        </View>
-      </View>
-    </Pressable>
-  );
-});
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 const MessagesScreen = () => {

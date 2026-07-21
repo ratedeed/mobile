@@ -56,6 +56,10 @@ import { EmptyState } from '../components/common/EmptyState';
 import { VerifiedBadge } from '../components/common/VerifiedBadge';
 import { SkeletonLoader } from '../components/common/SkeletonLoader';
 import { BouncingDotsLoader, BouncingRefreshScrollView } from '../components/common';
+import OperationalOverviewCard from '../components/dashboard/OperationalOverviewCard';
+import TrustActionRequiredCard from '../components/dashboard/TrustActionRequiredCard';
+import DashboardKpiGrid from '../components/dashboard/DashboardKpiGrid';
+import ContractorCalendarTab from '../components/dashboard/ContractorCalendarTab';
 
 const CURATED_TAGS = [
   'Before & After',
@@ -299,42 +303,7 @@ const getJobDate = (j: any) => {
   return isNaN(d.getTime()) ? null : d;
 };
 
-const ScaleButton = ({ children, onPress, className, style, activeScale = 0.96 }: any) => {
-  const scale = React.useRef(new Animated.Value(1)).current;
-
-  const handlePressIn = () => {
-    Animated.spring(scale, {
-      toValue: activeScale,
-      useNativeDriver: true,
-      speed: 50,
-      bounciness: 10,
-    }).start();
-  };
-
-  const handlePressOut = () => {
-    Animated.spring(scale, {
-      toValue: 1,
-      useNativeDriver: true,
-      speed: 50,
-      bounciness: 10,
-    }).start();
-  };
-
-  return (
-    <TouchableWithoutFeedback
-      onPress={onPress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-    >
-      <Animated.View
-        className={className}
-        style={[style, { transform: [{ scale }] }]}
-      >
-        {children}
-      </Animated.View>
-    </TouchableWithoutFeedback>
-  );
-};
+import ScaleButton from '../components/common/ScaleButton';
 
 // ================================================================
 // Main Component
@@ -1196,106 +1165,34 @@ const ContractorDashboardScreen: React.FC = () => {
           {activeTab === 'today' && (
             <View style={{ gap: 16 }}>
               {/* Operational Overview */}
-              <View className="bg-neutral-900 dark:bg-neutral-950 rounded-2xl p-5 overflow-hidden relative shadow-sm">
-                <Text className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Operational Overview</Text>
-                <Text className="text-xl font-bold text-white mt-1">Hello, {contractorName || 'Pro'} 👋</Text>
-                <Text className="text-xs text-neutral-300 mt-2 leading-relaxed">
-                  You have {jobs.filter((j: any) => ['funded_in_progress', 'partially_funded'].includes(j.status)).length} active jobs and {conversations.filter(c => c.unreadCount > 0).length} unread conversations.
-                </Text>
-                <View className="flex-row mt-4" style={{ gap: 8 }}>
-                  <ScaleButton onPress={() => setActiveTab('calendar')} className="bg-indigo-600 px-4 py-2 rounded-lg">
-                    <Text className="text-xs font-bold text-white">View Schedule</Text>
-                  </ScaleButton>
-                  <ScaleButton onPress={() => { setActiveTab('payments'); setPaymentSubTab('overview'); }} className="bg-white/10 border border-white/20 px-4 py-2 rounded-lg">
-                    <Text className="text-xs font-bold text-white">Earnings</Text>
-                  </ScaleButton>
-                </View>
-              </View>
+              <OperationalOverviewCard
+                contractorName={contractorName}
+                activeJobsCount={jobs.filter((j: any) => ['funded_in_progress', 'partially_funded'].includes(j.status)).length}
+                unreadConversationsCount={conversations.filter(c => c.unreadCount > 0).length}
+                onViewSchedule={() => setActiveTab('calendar')}
+                onViewEarnings={() => { setActiveTab('payments'); setPaymentSubTab('overview'); }}
+              />
 
               {/* Trust & Verification Onboarding Status checklist */}
-              {(!onboardingComplete || licenseStatus !== 'approved' || !stripeStatus?.chargesEnabled) && (
-                <View className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 rounded-2xl p-4">
-                  <View className="flex-row items-center" style={{ gap: 8 }}>
-                    <FontAwesome5 name="exclamation-circle" size={14} color="#d97706" />
-                    <Text className="text-sm font-bold text-amber-800 dark:text-amber-400">Action Required</Text>
-                  </View>
-                  <Text className="text-xs text-amber-700 dark:text-amber-300/80 mt-1 leading-relaxed">
-                    {!stripeStatus?.chargesEnabled && licenseStatus !== 'approved'
-                      ? "Connect your Stripe account to receive payouts, and verify your license to build trust with clients."
-                      : !stripeStatus?.chargesEnabled
-                      ? "Connect your Stripe account to receive payouts from clients."
-                      : "Verify your license to build trust with clients and get a Verified Pro badge."}
-                  </Text>
-                  <View className="mt-3" style={{ gap: 8 }}>
-                    {!stripeStatus?.chargesEnabled && (
-                      <Pressable onPress={() => { setActiveTab('payments'); setPaymentSubTab('overview'); }} className="flex-row items-center justify-between bg-white dark:bg-neutral-900 p-3 rounded-xl border border-amber-200 dark:border-amber-900/40">
-                        <View className="flex-row items-center" style={{ gap: 8 }}>
-                          <FontAwesome5 name="credit-card" size={12} color="#d97706" />
-                          <Text className="text-xs font-bold text-neutral-800 dark:text-neutral-200">Connect Stripe Account</Text>
-                        </View>
-                        <FontAwesome5 name="chevron-right" size={10} color="#d97706" />
-                      </Pressable>
-                    )}
-                    {licenseStatus !== 'approved' && (
-                      <Pressable onPress={() => setShowEditProfile(true)} className="flex-row items-center justify-between bg-white dark:bg-neutral-900 p-3 rounded-xl border border-amber-200 dark:border-amber-900/40">
-                        <View className="flex-row items-center" style={{ gap: 8 }}>
-                          <FontAwesome5 name="id-card" size={12} color="#d97706" />
-                          <Text className="text-xs font-bold text-neutral-800 dark:text-neutral-200">Verify CSLB License</Text>
-                        </View>
-                        <FontAwesome5 name="chevron-right" size={10} color="#d97706" />
-                      </Pressable>
-                    )}
-                  </View>
-                </View>
-              )}
+              <TrustActionRequiredCard
+                onboardingComplete={onboardingComplete}
+                licenseStatus={licenseStatus}
+                stripeStatus={stripeStatus}
+                onConnectStripe={() => { setActiveTab('payments'); setPaymentSubTab('overview'); }}
+                onVerifyLicense={() => setShowEditProfile(true)}
+              />
 
               {/* KPI Cards Grid */}
-              <View className="flex-row flex-wrap" style={{ marginHorizontal: -4 }}>
-                <Pressable onPress={() => { setActiveTab('payments'); setPaymentSubTab('jobs'); }} className="w-1/2 p-1">
-                  <View className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 flex-col justify-between" style={{ minHeight: 90 }}>
-                    <View className="flex-row items-center justify-between">
-                      <Text className="text-[10px] font-semibold text-neutral-500 uppercase">Active Jobs</Text>
-                      <FontAwesome5 name="briefcase" size={12} color="#6366f1" />
-                    </View>
-                    <Text className="text-2xl font-bold text-neutral-900 dark:text-white mt-2">
-                      {jobs.filter((j: any) => ['funded_in_progress', 'partially_funded'].includes(j.status)).length}
-                    </Text>
-                  </View>
-                </Pressable>
-                <Pressable onPress={() => navigation.navigate('Main', { screen: 'Messages' } as any)} className="w-1/2 p-1">
-                  <View className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 flex-col justify-between" style={{ minHeight: 90 }}>
-                    <View className="flex-row items-center justify-between">
-                      <Text className="text-[10px] font-semibold text-neutral-500 uppercase">Unread Chats</Text>
-                      <FontAwesome5 name="comment-dots" size={12} color="#10b981" />
-                    </View>
-                    <Text className="text-2xl font-bold text-emerald-600 mt-2">
-                      {conversations.filter(c => c.unreadCount > 0).length}
-                    </Text>
-                  </View>
-                </Pressable>
-                <Pressable onPress={() => { setActiveTab('payments'); setPaymentSubTab('quotes'); }} className="w-1/2 p-1">
-                  <View className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 flex-col justify-between" style={{ minHeight: 90 }}>
-                    <View className="flex-row items-center justify-between">
-                      <Text className="text-[10px] font-semibold text-neutral-500 uppercase">Quotes Sent</Text>
-                      <FontAwesome5 name="file-invoice-dollar" size={12} color="#f59e0b" />
-                    </View>
-                    <Text className="text-2xl font-bold text-neutral-900 dark:text-white mt-2">
-                      {quotes.length}
-                    </Text>
-                  </View>
-                </Pressable>
-                <Pressable onPress={() => { setActiveTab('payments'); setPaymentSubTab('overview'); }} className="w-1/2 p-1">
-                  <View className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 flex-col justify-between" style={{ minHeight: 90 }}>
-                    <View className="flex-row items-center justify-between">
-                      <Text className="text-[10px] font-semibold text-neutral-500 uppercase">Total Revenue</Text>
-                      <FontAwesome5 name="wallet" size={12} color="#ec4899" />
-                    </View>
-                    <Text className="text-xl font-bold text-neutral-900 dark:text-white mt-2 truncate">
-                      ${((_earnings?.totalEarned || 0) / 100).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                    </Text>
-                  </View>
-                </Pressable>
-              </View>
+              <DashboardKpiGrid
+                activeJobsCount={jobs.filter((j: any) => ['funded_in_progress', 'partially_funded'].includes(j.status)).length}
+                unreadChatsCount={conversations.filter(c => c.unreadCount > 0).length}
+                quotesCount={quotes.length}
+                availableBalanceText={formatCurrency(((_earnings?.availableBalance ?? 0)) / 100)}
+                onPressActiveJobs={() => { setActiveTab('payments'); setPaymentSubTab('jobs'); }}
+                onPressUnreadChats={() => navigation.navigate('Main', { screen: 'Messages' } as any)}
+                onPressQuotes={() => { setActiveTab('payments'); setPaymentSubTab('quotes'); }}
+                onPressBalance={() => { setActiveTab('payments'); setPaymentSubTab('overview'); }}
+              />
 
               {/* Recent Chats Section */}
               <View className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4">
@@ -1444,133 +1341,17 @@ const ContractorDashboardScreen: React.FC = () => {
           )}
 
           {/* TAB: Calendar */}
-          {activeTab === 'calendar' && (() => {
-
-
-            const year = calendarDate.getFullYear();
-            const month = calendarDate.getMonth();
-            const monthName = calendarDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-
-            const firstDayOffset = new Date(year, month, 1).getDay();
-            const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-            const nextMonth = () => {
-              setCalendarDate(new Date(year, month + 1, 1));
-              setSelectedDay(null);
-            };
-            const prevMonth = () => {
-              setCalendarDate(new Date(year, month - 1, 1));
-              setSelectedDay(null);
-            };
-
-            const getJobsForDay = (day: number) => {
-              return (jobs || []).filter(job => {
-                const d = getJobDate(job);
-                if (!d) return false;
-                return d.getFullYear() === year && d.getMonth() === month && d.getDate() === day;
-              });
-            };
-
-            const selectedDateJobs = selectedDay ? getJobsForDay(selectedDay) : [];
-
-            // Generate calendar cell grid items
-            const cells = [];
-            for (let i = 0; i < firstDayOffset; i++) {
-              cells.push({ key: `empty-${i}`, day: null });
-            }
-            for (let d = 1; d <= daysInMonth; d++) {
-              cells.push({ key: `day-${d}`, day: d });
-            }
-
-            return (
-              <View className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4">
-                {/* Header Month / Arrows */}
-                <View className="flex-row items-center justify-between mb-4 px-1">
-                  <Text className="text-base font-bold text-neutral-900 dark:text-white">{monthName}</Text>
-                  <View className="flex-row" style={{ gap: 12 }}>
-                    <Pressable onPress={prevMonth} className="p-2 bg-neutral-50 dark:bg-neutral-800 rounded-lg">
-                      <FontAwesome5 name="chevron-left" size={10} color={isDark ? "#d4d4d4" : "#404040"} />
-                    </Pressable>
-                    <Pressable onPress={nextMonth} className="p-2 bg-neutral-50 dark:bg-neutral-800 rounded-lg">
-                      <FontAwesome5 name="chevron-right" size={10} color={isDark ? "#d4d4d4" : "#404040"} />
-                    </Pressable>
-                  </View>
-                </View>
-
-                {/* Days of Week Headers */}
-                <View className="flex-row mb-2">
-                  {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((lbl, idx) => (
-                    <Text key={idx} className="flex-1 text-center text-[10px] font-bold text-neutral-400">
-                      {lbl}
-                    </Text>
-                  ))}
-                </View>
-
-                {/* Monthly Date Grid */}
-                <View className="flex-row flex-wrap">
-                  {cells.map((cell, idx) => {
-                    const isSelected = cell.day === selectedDay;
-                    const hasJobs = cell.day ? getJobsForDay(cell.day).length > 0 : false;
-                    const isToday = cell.day && new Date().getFullYear() === year && new Date().getMonth() === month && new Date().getDate() === cell.day;
-
-                    return (
-                      <Pressable
-                        key={cell.key}
-                        onPress={() => cell.day && setSelectedDay(cell.day)}
-                        disabled={!cell.day}
-                        className="w-[14.28%] aspect-square items-center justify-center p-0.5"
-                      >
-                        {cell.day && (
-                          <View className={`w-8 h-8 rounded-full items-center justify-center relative ${
-                            isSelected ? 'bg-indigo-600' : isToday ? 'border border-indigo-600' : ''
-                          }`}>
-                            <Text className={`text-xs font-bold ${
-                              isSelected ? 'text-white' : isToday ? 'text-indigo-600' : 'text-neutral-700 dark:text-neutral-300'
-                            }`}>
-                              {cell.day}
-                            </Text>
-                            {hasJobs && (
-                              <View className={`absolute bottom-1 w-1 h-1 rounded-full ${
-                                isSelected ? 'bg-white' : 'bg-indigo-600'
-                              }`} />
-                            )}
-                          </View>
-                        )}
-                      </Pressable>
-                    );
-                  })}
-                </View>
-
-                {/* Day Details List */}
-                <View className="mt-5 pt-4 border-t border-neutral-100 dark:border-neutral-800">
-                  <Text className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-3">
-                    {selectedDay ? `Schedule for ${calendarDate.toLocaleString('en-US', { month: 'short' })} ${selectedDay}` : 'Select a day'}
-                  </Text>
-                  {selectedDateJobs.length === 0 ? (
-                    <Text className="text-xs text-neutral-400 dark:text-neutral-500 py-4 text-center">No projects scheduled for this day.</Text>
-                  ) : (
-                    <View style={{ gap: 8 }}>
-                      {selectedDateJobs.map((j: any) => (
-                        <View key={j._id} className="bg-neutral-50 dark:bg-neutral-800/40 p-3 rounded-xl border border-neutral-100 dark:border-neutral-800/60 flex-row justify-between items-center">
-                          <View className="flex-1 min-w-0 mr-2">
-                            <Text className="text-xs font-bold text-neutral-800 dark:text-neutral-200 truncate">{j.title || 'Project'}</Text>
-                            <Text className="text-[10px] text-neutral-500 dark:text-neutral-400 mt-0.5 truncate">
-                              Client: {j.user ? `${j.user.firstName || ''} ${j.user.lastName || ''}`.trim() : 'Homeowner'}
-                            </Text>
-                          </View>
-                          <View className="px-2 py-1 bg-indigo-50 dark:bg-indigo-950/60 rounded">
-                            <Text className="text-[9px] font-bold text-indigo-600 dark:text-indigo-400 uppercase">
-                              {j.status?.replace(/_/g, ' ')}
-                            </Text>
-                          </View>
-                        </View>
-                      ))}
-                    </View>
-                  )}
-                </View>
-              </View>
-            );
-          })()}
+          {activeTab === 'calendar' && (
+            <ContractorCalendarTab
+              calendarDate={calendarDate}
+              selectedDay={selectedDay}
+              jobs={jobs}
+              isDark={isDark}
+              setCalendarDate={setCalendarDate}
+              setSelectedDay={setSelectedDay}
+              getJobDate={getJobDate}
+            />
+          )}
 
           {/* TAB: Public Profile */}
           {activeTab === 'profile' && (
