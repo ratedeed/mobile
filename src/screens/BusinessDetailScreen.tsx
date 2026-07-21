@@ -396,7 +396,6 @@ const BusinessDetailScreen: React.FC = () => {
 
   const displayReviews = showAllReviews ? normalizedReviews : normalizedReviews.slice(0, 2);
   const avgRating = c.averageRating || c.rating || 0;
-  const reviewCount = Math.max(normalizedReviews.length, c.numReviews || c.reviews || 0);
 
   const ratingBreakdown = [5, 4, 3, 2, 1].map(stars => ({
     stars,
@@ -404,15 +403,30 @@ const BusinessDetailScreen: React.FC = () => {
     pct: normalizedReviews.length > 0 ? (normalizedReviews.filter(r => Math.round(r.rating) === stars).length / normalizedReviews.length) * 100 : 0,
   }));
 
+  const getReviewCount = (contractor: any) => {
+    if (!contractor) return 0;
+    if (typeof contractor.reviewCount === 'number') return contractor.reviewCount;
+    if (typeof contractor.numReviews === 'number') return contractor.numReviews;
+    if (Array.isArray(contractor.reviews)) return contractor.reviews.length;
+    if (typeof contractor.reviews === 'number') return contractor.reviews;
+    return 0;
+  };
+
+  const isMongoIdStr = (str: any) => typeof str === 'string' && /^[0-9a-fA-F]{24}$/.test(str.trim());
+
+  const reviewCount = Math.max(normalizedReviews.length, getReviewCount(c));
+
   const location = (() => {
     const city = c.contactInfo?.city || (c as any).city || '';
     const state = c.contactInfo?.state || (c as any).state || '';
-    if (city && state) return `${city}, ${state}`;
-    if (city || state) return city || state;
+    const validCity = isMongoIdStr(city) ? '' : city;
+    const validState = isMongoIdStr(state) ? '' : state;
+    if (validCity && validState) return `${validCity}, ${validState}`;
+    if (validCity || validState) return validCity || validState;
     const loc = (c as any).location;
-    if (typeof loc === 'string' && loc.trim() && !loc.includes('{')) return loc.trim();
+    if (typeof loc === 'string' && loc.trim() && !loc.includes('{') && !isMongoIdStr(loc)) return loc.trim();
     const addr = (c as any).businessAddress || c.contact?.address;
-    if (typeof addr === 'string' && addr.trim()) return addr.trim();
+    if (typeof addr === 'string' && addr.trim() && !isMongoIdStr(addr)) return addr.trim();
     return '';
   })();
 
@@ -1113,8 +1127,10 @@ const BusinessDetailScreen: React.FC = () => {
                 {similarContractors.map((sc, i) => {
                   const scName = sc.companyName || sc.businessName || 'Contractor';
                   const scRating = sc.averageRating || sc.rating || 0;
-                  const scReviews = sc.numReviews || sc.reviews || 0;
-                  const scLocation = [sc.contactInfo?.city, sc.contactInfo?.state].filter(Boolean).join(', ');
+                  const scReviews = getReviewCount(sc);
+                  const scCity = sc.contactInfo?.city && !isMongoIdStr(sc.contactInfo.city) ? sc.contactInfo.city : '';
+                  const scState = sc.contactInfo?.state && !isMongoIdStr(sc.contactInfo.state) ? sc.contactInfo.state : '';
+                  const scLocation = [scCity, scState].filter(Boolean).join(', ');
                   const scCover = getCoverImageUrl(scName, (sc as any).bannerUrl || sc.bannerImage || (sc as any).imageUrl || sc.profilePicture || '', sc.category, 400, 400);
                   const scId = sc._id || (sc as any).id;
                   return (
