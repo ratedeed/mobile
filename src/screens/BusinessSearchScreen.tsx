@@ -133,7 +133,7 @@ const ListingCard = React.memo(({
           </Text>
         ) : null}
         {distance ? <Text className="text-[11px] text-neutral-400 dark:text-neutral-500 mt-0.5">{distance}</Text> : null}
-        {searchZip && listing.zipCodesCovered?.includes(searchZip) && (
+        {searchZip && (listing.zipCodesCovered?.includes(searchZip) || listing.distance) && (
           <View className="flex-row items-center mt-0.5" style={{ gap: 2 }}>
             <FontAwesome5 name="map-marker-alt" size={10} color="#059669" />
             <Text className="text-[10px] font-semibold text-emerald-700">Serves your area</Text>
