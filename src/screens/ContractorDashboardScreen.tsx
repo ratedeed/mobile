@@ -1162,7 +1162,7 @@ const ContractorDashboardScreen: React.FC = () => {
                       onPress={() => setActiveTab(tab.key)}
                       className={`flex-row items-center px-4 py-2.5 rounded-xl transition-all ${
                         isActive
-                          ? 'bg-white dark:bg-neutral-800 shadow-sm border border-neutral-200/60 dark:border-neutral-700'
+                          ? 'bg-white dark:bg-neutral-800 border border-neutral-200/60 dark:border-neutral-700'
                           : 'bg-transparent'
                       }`}
                       style={{ gap: 6 }}
