@@ -126,6 +126,7 @@ const collectAllIds = (obj) => {
 
 const getParticipantDisplayName = (entity) => {
   if (!entity) return null;
+  if (entity.role === 'admin' || entity.isAdmin) return 'RateDeed Support';
   const firstLast = `${entity.firstName || ""} ${entity.lastName || ""}`.trim();
   return (
     firstLast ||
