@@ -56,11 +56,11 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; 
 };
 
 const JOB_FLOW = [
-  { status: 'awaiting_payment', label: 'Accepted', icon: 'check-circle' },
-  { status: 'funded_in_progress', label: 'Funded', icon: 'dollar-sign' },
-  { status: 'completed_pending_release', label: 'Done', icon: 'hammer' },
-  { status: 'completed_paid', label: 'Released', icon: 'unlock' },
-  { status: 'reviewed', label: 'Reviewed', icon: 'star' },
+  { status: 'awaiting_payment', label: 'Accepted', icon: 'check-circle', tooltip: 'Quote accepted by client. Awaiting escrow funding.' },
+  { status: 'funded_in_progress', label: 'Funded', icon: 'dollar-sign', tooltip: '100% of project funds are securely held in Stripe Escrow.' },
+  { status: 'completed_pending_release', label: 'Done', icon: 'hammer', tooltip: 'Contractor finished work and submitted photos for client review.' },
+  { status: 'completed_paid', label: 'Released', icon: 'unlock', tooltip: 'Homeowner approved completion and escrow funds were released.' },
+  { status: 'reviewed', label: 'Reviewed', icon: 'star', tooltip: 'Project complete & verified with client rating and review.' },
 ];
 
 const formatCurrency = (cents: number) => `$${(cents / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
@@ -453,7 +453,11 @@ export default function JobDetailScreen() {
                   const isCurrent = idx === currentStepIndex;
 
                   return (
-                    <View key={flowStep.status} className="items-center z-10 flex-1">
+                    <Pressable 
+                      key={flowStep.status} 
+                      onPress={() => Alert.alert(flowStep.label, flowStep.tooltip)}
+                      className="items-center z-10 flex-1"
+                    >
                       <View 
                         className={`w-8 h-8 rounded-full items-center justify-center border-2 ${
                           isCompleted 
@@ -481,7 +485,7 @@ export default function JobDetailScreen() {
                       >
                         {flowStep.label}
                       </Text>
-                    </View>
+                    </Pressable>
                   );
                 })}
               </View>
