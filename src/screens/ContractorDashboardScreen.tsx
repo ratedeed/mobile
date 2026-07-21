@@ -151,12 +151,12 @@ const getMobileTagIcon = (tag: string) => {
 };
 
 const TABS = [
-  { key: 'today', label: 'Today' },
-  { key: 'calendar', label: 'Calendar' },
-  { key: 'profile', label: 'Public Profile' },
-  { key: 'payments', label: 'Earnings & Jobs' },
-  { key: 'analytics', label: 'Analytics' },
-  { key: 'promote', label: 'Promote' },
+  { key: 'today', label: 'Today', icon: 'th-large' },
+  { key: 'calendar', label: 'Calendar', icon: 'calendar-alt' },
+  { key: 'profile', label: 'Public Profile', icon: 'user' },
+  { key: 'payments', label: 'Earnings & Jobs', icon: 'wallet' },
+  { key: 'analytics', label: 'Analytics', icon: 'chart-bar' },
+  { key: 'promote', label: 'Promote', icon: 'bullhorn' },
 ];
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -1150,25 +1150,43 @@ const ContractorDashboardScreen: React.FC = () => {
         )}
 
         {/* ==================== Tab Navigation ==================== */}
-        <View className="mt-4 border-b border-neutral-200 dark:border-neutral-700">
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="px-4">
-            <View className="flex-row" style={{ gap: 0 }}>
-              {TABS.map(tab => (
-                <ScaleButton
-                  key={tab.key}
-                  onPress={() => setActiveTab(tab.key)}
-                  className="relative px-4 py-3"
-                >
-                  <Text className={`text-sm font-semibold whitespace-nowrap ${activeTab === tab.key ? "text-indigo-600" : "text-neutral-500 dark:text-neutral-400 dark:text-neutral-500"}`}>
-                    {tab.label}
-                  </Text>
-                  {activeTab === tab.key && (
-                    <View className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 rounded-t-full" />
-                  )}
-                </ScaleButton>
-              ))}
-            </View>
-          </ScrollView>
+        <View className="mt-4 px-4">
+          <View className="bg-neutral-100 dark:bg-neutral-900 p-1.5 rounded-2xl border border-neutral-200/80 dark:border-neutral-800">
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <View className="flex-row" style={{ gap: 6 }}>
+                {TABS.map(tab => {
+                  const isActive = activeTab === tab.key;
+                  return (
+                    <ScaleButton
+                      key={tab.key}
+                      onPress={() => setActiveTab(tab.key)}
+                      className={`flex-row items-center px-4 py-2.5 rounded-xl transition-all ${
+                        isActive
+                          ? 'bg-white dark:bg-neutral-800 shadow-sm border border-neutral-200/60 dark:border-neutral-700'
+                          : 'bg-transparent'
+                      }`}
+                      style={{ gap: 6 }}
+                    >
+                      <FontAwesome5
+                        name={tab.icon}
+                        size={13}
+                        color={isActive ? (isDark ? '#818cf8' : '#4f46e5') : (isDark ? '#a3a3a3' : '#6b7280')}
+                      />
+                      <Text
+                        className={`text-xs font-bold whitespace-nowrap ${
+                          isActive
+                            ? 'text-indigo-600 dark:text-indigo-400'
+                            : 'text-neutral-600 dark:text-neutral-400'
+                        }`}
+                      >
+                        {tab.label}
+                      </Text>
+                    </ScaleButton>
+                  );
+                })}
+              </View>
+            </ScrollView>
+          </View>
         </View>
 
         {/* ==================== Tab Content ==================== */}
