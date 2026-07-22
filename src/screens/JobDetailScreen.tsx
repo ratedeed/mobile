@@ -27,6 +27,7 @@ import {
   declineChangeOrder,
   uploadProgressPhoto,
   getPlatformFeePercent,
+  sendMessage,
 } from '../utils/apiClient';
 import { useAuth } from '../context/AuthContext';
 import HapticFeedback from '../utils/haptics';
@@ -200,6 +201,13 @@ export default function JobDetailScreen() {
             throw new Error('Upload failed — no URL returned from server');
           }
           await uploadProgressPhoto(jobId, cloudinaryUrl);
+          
+          if (job?.conversationId) {
+            try {
+              await sendMessage(job.conversationId, '', '📸 Progress Update: New photo uploaded for this project', cloudinaryUrl);
+            } catch {}
+          }
+
           uploaded++;
         } catch (err: any) {
           if (!firstError) firstError = err?.message || 'Failed to upload one or more photos';
@@ -275,8 +283,20 @@ export default function JobDetailScreen() {
   const handleMarkComplete = () =>
     handleAction(
       'mark complete',
-      () => markJobComplete(jobId, job?.completionNotes),
-      'Job marked as complete. Awaiting payment release from the homeowner.'
+      async () => {
+        const res = await markJobComplete(jobId, job?.completionNotes);
+        if (job?.conversationId) {
+          try {
+            await sendMessage(
+              job.conversationId,
+              '',
+              `💰 Contractor requested milestone payment release for "${job?.title || 'Project'}". Please review progress photos and approve funds release.`
+            );
+          } catch {}
+        }
+        return res;
+      },
+      'Milestone marked complete. Awaiting payment release from the homeowner.'
     );
   const handleReleaseFunds = () =>
     handleAction('release payment', () => releaseFunds(jobId), 'Payment released to the contractor!');
@@ -565,37 +585,57 @@ export default function JobDetailScreen() {
                 <View className="mt-3 p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl border border-indigo-100 dark:border-indigo-800">
                   <View className="flex-row items-center mb-2" style={{ gap: 6 }}>
                     <FontAwesome5 name="shield-alt" size={12} color="#4F46E5" />
-                    <Text className="text-[12px] font-semibold text-indigo-900 dark:text-indigo-200">
-                      Milestone Escrow
+                    <Text className="text-[12px] font-bold text-indigo-900 dark:text-indigo-200">
+                      Milestone Escrow Protection
                     </Text>
                   </View>
                   {job.milestones &&
-                    job.milestones.map((m: any, i: number) => (
-                      <View key={i} className="flex-row items-center justify-between mt-2">
-                        <View className="flex-1 pr-2">
-                          <Text className="text-[12px] font-semibold text-indigo-900 dark:text-indigo-200">
-                            {m.name}
-                          </Text>
-                          <Text className="text-[10px] text-indigo-700 dark:text-indigo-400 capitalize">
-                            Status: {m.status || 'pending'}
-                          </Text>
+                    job.milestones.map((m: any, i: number) => {
+                      const mStatus = m.status || (i === 0 && ['funded_in_progress', 'completed_pending_release'].includes(job.status) ? 'in_escrow' : 'pending');
+                      const isReleased = mStatus === 'released' || mStatus === 'paid' || mStatus === 'completed';
+                      return (
+                        <View key={i} className="flex-row items-center justify-between mt-2 pt-2 border-t border-indigo-100/50 dark:border-indigo-800/40">
+                          <View className="flex-1 pr-2">
+                            <Text className="text-[12px] font-bold text-indigo-900 dark:text-indigo-200">
+                              {i + 1}. {m.name}
+                            </Text>
+                            <Text className="text-[10px] text-indigo-700 dark:text-indigo-400">
+                              {m.percentage || 0}% of total
+                            </Text>
+                          </View>
+                          <View className="flex-row items-center" style={{ gap: 8 }}>
+                            <Text className="text-[12px] font-bold text-indigo-900 dark:text-indigo-200">
+                              {formatCurrency(m.amount)}
+                            </Text>
+                            {isReleased ? (
+                              <View className="px-2 py-1 bg-emerald-100 dark:bg-emerald-900/40 rounded-full">
+                                <Text className="text-[9px] font-bold text-emerald-800 dark:text-emerald-300">Released</Text>
+                              </View>
+                            ) : isContractor && job.status === 'funded_in_progress' ? (
+                              <Pressable
+                                onPress={handleMarkComplete}
+                                disabled={actionLoading !== null}
+                                className="px-2.5 py-1.5 bg-indigo-600 rounded-lg"
+                              >
+                                <Text className="text-[10px] font-bold text-white">Request Release</Text>
+                              </Pressable>
+                            ) : isUser && (m.status === 'funded' || ['funded_in_progress', 'completed_pending_release'].includes(job.status)) ? (
+                              <Pressable
+                                onPress={() => handleReleaseMilestone(m._id || m.id || `${i}`, m.name)}
+                                disabled={actionLoading !== null}
+                                className="px-2.5 py-1.5 bg-emerald-600 rounded-lg"
+                              >
+                                <Text className="text-[10px] font-bold text-white">Release</Text>
+                              </Pressable>
+                            ) : (
+                              <View className="px-2 py-1 bg-neutral-200 dark:bg-neutral-800 rounded-full">
+                                <Text className="text-[9px] font-medium text-neutral-600 dark:text-neutral-400">In Escrow</Text>
+                              </View>
+                            )}
+                          </View>
                         </View>
-                        <View className="flex-row items-center" style={{ gap: 8 }}>
-                          <Text className="text-[12px] font-bold text-indigo-900 dark:text-indigo-200">
-                            {formatCurrency(m.amount)}
-                          </Text>
-                          {isUser && m.status === 'funded' && (
-                            <Pressable
-                              onPress={() => handleReleaseMilestone(m._id, m.name)}
-                              disabled={actionLoading !== null}
-                              className="px-2.5 py-1.5 bg-indigo-600 rounded-lg"
-                            >
-                              <Text className="text-[10px] font-bold text-white">Release</Text>
-                            </Pressable>
-                          )}
-                        </View>
-                      </View>
-                    ))}
+                      );
+                    })}
                 </View>
               )}
             </View>
