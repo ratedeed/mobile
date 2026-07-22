@@ -17,7 +17,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const ESCROW_BANNER_KEY = '@escrow_banner_dismissed_at';
-const THIRTY_MINUTES_MS = 1000;
+const THIRTY_MINUTES_MS = 30 * 60 * 1000;
+const BANNER_WIDTH = Math.min(SCREEN_WIDTH - 32, 520);
 
 // ---- Animated Gradient Text Component ----
 const AnimatedGradientText = ({ text }: { text: string }) => {
@@ -71,38 +72,57 @@ const AnimatedGradientText = ({ text }: { text: string }) => {
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 // ---- Native Stardust Particle System ----
-const PARTICLE_COUNT = 32;
-const NATIVE_PARTICLE_COLORS = [
-  '#E9EDFF', // Ice-Blue Background Stardust Tint (rgb(233, 237, 255) from Web StardustGL)
-  '#E0E7FF', // Soft Cosmic Blue Dust
-  '#E9EDFF', // Weighted Ice-Blue Stardust
-  '#4F46E5', // Royal Indigo Logo
-  '#6366F1', // Indigo Shimmer Text
-  '#1F2937', // Dark Charcoal Text Dust
-  '#F59E0B', // Escrow Gold Accent
-];
+// Pre-calculating particle data ensures no bridge overhead during animation
+const TOTAL_PARTICLES = 60;
+const generateParticles = () => {
+  const particles = [];
+  for (let i = 0; i < TOTAL_PARTICLES; i++) {
+    const x = Math.random() * BANNER_WIDTH;
+    const y = Math.random() * 80 + 10; // Spread vertically
+    
+    // Simulate WebGL Texture Sampling (Mapping UI colors to coordinates)
+    let color = '#E9EDFF'; // 60% Base Ice-Blue Background Dust
+    const colorRoll = Math.random();
+    if (colorRoll > 0.6) {
+      if (x < 80) color = '#4F46E5'; // Hammer Logo Area
+      else if (x > BANNER_WIDTH * 0.4 && x < BANNER_WIDTH * 0.55) color = '#6366F1'; // Escrow Text
+      else color = '#1C1B1F'; // Dark Text Dust
+    }
 
-interface ParticleState {
-  id: number;
-  x: number;
-  y: number;
-  size: number;
-  color: string;
-  transX: Animated.Value;
-  transY: Animated.Value;
-  opacity: Animated.Value;
-  scale: Animated.Value;
-}
+    // Normalized X position determines when the wave hits this particle (0 to 0.7)
+    // It lives for 0.3s after being hit. Total animation runs 0 to 1.
+    const start = (x / BANNER_WIDTH) * 0.7;
+    const end = Math.min(1, start + 0.3);
+
+    particles.push({
+      id: i,
+      x,
+      y,
+      size: Math.random() * 3 + 2, // 2px to 5px
+      color,
+      start,
+      end,
+      driftX: 30 + Math.random() * 50, // Rightward drift
+      driftY: 50 + Math.random() * 60, // Upward airy lift
+    });
+  }
+  return particles;
+};
 
 export const EscrowTrustBanner = () => {
   const [visible, setVisible] = useState(false);
   const [isDisintegrating, setIsDisintegrating] = useState(false);
-  
+
   const slideAnim = useRef(new Animated.Value(300)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
   const hammerRotate = useRef(new Animated.Value(0)).current;
   const hammerY = useRef(new Animated.Value(0)).current;
   
+  // Single native driver for the entire disintegration effect
+  const dismissProgress = useRef(new Animated.Value(0)).current;
+  
+  const particlesRef = useRef(generateParticles());
+
   // Staggered text animations
   const text1Opacity = useRef(new Animated.Value(0)).current;
   const text1Y = useRef(new Animated.Value(10)).current;
@@ -111,27 +131,7 @@ export const EscrowTrustBanner = () => {
   const text3Opacity = useRef(new Animated.Value(0)).current;
   const text3Y = useRef(new Animated.Value(10)).current;
 
-  // Generate native stardust particle instances
-  const particlesRef = useRef<ParticleState[]>([]);
-  if (particlesRef.current.length === 0) {
-    const bannerWidth = Math.min(SCREEN_WIDTH - 32, 520);
-    particlesRef.current = Array.from({ length: PARTICLE_COUNT }).map((_, i) => {
-      const xProgress = i / PARTICLE_COUNT;
-      return {
-        id: i,
-        x: xProgress * bannerWidth,
-        y: Math.random() * 50 + 10,
-        size: Math.random() * 2 + 2, // 2px to 4px particle
-        color: NATIVE_PARTICLE_COLORS[i % NATIVE_PARTICLE_COLORS.length],
-        transX: new Animated.Value(0),
-        transY: new Animated.Value(0),
-        opacity: new Animated.Value(0),
-        scale: new Animated.Value(1),
-      };
-    });
-  }
-
-  // Exact 1.8s RateDeed double-tap hammer sequence (matching Web)
+  // Exact RateDeed double-tap hammer sequence
   const startHammerAnimation = useCallback(() => {
     Animated.loop(
       Animated.sequence([
@@ -159,13 +159,7 @@ export const EscrowTrustBanner = () => {
   const show = useCallback(() => {
     setVisible(true);
     setIsDisintegrating(false);
-    
-    // Reset particles
-    particlesRef.current.forEach((p) => {
-      p.transX.setValue(0);
-      p.transY.setValue(0);
-      p.opacity.setValue(0);
-    });
+    dismissProgress.setValue(0);
 
     Animated.parallel([
       Animated.timing(slideAnim, {
@@ -197,78 +191,38 @@ export const EscrowTrustBanner = () => {
         ]),
       ]).start();
     });
-  }, [slideAnim, opacityAnim, startHammerAnimation, text1Opacity, text1Y, text2Opacity, text2Y, text3Opacity, text3Y]);
+  }, [slideAnim, opacityAnim, startHammerAnimation, text1Opacity, text1Y, text2Opacity, text2Y, text3Opacity, text3Y, dismissProgress]);
 
-  // Left-to-Right Sweeping Stardust Disintegration Dismissal
+  // High-Performance Single-Driver Dismissal
   const dismiss = useCallback(() => {
     if (isDisintegrating) return;
     setIsDisintegrating(true);
     AsyncStorage.setItem(ESCROW_BANNER_KEY, Date.now().toString()).catch(() => {});
 
-    // Fade out main banner card smoothly
+    // Drive one single value natively. All particles & the card fade follow this value.
+    Animated.timing(dismissProgress, {
+      toValue: 1,
+      duration: 1500, // Exact 1.5s gradual dissolve
+      easing: Easing.inOut(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+
+    // Fade the banner card out quickly so the particles take over visually
     Animated.timing(opacityAnim, {
       toValue: 0,
       duration: 500,
       useNativeDriver: true,
-    }).start();
-
-    // Trigger particle animations sequentially from left to right
-    const particleAnimations = particlesRef.current.map((p, i) => {
-      const delay = Math.floor((i / PARTICLE_COUNT) * 450); // Left-to-right delay wave
-      p.opacity.setValue(1);
-      p.scale.setValue(1);
-
-      return Animated.sequence([
-        Animated.delay(delay),
-        Animated.parallel([
-          Animated.timing(p.transY, {
-            toValue: -(Math.random() * 60 + 80),
-            duration: 850,
-            easing: Easing.out(Easing.quad),
-            useNativeDriver: true,
-          }),
-          Animated.timing(p.transX, {
-            toValue: Math.random() * 35 + 10,
-            duration: 850,
-            useNativeDriver: true,
-          }),
-          Animated.sequence([
-            Animated.timing(p.scale, {
-              toValue: 1.8,
-              duration: 300,
-              useNativeDriver: true,
-            }),
-            Animated.timing(p.scale, {
-              toValue: 0.3,
-              duration: 550,
-              useNativeDriver: true,
-            }),
-          ]),
-          Animated.timing(p.opacity, {
-            toValue: 0,
-            duration: 850,
-            easing: Easing.in(Easing.quad),
-            useNativeDriver: true,
-          }),
-        ]),
-      ]);
-    });
-
-    Animated.parallel(particleAnimations).start(() => {
+    }).start(() => {
       setVisible(false);
       setIsDisintegrating(false);
-      text1Opacity.setValue(0);
-      text1Y.setValue(10);
-      text2Opacity.setValue(0);
-      text2Y.setValue(10);
-      text3Opacity.setValue(0);
-      text3Y.setValue(10);
-      hammerRotate.setValue(0);
-      slideAnim.setValue(300);
+      text1Opacity.setValue(0); text1Y.setValue(10);
+      text2Opacity.setValue(0); text2Y.setValue(10);
+      text3Opacity.setValue(0); text3Y.setValue(10);
+      hammerRotate.setValue(0); slideAnim.setValue(300);
+      dismissProgress.setValue(0);
     });
-  }, [isDisintegrating, opacityAnim, slideAnim, text1Opacity, text1Y, text2Opacity, text2Y, text3Opacity, text3Y, hammerRotate]);
+  }, [isDisintegrating, opacityAnim, slideAnim, text1Opacity, text1Y, text2Opacity, text2Y, text3Opacity, text3Y, hammerRotate, dismissProgress]);
 
-  // Listen for 'show-escrow-banner' event emitted after contractors populate the page
   useEffect(() => {
     const checkAndShow = () => {
       AsyncStorage.getItem(ESCROW_BANNER_KEY)
@@ -276,7 +230,7 @@ export const EscrowTrustBanner = () => {
           if (val) {
             const dismissedAt = parseInt(val, 10);
             if (!isNaN(dismissedAt) && Date.now() - dismissedAt < THIRTY_MINUTES_MS) {
-              return; // Cooldown: wait for 30 minutes
+              return;
             }
           }
           show();
@@ -285,8 +239,6 @@ export const EscrowTrustBanner = () => {
     };
 
     const subscription = DeviceEventEmitter.addListener('show-escrow-banner', checkAndShow);
-
-    // Re-check every 30 minutes automatically
     const interval = setInterval(checkAndShow, THIRTY_MINUTES_MS);
 
     return () => {
@@ -302,38 +254,86 @@ export const EscrowTrustBanner = () => {
     outputRange: ['-35deg', '0deg'],
   });
 
+  // Wavefront Glow Sweeping Interpolation
+  const waveTranslateX = dismissProgress.interpolate({
+    inputRange: [0, 0.7, 1],
+    outputRange: [-50, BANNER_WIDTH + 50, BANNER_WIDTH + 50],
+    extrapolate: 'clamp',
+  });
+  const waveOpacity = dismissProgress.interpolate({
+    inputRange: [0, 0.1, 0.6, 0.7, 1],
+    outputRange: [0, 1, 1, 0, 0],
+    extrapolate: 'clamp',
+  });
+
   return (
     <>
-      {/* Backdrop — tap anywhere to dismiss */}
       <AnimatedPressable style={[styles.overlay, { opacity: opacityAnim }]} onPress={dismiss} />
 
-      {/* Banner container */}
       <View style={styles.container} pointerEvents="box-none">
         {/* Render Floating Native Stardust Particles Layer */}
         {isDisintegrating && (
           <View style={styles.particleContainer} pointerEvents="none">
-            {particlesRef.current.map((p) => (
-              <Animated.View
-                key={p.id}
-                style={[
-                  styles.particle,
-                  {
-                    left: p.x,
-                    top: p.y,
-                    width: p.size,
-                    height: p.size,
-                    borderRadius: p.size / 2,
-                    backgroundColor: p.color,
-                    opacity: p.opacity,
-                    transform: [
-                      { translateX: p.transX },
-                      { translateY: p.transY },
-                      { scale: p.scale },
-                    ],
-                  },
-                ]}
-              />
-            ))}
+            {/* WebGL Wavefront Glow Simulation */}
+            <Animated.View
+              style={[
+                styles.waveGlow,
+                { 
+                  transform: [{ translateX: waveTranslateX }],
+                  opacity: waveOpacity
+                },
+              ]}
+            />
+            
+            {particlesRef.current.map((p) => {
+              // Interpolate all particle properties from the single dismissProgress value
+              const pOpacity = dismissProgress.interpolate({
+                inputRange: [p.start, p.start + 0.02, p.end],
+                outputRange: [0, 1, 0],
+                extrapolate: 'clamp',
+              });
+
+              const pScale = dismissProgress.interpolate({
+                inputRange: [p.start, p.start + 0.1, p.end],
+                outputRange: [0.5, 1.4, 0],
+                extrapolate: 'clamp',
+              });
+
+              const pTransX = dismissProgress.interpolate({
+                inputRange: [p.start, p.end],
+                outputRange: [0, p.driftX],
+                extrapolate: 'clamp',
+              });
+
+              const pTransY = dismissProgress.interpolate({
+                inputRange: [p.start, p.end],
+                outputRange: [0, -p.driftY], // Upward airy drift
+                extrapolate: 'clamp',
+              });
+
+              return (
+                <Animated.View
+                  key={p.id}
+                  style={[
+                    styles.particle,
+                    {
+                      left: p.x,
+                      top: p.y,
+                      width: p.size,
+                      height: p.size,
+                      borderRadius: p.size / 2,
+                      backgroundColor: p.color,
+                      opacity: pOpacity,
+                      transform: [
+                        { translateX: pTransX },
+                        { translateY: pTransY },
+                        { scale: pScale },
+                      ],
+                    },
+                  ]}
+                />
+              );
+            })}
           </View>
         )}
 
@@ -401,19 +401,33 @@ const styles = StyleSheet.create({
   },
   particleContainer: {
     position: 'absolute',
-    bottom: 20,
-    left: 16,
-    right: 16,
-    height: 70,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 140,
+    maxWidth: BANNER_WIDTH,
+    alignSelf: 'center',
     zIndex: 99999,
+  },
+  waveGlow: {
+    position: 'absolute',
+    top: -20,
+    bottom: -20,
+    width: 4,
+    backgroundColor: '#818CF8',
+    shadowColor: '#818CF8',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 20,
+    elevation: 10,
   },
   particle: {
     position: 'absolute',
     shadowColor: '#FFF',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 4,
-    elevation: 5,
+    shadowOpacity: 0.6,
+    shadowRadius: 3,
+    elevation: 4,
   },
   banner: {
     position: 'absolute',
