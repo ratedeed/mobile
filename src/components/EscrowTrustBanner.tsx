@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Easing,
   DeviceEventEmitter,
+  Image,
 } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { Svg, Text as SvgText, Defs, LinearGradient as SvgGradient, Stop, Rect } from 'react-native-svg';
@@ -16,7 +17,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const ESCROW_BANNER_KEY = '@escrow_banner_dismissed_at';
-const DISMISS_DURATION_MS = 30 * 60 * 1000; // 30-minute Cooldown
+const THIRTY_MINUTES_MS = 30 * 60 * 1000;
 
 // ---- Animated Gradient Text Component ----
 const AnimatedGradientText = ({ text }: { text: string }) => {
@@ -71,15 +72,13 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 // ---- Native Stardust Particle System ----
 const PARTICLE_COUNT = 32;
-const RAINBOW_PARTICLE_COLORS = [
-  '#FF0080', // Neon Pink / Magenta
+const NATIVE_PARTICLE_COLORS = [
+  '#FFFFFF', // Card White
+  '#FFFFFF', // Card White (weighted for more frosted glass effect)
   '#4F46E5', // Royal Indigo
-  '#06B6D4', // Electric Cyan
-  '#10B981', // Emerald Green
-  '#F59E0B', // Vibrant Gold
-  '#EF4444', // Coral Red
-  '#A855F7', // Electric Purple
-  '#3B82F6', // Sky Blue
+  '#6366F1', // Indigo Shimmer
+  '#1F2937', // Dark Copy Charcoal
+  '#F59E0B', // Escrow Gold
 ];
 
 interface ParticleState {
@@ -91,6 +90,7 @@ interface ParticleState {
   transX: Animated.Value;
   transY: Animated.Value;
   opacity: Animated.Value;
+  scale: Animated.Value;
 }
 
 export const EscrowTrustBanner = () => {
@@ -100,6 +100,7 @@ export const EscrowTrustBanner = () => {
   const slideAnim = useRef(new Animated.Value(300)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
   const hammerRotate = useRef(new Animated.Value(0)).current;
+  const hammerY = useRef(new Animated.Value(0)).current;
   
   // Staggered text animations
   const text1Opacity = useRef(new Animated.Value(0)).current;
@@ -120,33 +121,39 @@ export const EscrowTrustBanner = () => {
         x: xProgress * bannerWidth,
         y: Math.random() * 50 + 10,
         size: Math.random() * 2 + 2, // 2px to 4px particle
-        color: RAINBOW_PARTICLE_COLORS[i % RAINBOW_PARTICLE_COLORS.length],
+        color: NATIVE_PARTICLE_COLORS[i % NATIVE_PARTICLE_COLORS.length],
         transX: new Animated.Value(0),
         transY: new Animated.Value(0),
         opacity: new Animated.Value(0),
+        scale: new Animated.Value(1),
       };
     });
   }
 
+  // Exact 1.8s RateDeed double-tap hammer sequence (matching Web)
   const startHammerAnimation = useCallback(() => {
     Animated.loop(
       Animated.sequence([
-        Animated.timing(hammerRotate, {
-          toValue: -45,
-          duration: 400,
-          easing: Easing.out(Easing.back(1.5)),
-          useNativeDriver: true,
-        }),
-        Animated.timing(hammerRotate, {
-          toValue: 0,
-          duration: 150,
-          easing: Easing.bounce,
-          useNativeDriver: true,
-        }),
+        Animated.parallel([
+          Animated.timing(hammerRotate, { toValue: -35, duration: 250, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+          Animated.timing(hammerY, { toValue: 4, duration: 250, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+        ]),
+        Animated.parallel([
+          Animated.timing(hammerRotate, { toValue: 0, duration: 180, easing: Easing.bounce, useNativeDriver: true }),
+          Animated.timing(hammerY, { toValue: 0, duration: 180, useNativeDriver: true }),
+        ]),
+        Animated.parallel([
+          Animated.timing(hammerRotate, { toValue: -20, duration: 200, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+          Animated.timing(hammerY, { toValue: 2, duration: 200, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+        ]),
+        Animated.parallel([
+          Animated.timing(hammerRotate, { toValue: 0, duration: 150, easing: Easing.bounce, useNativeDriver: true }),
+          Animated.timing(hammerY, { toValue: 0, duration: 150, useNativeDriver: true }),
+        ]),
         Animated.delay(1000),
       ])
     ).start();
-  }, [hammerRotate]);
+  }, [hammerRotate, hammerY]);
 
   const show = useCallback(() => {
     setVisible(true);
@@ -208,6 +215,7 @@ export const EscrowTrustBanner = () => {
     const particleAnimations = particlesRef.current.map((p, i) => {
       const delay = Math.floor((i / PARTICLE_COUNT) * 450); // Left-to-right delay wave
       p.opacity.setValue(1);
+      p.scale.setValue(1);
 
       return Animated.sequence([
         Animated.delay(delay),
@@ -223,6 +231,18 @@ export const EscrowTrustBanner = () => {
             duration: 850,
             useNativeDriver: true,
           }),
+          Animated.sequence([
+            Animated.timing(p.scale, {
+              toValue: 1.8,
+              duration: 300,
+              useNativeDriver: true,
+            }),
+            Animated.timing(p.scale, {
+              toValue: 0.3,
+              duration: 550,
+              useNativeDriver: true,
+            }),
+          ]),
           Animated.timing(p.opacity, {
             toValue: 0,
             duration: 850,
@@ -249,28 +269,36 @@ export const EscrowTrustBanner = () => {
 
   // Listen for 'show-escrow-banner' event emitted after contractors populate the page
   useEffect(() => {
-    const subscription = DeviceEventEmitter.addListener('show-escrow-banner', () => {
+    const checkAndShow = () => {
       AsyncStorage.getItem(ESCROW_BANNER_KEY)
         .then((val) => {
           if (val) {
             const dismissedAt = parseInt(val, 10);
-            if (!isNaN(dismissedAt) && Date.now() - dismissedAt < DISMISS_DURATION_MS) {
-              return; // Still in 30-minute cooldown
+            if (!isNaN(dismissedAt) && Date.now() - dismissedAt < THIRTY_MINUTES_MS) {
+              return; // Cooldown: wait for 30 minutes
             }
           }
           show();
         })
         .catch(() => show());
-    });
+    };
 
-    return () => subscription.remove();
+    const subscription = DeviceEventEmitter.addListener('show-escrow-banner', checkAndShow);
+
+    // Re-check every 30 minutes automatically
+    const interval = setInterval(checkAndShow, THIRTY_MINUTES_MS);
+
+    return () => {
+      subscription.remove();
+      clearInterval(interval);
+    };
   }, [show]);
 
   if (!visible) return null;
 
   const rotateInterpolate = hammerRotate.interpolate({
-    inputRange: [-45, 0],
-    outputRange: ['-45deg', '0deg'],
+    inputRange: [-35, 0],
+    outputRange: ['-35deg', '0deg'],
   });
 
   return (
@@ -299,6 +327,7 @@ export const EscrowTrustBanner = () => {
                     transform: [
                       { translateX: p.transX },
                       { translateY: p.transY },
+                      { scale: p.scale },
                     ],
                   },
                 ]}
@@ -318,8 +347,21 @@ export const EscrowTrustBanner = () => {
           pointerEvents="auto"
         >
           <View style={styles.content}>
-            <Animated.View style={[styles.iconContainer, { transform: [{ rotate: rotateInterpolate }] }]}>
-              <FontAwesome5 name="hammer" size={32} color="#4F46E5" />
+            <Animated.View
+              style={[
+                styles.iconContainer,
+                {
+                  transform: [
+                    { rotate: rotateInterpolate },
+                    { translateY: hammerY },
+                  ],
+                },
+              ]}
+            >
+              <Image
+                source={require('../../assets/logo-hammer.png')}
+                style={{ width: 44, height: 44, resizeMode: 'contain' }}
+              />
             </Animated.View>
 
             <View style={styles.textContainer}>
