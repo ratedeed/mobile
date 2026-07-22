@@ -16,7 +16,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const ESCROW_BANNER_KEY = '@escrow_banner_dismissed_at';
-const DISMISS_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
+const DISMISS_DURATION_MS = 30 * 60 * 1000; // 30-minute Cooldown
 
 // ---- Animated Gradient Text Component ----
 const AnimatedGradientText = ({ text }: { text: string }) => {
@@ -255,7 +255,7 @@ export const EscrowTrustBanner = () => {
           if (val) {
             const dismissedAt = parseInt(val, 10);
             if (!isNaN(dismissedAt) && Date.now() - dismissedAt < DISMISS_DURATION_MS) {
-              return;
+              return; // Still in 30-minute cooldown
             }
           }
           show();
