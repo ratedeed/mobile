@@ -332,9 +332,33 @@ export default function JobDetailScreen() {
     return handleAction('cancel this job', () => cancelJob(jobId), 'Job cancelled successfully.', warning);
   };
   const handleAcceptChangeOrder = (coId: string) =>
-    handleAction('accept change order', () => acceptChangeOrder(jobId, coId), 'Change order accepted!');
+    handleAction(
+      'accept change order',
+      async () => {
+        const res = await acceptChangeOrder(jobId, coId);
+        if (job?.conversationId) {
+          try {
+            await sendMessage(job.conversationId, '', '✅ Change order accepted by homeowner.');
+          } catch {}
+        }
+        return res;
+      },
+      'Change order accepted!'
+    );
   const handleDeclineChangeOrder = (coId: string) =>
-    handleAction('decline change order', () => declineChangeOrder(jobId, coId), 'Change order declined.');
+    handleAction(
+      'decline change order',
+      async () => {
+        const res = await declineChangeOrder(jobId, coId);
+        if (job?.conversationId) {
+          try {
+            await sendMessage(job.conversationId, '', '❌ Change order was declined by homeowner.');
+          } catch {}
+        }
+        return res;
+      },
+      'Change order declined.'
+    );
   const handleCreateChangeOrder = async () => {
     if (!coTitle.trim() || !coAmount.trim()) {
       HapticFeedback.error();
@@ -354,8 +378,19 @@ export default function JobDetailScreen() {
         description: coDescription.trim(),
         amount: Math.round(parsedAmount * 100),
       });
+
+      if (job?.conversationId) {
+        try {
+          await sendMessage(
+            job.conversationId,
+            '',
+            `📝 New Change Order: "${coTitle.trim()}" ($${parsedAmount.toFixed(2)}). Please review and accept or decline.`
+          );
+        } catch {}
+      }
+
       HapticFeedback.success();
-      Alert.alert('Success', 'Change order sent!');
+      Alert.alert('Success', 'Change order sent & client notified!');
       setShowChangeOrder(false);
       setCoTitle('');
       setCoDescription('');

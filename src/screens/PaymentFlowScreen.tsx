@@ -108,6 +108,16 @@ export default function PaymentFlowScreen() {
           return;
         }
         if (quote && (quote.status === 'accepted' || quote.status === 'paid' || (quote.jobId && quote.jobStatus && quote.jobStatus !== 'awaiting_payment'))) {
+          if (quote.conversationId) {
+            try {
+              const { sendMessage } = await import('../api');
+              await sendMessage(
+                quote.conversationId,
+                '',
+                `💳 Payment Confirmed: Escrow funds held securely in RateDeed Escrow. Work is ready to begin!`
+              );
+            } catch {}
+          }
           HapticFeedback.success();
           setVerifying(false);
           setIsPolling(false);

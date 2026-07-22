@@ -149,6 +149,18 @@ export default function QuoteReviewScreen() {
     setActionLoading('reject');
     try {
       await updateQuoteStatus(quoteId, 'rejected');
+      
+      if (quote?.conversationId) {
+        try {
+          const { sendMessage } = await import('../api');
+          await sendMessage(
+            quote.conversationId,
+            '',
+            `❌ Quote for $${(quote?.totalAmount || quote?.total || 0).toLocaleString()} was declined by homeowner.`
+          );
+        } catch {}
+      }
+
       HapticFeedback.warning();
       Alert.alert('Quote Declined', 'You have declined this quote.', [
         { text: 'OK', onPress: () => navigation.goBack() },

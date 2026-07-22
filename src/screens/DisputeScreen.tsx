@@ -151,6 +151,18 @@ export default function DisputeScreen() {
       );
       const reason = `[${category}] ${description.trim()}`;
       await raiseDispute(jobIdState, reason, undefined, uploadedUrls);
+
+      try {
+        const { sendMessage, getJobById } = await import('../api');
+        const j = await getJobById(jobIdState);
+        if (j?.conversationId) {
+          await sendMessage(
+            j.conversationId,
+            '',
+            `⚠️ Dispute Raised: "${category}". RateDeed Support team has been notified to mediate.`
+          );
+        }
+      } catch {}
       
       HapticFeedback.warning();
       Alert.alert(
