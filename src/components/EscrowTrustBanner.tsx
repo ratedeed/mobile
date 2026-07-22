@@ -17,7 +17,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const ESCROW_BANNER_KEY = '@escrow_banner_dismissed_at';
-const THIRTY_MINUTES_MS = 30 * 60 * 1000;
+const THIRTY_MINUTES_MS = 1000;
 const BANNER_WIDTH = Math.min(SCREEN_WIDTH - 32, 520);
 
 // ---- Animated Gradient Text Component ----
