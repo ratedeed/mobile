@@ -72,7 +72,6 @@ const AnimatedGradientText = ({ text }: { text: string }) => {
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 // ---- Native Stardust Particle System ----
-// Pre-calculating particle data ensures no bridge overhead during animation
 const TOTAL_PARTICLES = 60;
 const generateParticles = () => {
   const particles = [];
@@ -89,8 +88,6 @@ const generateParticles = () => {
       else color = '#1C1B1F'; // Dark Text Dust
     }
 
-    // Normalized X position determines when the wave hits this particle (0 to 0.7)
-    // It lives for 0.3s after being hit. Total animation runs 0 to 1.
     const start = (x / BANNER_WIDTH) * 0.7;
     const end = Math.min(1, start + 0.3);
 
@@ -193,21 +190,18 @@ export const EscrowTrustBanner = () => {
     });
   }, [slideAnim, opacityAnim, startHammerAnimation, text1Opacity, text1Y, text2Opacity, text2Y, text3Opacity, text3Y, dismissProgress]);
 
-  // High-Performance Single-Driver Dismissal
   const dismiss = useCallback(() => {
     if (isDisintegrating) return;
     setIsDisintegrating(true);
     AsyncStorage.setItem(ESCROW_BANNER_KEY, Date.now().toString()).catch(() => {});
 
-    // Drive one single value natively. All particles & the card fade follow this value.
     Animated.timing(dismissProgress, {
       toValue: 1,
-      duration: 1500, // Exact 1.5s gradual dissolve
+      duration: 1500,
       easing: Easing.inOut(Easing.cubic),
       useNativeDriver: true,
     }).start();
 
-    // Fade the banner card out quickly so the particles take over visually
     Animated.timing(opacityAnim, {
       toValue: 0,
       duration: 500,
@@ -254,7 +248,6 @@ export const EscrowTrustBanner = () => {
     outputRange: ['-35deg', '0deg'],
   });
 
-  // Wavefront Glow Sweeping Interpolation
   const waveTranslateX = dismissProgress.interpolate({
     inputRange: [0, 0.7, 1],
     outputRange: [-50, BANNER_WIDTH + 50, BANNER_WIDTH + 50],
@@ -267,137 +260,132 @@ export const EscrowTrustBanner = () => {
   });
 
   return (
-    <>
-      <AnimatedPressable style={[styles.overlay, { opacity: opacityAnim }]} onPress={dismiss} />
+    // pointerEvents="box-none" allows touches to pass through to the background screen
+    <View style={styles.container} pointerEvents="box-none">
+      {/* Render Floating Native Stardust Particles Layer */}
+      {isDisintegrating && (
+        <View style={styles.particleContainer} pointerEvents="none">
+          {/* WebGL Wavefront Glow Simulation */}
+          <Animated.View
+            style={[
+              styles.waveGlow,
+              { 
+                transform: [{ translateX: waveTranslateX }],
+                opacity: waveOpacity
+              },
+            ]}
+          />
+          
+          {particlesRef.current.map((p) => {
+            const pOpacity = dismissProgress.interpolate({
+              inputRange: [p.start, p.start + 0.02, p.end],
+              outputRange: [0, 1, 0],
+              extrapolate: 'clamp',
+            });
 
-      <View style={styles.container} pointerEvents="box-none">
-        {/* Render Floating Native Stardust Particles Layer */}
-        {isDisintegrating && (
-          <View style={styles.particleContainer} pointerEvents="none">
-            {/* WebGL Wavefront Glow Simulation */}
-            <Animated.View
-              style={[
-                styles.waveGlow,
-                { 
-                  transform: [{ translateX: waveTranslateX }],
-                  opacity: waveOpacity
-                },
-              ]}
-            />
-            
-            {particlesRef.current.map((p) => {
-              // Interpolate all particle properties from the single dismissProgress value
-              const pOpacity = dismissProgress.interpolate({
-                inputRange: [p.start, p.start + 0.02, p.end],
-                outputRange: [0, 1, 0],
-                extrapolate: 'clamp',
-              });
+            const pScale = dismissProgress.interpolate({
+              inputRange: [p.start, p.start + 0.1, p.end],
+              outputRange: [0.5, 1.4, 0],
+              extrapolate: 'clamp',
+            });
 
-              const pScale = dismissProgress.interpolate({
-                inputRange: [p.start, p.start + 0.1, p.end],
-                outputRange: [0.5, 1.4, 0],
-                extrapolate: 'clamp',
-              });
+            const pTransX = dismissProgress.interpolate({
+              inputRange: [p.start, p.end],
+              outputRange: [0, p.driftX],
+              extrapolate: 'clamp',
+            });
 
-              const pTransX = dismissProgress.interpolate({
-                inputRange: [p.start, p.end],
-                outputRange: [0, p.driftX],
-                extrapolate: 'clamp',
-              });
+            const pTransY = dismissProgress.interpolate({
+              inputRange: [p.start, p.end],
+              outputRange: [0, -p.driftY],
+              extrapolate: 'clamp',
+            });
 
-              const pTransY = dismissProgress.interpolate({
-                inputRange: [p.start, p.end],
-                outputRange: [0, -p.driftY], // Upward airy drift
-                extrapolate: 'clamp',
-              });
-
-              return (
-                <Animated.View
-                  key={p.id}
-                  style={[
-                    styles.particle,
-                    {
-                      left: p.x,
-                      top: p.y,
-                      width: p.size,
-                      height: p.size,
-                      borderRadius: p.size / 2,
-                      backgroundColor: p.color,
-                      opacity: pOpacity,
-                      transform: [
-                        { translateX: pTransX },
-                        { translateY: pTransY },
-                        { scale: pScale },
-                      ],
-                    },
-                  ]}
-                />
-              );
-            })}
-          </View>
-        )}
-
-        <Animated.View
-          style={[
-            styles.banner,
-            {
-              transform: [{ translateY: slideAnim }],
-              opacity: opacityAnim,
-            }
-          ]}
-          pointerEvents="auto"
-        >
-          <View style={styles.content}>
-            <Animated.View
-              style={[
-                styles.iconContainer,
-                {
-                  transform: [
-                    { rotate: rotateInterpolate },
-                    { translateY: hammerY },
-                  ],
-                },
-              ]}
-            >
-              <Image
-                source={require('../../assets/logo-hammer.png')}
-                style={{ width: 44, height: 44, resizeMode: 'contain' }}
+            return (
+              <Animated.View
+                key={p.id}
+                style={[
+                  styles.particle,
+                  {
+                    left: p.x,
+                    top: p.y,
+                    width: p.size,
+                    height: p.size,
+                    borderRadius: p.size / 2,
+                    backgroundColor: p.color,
+                    opacity: pOpacity,
+                    transform: [
+                      { translateX: pTransX },
+                      { translateY: pTransY },
+                      { scale: pScale },
+                    ],
+                  },
+                ]}
               />
-            </Animated.View>
+            );
+          })}
+        </View>
+      )}
 
-            <View style={styles.textContainer}>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center' }}>
-                <Animated.View style={{ opacity: text1Opacity, transform: [{ translateY: text1Y }] }}>
-                  <Text style={styles.text}>Your money is held in </Text>
-                </Animated.View>
-                
-                <Animated.View style={{ opacity: text2Opacity, transform: [{ translateY: text2Y }] }}>
-                  <AnimatedGradientText text="escrow " />
-                </Animated.View>
-                
-                <Animated.View style={{ opacity: text3Opacity, transform: [{ translateY: text3Y }] }}>
-                  <Text style={styles.text}>until the job is done right.</Text>
-                </Animated.View>
-              </View>
+      {/* Only the banner itself captures touches. The background is completely scrollable. */}
+      <AnimatedPressable 
+        style={[
+          styles.banner,
+          {
+            transform: [{ translateY: slideAnim }],
+            opacity: opacityAnim,
+          }
+        ]}
+        onPress={dismiss}
+      >
+        <View style={styles.content}>
+          <Animated.View
+            style={[
+              styles.iconContainer,
+              {
+                transform: [
+                  { rotate: rotateInterpolate },
+                  { translateY: hammerY },
+                ],
+              },
+            ]}
+          >
+            <Image
+              source={require('../../assets/logo-hammer.png')}
+              style={{ width: 44, height: 44, resizeMode: 'contain' }}
+            />
+          </Animated.View>
+
+          <View style={styles.textContainer}>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center' }}>
+              <Animated.View style={{ opacity: text1Opacity, transform: [{ translateY: text1Y }] }}>
+                <Text style={styles.text}>Your money is held in </Text>
+              </Animated.View>
+              
+              <Animated.View style={{ opacity: text2Opacity, transform: [{ translateY: text2Y }] }}>
+                <AnimatedGradientText text="escrow " />
+              </Animated.View>
+              
+              <Animated.View style={{ opacity: text3Opacity, transform: [{ translateY: text3Y }] }}>
+                <Text style={styles.text}>until the job is done right.</Text>
+              </Animated.View>
             </View>
-
-            <Pressable onPress={dismiss} style={styles.closeButton}>
-              <FontAwesome5 name="times" size={18} color="#A3A3A3" />
-            </Pressable>
           </View>
-        </Animated.View>
-      </View>
-    </>
+
+          {/* Specific close button to prevent accidental dismissals when tapping the banner */ }
+          <Pressable onPress={dismiss} style={styles.closeButton}>
+            <FontAwesome5 name="times" size={18} color="#A3A3A3" />
+          </Pressable>
+        </View>
+      </AnimatedPressable>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  // 'box-none' ensures the wrapper doesn't block scrolling, only the visible children capture touches
   container: {
     ...StyleSheet.absoluteFillObject,
-  },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'transparent',
   },
   particleContainer: {
     position: 'absolute',
