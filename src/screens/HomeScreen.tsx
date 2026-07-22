@@ -11,6 +11,7 @@ import {
   useColorScheme,
   FlatList,
   Dimensions,
+  DeviceEventEmitter,
 } from 'react-native';
 import { useNavigation, useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -323,6 +324,9 @@ const CategoryRow = memo(({ category, zip, favorites, toggleFav, handleContracto
         const list = extractList(result);
         if (active) {
           setContractors(list);
+          if (list.length > 0) {
+            DeviceEventEmitter.emit('show-escrow-banner');
+          }
         }
       } catch (err) {
         if (__DEV__) console.warn(`Failed to load category row ${category.label}:`, err);

@@ -14,6 +14,7 @@ import {
   useColorScheme,
   Platform,
   Modal,
+  DeviceEventEmitter,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -184,6 +185,9 @@ const BusinessDetailScreen: React.FC = () => {
       
       if (!isMounted.current) return;
       setContractor(data);
+      if (data) {
+        DeviceEventEmitter.emit('show-escrow-banner');
+      }
 
       const contractorId = data?._id || (data as any).id || id;
 

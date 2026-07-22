@@ -7,6 +7,7 @@ import {
   Dimensions,
   StyleSheet,
   Easing,
+  DeviceEventEmitter,
 } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { Svg, Text as SvgText, Defs, LinearGradient as SvgGradient, Stop, Rect } from 'react-native-svg';
@@ -15,10 +16,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const ESCROW_BANNER_KEY = '@escrow_banner_dismissed_at';
-// Show the banner again after 7 days
 const DISMISS_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
 
-// ---- Animated Gradient Text Component (using SVG to avoid native MaskedView crashes) ----
+// ---- Animated Gradient Text Component ----
 const AnimatedGradientText = ({ text }: { text: string }) => {
   const animatedValue = useRef(new Animated.Value(0)).current;
 
@@ -69,8 +69,33 @@ const AnimatedGradientText = ({ text }: { text: string }) => {
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
+// ---- Native Stardust Particle System ----
+const PARTICLE_COUNT = 32;
+const RAINBOW_PARTICLE_COLORS = [
+  '#FF0080', // Neon Pink / Magenta
+  '#4F46E5', // Royal Indigo
+  '#06B6D4', // Electric Cyan
+  '#10B981', // Emerald Green
+  '#F59E0B', // Vibrant Gold
+  '#EF4444', // Coral Red
+  '#A855F7', // Electric Purple
+  '#3B82F6', // Sky Blue
+];
+
+interface ParticleState {
+  id: number;
+  x: number;
+  y: number;
+  size: number;
+  color: string;
+  transX: Animated.Value;
+  transY: Animated.Value;
+  opacity: Animated.Value;
+}
+
 export const EscrowTrustBanner = () => {
   const [visible, setVisible] = useState(false);
+  const [isDisintegrating, setIsDisintegrating] = useState(false);
   
   const slideAnim = useRef(new Animated.Value(300)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
@@ -83,6 +108,25 @@ export const EscrowTrustBanner = () => {
   const text2Y = useRef(new Animated.Value(10)).current;
   const text3Opacity = useRef(new Animated.Value(0)).current;
   const text3Y = useRef(new Animated.Value(10)).current;
+
+  // Generate native stardust particle instances
+  const particlesRef = useRef<ParticleState[]>([]);
+  if (particlesRef.current.length === 0) {
+    const bannerWidth = Math.min(SCREEN_WIDTH - 32, 520);
+    particlesRef.current = Array.from({ length: PARTICLE_COUNT }).map((_, i) => {
+      const xProgress = i / PARTICLE_COUNT;
+      return {
+        id: i,
+        x: xProgress * bannerWidth,
+        y: Math.random() * 50 + 10,
+        size: Math.random() * 2 + 2, // 2px to 4px particle
+        color: RAINBOW_PARTICLE_COLORS[i % RAINBOW_PARTICLE_COLORS.length],
+        transX: new Animated.Value(0),
+        transY: new Animated.Value(0),
+        opacity: new Animated.Value(0),
+      };
+    });
+  }
 
   const startHammerAnimation = useCallback(() => {
     Animated.loop(
@@ -106,57 +150,92 @@ export const EscrowTrustBanner = () => {
 
   const show = useCallback(() => {
     setVisible(true);
+    setIsDisintegrating(false);
+    
+    // Reset particles
+    particlesRef.current.forEach((p) => {
+      p.transX.setValue(0);
+      p.transY.setValue(0);
+      p.opacity.setValue(0);
+    });
+
     Animated.parallel([
       Animated.timing(slideAnim, {
         toValue: 0,
-        duration: 1000,
+        duration: 800,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
       Animated.timing(opacityAnim, {
         toValue: 1,
-        duration: 800,
+        duration: 600,
         useNativeDriver: true,
       }),
     ]).start(() => {
       startHammerAnimation();
       
-      // Staggered text reveal exactly like web version (delay-based)
-      Animated.stagger(200, [
+      Animated.stagger(150, [
         Animated.parallel([
-          Animated.timing(text1Opacity, { toValue: 1, duration: 500, useNativeDriver: true }),
-          Animated.timing(text1Y, { toValue: 0, duration: 500, useNativeDriver: true }),
+          Animated.timing(text1Opacity, { toValue: 1, duration: 400, useNativeDriver: true }),
+          Animated.timing(text1Y, { toValue: 0, duration: 400, useNativeDriver: true }),
         ]),
         Animated.parallel([
-          Animated.timing(text2Opacity, { toValue: 1, duration: 500, useNativeDriver: true }),
-          Animated.timing(text2Y, { toValue: 0, duration: 500, useNativeDriver: true }),
+          Animated.timing(text2Opacity, { toValue: 1, duration: 400, useNativeDriver: true }),
+          Animated.timing(text2Y, { toValue: 0, duration: 400, useNativeDriver: true }),
         ]),
         Animated.parallel([
-          Animated.timing(text3Opacity, { toValue: 1, duration: 500, useNativeDriver: true }),
-          Animated.timing(text3Y, { toValue: 0, duration: 500, useNativeDriver: true }),
+          Animated.timing(text3Opacity, { toValue: 1, duration: 400, useNativeDriver: true }),
+          Animated.timing(text3Y, { toValue: 0, duration: 400, useNativeDriver: true }),
         ]),
       ]).start();
     });
   }, [slideAnim, opacityAnim, startHammerAnimation, text1Opacity, text1Y, text2Opacity, text2Y, text3Opacity, text3Y]);
 
+  // Left-to-Right Sweeping Stardust Disintegration Dismissal
   const dismiss = useCallback(() => {
-    // Persist dismissal timestamp so it doesn't show again for a while
+    if (isDisintegrating) return;
+    setIsDisintegrating(true);
     AsyncStorage.setItem(ESCROW_BANNER_KEY, Date.now().toString()).catch(() => {});
 
-    Animated.parallel([
-      Animated.timing(slideAnim, {
-        toValue: 300,
-        duration: 600,
-        easing: Easing.in(Easing.cubic),
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacityAnim, {
-        toValue: 0,
-        duration: 500,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
+    // Fade out main banner card smoothly
+    Animated.timing(opacityAnim, {
+      toValue: 0,
+      duration: 500,
+      useNativeDriver: true,
+    }).start();
+
+    // Trigger particle animations sequentially from left to right
+    const particleAnimations = particlesRef.current.map((p, i) => {
+      const delay = Math.floor((i / PARTICLE_COUNT) * 450); // Left-to-right delay wave
+      p.opacity.setValue(1);
+
+      return Animated.sequence([
+        Animated.delay(delay),
+        Animated.parallel([
+          Animated.timing(p.transY, {
+            toValue: -(Math.random() * 60 + 80),
+            duration: 850,
+            easing: Easing.out(Easing.quad),
+            useNativeDriver: true,
+          }),
+          Animated.timing(p.transX, {
+            toValue: Math.random() * 35 + 10,
+            duration: 850,
+            useNativeDriver: true,
+          }),
+          Animated.timing(p.opacity, {
+            toValue: 0,
+            duration: 850,
+            easing: Easing.in(Easing.quad),
+            useNativeDriver: true,
+          }),
+        ]),
+      ]);
+    });
+
+    Animated.parallel(particleAnimations).start(() => {
       setVisible(false);
+      setIsDisintegrating(false);
       text1Opacity.setValue(0);
       text1Y.setValue(10);
       text2Opacity.setValue(0);
@@ -164,37 +243,27 @@ export const EscrowTrustBanner = () => {
       text3Opacity.setValue(0);
       text3Y.setValue(10);
       hammerRotate.setValue(0);
+      slideAnim.setValue(300);
     });
-  }, [slideAnim, opacityAnim, text1Opacity, text1Y, text2Opacity, text2Y, text3Opacity, text3Y, hammerRotate]);
+  }, [isDisintegrating, opacityAnim, slideAnim, text1Opacity, text1Y, text2Opacity, text2Y, text3Opacity, text3Y, hammerRotate]);
 
+  // Listen for 'show-escrow-banner' event emitted after contractors populate the page
   useEffect(() => {
-    let timer: any;
-
-    // Check AsyncStorage to see if we've already shown the banner recently
-    AsyncStorage.getItem(ESCROW_BANNER_KEY)
-      .then((val) => {
-        if (val) {
-          const dismissedAt = parseInt(val, 10);
-          if (!isNaN(dismissedAt) && Date.now() - dismissedAt < DISMISS_DURATION_MS) {
-            // Dismissed recently, don't show
-            return;
+    const subscription = DeviceEventEmitter.addListener('show-escrow-banner', () => {
+      AsyncStorage.getItem(ESCROW_BANNER_KEY)
+        .then((val) => {
+          if (val) {
+            const dismissedAt = parseInt(val, 10);
+            if (!isNaN(dismissedAt) && Date.now() - dismissedAt < DISMISS_DURATION_MS) {
+              return;
+            }
           }
-        }
-        // Show banner after a short delay
-        timer = setTimeout(() => {
           show();
-        }, 3300);
-      })
-      .catch(() => {
-        // On error reading storage, show the banner anyway
-        timer = setTimeout(() => {
-          show();
-        }, 3300);
-      });
+        })
+        .catch(() => show());
+    });
 
-    return () => {
-      if (timer) clearTimeout(timer);
-    };
+    return () => subscription.remove();
   }, [show]);
 
   if (!visible) return null;
@@ -209,8 +278,35 @@ export const EscrowTrustBanner = () => {
       {/* Backdrop — tap anywhere to dismiss */}
       <AnimatedPressable style={[styles.overlay, { opacity: opacityAnim }]} onPress={dismiss} />
 
-      {/* Banner wrapper — lets touches pass through to backdrop except on the banner itself */}
+      {/* Banner container */}
       <View style={styles.container} pointerEvents="box-none">
+        {/* Render Floating Native Stardust Particles Layer */}
+        {isDisintegrating && (
+          <View style={styles.particleContainer} pointerEvents="none">
+            {particlesRef.current.map((p) => (
+              <Animated.View
+                key={p.id}
+                style={[
+                  styles.particle,
+                  {
+                    left: p.x,
+                    top: p.y,
+                    width: p.size,
+                    height: p.size,
+                    borderRadius: p.size / 2,
+                    backgroundColor: p.color,
+                    opacity: p.opacity,
+                    transform: [
+                      { translateX: p.transX },
+                      { translateY: p.transY },
+                    ],
+                  },
+                ]}
+              />
+            ))}
+          </View>
+        )}
+
         <Animated.View
           style={[
             styles.banner,
@@ -260,6 +356,22 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'transparent',
   },
+  particleContainer: {
+    position: 'absolute',
+    bottom: 20,
+    left: 16,
+    right: 16,
+    height: 70,
+    zIndex: 99999,
+  },
+  particle: {
+    position: 'absolute',
+    shadowColor: '#FFF',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 4,
+    elevation: 5,
+  },
   banner: {
     position: 'absolute',
     bottom: 0,
@@ -298,12 +410,6 @@ const styles = StyleSheet.create({
   text: {
     fontSize: 17,
     color: '#1f2937',
-    lineHeight: 24,
-  },
-  bold: {
-    fontWeight: '800',
-    color: '#111827',
-    fontSize: 17,
     lineHeight: 24,
   },
   closeButton: {
