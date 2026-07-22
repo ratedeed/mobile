@@ -217,7 +217,36 @@ const NotificationsScreen: React.FC = () => {
     if (!item.read) {
       await toggleRead(item._id);
     }
-    if (!item.link) return;
+
+    // Direct Parameter Deep-linking
+    const convId = item.conversationId || item.conversation || item.chatId || (item.data && (item.data.conversationId || item.data.conversation));
+    const jobIdParam = item.jobId || item.job || (item.data && (item.data.jobId || item.data.job));
+    const quoteIdParam = item.quoteId || item.quote || (item.data && (item.data.quoteId || item.data.quote));
+
+    if (convId) {
+      navigation.navigate('ChatScreen', { conversationId: convId.toString() });
+      return;
+    }
+    if (jobIdParam) {
+      navigation.navigate('JobDetail', { jobId: jobIdParam.toString() });
+      return;
+    }
+    if (quoteIdParam) {
+      navigation.navigate('QuoteReview', { quoteId: quoteIdParam.toString() });
+      return;
+    }
+
+    if (!item.link) {
+      // Fallback for notifications without explicit link string
+      const t = (item.type || '').toLowerCase();
+      const m = (item.message || '').toLowerCase();
+      if (t === 'admin_message' || t === 'new_message' || t === 'message' || m.includes('message')) {
+        navigation.navigate('Messages');
+      } else if (t.includes('job') || t.includes('milestone') || t.includes('payment') || m.includes('payment') || m.includes('milestone')) {
+        navigation.navigate('Jobs');
+      }
+      return;
+    }
 
     let path = item.link;
     if (path.startsWith('http')) {

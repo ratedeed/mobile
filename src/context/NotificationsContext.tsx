@@ -45,8 +45,11 @@ export const NotificationsProvider: React.FC<{ children: ReactNode }> = ({ child
           const count = unreadConvos.reduce((sum: number, c: any) => sum + (c.unreadCount || 0), 0);
           setUnreadMessagesCount(count);
           const syntheticNotifs = unreadConvos.map((c: any) => {
-            const otherParticipant = (c.participants || []).find((p: any) => p._id !== userId);
-            const name = otherParticipant ? (otherParticipant.businessName || otherParticipant.companyName || `${otherParticipant.firstName || ''} ${otherParticipant.lastName || ''}`.trim() || 'Someone') : 'Someone';
+            const otherParticipant = (c.participants || []).find((p: any) => {
+              const pid = p._id?.toString() || p.id?.toString() || p;
+              return pid !== userId?.toString();
+            });
+            const name = otherParticipant ? (otherParticipant.businessName || otherParticipant.companyName || `${otherParticipant.firstName || ''} ${otherParticipant.lastName || ''}`.trim() || 'RateDeed Support') : 'RateDeed Support';
             return {
               _id: `msg-notif-${c.conversationId}`,
               type: 'new_message',
