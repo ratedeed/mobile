@@ -25,14 +25,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-const ESCROW_BANNER_KEY = '@escrow_banner_dismissed_at';
-
-/*
-  FIX:
-  Use a real cooldown.
-  Do not use 1000ms here unless you want the banner to reappear constantly.
-*/
-const COOLDOWN_MS = 10000;
+const ESCROW_BANNER_KEY = 'ratedeed_escrow_banner_dismissed_at';
+const COOLDOWN_MS = 30 * 60 * 1000; // 30 minutes cooldown matching web reference
 
 /*
   Periodic recheck is disabled by default because it is safer.
@@ -93,23 +87,23 @@ const AnimatedGradientText = ({ text }: { text: string }) => {
   });
 
   return (
-    <View style={{ width: 70, height: 24 }}>
-      <Svg height="24" width="70" viewBox="0 0 70 24">
+    <View style={{ width: 62, height: 22 }}>
+      <Svg height="22" width="62" viewBox="0 0 62 22">
         <Defs>
           <SvgGradient id="grad" x1="0%" y1="0%" x2="100%" y2="0%">
             <Stop offset="0%" stopColor="#4F46E5" />
             <Stop offset="25%" stopColor="#6366F1" />
-            <Stop offset="50%" stopColor="#A5B4FC" />
+            <Stop offset="50%" stopColor="#818CF8" />
             <Stop offset="75%" stopColor="#6366F1" />
             <Stop offset="100%" stopColor="#4F46E5" />
           </SvgGradient>
         </Defs>
 
         <Animated.View style={{ transform: [{ translateX }] }}>
-          <Rect x="-100" y="0" width="300" height="24" fill="url(#grad)" />
+          <Rect x="-100" y="0" width="300" height="22" fill="url(#grad)" />
         </Animated.View>
 
-        <SvgText fill="url(#grad)" fontSize="17" fontWeight="800" x="0" y="18">
+        <SvgText fill="url(#grad)" fontSize="14.5" fontWeight="700" x="0" y="16">
           {text}
         </SvgText>
       </Svg>
@@ -173,10 +167,6 @@ export const EscrowTrustBanner = () => {
   const cleanupTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hammerLoopRef = useRef<ReturnType<typeof Animated.loop> | null>(null);
 
-  /*
-    FIX:
-    This prevents repeated show/dismiss cycles.
-  */
   const bannerPhase = useRef<BannerPhase>('hidden');
   const isMountedRef = useRef(true);
 
@@ -231,14 +221,14 @@ export const EscrowTrustBanner = () => {
       Animated.sequence([
         Animated.parallel([
           Animated.timing(hammerRotate, {
-            toValue: -35,
-            duration: 250,
+            toValue: -30,
+            duration: 192,
             easing: Easing.out(Easing.quad),
             useNativeDriver: true,
           }),
           Animated.timing(hammerY, {
-            toValue: 4,
-            duration: 250,
+            toValue: 3,
+            duration: 192,
             easing: Easing.out(Easing.quad),
             useNativeDriver: true,
           }),
@@ -246,26 +236,26 @@ export const EscrowTrustBanner = () => {
         Animated.parallel([
           Animated.timing(hammerRotate, {
             toValue: 0,
-            duration: 180,
+            duration: 192,
             easing: Easing.bounce,
             useNativeDriver: true,
           }),
           Animated.timing(hammerY, {
             toValue: 0,
-            duration: 180,
+            duration: 192,
             useNativeDriver: true,
           }),
         ]),
         Animated.parallel([
           Animated.timing(hammerRotate, {
-            toValue: -20,
-            duration: 200,
+            toValue: -16,
+            duration: 192,
             easing: Easing.out(Easing.quad),
             useNativeDriver: true,
           }),
           Animated.timing(hammerY, {
             toValue: 2,
-            duration: 200,
+            duration: 192,
             easing: Easing.out(Easing.quad),
             useNativeDriver: true,
           }),
@@ -273,13 +263,28 @@ export const EscrowTrustBanner = () => {
         Animated.parallel([
           Animated.timing(hammerRotate, {
             toValue: 0,
-            duration: 150,
+            duration: 192,
             easing: Easing.bounce,
             useNativeDriver: true,
           }),
           Animated.timing(hammerY, {
             toValue: 0,
-            duration: 150,
+            duration: 192,
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.parallel([
+          Animated.timing(hammerRotate, {
+            toValue: -6,
+            duration: 192,
+            easing: Easing.out(Easing.quad),
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.parallel([
+          Animated.timing(hammerRotate, {
+            toValue: 0,
+            duration: 640,
             useNativeDriver: true,
           }),
         ]),
@@ -481,13 +486,13 @@ export const EscrowTrustBanner = () => {
     Animated.parallel([
       Animated.timing(slideAnim, {
         toValue: 0,
-        duration: 800,
+        duration: 500,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
       Animated.timing(bannerOpacity, {
         toValue: 1,
-        duration: 600,
+        duration: 400,
         useNativeDriver: true,
       }),
     ]).start(() => {
@@ -496,40 +501,40 @@ export const EscrowTrustBanner = () => {
 
       startHammerAnimation();
 
-      Animated.stagger(150, [
+      Animated.stagger(120, [
         Animated.parallel([
           Animated.timing(text1Opacity, {
             toValue: 1,
-            duration: 400,
+            duration: 350,
             useNativeDriver: true,
           }),
           Animated.timing(text1Y, {
             toValue: 0,
-            duration: 400,
+            duration: 350,
             useNativeDriver: true,
           }),
         ]),
         Animated.parallel([
           Animated.timing(text2Opacity, {
             toValue: 1,
-            duration: 400,
+            duration: 350,
             useNativeDriver: true,
           }),
           Animated.timing(text2Y, {
             toValue: 0,
-            duration: 400,
+            duration: 350,
             useNativeDriver: true,
           }),
         ]),
         Animated.parallel([
           Animated.timing(text3Opacity, {
             toValue: 1,
-            duration: 400,
+            duration: 350,
             useNativeDriver: true,
           }),
           Animated.timing(text3Y, {
             toValue: 0,
-            duration: 400,
+            duration: 350,
             useNativeDriver: true,
           }),
         ]),
@@ -560,7 +565,6 @@ export const EscrowTrustBanner = () => {
       cleanupTimer.current = null;
     }
 
-    // Stop any ongoing entrance/stagger animations immediately
     slideAnim.stopAnimation();
     bannerOpacity.stopAnimation();
     text1Opacity.stopAnimation();
@@ -572,7 +576,6 @@ export const EscrowTrustBanner = () => {
     hammerRotate.stopAnimation();
     hammerY.stopAnimation();
 
-    // Lock position and snap text opacities so particles crumble from full card layout
     slideAnim.setValue(0);
     bannerOpacity.setValue(1);
     text1Opacity.setValue(1);
@@ -587,14 +590,14 @@ export const EscrowTrustBanner = () => {
 
     AsyncStorage.setItem(ESCROW_BANNER_KEY, Date.now().toString()).catch(() => {});
 
-    const fallbackWidth = Math.min(SCREEN_WIDTH - 32, 520);
+    const fallbackWidth = Math.min(SCREEN_WIDTH - 32, 460);
 
     const layout: BannerLayout =
       bannerLayoutRef.current || {
         x: (SCREEN_WIDTH - fallbackWidth) / 2,
         y: 0,
         width: fallbackWidth,
-        height: 88,
+        height: 76,
       };
 
     if (!bannerLayoutRef.current) {
@@ -608,10 +611,6 @@ export const EscrowTrustBanner = () => {
     createParticles(width, height);
     setFxVersion((v) => v + 1);
 
-    /*
-      Card exit:
-      quick elegant fade + slight scale-down while particles emit
-    */
     Animated.parallel([
       Animated.timing(cardOpacity, {
         toValue: 0,
@@ -676,11 +675,6 @@ export const EscrowTrustBanner = () => {
     text3Y,
   ]);
 
-  /*
-    FIX:
-    Safe event-driven show logic.
-    Only shows when triggered by 'show-escrow-banner' event after contractors load.
-  */
   useEffect(() => {
     const checkAndShow = async () => {
       if (!isMountedRef.current) return;
@@ -739,14 +733,20 @@ export const EscrowTrustBanner = () => {
   if (!visible) return null;
 
   const rotateInterpolate = hammerRotate.interpolate({
-    inputRange: [-35, 0],
-    outputRange: ['-35deg', '0deg'],
+    inputRange: [-30, 0],
+    outputRange: ['-30deg', '0deg'],
   });
 
   const layoutForFx = bannerLayout;
 
   const renderLiveContent = () => (
     <View style={styles.content}>
+      {/* Top Glass Highlight */}
+      <View style={styles.glassHighlight} />
+
+      {/* Top Grabber Handle */}
+      <View style={styles.grabberHandle} />
+
       <Animated.View
         style={[
           styles.iconContainer,
@@ -786,11 +786,6 @@ export const EscrowTrustBanner = () => {
   );
 
   return (
-    /*
-      FIX:
-      Root is pass-through.
-      Only the banner card itself receives touches.
-    */
     <View style={styles.container} pointerEvents="auto" {...panResponder.panHandlers}>
       <Animated.View
         style={[
@@ -802,7 +797,7 @@ export const EscrowTrustBanner = () => {
         ]}
         pointerEvents="box-none"
       >
-        {/* Interactive banner card */}
+        {/* Floating interactive banner card matching web reference layout */}
         <Animated.View
           pointerEvents={isDisintegrating ? 'none' : 'auto'}
           style={{
@@ -867,33 +862,57 @@ const styles = StyleSheet.create({
   },
   bannerPositioner: {
     position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
+    bottom: Platform.OS === 'ios' ? 34 : 20,
+    left: 16,
+    right: 16,
+    alignItems: 'center',
   },
   banner: {
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    paddingVertical: 28,
-    paddingHorizontal: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(28, 27, 31, 0.08)',
+    paddingVertical: 16,
+    paddingHorizontal: 18,
+    paddingTop: 18,
+    shadowColor: '#4338CA',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.16,
+    shadowRadius: 24,
     elevation: 10,
-    maxWidth: 520,
+    maxWidth: 460,
     alignSelf: 'center',
     width: '100%',
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  glassHighlight: {
+    position: 'absolute',
+    top: 0,
+    left: 20,
+    right: 20,
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.85)',
+    opacity: 0.6,
+  },
+  grabberHandle: {
+    position: 'absolute',
+    top: 7,
+    left: '50%',
+    marginLeft: -16,
+    width: 32,
+    height: 3.5,
+    borderRadius: 2,
+    backgroundColor: 'rgba(28, 27, 31, 0.08)',
   },
   content: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    gap: 13,
   },
   iconContainer: {
-    width: 56,
-    height: 64,
+    width: 48,
+    height: 48,
     justifyContent: 'center',
     alignItems: 'center',
   },
