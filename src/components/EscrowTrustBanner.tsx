@@ -11,8 +11,8 @@ import {
   Image,
   Platform,
   LayoutChangeEvent,
+  PanResponder,
 } from 'react-native';
-import { FontAwesome5 } from '@expo/vector-icons';
 import {
   Svg,
   Text as SvgText,
@@ -179,6 +179,23 @@ export const EscrowTrustBanner = () => {
   */
   const bannerPhase = useRef<BannerPhase>('hidden');
   const isMountedRef = useRef(true);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponderCapture: () => {
+        if (bannerPhase.current === 'visible') {
+          dismiss();
+        }
+        return false;
+      },
+      onMoveShouldSetPanResponderCapture: () => {
+        if (bannerPhase.current === 'visible') {
+          dismiss();
+        }
+        return false;
+      },
+    })
+  ).current;
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -741,17 +758,6 @@ export const EscrowTrustBanner = () => {
           </Animated.View>
         </View>
       </View>
-
-      <Pressable
-        onPress={(e) => {
-          e.stopPropagation();
-          dismiss();
-        }}
-        style={styles.closeButton}
-        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-      >
-        <FontAwesome5 name="times" size={18} color="#A3A3A3" />
-      </Pressable>
     </View>
   );
 
@@ -761,7 +767,7 @@ export const EscrowTrustBanner = () => {
       Root is pass-through.
       Only the banner card itself receives touches.
     */
-    <View style={styles.container} pointerEvents="box-none">
+    <View style={styles.container} pointerEvents="auto" {...panResponder.panHandlers}>
       <Animated.View
         style={[
           styles.bannerPositioner,
@@ -803,34 +809,6 @@ export const EscrowTrustBanner = () => {
             }}
             pointerEvents="none"
           >
-            {/* Wavefront halo */}
-            <Animated.View
-              style={{
-                position: 'absolute',
-                top: 0,
-                bottom: 0,
-                left: -12,
-                width: 24,
-                opacity: waveOpacity,
-                transform: [{ translateX: waveX }],
-                backgroundColor: 'rgba(129,140,248,0.14)',
-              }}
-            />
-
-            {/* Wavefront line */}
-            <Animated.View
-              style={{
-                position: 'absolute',
-                top: 0,
-                bottom: 0,
-                left: -1,
-                width: 2,
-                opacity: waveOpacity,
-                transform: [{ translateX: waveX }],
-                backgroundColor: 'rgba(99,102,241,0.42)',
-              }}
-            />
-
             {/* Particles */}
             {particleAnimsRef.current.map((p) => (
               <Animated.View
@@ -897,17 +875,10 @@ const styles = StyleSheet.create({
   },
   textContainer: {
     flex: 1,
-    paddingRight: 10,
   },
   text: {
     fontSize: 17,
     color: '#1f2937',
     lineHeight: 24,
-  },
-  closeButton: {
-    position: 'absolute',
-    top: -12,
-    right: -8,
-    padding: 12,
   },
 });
