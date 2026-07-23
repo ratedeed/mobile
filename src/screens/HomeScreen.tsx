@@ -684,6 +684,11 @@ const HomeScreen = () => {
             setNearbyLabel('');
           }
           setLoading(false);
+          if (data && data.length > 0) {
+            setTimeout(() => {
+              DeviceEventEmitter.emit('show-escrow-banner');
+            }, 300);
+          }
 
           // Silently trigger background update if IP ZIP differs from what was cached/prefetched
           const cachedZip = await cachedZipPromise;
