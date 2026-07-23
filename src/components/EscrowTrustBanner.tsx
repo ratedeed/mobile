@@ -91,8 +91,8 @@ const AnimatedGradientText = ({ text }: { text: string }) => {
   });
 
   return (
-    <View style={{ width: 62, height: 22 }}>
-      <Svg height="22" width="62" viewBox="0 0 62 22">
+    <View style={{ width: 68, height: 24 }}>
+      <Svg height="24" width="68" viewBox="0 0 68 24">
         <Defs>
           <SvgGradient id="grad" x1="0%" y1="0%" x2="100%" y2="0%">
             <Stop offset="0%" stopColor="#4F46E5" />
@@ -104,10 +104,10 @@ const AnimatedGradientText = ({ text }: { text: string }) => {
         </Defs>
 
         <Animated.View style={{ transform: [{ translateX }] }}>
-          <Rect x="-100" y="0" width="300" height="22" fill="url(#grad)" />
+          <Rect x="-100" y="0" width="300" height="24" fill="url(#grad)" />
         </Animated.View>
 
-        <SvgText fill="url(#grad)" fontSize="14.5" fontWeight="700" x="0" y="16">
+        <SvgText fill="url(#grad)" fontSize="15.5" fontWeight="700" x="0" y="18">
           {text}
         </SvgText>
       </Svg>
@@ -734,6 +734,9 @@ export const EscrowTrustBanner = () => {
       }
     );
 
+    // Initial check on mount so banner shows up when app first opens
+    checkAndShow();
+
     let interval: ReturnType<typeof setInterval> | undefined;
 
     if (ENABLE_PERIODIC_RECHECK) {
@@ -781,7 +784,7 @@ export const EscrowTrustBanner = () => {
       >
         <Image
           source={require('../../assets/logo-hammer.png')}
-          style={{ width: 44, height: 44, resizeMode: 'contain' }}
+          style={{ width: 40, height: 40, resizeMode: 'contain' }}
         />
       </Animated.View>
 
@@ -899,15 +902,15 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: 'rgba(28, 27, 31, 0.08)',
-    paddingVertical: 16,
-    paddingHorizontal: 18,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
     shadowColor: '#4338CA',
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.16,
     shadowRadius: 24,
     elevation: 10,
     width: '100%',
-    maxWidth: 460,
+    maxWidth: 420,
     alignSelf: 'center',
     overflow: 'hidden',
     position: 'relative',
@@ -924,11 +927,11 @@ const styles = StyleSheet.create({
   content: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 13,
+    gap: 12,
   },
   iconContainer: {
-    width: 48,
-    height: 48,
+    width: 44,
+    height: 44,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -939,9 +942,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   text: {
-    fontSize: 14.5,
-    fontWeight: '500',
+    fontSize: 15.5,
+    fontWeight: '600',
     color: '#1C1B1F',
-    lineHeight: 21,
+    lineHeight: 22,
   },
 });
