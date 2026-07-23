@@ -28,18 +28,15 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const ESCROW_BANNER_KEY = '@escrow_banner_dismissed_at';
 
 /*
-  IMPORTANT FIX:
-  Your old code used 1000ms as both cooldown and recheck interval.
-  That caused the banner to reappear almost immediately after dismissal.
-
+  FIX:
   Use a real cooldown.
-  If you are testing, temporarily change this to 5000, not 1000.
+  Do not use 1000ms here unless you want the banner to reappear constantly.
 */
 const COOLDOWN_MS = 30 * 60 * 1000;
 
 /*
-  Periodic rechecking is disabled by default because it is safer.
-  If you truly need it, enable it and keep the interval long.
+  Periodic recheck is disabled by default because it is safer.
+  If you need it, enable it and keep the interval long.
 */
 const ENABLE_PERIODIC_RECHECK = false;
 const RECHECK_INTERVAL_MS = 60 * 1000;
@@ -47,10 +44,10 @@ const RECHECK_INTERVAL_MS = 60 * 1000;
 /*
   Animation settings
 */
-const WAVE_DURATION = 1250;
-const SLICE_COUNT = 14;
-const PARTICLE_COUNT = Platform.OS === 'ios' ? 160 : 125;
-const CLEANUP_DELAY = WAVE_DURATION + 2350;
+const WAVE_DURATION = 700;
+const CARD_EXIT_DURATION = 700;
+const CLEANUP_DELAY = 2600;
+const PARTICLE_COUNT = Platform.OS === 'ios' ? 180 : 130;
 
 const rand = (min: number, max: number) => Math.random() * (max - min) + min;
 
@@ -120,20 +117,6 @@ const AnimatedGradientText = ({ text }: { text: string }) => {
   );
 };
 
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
-
-interface SliceAnim {
-  id: number;
-  transX: Animated.Value;
-  transY: Animated.Value;
-  opacity: Animated.Value;
-  scale: Animated.Value;
-  delay: number;
-  duration: number;
-  toX: number;
-  toY: number;
-}
-
 interface ParticleAnim {
   id: number;
   x: number;
@@ -163,13 +146,14 @@ type BannerPhase = 'hidden' | 'visible' | 'dismissing';
 export const EscrowTrustBanner = () => {
   const [visible, setVisible] = useState(false);
   const [isDisintegrating, setIsDisintegrating] = useState(false);
-  const [hideOriginal, setHideOriginal] = useState(false);
   const [fxVersion, setFxVersion] = useState(0);
   const [bannerLayout, setBannerLayout] = useState<BannerLayout | null>(null);
 
   const slideAnim = useRef(new Animated.Value(300)).current;
   const bannerOpacity = useRef(new Animated.Value(0)).current;
-  const backdropOpacity = useRef(new Animated.Value(0)).current;
+
+  const cardOpacity = useRef(new Animated.Value(1)).current;
+  const cardScale = useRef(new Animated.Value(1)).current;
 
   const hammerRotate = useRef(new Animated.Value(0)).current;
   const hammerY = useRef(new Animated.Value(0)).current;
@@ -184,7 +168,6 @@ export const EscrowTrustBanner = () => {
   const waveX = useRef(new Animated.Value(0)).current;
   const waveOpacity = useRef(new Animated.Value(0)).current;
 
-  const sliceAnimsRef = useRef<SliceAnim[]>([]);
   const particleAnimsRef = useRef<ParticleAnim[]>([]);
   const bannerLayoutRef = useRef<BannerLayout | null>(null);
   const cleanupTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -193,7 +176,6 @@ export const EscrowTrustBanner = () => {
   /*
     FIX:
     This prevents repeated show/dismiss cycles.
-    This is the main anti-glitch guard.
   */
   const bannerPhase = useRef<BannerPhase>('hidden');
   const isMountedRef = useRef(true);
@@ -301,28 +283,6 @@ export const EscrowTrustBanner = () => {
     text3Y.setValue(10);
   }, [text1Opacity, text1Y, text2Opacity, text2Y, text3Opacity, text3Y]);
 
-  const createSlices = useCallback((width: number) => {
-    const slices: SliceAnim[] = [];
-
-    for (let i = 0; i < SLICE_COUNT; i++) {
-      const progress = i / SLICE_COUNT;
-
-      slices.push({
-        id: i,
-        transX: new Animated.Value(0),
-        transY: new Animated.Value(0),
-        opacity: new Animated.Value(1),
-        scale: new Animated.Value(1),
-        delay: progress * WAVE_DURATION + rand(0, 90),
-        duration: rand(680, 980),
-        toX: rand(6, 26) + progress * 14,
-        toY: -rand(16, 58),
-      });
-    }
-
-    sliceAnimsRef.current = slices;
-  }, []);
-
   const createParticles = useCallback((width: number, height: number) => {
     const particles: ParticleAnim[] = [];
 
@@ -350,50 +310,14 @@ export const EscrowTrustBanner = () => {
         transY: new Animated.Value(0),
         opacity: new Animated.Value(0),
         scale: new Animated.Value(0.85),
-        delay: Math.max(0, progress * WAVE_DURATION + rand(-50, 140)),
-        duration: rand(950, 1700),
+        delay: Math.max(0, progress * WAVE_DURATION + rand(-30, 120)),
+        duration: rand(900, 1500),
         toX: rand(8, 44) + progress * 18,
         toY: -(rand(18, 84) + progress * 12),
       });
     }
 
     particleAnimsRef.current = particles;
-  }, []);
-
-  const animateSlices = useCallback(() => {
-    const anims = sliceAnimsRef.current.map((slice) =>
-      Animated.sequence([
-        Animated.delay(slice.delay),
-        Animated.parallel([
-          Animated.timing(slice.transX, {
-            toValue: slice.toX,
-            duration: slice.duration,
-            easing: Easing.out(Easing.cubic),
-            useNativeDriver: true,
-          }),
-          Animated.timing(slice.transY, {
-            toValue: slice.toY,
-            duration: slice.duration,
-            easing: Easing.out(Easing.cubic),
-            useNativeDriver: true,
-          }),
-          Animated.timing(slice.opacity, {
-            toValue: 0,
-            duration: slice.duration,
-            easing: Easing.in(Easing.quad),
-            useNativeDriver: true,
-          }),
-          Animated.timing(slice.scale, {
-            toValue: 0.96,
-            duration: slice.duration,
-            easing: Easing.out(Easing.cubic),
-            useNativeDriver: true,
-          }),
-        ]),
-      ])
-    );
-
-    Animated.parallel(anims).start();
   }, []);
 
   const animateParticles = useCallback(() => {
@@ -510,11 +434,6 @@ export const EscrowTrustBanner = () => {
   );
 
   const show = useCallback(() => {
-    /*
-      FIX:
-      Only allow show if currently hidden.
-      This stops event spam / interval spam from re-triggering the banner.
-    */
     if (bannerPhase.current !== 'hidden') return;
 
     bannerPhase.current = 'visible';
@@ -527,16 +446,17 @@ export const EscrowTrustBanner = () => {
     stopHammer();
     resetTextAnimations();
 
-    sliceAnimsRef.current = [];
     particleAnimsRef.current = [];
 
     setIsDisintegrating(false);
-    setHideOriginal(false);
     setFxVersion((v) => v + 1);
 
     slideAnim.setValue(300);
     bannerOpacity.setValue(0);
-    backdropOpacity.setValue(0);
+
+    cardOpacity.setValue(1);
+    cardScale.setValue(1);
+
     waveOpacity.setValue(0);
 
     setVisible(true);
@@ -549,11 +469,6 @@ export const EscrowTrustBanner = () => {
         useNativeDriver: true,
       }),
       Animated.timing(bannerOpacity, {
-        toValue: 1,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-      Animated.timing(backdropOpacity, {
         toValue: 1,
         duration: 600,
         useNativeDriver: true,
@@ -606,7 +521,6 @@ export const EscrowTrustBanner = () => {
   }, [
     slideAnim,
     bannerOpacity,
-    backdropOpacity,
     startHammerAnimation,
     resetTextAnimations,
     stopHammer,
@@ -620,11 +534,6 @@ export const EscrowTrustBanner = () => {
   ]);
 
   const dismiss = useCallback(() => {
-    /*
-      FIX:
-      Only allow dismissal from visible state.
-      This prevents double-dismiss and repeated dismissal triggers.
-    */
     if (bannerPhase.current !== 'visible') return;
 
     bannerPhase.current = 'dismissing';
@@ -635,7 +544,6 @@ export const EscrowTrustBanner = () => {
     }
 
     setIsDisintegrating(true);
-    setHideOriginal(false);
     stopHammer();
 
     AsyncStorage.setItem(ESCROW_BANNER_KEY, Date.now().toString()).catch(() => {});
@@ -658,34 +566,30 @@ export const EscrowTrustBanner = () => {
     const width = layout.width;
     const height = layout.height;
 
-    createSlices(width);
     createParticles(width, height);
     setFxVersion((v) => v + 1);
 
-    Animated.timing(backdropOpacity, {
-      toValue: 0,
-      duration: 500,
-      useNativeDriver: true,
-    }).start();
-
     /*
-      FIX:
-      Double rAF helps ensure the FX layer is mounted before we hide
-      the original banner and start animations.
-      This removes the flash/glitch.
+      Card exit:
+      quick elegant fade + slight scale-down while particles emit
     */
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        if (!isMountedRef.current) return;
-        if (bannerPhase.current !== 'dismissing') return;
+    Animated.parallel([
+      Animated.timing(cardOpacity, {
+        toValue: 0,
+        duration: CARD_EXIT_DURATION,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(cardScale, {
+        toValue: 0.985,
+        duration: CARD_EXIT_DURATION,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start();
 
-        setHideOriginal(true);
-
-        animateWave(width);
-        animateSlices();
-        animateParticles();
-      });
-    });
+    animateWave(width);
+    animateParticles();
 
     cleanupTimer.current = setTimeout(() => {
       if (!isMountedRef.current) return;
@@ -694,9 +598,7 @@ export const EscrowTrustBanner = () => {
 
       setVisible(false);
       setIsDisintegrating(false);
-      setHideOriginal(false);
 
-      sliceAnimsRef.current = [];
       particleAnimsRef.current = [];
       setFxVersion((v) => v + 1);
 
@@ -706,23 +608,25 @@ export const EscrowTrustBanner = () => {
       hammerY.setValue(0);
       slideAnim.setValue(300);
       bannerOpacity.setValue(0);
-      backdropOpacity.setValue(0);
+
+      cardOpacity.setValue(1);
+      cardScale.setValue(1);
+
       waveOpacity.setValue(0);
 
       cleanupTimer.current = null;
     }, CLEANUP_DELAY);
   }, [
-    backdropOpacity,
-    createSlices,
     createParticles,
     animateWave,
-    animateSlices,
     animateParticles,
     resetTextAnimations,
     hammerRotate,
     hammerY,
     slideAnim,
     bannerOpacity,
+    cardOpacity,
+    cardScale,
     waveOpacity,
     stopHammer,
   ]);
@@ -730,7 +634,8 @@ export const EscrowTrustBanner = () => {
   /*
     FIX:
     Safe event-driven show logic.
-    No more aggressive 1-second polling by default.
+    No full-screen backdrop.
+    No aggressive polling.
   */
   useEffect(() => {
     const checkAndShow = async () => {
@@ -765,6 +670,9 @@ export const EscrowTrustBanner = () => {
       checkAndShow
     );
 
+    // Initial check on mount
+    checkAndShow();
+
     let interval: ReturnType<typeof setInterval> | undefined;
 
     if (ENABLE_PERIODIC_RECHECK) {
@@ -795,7 +703,6 @@ export const EscrowTrustBanner = () => {
   });
 
   const layoutForFx = bannerLayout;
-  const sliceWidth = layoutForFx ? layoutForFx.width / SLICE_COUNT : 0;
 
   const renderLiveContent = () => (
     <View style={styles.content}>
@@ -835,181 +742,126 @@ export const EscrowTrustBanner = () => {
         </View>
       </View>
 
-      <Pressable onPress={dismiss} style={styles.closeButton}>
+      <Pressable
+        onPress={(e) => {
+          e.stopPropagation();
+          dismiss();
+        }}
+        style={styles.closeButton}
+        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+      >
         <FontAwesome5 name="times" size={18} color="#A3A3A3" />
       </Pressable>
     </View>
   );
 
-  const renderStaticContent = () => (
-    <View style={styles.content}>
-      <View style={styles.iconContainer}>
-        <Image
-          source={require('../../assets/logo-hammer.png')}
-          style={{ width: 44, height: 44, resizeMode: 'contain' }}
-        />
-      </View>
-
-      <View style={styles.textContainer}>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center' }}>
-          <Text style={styles.text}>Your money is held in </Text>
-          <Text style={[styles.text, { color: '#6366F1', fontWeight: '800' }]}>
-            escrow{' '}
-          </Text>
-          <Text style={styles.text}>until the job is done right.</Text>
-        </View>
-      </View>
-    </View>
-  );
-
   return (
-    <>
-      {/* Backdrop */}
-      <AnimatedPressable
-        style={[styles.overlay, { opacity: backdropOpacity }]}
-        onPress={dismiss}
-        pointerEvents={isDisintegrating ? 'none' : 'auto'}
-      />
-
-      {/* Banner positioner */}
-      <View style={styles.container} pointerEvents="box-none">
+    /*
+      FIX:
+      Root is pass-through.
+      Only the banner card itself receives touches.
+    */
+    <View style={styles.container} pointerEvents="box-none">
+      <Animated.View
+        style={[
+          styles.bannerPositioner,
+          {
+            transform: [{ translateY: slideAnim }],
+            opacity: bannerOpacity,
+          },
+        ]}
+        pointerEvents="box-none"
+      >
+        {/* Interactive banner card */}
         <Animated.View
-          style={[
-            styles.bannerPositioner,
-            {
-              transform: [{ translateY: slideAnim }],
-              opacity: bannerOpacity,
-            },
-          ]}
-          pointerEvents="box-none"
+          pointerEvents={isDisintegrating ? 'none' : 'auto'}
+          style={{
+            opacity: cardOpacity,
+            transform: [{ scale: cardScale }],
+          }}
         >
-          {/* Real banner */}
-          <View
-            style={[
-              styles.banner,
-              {
-                opacity: hideOriginal ? 0 : 1,
-              },
-            ]}
+          <Pressable
+            style={styles.banner}
+            onPress={dismiss}
             onLayout={onBannerLayout}
-            pointerEvents={isDisintegrating ? 'none' : 'auto'}
+            disabled={isDisintegrating}
           >
             {renderLiveContent()}
-          </View>
+          </Pressable>
+        </Animated.View>
 
-          {/* Disintegration FX layer */}
-          {isDisintegrating && layoutForFx && sliceWidth > 0 && (
-            <View
-              key={`fx-${fxVersion}`}
+        {/* FX layer — completely pass-through */}
+        {isDisintegrating && layoutForFx && (
+          <View
+            key={`fx-${fxVersion}`}
+            style={{
+              position: 'absolute',
+              top: layoutForFx.y,
+              left: layoutForFx.x,
+              width: layoutForFx.width,
+              height: layoutForFx.height,
+            }}
+            pointerEvents="none"
+          >
+            {/* Wavefront halo */}
+            <Animated.View
               style={{
                 position: 'absolute',
-                top: layoutForFx.y,
-                left: layoutForFx.x,
-                width: layoutForFx.width,
-                height: layoutForFx.height,
+                top: 0,
+                bottom: 0,
+                left: -12,
+                width: 24,
+                opacity: waveOpacity,
+                transform: [{ translateX: waveX }],
+                backgroundColor: 'rgba(129,140,248,0.14)',
               }}
-              pointerEvents="none"
-            >
-              {/* Slices */}
-              {sliceAnimsRef.current.map((slice, i) => (
-                <View
-                  key={`slice-${slice.id}`}
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    bottom: 0,
-                    left: i * sliceWidth,
-                    width: sliceWidth,
-                    overflow: 'hidden',
-                  }}
-                >
-                  <Animated.View
-                    style={{
-                      width: layoutForFx.width,
-                      height: layoutForFx.height,
-                      backgroundColor: '#FFFFFF',
-                      borderTopLeftRadius: 32,
-                      borderTopRightRadius: 32,
-                      paddingVertical: 28,
-                      paddingHorizontal: 24,
-                      opacity: slice.opacity,
-                      transform: [
-                        { translateX: -i * sliceWidth },
-                        { translateX: slice.transX },
-                        { translateY: slice.transY },
-                        { scale: slice.scale },
-                      ],
-                    }}
-                  >
-                    {renderStaticContent()}
-                  </Animated.View>
-                </View>
-              ))}
+            />
 
-              {/* Wavefront halo */}
+            {/* Wavefront line */}
+            <Animated.View
+              style={{
+                position: 'absolute',
+                top: 0,
+                bottom: 0,
+                left: -1,
+                width: 2,
+                opacity: waveOpacity,
+                transform: [{ translateX: waveX }],
+                backgroundColor: 'rgba(99,102,241,0.42)',
+              }}
+            />
+
+            {/* Particles */}
+            {particleAnimsRef.current.map((p) => (
               <Animated.View
+                key={`particle-${p.id}`}
                 style={{
                   position: 'absolute',
-                  top: 0,
-                  bottom: 0,
-                  left: -12,
-                  width: 24,
-                  opacity: waveOpacity,
-                  transform: [{ translateX: waveX }],
-                  backgroundColor: 'rgba(129,140,248,0.14)',
+                  left: p.x,
+                  top: p.y,
+                  width: p.size,
+                  height: p.size,
+                  borderRadius: p.size / 2,
+                  backgroundColor: p.color,
+                  opacity: p.opacity,
+                  transform: [
+                    { translateX: p.transX },
+                    { translateY: p.transY },
+                    { scale: p.scale },
+                  ],
                 }}
               />
-
-              {/* Wavefront line */}
-              <Animated.View
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  bottom: 0,
-                  left: -1,
-                  width: 2,
-                  opacity: waveOpacity,
-                  transform: [{ translateX: waveX }],
-                  backgroundColor: 'rgba(99,102,241,0.42)',
-                }}
-              />
-
-              {/* Particles */}
-              {particleAnimsRef.current.map((p) => (
-                <Animated.View
-                  key={`particle-${p.id}`}
-                  style={{
-                    position: 'absolute',
-                    left: p.x,
-                    top: p.y,
-                    width: p.size,
-                    height: p.size,
-                    borderRadius: p.size / 2,
-                    backgroundColor: p.color,
-                    opacity: p.opacity,
-                    transform: [
-                      { translateX: p.transX },
-                      { translateY: p.transY },
-                      { scale: p.scale },
-                    ],
-                  }}
-                />
-              ))}
-            </View>
-          )}
-        </Animated.View>
-      </View>
-    </>
+            ))}
+          </View>
+        )}
+      </Animated.View>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     ...StyleSheet.absoluteFillObject,
-  },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'transparent',
   },
   bannerPositioner: {
     position: 'absolute',
