@@ -767,9 +767,6 @@ export const EscrowTrustBanner = () => {
       {/* Top Glass Highlight */}
       <View style={styles.glassHighlight} />
 
-      {/* Top Grabber Handle */}
-      <View style={styles.grabberHandle} />
-
       <Animated.View
         style={[
           styles.iconContainer,
@@ -900,7 +897,6 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(28, 27, 31, 0.08)',
     paddingVertical: 16,
     paddingHorizontal: 18,
-    paddingTop: 18,
     shadowColor: '#4338CA',
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.16,
@@ -920,16 +916,6 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: 'rgba(255, 255, 255, 0.85)',
     opacity: 0.6,
-  },
-  grabberHandle: {
-    position: 'absolute',
-    top: 7,
-    left: '50%',
-    marginLeft: -16,
-    width: 32,
-    height: 3.5,
-    borderRadius: 2,
-    backgroundColor: 'rgba(28, 27, 31, 0.08)',
   },
   content: {
     flexDirection: 'row',
