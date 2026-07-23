@@ -42,23 +42,26 @@ const RECHECK_INTERVAL_MS = 60 * 1000;
 const WAVE_DURATION = 700;
 const CARD_EXIT_DURATION = 700;
 const CLEANUP_DELAY = 2600;
-const PARTICLE_COUNT = Platform.OS === 'ios' ? 180 : 130;
+const PARTICLE_COUNT = Platform.OS === 'ios' ? 360 : 240;
 
 const rand = (min: number, max: number) => Math.random() * (max - min) + min;
 
 function pickDustColor() {
   const r = Math.random();
 
-  if (r < 0.52) return '#E9EDFF';
-  if (r < 0.74) return '#E0E7FF';
-  if (r < 0.86) return '#C7D2FE';
-  if (r < 0.94) return '#A5B4FC';
+  if (r < 0.45) return '#F0F4FF';
+  if (r < 0.70) return '#E0E7FF';
+  if (r < 0.84) return '#C7D2FE';
+  if (r < 0.93) return '#A5B4FC';
   if (r < 0.98) return '#6366F1';
-  return '#1F2937';
+  return '#1E1B4B';
 }
 
 function pickSparkleColor() {
-  return Math.random() > 0.5 ? '#FFFFFF' : '#E0E7FF';
+  const r = Math.random();
+  if (r < 0.60) return '#FFFFFF';
+  if (r < 0.85) return '#E0E7FF';
+  return '#C7D2FE';
 }
 
 /* ────────────────────────────────────────────────────────────────
@@ -312,16 +315,17 @@ export const EscrowTrustBanner = () => {
 
     for (let i = 0; i < PARTICLE_COUNT; i++) {
       const x = Math.random() * width;
-      const y = Math.random() * Math.max(40, height - 18) + 8;
+      const y = Math.random() * Math.max(36, height - 12) + 6;
       const progress = x / width;
 
-      const isSparkle = Math.random() < 0.14;
+      const isSparkle = Math.random() < 0.22;
+      const isFineDust = Math.random() < 0.65;
 
       const size = isSparkle
-        ? rand(1.4, 2.6)
-        : Math.random() < 0.76
-          ? rand(1.5, 3.0)
-          : rand(3.0, 4.6);
+        ? rand(1.0, 2.2)
+        : isFineDust
+          ? rand(0.8, 1.8)
+          : rand(2.0, 3.4);
 
       particles.push({
         id: i,
@@ -334,10 +338,10 @@ export const EscrowTrustBanner = () => {
         transY: new Animated.Value(0),
         opacity: new Animated.Value(0),
         scale: new Animated.Value(0.85),
-        delay: Math.max(0, progress * WAVE_DURATION + rand(-30, 120)),
-        duration: rand(900, 1500),
-        toX: rand(8, 44) + progress * 18,
-        toY: -(rand(18, 84) + progress * 12),
+        delay: Math.max(0, progress * WAVE_DURATION + rand(-40, 140)),
+        duration: rand(850, 1600),
+        toX: rand(10, 52) + progress * 22,
+        toY: -(rand(16, 95) + progress * 16),
       });
     }
 
