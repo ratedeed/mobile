@@ -324,9 +324,6 @@ const CategoryRow = memo(({ category, zip, favorites, toggleFav, handleContracto
         const list = extractList(result);
         if (active) {
           setContractors(list);
-          if (list.length > 0) {
-            DeviceEventEmitter.emit('show-escrow-banner');
-          }
         }
       } catch (err) {
         if (__DEV__) console.warn(`Failed to load category row ${category.label}:`, err);
@@ -511,9 +508,6 @@ const HomeScreen = () => {
             });
           } else {
             setAllContractors(list);
-            if (list.length > 0) {
-              DeviceEventEmitter.emit('show-escrow-banner');
-            }
           }
           setPage(pageNum);
           setHasMore(pageNum < (cachedEntry.pages || 1));
@@ -536,9 +530,6 @@ const HomeScreen = () => {
       // If stale, render cached data immediately but continue to network fetch
       if (!append) {
         setAllContractors(cachedEntry.data);
-        if (cachedEntry.data.length > 0) {
-          DeviceEventEmitter.emit('show-escrow-banner');
-        }
         setLoading(false); // Hide loading spinner, show stale data
       }
     } else {
@@ -587,9 +578,6 @@ const HomeScreen = () => {
           });
         } else {
           setAllContractors(list);
-          if (list.length > 0) {
-            DeviceEventEmitter.emit('show-escrow-banner');
-          }
         }
 
         setPage(pageNum);
@@ -617,6 +605,11 @@ const HomeScreen = () => {
       if (mountedRef.current) {
         setLoading(false);
         setLoadingMore(false);
+        if (pageNum === 1 && !append) {
+          setTimeout(() => {
+            DeviceEventEmitter.emit('show-escrow-banner');
+          }, 300);
+        }
       }
     }
   }, []);
