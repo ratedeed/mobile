@@ -522,6 +522,11 @@ const HomeScreen = () => {
           
           setLoading(false);
           setLoadingMore(false);
+          if (pageNum === 1 && !append && list.length > 0) {
+            setTimeout(() => {
+              DeviceEventEmitter.emit('show-escrow-banner');
+            }, 300);
+          }
         }
         isFetchingRef.current = false;
         return;

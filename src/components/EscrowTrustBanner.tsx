@@ -27,7 +27,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const ESCROW_BANNER_KEY = 'ratedeed_escrow_banner_dismissed_at';
-const COOLDOWN_MS = 1000; // 30 minutes cooldown matching web reference
+const COOLDOWN_MS = 1000; // 5s in dev testing, 30m in prod
 
 /*
   Periodic recheck is disabled by default because it is safer.
