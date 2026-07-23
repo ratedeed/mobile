@@ -27,7 +27,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const ESCROW_BANNER_KEY = 'ratedeed_escrow_banner_dismissed_at';
-const COOLDOWN_MS = 1000; // 5s in dev testing, 30m in prod
+const COOLDOWN_MS = 30 * 60 * 1000; // 30 minutes cooldown
 
 /*
   Periodic recheck is disabled by default because it is safer.
@@ -916,7 +916,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.16,
     shadowRadius: 24,
     elevation: 10,
-    width: '100%',
     maxWidth: 420,
     alignSelf: 'center',
     overflow: 'hidden',
