@@ -609,11 +609,27 @@ export default function JobDetailScreen() {
                   </>
                 );
               })()}
+
+              {/* Accepted Change Orders Line Items */}
+              {changeOrders.filter((co: any) => co.status === 'accepted').map((co: any) => {
+                const isDeduction = (co.amount || 0) < 0;
+                return (
+                  <View key={co._id || co.id} className={`flex-row justify-between items-center py-1.5 px-2.5 rounded-lg mt-1 ${isDeduction ? 'bg-rose-50 dark:bg-rose-950/40' : 'bg-emerald-50 dark:bg-emerald-950/40'}`}>
+                    <Text className={`text-[12px] font-semibold ${isDeduction ? 'text-rose-800 dark:text-rose-300' : 'text-emerald-800 dark:text-emerald-300'}`}>
+                      {isDeduction ? 'Scope Reduction' : 'Change Order'}: {co.title}
+                    </Text>
+                    <Text className={`text-[12px] font-bold ${isDeduction ? 'text-rose-700 dark:text-rose-400' : 'text-emerald-700 dark:text-emerald-400'}`}>
+                      {isDeduction ? '-' : '+'}{formatCurrency(Math.abs(co.amount))}
+                    </Text>
+                  </View>
+                );
+              })}
+
               <View className="h-px bg-neutral-200 dark:bg-neutral-700 my-2" />
-              <View className="flex-row justify-between">
-                <Text className="text-[14px] font-bold text-neutral-900 dark:text-neutral-50">Total</Text>
-                <Text className="text-[14px] font-bold text-indigo-600">
-                  {formatCurrency(quote.totalAmount || quote.total || 0)}
+              <View className="flex-row justify-between items-center">
+                <Text className="text-[14px] font-bold text-neutral-900 dark:text-neutral-50">Total Contract Value</Text>
+                <Text className="text-[15px] font-black text-indigo-600 dark:text-indigo-400">
+                  {formatCurrency(job.totalAmount || quote.totalAmount || quote.total || 0)}
                 </Text>
               </View>
               {job.isMilestone && (

@@ -45,6 +45,7 @@ export default function ChangeOrderScreen() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
+  const [coType, setCoType] = useState<'addition' | 'deduction'>('addition');
   const [submitting, setSubmitting] = useState(false);
   const [changeOrderState, setChangeOrderState] = useState(initialChangeOrder);
 
@@ -66,6 +67,8 @@ export default function ChangeOrderScreen() {
       return;
     }
 
+    const finalAmount = coType === 'deduction' ? -Math.abs(parsedAmount) : Math.abs(parsedAmount);
+
     if (!jobId) {
       Alert.alert('Error', 'Missing job information.');
       return;
@@ -76,12 +79,12 @@ export default function ChangeOrderScreen() {
       await createChangeOrder(jobId, {
         title: title.trim(),
         description: description.trim(),
-        amount: Math.round(parsedAmount * 100),
+        amount: Math.round(finalAmount * 100),
       });
 
       Alert.alert(
-        'Change Order Submitted',
-        'The change order has been submitted. The other party will be notified to review it.',
+        coType === 'deduction' ? 'Scope Reduction Submitted' : 'Change Order Submitted',
+        `The ${coType === 'deduction' ? 'scope reduction' : 'change order'} has been submitted for client review.`,
         [{ text: 'Done', onPress: () => navigation.goBack() }]
       );
     } catch (err: any) {
@@ -181,10 +184,34 @@ export default function ChangeOrderScreen() {
 
         {isCreate ? (
           <>
+            {/* Type Selector Pills */}
+            <View className="flex-row bg-neutral-100 dark:bg-neutral-800 p-1.5 rounded-2xl mb-6" style={{ gap: 8 }}>
+              <Pressable
+                onPress={() => setCoType('addition')}
+                className={`flex-1 py-3 rounded-xl items-center justify-center ${
+                  coType === 'addition' ? 'bg-emerald-600' : 'bg-transparent'
+                }`}
+              >
+                <Text className={`text-xs font-bold ${coType === 'addition' ? 'text-white' : 'text-neutral-600 dark:text-neutral-300'}`}>
+                  ➕ Addition (+ Extra Work)
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => setCoType('deduction')}
+                className={`flex-1 py-3 rounded-xl items-center justify-center ${
+                  coType === 'deduction' ? 'bg-rose-600' : 'bg-transparent'
+                }`}
+              >
+                <Text className={`text-xs font-bold ${coType === 'deduction' ? 'text-white' : 'text-neutral-600 dark:text-neutral-300'}`}>
+                  ➖ Deduction (- Scope Reduction)
+                </Text>
+              </Pressable>
+            </View>
+
             {/* Title Input */}
             <Text className="text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-1.5">Title *</Text>
             <TextInput
-              placeholder="e.g., Additional bathroom tile work"
+              placeholder={coType === 'addition' ? "e.g., Additional bathroom tile work" : "e.g., Removed guest bathroom tile work"}
               value={title}
               onChangeText={setTitle}
               maxLength={150}
