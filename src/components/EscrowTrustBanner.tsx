@@ -22,11 +22,12 @@ import {
   Rect,
 } from 'react-native-svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const ESCROW_BANNER_KEY = 'ratedeed_escrow_banner_dismissed_at';
-const COOLDOWN_MS = 1000; // 30 minutes cooldown matching web reference
+const COOLDOWN_MS = 30 * 60 * 1000; // 30 minutes cooldown matching web reference
 
 /*
   Periodic recheck is disabled by default because it is safer.
@@ -138,6 +139,7 @@ interface BannerLayout {
 type BannerPhase = 'hidden' | 'visible' | 'dismissing';
 
 export const EscrowTrustBanner = () => {
+  const insets = useSafeAreaInsets();
   const [visible, setVisible] = useState(false);
   const [isDisintegrating, setIsDisintegrating] = useState(false);
   const [fxVersion, setFxVersion] = useState(0);
@@ -565,6 +567,7 @@ export const EscrowTrustBanner = () => {
       cleanupTimer.current = null;
     }
 
+    // Stop any ongoing entrance/stagger animations immediately
     slideAnim.stopAnimation();
     bannerOpacity.stopAnimation();
     text1Opacity.stopAnimation();
@@ -576,6 +579,7 @@ export const EscrowTrustBanner = () => {
     hammerRotate.stopAnimation();
     hammerY.stopAnimation();
 
+    // Lock position and snap text opacities so particles crumble from full card layout
     slideAnim.setValue(0);
     bannerOpacity.setValue(1);
     text1Opacity.setValue(1);
@@ -611,6 +615,10 @@ export const EscrowTrustBanner = () => {
     createParticles(width, height);
     setFxVersion((v) => v + 1);
 
+    /*
+      Card exit:
+      quick elegant fade + slight scale-down while particles emit
+    */
     Animated.parallel([
       Animated.timing(cardOpacity, {
         toValue: 0,
@@ -675,6 +683,11 @@ export const EscrowTrustBanner = () => {
     text3Y,
   ]);
 
+  /*
+    FIX:
+    Safe event-driven show logic.
+    Only shows when triggered by 'show-escrow-banner' event after contractors load.
+  */
   useEffect(() => {
     const checkAndShow = async () => {
       if (!isMountedRef.current) return;
@@ -772,28 +785,28 @@ export const EscrowTrustBanner = () => {
       </Animated.View>
 
       <View style={styles.textContainer}>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center' }}>
-          <Animated.View
-            style={{ opacity: text1Opacity, transform: [{ translateY: text1Y }] }}
-          >
-            <Text style={styles.text}>Your money is held in </Text>
-          </Animated.View>
+        <Animated.View
+          style={{ opacity: text1Opacity, transform: [{ translateY: text1Y }] }}
+        >
+          <Text style={styles.text}>Your money is held in </Text>
+        </Animated.View>
 
-          <Animated.View
-            style={{ opacity: text2Opacity, transform: [{ translateY: text2Y }] }}
-          >
-            <AnimatedGradientText text="escrow " />
-          </Animated.View>
+        <Animated.View
+          style={{ opacity: text2Opacity, transform: [{ translateY: text2Y }] }}
+        >
+          <AnimatedGradientText text="escrow " />
+        </Animated.View>
 
-          <Animated.View
-            style={{ opacity: text3Opacity, transform: [{ translateY: text3Y }] }}
-          >
-            <Text style={styles.text}>until the job is done right.</Text>
-          </Animated.View>
-        </View>
+        <Animated.View
+          style={{ opacity: text3Opacity, transform: [{ translateY: text3Y }] }}
+        >
+          <Text style={styles.text}>until the job is done right.</Text>
+        </Animated.View>
       </View>
     </View>
   );
+
+  const bottomOffset = 64 + insets.bottom + 12;
 
   return (
     <View style={styles.container} pointerEvents="box-none">
@@ -801,6 +814,7 @@ export const EscrowTrustBanner = () => {
         style={[
           styles.bannerPositioner,
           {
+            bottom: bottomOffset,
             transform: [{ translateY: slideAnim }],
             opacity: bannerOpacity,
           },
@@ -811,6 +825,9 @@ export const EscrowTrustBanner = () => {
         <Animated.View
           pointerEvents={isDisintegrating ? 'none' : 'auto'}
           style={{
+            width: '100%',
+            maxWidth: 460,
+            alignSelf: 'center',
             opacity: cardOpacity,
             transform: [{ scale: cardScale }],
           }}
@@ -872,7 +889,6 @@ const styles = StyleSheet.create({
   },
   bannerPositioner: {
     position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 34 : 20,
     left: 16,
     right: 16,
     alignItems: 'center',
@@ -890,9 +906,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.16,
     shadowRadius: 24,
     elevation: 10,
+    width: '100%',
     maxWidth: 460,
     alignSelf: 'center',
-    width: '100%',
     overflow: 'hidden',
     position: 'relative',
   },
@@ -928,10 +944,14 @@ const styles = StyleSheet.create({
   },
   textContainer: {
     flex: 1,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
   },
   text: {
-    fontSize: 17,
-    color: '#1f2937',
-    lineHeight: 24,
+    fontSize: 14.5,
+    fontWeight: '500',
+    color: '#1C1B1F',
+    lineHeight: 21,
   },
 });
