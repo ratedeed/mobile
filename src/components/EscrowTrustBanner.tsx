@@ -26,7 +26,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const ESCROW_BANNER_KEY = 'ratedeed_escrow_banner_dismissed_at';
-const COOLDOWN_MS = 30 * 60 * 1000; // 30 minutes cooldown matching web reference
+const COOLDOWN_MS = 1000; // 30 minutes cooldown matching web reference
 
 /*
   Periodic recheck is disabled by default because it is safer.
