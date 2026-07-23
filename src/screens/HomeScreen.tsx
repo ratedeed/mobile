@@ -511,6 +511,9 @@ const HomeScreen = () => {
             });
           } else {
             setAllContractors(list);
+            if (list.length > 0) {
+              DeviceEventEmitter.emit('show-escrow-banner');
+            }
           }
           setPage(pageNum);
           setHasMore(pageNum < (cachedEntry.pages || 1));
@@ -533,6 +536,9 @@ const HomeScreen = () => {
       // If stale, render cached data immediately but continue to network fetch
       if (!append) {
         setAllContractors(cachedEntry.data);
+        if (cachedEntry.data.length > 0) {
+          DeviceEventEmitter.emit('show-escrow-banner');
+        }
         setLoading(false); // Hide loading spinner, show stale data
       }
     } else {
@@ -581,6 +587,9 @@ const HomeScreen = () => {
           });
         } else {
           setAllContractors(list);
+          if (list.length > 0) {
+            DeviceEventEmitter.emit('show-escrow-banner');
+          }
         }
 
         setPage(pageNum);

@@ -560,6 +560,28 @@ export const EscrowTrustBanner = () => {
       cleanupTimer.current = null;
     }
 
+    // Stop any ongoing entrance/stagger animations immediately
+    slideAnim.stopAnimation();
+    bannerOpacity.stopAnimation();
+    text1Opacity.stopAnimation();
+    text2Opacity.stopAnimation();
+    text3Opacity.stopAnimation();
+    text1Y.stopAnimation();
+    text2Y.stopAnimation();
+    text3Y.stopAnimation();
+    hammerRotate.stopAnimation();
+    hammerY.stopAnimation();
+
+    // Lock position and snap text opacities so particles crumble from full card layout
+    slideAnim.setValue(0);
+    bannerOpacity.setValue(1);
+    text1Opacity.setValue(1);
+    text2Opacity.setValue(1);
+    text3Opacity.setValue(1);
+    text1Y.setValue(0);
+    text2Y.setValue(0);
+    text3Y.setValue(0);
+
     setIsDisintegrating(true);
     stopHammer();
 
@@ -569,7 +591,7 @@ export const EscrowTrustBanner = () => {
 
     const layout: BannerLayout =
       bannerLayoutRef.current || {
-        x: 0,
+        x: (SCREEN_WIDTH - fallbackWidth) / 2,
         y: 0,
         width: fallbackWidth,
         height: 88,
@@ -646,13 +668,18 @@ export const EscrowTrustBanner = () => {
     cardScale,
     waveOpacity,
     stopHammer,
+    text1Opacity,
+    text1Y,
+    text2Opacity,
+    text2Y,
+    text3Opacity,
+    text3Y,
   ]);
 
   /*
     FIX:
     Safe event-driven show logic.
-    No full-screen backdrop.
-    No aggressive polling.
+    Only shows when triggered by 'show-escrow-banner' event after contractors load.
   */
   useEffect(() => {
     const checkAndShow = async () => {
@@ -686,9 +713,6 @@ export const EscrowTrustBanner = () => {
       'show-escrow-banner',
       checkAndShow
     );
-
-    // Initial check on mount
-    checkAndShow();
 
     let interval: ReturnType<typeof setInterval> | undefined;
 
