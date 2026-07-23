@@ -734,9 +734,6 @@ export const EscrowTrustBanner = () => {
       }
     );
 
-    // Initial check on mount so banner shows up when app first opens
-    checkAndShow();
-
     let interval: ReturnType<typeof setInterval> | undefined;
 
     if (ENABLE_PERIODIC_RECHECK) {
@@ -789,23 +786,17 @@ export const EscrowTrustBanner = () => {
       </Animated.View>
 
       <View style={styles.textContainer}>
-        <Animated.View
-          style={{ opacity: text1Opacity, transform: [{ translateY: text1Y }] }}
-        >
-          <Text style={styles.text}>Your money is held in </Text>
-        </Animated.View>
-
-        <Animated.View
-          style={{ opacity: text2Opacity, transform: [{ translateY: text2Y }] }}
-        >
-          <AnimatedGradientText text="escrow " />
-        </Animated.View>
-
-        <Animated.View
-          style={{ opacity: text3Opacity, transform: [{ translateY: text3Y }] }}
-        >
-          <Text style={styles.text}>until the job is done right.</Text>
-        </Animated.View>
+        <Text style={styles.text}>
+          <Animated.Text style={{ opacity: text1Opacity }}>
+            Your money is held in{' '}
+          </Animated.Text>
+          <Animated.Text style={{ opacity: text2Opacity, color: '#4F46E5', fontWeight: '800' }}>
+            escrow{' '}
+          </Animated.Text>
+          <Animated.Text style={{ opacity: text3Opacity }}>
+            until the job is done right.
+          </Animated.Text>
+        </Text>
       </View>
     </View>
   );
@@ -937,14 +928,12 @@ const styles = StyleSheet.create({
   },
   textContainer: {
     flex: 1,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
+    justifyContent: 'center',
   },
   text: {
-    fontSize: 15.5,
+    fontSize: 14.5,
     fontWeight: '600',
     color: '#1C1B1F',
-    lineHeight: 22,
+    lineHeight: 21,
   },
 });
