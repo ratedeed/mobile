@@ -32,7 +32,7 @@ const ESCROW_BANNER_KEY = '@escrow_banner_dismissed_at';
   Use a real cooldown.
   Do not use 1000ms here unless you want the banner to reappear constantly.
 */
-const COOLDOWN_MS = 1000;
+const COOLDOWN_MS = 10000;
 
 /*
   Periodic recheck is disabled by default because it is safer.
