@@ -97,8 +97,8 @@ const AnimatedGradientText = ({ text }: { text: string }) => {
   });
 
   return (
-    <View style={{ width: 54, height: 21, justifyContent: 'center', marginHorizontal: 2 }}>
-      <Svg height="21" width="54" viewBox="0 0 54 21">
+    <View style={{ width: 58, height: 22, justifyContent: 'center', marginHorizontal: 2 }}>
+      <Svg height="22" width="58" viewBox="0 0 58 22">
         <Defs>
           <SvgGradient id="grad" x1="0%" y1="0%" x2="100%" y2="0%">
             <Stop offset="0%" stopColor="#4F46E5" />
@@ -110,10 +110,10 @@ const AnimatedGradientText = ({ text }: { text: string }) => {
         </Defs>
 
         <Animated.View style={{ transform: [{ translateX }] }}>
-          <Rect x="-90" y="0" width="270" height="21" fill="url(#grad)" />
+          <Rect x="-90" y="0" width="270" height="22" fill="url(#grad)" />
         </Animated.View>
 
-        <SvgText fill="url(#grad)" fontSize="14.5" fontWeight="800" x="0" y="16">
+        <SvgText fill="url(#grad)" fontSize="15" fontWeight="800" x="0" y="17">
           {text}
         </SvgText>
       </Svg>
@@ -942,7 +942,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   textContainer: {
-    flex: 1,
+    flexShrink: 1,
     justifyContent: 'center',
   },
   text: {
