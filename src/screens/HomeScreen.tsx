@@ -525,7 +525,7 @@ const HomeScreen = () => {
           if (pageNum === 1 && !append && list.length > 0) {
             setTimeout(() => {
               DeviceEventEmitter.emit('show-escrow-banner');
-            }, 300);
+            }, 3000);
           }
         }
         isFetchingRef.current = false;
@@ -613,7 +613,7 @@ const HomeScreen = () => {
         if (pageNum === 1 && !append) {
           setTimeout(() => {
             DeviceEventEmitter.emit('show-escrow-banner');
-          }, 300);
+          }, 3000);
         }
       }
     }
@@ -687,7 +687,7 @@ const HomeScreen = () => {
           if (data && data.length > 0) {
             setTimeout(() => {
               DeviceEventEmitter.emit('show-escrow-banner');
-            }, 300);
+            }, 3000);
           }
 
           // Silently trigger background update if IP ZIP differs from what was cached/prefetched
