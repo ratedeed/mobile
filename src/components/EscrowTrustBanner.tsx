@@ -708,6 +708,15 @@ export const EscrowTrustBanner = () => {
       checkAndShow
     );
 
+    const dismissSubscription = DeviceEventEmitter.addListener(
+      'dismiss-escrow-banner',
+      () => {
+        if (bannerPhase.current === 'visible') {
+          dismiss();
+        }
+      }
+    );
+
     let interval: ReturnType<typeof setInterval> | undefined;
 
     if (ENABLE_PERIODIC_RECHECK) {
@@ -716,6 +725,7 @@ export const EscrowTrustBanner = () => {
 
     return () => {
       subscription.remove();
+      dismissSubscription.remove();
 
       if (interval) {
         clearInterval(interval);
@@ -728,7 +738,7 @@ export const EscrowTrustBanner = () => {
         cleanupTimer.current = null;
       }
     };
-  }, [show, stopHammer]);
+  }, [show, dismiss, stopHammer]);
 
   if (!visible) return null;
 
@@ -786,7 +796,7 @@ export const EscrowTrustBanner = () => {
   );
 
   return (
-    <View style={styles.container} pointerEvents="auto" {...panResponder.panHandlers}>
+    <View style={styles.container} pointerEvents="box-none">
       <Animated.View
         style={[
           styles.bannerPositioner,

@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { View, Platform } from 'react-native';
+import { View, Platform, DeviceEventEmitter } from 'react-native';
 import { useColorScheme } from 'nativewind';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import AnimatedSplashScreen from './src/components/AnimatedSplashScreen';
@@ -160,7 +160,11 @@ function AppNavigator({ splashComplete }) {
   usePushNotifications(); // Initialize push notification listeners inside NavigationContainer
 
   return (
-    <View className="flex-1 bg-background">
+    <View
+      className="flex-1 bg-background"
+      onTouchStart={() => DeviceEventEmitter.emit('dismiss-escrow-banner')}
+      onTouchMove={() => DeviceEventEmitter.emit('dismiss-escrow-banner')}
+    >
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
       {/* Always show MainNavigator so guests can browse */}
       <MainNavigator />
