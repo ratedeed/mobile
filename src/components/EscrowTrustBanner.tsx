@@ -64,8 +64,14 @@ function pickSparkleColor() {
   return '#C7D2FE';
 }
 
+let hasBannerBeenRequested = false;
+
+DeviceEventEmitter.addListener('show-escrow-banner', () => {
+  hasBannerBeenRequested = true;
+});
+
 /* ────────────────────────────────────────────────────────────────
-   Animated Gradient Text
+   Animated Gradient Text (Web-Matching Shimmer Gradient)
    ──────────────────────────────────────────────────────────────── */
 const AnimatedGradientText = ({ text }: { text: string }) => {
   const animatedValue = useRef(new Animated.Value(0)).current;
@@ -87,12 +93,12 @@ const AnimatedGradientText = ({ text }: { text: string }) => {
 
   const translateX = animatedValue.interpolate({
     inputRange: [0, 1],
-    outputRange: [-100, 100],
+    outputRange: [-90, 90],
   });
 
   return (
-    <View style={{ width: 68, height: 24 }}>
-      <Svg height="24" width="68" viewBox="0 0 68 24">
+    <View style={{ width: 54, height: 21, justifyContent: 'center', marginHorizontal: 2 }}>
+      <Svg height="21" width="54" viewBox="0 0 54 21">
         <Defs>
           <SvgGradient id="grad" x1="0%" y1="0%" x2="100%" y2="0%">
             <Stop offset="0%" stopColor="#4F46E5" />
@@ -104,10 +110,10 @@ const AnimatedGradientText = ({ text }: { text: string }) => {
         </Defs>
 
         <Animated.View style={{ transform: [{ translateX }] }}>
-          <Rect x="-100" y="0" width="300" height="24" fill="url(#grad)" />
+          <Rect x="-90" y="0" width="270" height="21" fill="url(#grad)" />
         </Animated.View>
 
-        <SvgText fill="url(#grad)" fontSize="15.5" fontWeight="700" x="0" y="18">
+        <SvgText fill="url(#grad)" fontSize="14.5" fontWeight="800" x="0" y="16">
           {text}
         </SvgText>
       </Svg>
@@ -722,8 +728,17 @@ export const EscrowTrustBanner = () => {
 
     const subscription = DeviceEventEmitter.addListener(
       'show-escrow-banner',
-      checkAndShow
+      () => {
+        hasBannerBeenRequested = true;
+        checkAndShow();
+      }
     );
+
+    // If show-escrow-banner was already emitted (e.g. while splash screen was active before mount),
+    // trigger checkAndShow now that we are mounted and contractors have loaded.
+    if (hasBannerBeenRequested) {
+      checkAndShow();
+    }
 
     const dismissSubscription = DeviceEventEmitter.addListener(
       'dismiss-escrow-banner',
@@ -786,17 +801,18 @@ export const EscrowTrustBanner = () => {
       </Animated.View>
 
       <View style={styles.textContainer}>
-        <Text style={styles.text}>
-          <Animated.Text style={{ opacity: text1Opacity }}>
-            Your money is held in{' '}
-          </Animated.Text>
-          <Animated.Text style={{ opacity: text2Opacity, color: '#4F46E5', fontWeight: '800' }}>
-            escrow{' '}
-          </Animated.Text>
-          <Animated.Text style={{ opacity: text3Opacity }}>
-            until the job is done right.
-          </Animated.Text>
-        </Text>
+        <Animated.View
+          style={{
+            opacity: text1Opacity,
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+          }}
+        >
+          <Text style={styles.text}>Your money is held in </Text>
+          <AnimatedGradientText text="escrow" />
+          <Text style={styles.text}> until the job is done right.</Text>
+        </Animated.View>
       </View>
     </View>
   );
