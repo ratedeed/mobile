@@ -1069,7 +1069,7 @@ export const refundJob = async (jobId: string, amount?: number, reason?: string)
   return post(`${API_BASE}/jobs/${jobId}/refund`, { amount, reason }, authHeaders);
 };
 
-export const createChangeOrder = async (jobId: string, data: { title: string; description: string; amount: number }): Promise<any> => {
+export const createChangeOrder = async (jobId: string, data: { title: string; description: string; amount: number; coType?: 'addition' | 'deduction' }): Promise<any> => {
   const authHeaders = await getAuthHeaders();
   return post(`${API_BASE}/jobs/${jobId}/change-order`, data, authHeaders);
 };

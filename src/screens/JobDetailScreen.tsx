@@ -114,6 +114,7 @@ export default function JobDetailScreen() {
   const [coTitle, setCoTitle] = useState('');
   const [coDescription, setCoDescription] = useState('');
   const [coAmount, setCoAmount] = useState('');
+  const [coType, setCoType] = useState<'addition' | 'deduction'>('addition');
   const [uploadProgressPhotoLoading, setUploadProgressPhotoLoading] = useState(false);
 
   const loadJob = useCallback(async () => {
@@ -368,15 +369,19 @@ export default function JobDetailScreen() {
     const parsedAmount = parseFloat(coAmount);
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
       HapticFeedback.error();
-      Alert.alert('Error', 'Please enter a valid amount greater than 0.');
+      Alert.alert('Error', 'Please enter a valid positive amount.');
       return;
     }
+
+    const finalAmountInCents = coType === 'deduction' ? -Math.abs(Math.round(parsedAmount * 100)) : Math.abs(Math.round(parsedAmount * 100));
+
     setActionLoading('changeOrder');
     try {
       await createChangeOrder(jobId, {
         title: coTitle.trim(),
         description: coDescription.trim(),
-        amount: Math.round(parsedAmount * 100),
+        amount: finalAmountInCents,
+        coType,
       });
 
       if (job?.conversationId) {
@@ -384,17 +389,18 @@ export default function JobDetailScreen() {
           await sendMessage(
             job.conversationId,
             '',
-            `📝 New Change Order: "${coTitle.trim()}" ($${parsedAmount.toFixed(2)}). Please review and accept or decline.`
+            `📝 New ${coType === 'deduction' ? 'Scope Deduction' : 'Change Order'}: "${coTitle.trim()}" (${coType === 'deduction' ? '-' : ''}$${parsedAmount.toFixed(2)}). Please review and accept or decline.`
           );
         } catch {}
       }
 
       HapticFeedback.success();
-      Alert.alert('Success', 'Change order sent & client notified!');
+      Alert.alert('Success', `${coType === 'deduction' ? 'Scope reduction' : 'Change order'} sent & client notified!`);
       setShowChangeOrder(false);
       setCoTitle('');
       setCoDescription('');
       setCoAmount('');
+      setCoType('addition');
       loadJob();
     } catch (e: any) {
       HapticFeedback.error();
@@ -1065,12 +1071,34 @@ export default function JobDetailScreen() {
               style={{ paddingBottom: insets.bottom + 20 }}
             >
               <View className="flex-row items-center justify-between mb-4">
-                <Text className="text-[17px] font-bold text-neutral-900 dark:text-neutral-50">Change Order</Text>
+                <Text className="text-[17px] font-bold text-neutral-900 dark:text-neutral-50">
+                  {coType === 'deduction' ? 'Scope Reduction' : 'Change Order'}
+                </Text>
                 <Pressable
                   onPress={() => setShowChangeOrder(false)}
                   className="w-8 h-8 items-center justify-center rounded-full bg-neutral-100 dark:bg-neutral-800"
                 >
                   <FontAwesome5 name="times" size={14} color="#737373" />
+                </Pressable>
+              </View>
+
+              {/* Addition vs Deduction Pills */}
+              <View className="flex-row bg-neutral-100 dark:bg-neutral-900 p-1 rounded-xl mb-4 border border-neutral-200 dark:border-neutral-800">
+                <Pressable
+                  onPress={() => setCoType('addition')}
+                  className={`flex-1 py-2 rounded-lg items-center ${coType === 'addition' ? 'bg-emerald-600' : 'bg-transparent'}`}
+                >
+                  <Text className={`text-xs font-bold ${coType === 'addition' ? 'text-white' : 'text-neutral-600 dark:text-neutral-400'}`}>
+                    + Addition
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => setCoType('deduction')}
+                  className={`flex-1 py-2 rounded-lg items-center ${coType === 'deduction' ? 'bg-rose-600' : 'bg-transparent'}`}
+                >
+                  <Text className={`text-xs font-bold ${coType === 'deduction' ? 'text-white' : 'text-neutral-600 dark:text-neutral-400'}`}>
+                    - Scope Deduction
+                  </Text>
                 </Pressable>
               </View>
               <View className="mb-3">
