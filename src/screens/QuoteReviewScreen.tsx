@@ -334,7 +334,7 @@ export default function QuoteReviewScreen() {
                   ) : null}
                 </View>
                 <Text className="text-sm font-semibold text-neutral-900 dark:text-white">
-                  ${(item.amount / 100).toFixed(2)}
+                  ${Number(item.amount || 0).toFixed(2)}
                 </Text>
               </View>
             ))}
