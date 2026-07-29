@@ -38,6 +38,7 @@ interface ServiceItem {
 interface PortfolioProject {
   id: string;
   title: string;
+  description?: string;
   images: string[];
   category: string;
   localUri?: string;
@@ -159,6 +160,7 @@ export default function ContractorEditProfileScreen() {
         setPortfolio(data.portfolio.map((p: any) => ({
           id: p._id || p.id || `portfolio-${Date.now()}`,
           title: p.name || p.title || '',
+          description: p.description || '',
           images: Array.isArray(p.images) ? p.images : (p.imageUrl ? [p.imageUrl] : []),
           category: p.category || '',
         })));
@@ -288,6 +290,7 @@ export default function ContractorEditProfileScreen() {
           }
           return {
             name: p.title || undefined,
+            description: p.description || undefined,
             category: p.category || undefined,
             imageUrl: projectImages[0] || undefined,
             images: projectImages,

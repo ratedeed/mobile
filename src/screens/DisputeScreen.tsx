@@ -150,6 +150,26 @@ export default function DisputeScreen() {
         photos.map(p => uploadToCloudinary(p, CLOUDINARY_FOLDERS.DISPUTES))
       );
       const reason = `[${category}] ${description.trim()}`;
+
+      if (isContractor) {
+        const { sendMessage, getJobById } = await import('../api');
+        const j = await getJobById(jobIdState);
+        if (j?.conversationId) {
+          await sendMessage(
+            j.conversationId,
+            j.user || '',
+            `⚠️ Contractor Support Note: "${category} - ${description.trim()}". Support team notified.`
+          );
+        }
+        HapticFeedback.warning();
+        Alert.alert(
+          'Inquiry Submitted',
+          'Your support note has been posted to the job thread. RateDeed Support team has been notified.',
+          [{ text: 'Done', onPress: () => navigation.goBack() }]
+        );
+        return;
+      }
+
       await raiseDispute(jobIdState, reason, undefined, uploadedUrls);
 
       try {
@@ -158,7 +178,7 @@ export default function DisputeScreen() {
         if (j?.conversationId) {
           await sendMessage(
             j.conversationId,
-            '',
+            j.contractor?.user || '',
             `⚠️ Dispute Raised: "${category}". RateDeed Support team has been notified to mediate.`
           );
         }
@@ -167,9 +187,7 @@ export default function DisputeScreen() {
       HapticFeedback.warning();
       Alert.alert(
         'Dispute Filed',
-        isContractor
-          ? 'Your dispute inquiry has been submitted. Our team will review it.'
-          : 'Your dispute has been submitted successfully. Our team will review it within 24-48 hours.',
+        'Your dispute has been submitted successfully. Our team will review it within 24-48 hours.',
         [{ text: 'Done', onPress: () => navigation.goBack() }]
       );
     } catch (err: any) {

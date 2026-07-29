@@ -174,7 +174,7 @@ const SavedScreen = () => {
               <Image source={{ uri: coverImage }} className="absolute inset-0 w-full h-full" resizeMode="cover" />
             )}
 
-            <Pressable onPress={() => handleRemove(contractorId)} className="absolute top-2 right-2 p-1">
+            <Pressable onPress={() => handleRemove(contractorId)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} className="absolute top-2 right-2 p-1">
               <Heart size={24} color="rgba(225,29,72,1)" weight="fill" />
             </Pressable>
           </View>

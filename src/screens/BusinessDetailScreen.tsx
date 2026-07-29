@@ -517,13 +517,15 @@ const BusinessDetailScreen: React.FC = () => {
           )}
           <Pressable
             onPress={handleShare}
-            className="w-8 h-8 items-center justify-center bg-white dark:bg-neutral-950 rounded-full shadow-sm"
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            className="w-11 h-11 items-center justify-center bg-white dark:bg-neutral-950 rounded-full shadow-sm"
           >
             <FontAwesome5 name="share-alt" size={14} color={isDark ? "#ffffff" : "#171717"} />
           </Pressable>
           <Pressable
             onPress={toggleFavorite}
-            className="w-8 h-8 items-center justify-center bg-white dark:bg-neutral-950 rounded-full shadow-sm"
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            className="w-11 h-11 items-center justify-center bg-white dark:bg-neutral-950 rounded-full shadow-sm"
           >
             <FontAwesome5 name="heart" solid={isSaved} size={14} color={isSaved ? '#f43f5e' : (isDark ? '#ffffff' : '#171717')} />
           </Pressable>
@@ -532,7 +534,8 @@ const BusinessDetailScreen: React.FC = () => {
               onPress={() => {
                 setShowReportDialog(true);
               }}
-              className="w-8 h-8 items-center justify-center bg-white dark:bg-neutral-950 rounded-full shadow-sm"
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+              className="w-11 h-11 items-center justify-center bg-white dark:bg-neutral-950 rounded-full shadow-sm"
             >
               <FontAwesome5 name="flag" size={14} color={isDark ? '#ffffff' : '#737373'} />
             </Pressable>

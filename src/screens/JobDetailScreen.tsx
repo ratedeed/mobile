@@ -35,6 +35,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { uploadToCloudinary, CLOUDINARY_FOLDERS } from '../utils/cloudinary';
 import { requestPhotoLibraryPermission } from '../utils/permissions';
 import { BouncingDotsLoader, BouncingRefreshScrollView } from '../components/common';
+import ImageLightbox from '../components/ImageLightbox';
 
 type RootStackParamList = {
   JobDetail: { jobId: string };
@@ -676,7 +677,7 @@ export default function JobDetailScreen() {
                               >
                                 <Text className="text-[10px] font-bold text-white">Request Release</Text>
                               </Pressable>
-                            ) : isUser && (m.status === 'funded' || ['funded_in_progress', 'completed_pending_release'].includes(job.status)) ? (
+                            ) : isUser && (m.status === 'funded' || m.status === 'completed_pending_release') ? (
                               <Pressable
                                 onPress={() => handleReleaseMilestone(m._id || m.id || `${i}`, m.name)}
                                 disabled={actionLoading !== null}
@@ -1173,42 +1174,12 @@ export default function JobDetailScreen() {
       )}
 
       {/* Image Preview Modal */}
-      <Modal
+      <ImageLightbox
+        images={job?.progressPhotos?.length ? job.progressPhotos : (previewImage ? [previewImage] : [])}
+        initialIndex={previewImage && job?.progressPhotos ? Math.max(0, job.progressPhotos.indexOf(previewImage)) : 0}
         visible={!!previewImage}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setPreviewImage(null)}
-      >
-        <Pressable
-          style={{ flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.9)', justifyContent: 'center', alignItems: 'center' }}
-          onPress={() => setPreviewImage(null)}
-        >
-          {previewImage && (
-            <View style={{ width: '90%', height: '70%', justifyContent: 'center', alignItems: 'center' }}>
-              <Image
-                source={{ uri: previewImage }}
-                style={{ width: '100%', height: '100%', resizeMode: 'contain' }}
-              />
-              <Pressable
-                onPress={() => setPreviewImage(null)}
-                style={{
-                  position: 'absolute',
-                  top: -40,
-                  right: 10,
-                  backgroundColor: 'rgba(255,255,255,0.2)',
-                  width: 36,
-                  height: 36,
-                  borderRadius: 18,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <FontAwesome5 name="times" size={16} color="#fff" />
-              </Pressable>
-            </View>
-          )}
-        </Pressable>
-      </Modal>
+        onClose={() => setPreviewImage(null)}
+      />
     </View>
   );
 }
