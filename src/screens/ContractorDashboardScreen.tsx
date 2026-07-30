@@ -1315,7 +1315,12 @@ const ContractorDashboardScreen: React.FC = () => {
                       {upcomingJobs.map((j: any) => {
                         const date = getJobDate(j);
                         return (
-                          <View key={j._id} className="flex-row items-center bg-neutral-50 dark:bg-neutral-800/40 p-3 rounded-xl border border-neutral-100 dark:border-neutral-800/60" style={{ gap: 12 }}>
+                          <Pressable
+                            key={j._id}
+                            onPress={() => j._id && navigation.navigate('JobDetail', { jobId: j._id })}
+                            className="flex-row items-center bg-neutral-50 dark:bg-neutral-800/40 p-3 rounded-xl border border-neutral-100 dark:border-neutral-800/60 active:opacity-70"
+                            style={{ gap: 12 }}
+                          >
                             <View className="bg-indigo-50 dark:bg-indigo-950/60 px-2.5 py-1.5 rounded-xl items-center justify-center" style={{ minWidth: 42 }}>
                               <Text className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase">
                                 {date?.toLocaleDateString('en-US', { month: 'short' })}
@@ -1330,7 +1335,7 @@ const ContractorDashboardScreen: React.FC = () => {
                                 Client: {j.user ? `${j.user.firstName || ''} ${j.user.lastName || ''}`.trim() : 'Homeowner'}
                               </Text>
                             </View>
-                          </View>
+                          </Pressable>
                         );
                       })}
                     </View>
@@ -1350,6 +1355,7 @@ const ContractorDashboardScreen: React.FC = () => {
               setCalendarDate={setCalendarDate}
               setSelectedDay={setSelectedDay}
               getJobDate={getJobDate}
+              onJobPress={(jobId: string) => navigation.navigate('JobDetail', { jobId })}
             />
           )}
 

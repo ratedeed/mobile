@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 
 interface ContractorCalendarTabProps {
   calendarDate: Date;
@@ -10,6 +11,7 @@ interface ContractorCalendarTabProps {
   setCalendarDate: (d: Date) => void;
   setSelectedDay: (day: number | null) => void;
   getJobDate: (job: any) => Date | null;
+  onJobPress?: (jobId: string) => void;
 }
 
 export const ContractorCalendarTab: React.FC<ContractorCalendarTabProps> = ({
@@ -20,7 +22,9 @@ export const ContractorCalendarTab: React.FC<ContractorCalendarTabProps> = ({
   setCalendarDate,
   setSelectedDay,
   getJobDate,
+  onJobPress,
 }) => {
+  const navigation = useNavigation<any>();
   const year = calendarDate.getFullYear();
   const month = calendarDate.getMonth();
   const monthName = calendarDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
@@ -138,9 +142,16 @@ export const ContractorCalendarTab: React.FC<ContractorCalendarTabProps> = ({
         ) : (
           <View style={{ gap: 8 }}>
             {selectedDateJobs.map((j: any) => (
-              <View
+              <Pressable
                 key={j._id}
-                className="bg-neutral-50 dark:bg-neutral-800/40 p-3 rounded-xl border border-neutral-100 dark:border-neutral-800/60 flex-row justify-between items-center"
+                onPress={() => {
+                  if (onJobPress) {
+                    onJobPress(j._id);
+                  } else if (j._id) {
+                    navigation.navigate('JobDetail', { jobId: j._id });
+                  }
+                }}
+                className="bg-neutral-50 dark:bg-neutral-800/40 p-3 rounded-xl border border-neutral-100 dark:border-neutral-800/60 flex-row justify-between items-center active:opacity-70"
               >
                 <View className="flex-1 min-w-0 mr-2">
                   <Text className="text-xs font-bold text-neutral-800 dark:text-neutral-200 truncate">
@@ -155,7 +166,7 @@ export const ContractorCalendarTab: React.FC<ContractorCalendarTabProps> = ({
                     {j.status?.replace(/_/g, ' ')}
                   </Text>
                 </View>
-              </View>
+              </Pressable>
             ))}
           </View>
         )}
