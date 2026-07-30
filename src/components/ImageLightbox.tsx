@@ -11,6 +11,8 @@ import {
   Modal,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { FontAwesome5 } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Spacing } from '../constants/designTokens';
 
 interface ImageLightboxProps {
@@ -28,6 +30,7 @@ const ImageLightbox: React.FC<ImageLightboxProps> = ({
   visible,
   onClose,
 }) => {
+  const insets = useSafeAreaInsets();
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [scale, setScale] = useState(1);
   
@@ -89,6 +92,7 @@ const ImageLightbox: React.FC<ImageLightboxProps> = ({
   if (!visible || images.length === 0) return null;
 
   const uri = images[currentIndex];
+  const topInset = Math.max((insets?.top || 0) + 12, 50);
 
   return (
     <Modal
@@ -102,13 +106,14 @@ const ImageLightbox: React.FC<ImageLightboxProps> = ({
       <View style={styles.container}>
         {/* Close button - top right */}
         <TouchableOpacity 
-          style={styles.closeButton} 
+          style={[styles.closeButton, { top: topInset }]} 
           onPress={onClose} 
           activeOpacity={0.7}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           accessibilityLabel="Close lightbox"
           accessibilityRole="button"
         >
-          <Text style={styles.closeText}>✕</Text>
+          <FontAwesome5 name="times" size={18} color="#FFFFFF" />
         </TouchableOpacity>
 
         {/* Main image area */}
@@ -198,23 +203,21 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     position: 'absolute',
-    top: 50,
     right: 20,
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.4)',
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 10,
-  },
-  closeText: {
-    fontSize: 22,
-    color: '#fff',
-    fontWeight: '700',
-    marginTop: -2,
+    zIndex: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.5,
+    shadowRadius: 4,
+    elevation: 8,
   },
   pagination: {
     position: 'absolute',
