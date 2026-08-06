@@ -607,12 +607,14 @@ export default function JobDetailScreen() {
                         {formatCurrency(subtotalVal)}
                       </Text>
                     </View>
-                    <View className="flex-row justify-between py-1">
-                      <Text className="text-[12px] text-neutral-500 dark:text-neutral-400">Platform fee ({displayFeePercent}%)</Text>
-                      <Text className="text-[12px] text-neutral-500 dark:text-neutral-400">
-                        {formatCurrency(serviceFeeVal)}
-                      </Text>
-                    </View>
+                    {!isUser && (
+                      <View className="flex-row justify-between py-1">
+                        <Text className="text-[12px] text-neutral-500 dark:text-neutral-400">Platform fee ({displayFeePercent}%)</Text>
+                        <Text className="text-[12px] text-neutral-500 dark:text-neutral-400">
+                          {formatCurrency(serviceFeeVal)}
+                        </Text>
+                      </View>
+                    )}
                   </>
                 );
               })()}

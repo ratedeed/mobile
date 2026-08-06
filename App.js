@@ -29,44 +29,53 @@ import * as Sentry from '@sentry/react-native';
 import Constants from 'expo-constants';
 import { requestTrackingPermissionsAsync } from 'expo-tracking-transparency';
 import * as Linking from 'expo-linking';
+import { isDemoMode } from './src/utils/demoMode';
+import { silenceWarnings } from './src/utils/silenceWarnings';
+import { generateDemoToken, DEMO_USER_ID, demoUser } from './src/utils/demoData';
 
-Sentry.init({
-  dsn: Constants.expoConfig?.extra?.sentryDsn || '',
-  debug: false,
-  beforeSend(event) {
-    const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
-    const scrub = (val) => {
-      if (typeof val === 'string') {
-        let clean = val;
-        clean = clean.replace(/bearer\s+[a-zA-Z0-9-_=]+\.[a-zA-Z0-9-_=]+\.?[a-zA-Z0-9-_.+/=]*/gi, '[Redacted JWT]');
-        clean = clean.replace(emailRegex, '[Redacted Email]');
-        return clean;
-      }
-      if (val && typeof val === 'object') {
-        for (const key in val) {
-          if (Object.prototype.hasOwnProperty.call(val, key)) {
-            if (key.toLowerCase() === 'authorization' || key.toLowerCase() === 'jwt') {
-              val[key] = '[Redacted]';
-            } else {
-              val[key] = scrub(val[key]);
+silenceWarnings();
+
+if (!isDemoMode()) {
+  Sentry.init({
+    dsn: Constants.expoConfig?.extra?.sentryDsn || '',
+    debug: false,
+    beforeSend(event) {
+      const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+      const scrub = (val) => {
+        if (typeof val === 'string') {
+          let clean = val;
+          clean = clean.replace(/bearer\s+[a-zA-Z0-9-_=]+\.[a-zA-Z0-9-_=]+\.?[a-zA-Z0-9-_.+/=]*/gi, '[Redacted JWT]');
+          clean = clean.replace(emailRegex, '[Redacted Email]');
+          return clean;
+        }
+        if (val && typeof val === 'object') {
+          for (const key in val) {
+            if (Object.prototype.hasOwnProperty.call(val, key)) {
+              if (key.toLowerCase() === 'authorization' || key.toLowerCase() === 'jwt') {
+                val[key] = '[Redacted]';
+              } else {
+                val[key] = scrub(val[key]);
+              }
             }
           }
         }
+        return val;
+      };
+      if (event.request && event.request.headers) {
+        if (event.request.headers['Authorization']) event.request.headers['Authorization'] = '[Redacted]';
+        if (event.request.headers['authorization']) event.request.headers['authorization'] = '[Redacted]';
       }
-      return val;
-    };
-    if (event.request && event.request.headers) {
-      if (event.request.headers['Authorization']) event.request.headers['Authorization'] = '[Redacted]';
-      if (event.request.headers['authorization']) event.request.headers['authorization'] = '[Redacted]';
+      return scrub(event);
     }
-    return scrub(event);
-  }
-});
+  });
+}
 
 const STRIPE_PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
 
 if (!process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
-  if (__DEV__) {
+  if (isDemoMode()) {
+    // No-op in demo mode
+  } else if (__DEV__) {
     console.warn('EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY is not set. Please define it in your local .env file.');
   } else {
     throw new Error('CRITICAL: EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY environment variable is not defined in production build!');
@@ -138,6 +147,7 @@ function AppNavigator({ splashComplete }) {
   const { colorScheme } = useColorScheme();
 
   useEffect(() => {
+    if (isDemoMode()) return;
     (async () => {
       if (Platform.OS === 'ios') {
         const { status } = await requestTrackingPermissionsAsync();
@@ -149,6 +159,7 @@ function AppNavigator({ splashComplete }) {
   }, []);
 
   useEffect(() => {
+    if (isDemoMode()) return;
     startAppStateListener();
     startNetworkStatusListener();
     return () => {
@@ -174,15 +185,22 @@ function AppNavigator({ splashComplete }) {
 }
 
 function AppContent({ splashComplete }) {
-  const { isAuthenticated, isLoading, userId } = useAuth();
+  const { isAuthenticated, isLoading, userId, updateBackendToken } = useAuth();
 
   useEffect(() => {
-    if (isAuthenticated && userId) {
+    if (isDemoMode() && !isAuthenticated && !isLoading) {
+      const token = generateDemoToken(DEMO_USER_ID, 'user', demoUser.email);
+      updateBackendToken(token, true, demoUser).catch(() => {});
+    }
+  }, [isAuthenticated, isLoading, updateBackendToken]);
+
+  useEffect(() => {
+    if (isAuthenticated && userId && !isDemoMode()) {
       registerSocket(userId);
     }
   }, [isAuthenticated, userId]);
 
-  if (isLoading) {
+  if (isLoading || (isDemoMode() && !isAuthenticated)) {
     return (
       <>
         <StatusBar style="auto" />
@@ -229,7 +247,7 @@ function App() {
               <NotificationsProvider>
                 <ContractorProvider>
                   <AppContent splashComplete={splashComplete} />
-                  <OfflineBanner isVisible={!isConnected} />
+                  {!isDemoMode() && <OfflineBanner isVisible={!isConnected} />}
                   {!splashComplete && (
                     <AnimatedSplashScreen onComplete={() => setSplashComplete(true)} minDuration={800} />
                   )}
@@ -243,4 +261,4 @@ function App() {
   );
 }
 
-export default Sentry.wrap(App);
+export default isDemoMode() ? App : Sentry.wrap(App);

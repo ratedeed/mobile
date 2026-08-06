@@ -8,6 +8,8 @@ import { jwtDecode } from 'jwt-decode';
 import { AppState } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import { getSecureItem, setSecureItem, removeSecureItem } from './secureStore';
+import { isDemoMode } from './demoMode';
+import * as demo from './demoApiClient';
 
 // @ts-ignore - firebaseConfig is a JS module
 const firebaseAuth: Auth = auth as unknown as Auth;
@@ -390,6 +392,7 @@ const normalizeContractors = (list: any[]): Contractor[] => {
 // ==========================================
 
 export const login = async (email: string, password: string): Promise<any> => {
+  if (isDemoMode()) return demo.demoLogin(email, password);
   const data = await post(`${API_BASE}/users/login`, { email, password });
   if (data && data.token) {
     await setSecureItem('auth_token', data.token);
@@ -403,6 +406,7 @@ export const login = async (email: string, password: string): Promise<any> => {
 };
 
 export const logout = async (): Promise<void> => {
+  if (isDemoMode()) { await demo.demoLogout(); await removeSecureItem('auth_token'); await removeSecureItem('refresh_token'); await AsyncStorage.removeItem(USER_DATA_KEY); return; }
   try {
     const authHeaders = await getAuthHeaders();
     await post(`${API_BASE}/users/push-token`, { token: '' }, authHeaders).catch(() => {});
@@ -413,22 +417,27 @@ export const logout = async (): Promise<void> => {
 };
 
 export const register = async (data: any): Promise<any> => {
+  if (isDemoMode()) return demo.demoRegister(data);
   return post(`${API_BASE}/users/signup`, data);
 };
 
 export const verifyEmailBackend = async (email: string): Promise<any> => {
+  if (isDemoMode()) return demo.demoVerifyEmailBackend();
   return post(`${API_BASE}/users/verify-email`, { email });
 };
 
 export const forgotPassword = async (email: string): Promise<any> => {
+  if (isDemoMode()) return demo.demoForgotPassword();
   return post(`${API_BASE}/users/forgot-password`, { email });
 };
 
 export const contractorSignup = async (data: any): Promise<any> => {
+  if (isDemoMode()) return demo.demoContractorSignup(data);
   return post(`${API_BASE}/contractors`, data);
 };
 
 export const backendLoginFirebase = async (idToken: string, email: string): Promise<any> => {
+  if (isDemoMode()) return demo.demoBackendLoginFirebase();
   const headers = { 'Authorization': `Bearer ${idToken}` };
   const data = await post(`${API_BASE}/users/login`, { email, firebaseUid: firebaseAuth.currentUser?.uid }, headers);
   if (data && data.token) {
@@ -441,6 +450,7 @@ export const backendLoginFirebase = async (idToken: string, email: string): Prom
 };
 
 export const syncEmailVerificationStatus = async (idToken: string, email: string, isVerified: boolean): Promise<any> => {
+  if (isDemoMode()) return demo.demoSyncEmailVerificationStatus();
   // NOTE: The backend automatically syncs the email verification status during the login endpoint.
   // We return a resolved promise immediately to avoid breaking the client flow due to a 404 on this route.
   return { success: true, message: 'Synced on login' };
@@ -451,6 +461,7 @@ export const syncEmailVerificationStatus = async (idToken: string, email: string
 // ==========================================
 
 export const browseContractors = async (queryParams: ContractorQueryParams = {}): Promise<ContractorsResponse> => {
+  if (isDemoMode()) return demo.demoBrowseContractors(queryParams);
   const queryString = new URLSearchParams(queryParams as any).toString();
   const data = await get(`${API_BASE}/contractors?${queryString}`);
   if (data?.contractors) data.contractors = normalizeContractors(data.contractors);
@@ -459,11 +470,13 @@ export const browseContractors = async (queryParams: ContractorQueryParams = {})
 };
 
 export const getTopRatedContractors = async (zipCode: string, limit: number = 6): Promise<Contractor[]> => {
+  if (isDemoMode()) return demo.demoGetTopRatedContractors(zipCode, limit);
   const data = await get(`${API_BASE}/contractors/top-rated?zipCode=${zipCode}&limit=${limit}`);
   return normalizeContractors(data);
 };
 
 export const getNearbyTopRatedContractors = async (zipCode: string, excludeId?: string): Promise<Contractor[]> => {
+  if (isDemoMode()) return demo.demoGetNearbyTopRatedContractors(zipCode, excludeId);
   let url = `${API_BASE}/contractors/nearby?zipCode=${zipCode}`;
   if (excludeId) url += `&excludeId=${excludeId}`;
   const data = await get(url);
@@ -471,17 +484,20 @@ export const getNearbyTopRatedContractors = async (zipCode: string, excludeId?: 
 };
 
 export const getContractorBySlug = async (slug: string): Promise<Contractor> => {
+  if (isDemoMode()) return demo.demoGetContractorBySlug(slug);
   const data = await get(`${API_BASE}/contractors/slug/${slug}`);
   return normalizeApiContractor(data);
 };
 
 export const getContractorProfile = async (): Promise<Contractor> => {
+  if (isDemoMode()) return demo.demoGetContractorProfile();
   const authHeaders = await getAuthHeaders();
   const data = await get(`${API_BASE}/contractors/profile`, authHeaders);
   return normalizeApiContractor(data);
 };
 
 export const getContractorDetails = async (contractorId: string): Promise<Contractor> => {
+  if (isDemoMode()) return demo.demoGetContractorDetails(contractorId);
   const authHeaders = await getAuthHeaders();
   const data = await get(`${API_BASE}/contractors/${contractorId}`, authHeaders);
   return normalizeApiContractor(data);
@@ -490,12 +506,14 @@ export const getContractorDetails = async (contractorId: string): Promise<Contra
 export const fetchContractorDetails = getContractorDetails;
 
 export const updateContractorProfile = async (data: Partial<Contractor>): Promise<Contractor> => {
+  if (isDemoMode()) return demo.demoUpdateContractorProfile(data);
   const authHeaders = await getAuthHeaders();
   const result = await put(`${API_BASE}/contractors/profile`, data, authHeaders);
   return normalizeApiContractor(result);
 };
 
 export const requestVerification = async (data: { licenseNumber: string; licenseDocumentUrl?: string; licenseDocumentFile?: string }): Promise<any> => {
+  if (isDemoMode()) return demo.demoRequestVerification(data);
   const authHeaders = await getAuthHeaders();
   
   // Create a copy of the data and rename url to file if needed to match backend
@@ -586,6 +604,7 @@ export const stopNetworkStatusListener = () => {
 };
 
 export const initializeSocket = async () => {
+  if (isDemoMode()) return;
   if (socket?.connected || isInitializingSocket) return;
   isDisconnecting = false;
   isInitializingSocket = true;
@@ -674,6 +693,7 @@ export const initializeSocket = async () => {
 
 export const registerSocket = async (userId: string) => {
   if (!userId) return;
+  if (isDemoMode()) return;
   await initializeSocket();
 
   // Prevent redundant registrations
@@ -818,11 +838,13 @@ export const emitMessageRead = (messageId: string, readerId: string, conversatio
 };
 
 export const sendMessage = async (conversationId: string, recipientId: string, messageText: string, attachmentUrl?: string): Promise<any> => {
+  if (isDemoMode()) return demo.demoSendMessage(conversationId, recipientId, messageText);
   const authHeaders = await getAuthHeaders();
   return post(`${API_BASE}/messages/`, { conversationId, recipientId, messageText, attachmentUrl }, authHeaders);
 };
 
 export const listConversations = async (): Promise<any[]> => {
+  if (isDemoMode()) return demo.demoFetchConversations();
   const authHeaders = await getAuthHeaders();
   return get(`${API_BASE}/messages/conversations`, authHeaders);
 };
@@ -830,16 +852,19 @@ export const listConversations = async (): Promise<any[]> => {
 export const fetchConversations = listConversations;
 
 export const markConversationAsRead = async (conversationId: string): Promise<void> => {
+  if (isDemoMode()) return demo.demoMarkConversationAsRead(conversationId);
   const authHeaders = await getAuthHeaders();
   return put(`${API_BASE}/messages/read-conversation/${conversationId}`, {}, authHeaders);
 };
 
 export const fetchMessages = async (conversationId: string, page = 1, limit = 50): Promise<any> => {
+  if (isDemoMode()) return demo.demoFetchMessages(conversationId);
   const authHeaders = await getAuthHeaders();
   return get(`${API_BASE}/messages/conversation/${conversationId}?page=${page}&limit=${limit}`, authHeaders);
 };
 
 export const findOrCreateConversation = async (participantIds: string[]): Promise<any> => {
+  if (isDemoMode()) return demo.demoFindOrCreateConversation(participantIds);
   const authHeaders = await getAuthHeaders();
   return post(`${API_BASE}/messages/find-or-create-conversation`, { participantIds }, authHeaders);
 };
@@ -847,11 +872,13 @@ export const findOrCreateConversation = async (participantIds: string[]): Promis
 export const createConversation = findOrCreateConversation;
 
 export const deleteConversation = async (conversationId: string): Promise<any> => {
+  if (isDemoMode()) return demo.demoDeleteConversation(conversationId);
   const authHeaders = await getAuthHeaders();
   return del(`${API_BASE}/messages/conversation/${conversationId}`, authHeaders);
 };
 
 export const createQuoteFromChat = async (data: any): Promise<any> => {
+  if (isDemoMode()) return demo.demoCreateQuoteFromChat(data);
   const authHeaders = await getAuthHeaders();
   return post(`${API_BASE}/quotes/from-chat`, data, authHeaders);
 };
@@ -861,6 +888,7 @@ export const createQuoteFromChat = async (data: any): Promise<any> => {
 // ==========================================
 
 export const listPosts = async (queryParams: any = {}): Promise<{ posts: Post[] }> => {
+  if (isDemoMode()) return demo.demoListPosts(queryParams);
   const queryString = new URLSearchParams(queryParams).toString();
   return get(`${API_BASE}/posts?${queryString}`);
 };
@@ -868,41 +896,49 @@ export const listPosts = async (queryParams: any = {}): Promise<{ posts: Post[] 
 export const getFeedPosts = listPosts;
 
 export const fetchContractorPosts = async (contractorId: string): Promise<{ posts: Post[] }> => {
+  if (isDemoMode()) return demo.demoFetchContractorPosts(contractorId);
   const posts = await get(`${API_BASE}/posts/contractor/${contractorId}`);
   return { posts: Array.isArray(posts) ? posts : (posts.posts || []) };
 };
 
 export const createPost = async (postData: any): Promise<Post> => {
+  if (isDemoMode()) return demo.demoCreatePost(postData);
   const authHeaders = await getAuthHeaders();
   return post(`${API_BASE}/posts`, postData, authHeaders);
 };
 
 export const likePost = async (postId: string): Promise<void> => {
+  if (isDemoMode()) return demo.demoLikePost(postId);
   const authHeaders = await getAuthHeaders();
   return put(`${API_BASE}/posts/${postId}/like`, {}, authHeaders);
 };
 
 export const unlikePost = async (postId: string): Promise<void> => {
+  if (isDemoMode()) return demo.demoUnlikePost(postId);
   const authHeaders = await getAuthHeaders();
   return put(`${API_BASE}/posts/${postId}/like`, {}, authHeaders);
 };
 
 export const commentOnPost = async (postId: string, commentData: any): Promise<PostComment> => {
+  if (isDemoMode()) return demo.demoCommentOnPost(postId, commentData);
   const authHeaders = await getAuthHeaders();
   return post(`${API_BASE}/posts/${postId}/comments`, commentData, authHeaders);
 };
 
 export const deletePost = async (postId: string): Promise<void> => {
+  if (isDemoMode()) return demo.demoDeletePost(postId);
   const authHeaders = await getAuthHeaders();
   return del(`${API_BASE}/posts/${postId}`, authHeaders);
 };
 
 export const listContractorReviews = async (contractorId: string, params: any = {}): Promise<any> => {
+  if (isDemoMode()) return demo.demoFetchContractorReviews(contractorId);
   const queryString = new URLSearchParams(params).toString();
   return get(`${API_BASE}/contractors/${contractorId}/reviews?${queryString}`);
 };
 
 export const fetchContractorReviews = async (contractorId: string): Promise<Review[]> => {
+  if (isDemoMode()) return demo.demoFetchContractorReviews(contractorId);
   const data = await listContractorReviews(contractorId);
   if (!data) return [];
   if (Array.isArray(data)) return data;
@@ -912,11 +948,13 @@ export const fetchContractorReviews = async (contractorId: string): Promise<Revi
 };
 
 export const submitReview = async (contractorId: string, reviewData: Partial<Review> & { jobId: string }): Promise<Review> => {
+  if (isDemoMode()) return demo.demoSubmitReview(contractorId, reviewData);
   const authHeaders = await getAuthHeaders();
   return post(`${API_BASE}/contractors/${contractorId}/reviews`, reviewData, authHeaders);
 };
 
 export const respondToReview = async (reviewId: string, reply: string): Promise<any> => {
+  if (isDemoMode()) return demo.demoRespondToReview(reviewId, reply);
   const authHeaders = await getAuthHeaders();
   return post(`${API_BASE}/reviews/${encodeURIComponent(reviewId)}/respond`, { reply }, authHeaders);
 };
@@ -926,26 +964,31 @@ export const respondToReview = async (reviewId: string, reply: string): Promise<
 // ==========================================
 
 export const getNotifications = async (): Promise<Notification[]> => {
+  if (isDemoMode()) return demo.demoGetNotifications();
   const authHeaders = await getAuthHeaders();
   return get(`${API_BASE}/notifications`, authHeaders);
 };
 
 export const markNotificationRead = async (notificationId: string): Promise<void> => {
+  if (isDemoMode()) return demo.demoMarkNotificationRead(notificationId);
   const authHeaders = await getAuthHeaders();
   return put(`${API_BASE}/notifications/${notificationId}/read`, {}, authHeaders);
 };
 
 export const markAllNotificationsRead = async (): Promise<void> => {
+  if (isDemoMode()) return demo.demoMarkAllNotificationsRead();
   const authHeaders = await getAuthHeaders();
   return put(`${API_BASE}/notifications/read-all`, {}, authHeaders);
 };
 
 export const deleteNotification = async (notificationId: string): Promise<void> => {
+  if (isDemoMode()) return demo.demoDeleteNotification(notificationId);
   const authHeaders = await getAuthHeaders();
   return del(`${API_BASE}/notifications/${notificationId}`, authHeaders);
 };
 
 export const markNotificationUnread = async (notificationId: string): Promise<void> => {
+  if (isDemoMode()) return demo.demoMarkNotificationUnread(notificationId);
   const authHeaders = await getAuthHeaders();
   return put(`${API_BASE}/notifications/${notificationId}/unread`, {}, authHeaders);
 };
@@ -955,6 +998,7 @@ export const markNotificationUnread = async (notificationId: string): Promise<vo
 // ==========================================
 
 export const getUserProfile = async (): Promise<User> => {
+  if (isDemoMode()) return demo.demoGetUserProfile();
   const authHeaders = await getAuthHeaders();
   const user = await get(`${API_BASE}/users/profile`, authHeaders);
   if (!user.createdAt) {
@@ -974,22 +1018,26 @@ export const getUserProfile = async (): Promise<User> => {
 export const fetchUserProfile = getUserProfile;
 
 export const updateUserProfile = async (data: Partial<User>): Promise<User> => {
+  if (isDemoMode()) return demo.demoUpdateUserProfile(data);
   const authHeaders = await getAuthHeaders();
   return put(`${API_BASE}/users/profile`, data, authHeaders);
 };
 
 export const savePushToken = async (token: string): Promise<any> => {
+  if (isDemoMode()) return demo.demoSavePushToken();
   const authHeaders = await getAuthHeaders();
   // Production Render backend expects POST /api/users/push-token with { token: "..." }
   return post(`${API_BASE}/users/push-token`, { token }, authHeaders);
 };
 
 export const updateProfilePicture = async (pictureUrl: string): Promise<User> => {
+  if (isDemoMode()) return demo.demoUpdateProfilePicture(pictureUrl);
   const authHeaders = await getAuthHeaders();
   return put(`${API_BASE}/users/profile-picture`, { pictureUrl }, authHeaders);
 };
 
 export const updateBannerImage = async (imageUrl: string): Promise<User> => {
+  if (isDemoMode()) return demo.demoUpdateBannerImage(imageUrl);
   const authHeaders = await getAuthHeaders();
   return put(`${API_BASE}/users/banner-image`, { imageUrl }, authHeaders);
 };
@@ -1002,100 +1050,120 @@ export const getStripeConnectUrl = async (
   businessType?: 'individual' | 'company',
   returnTo?: string
 ): Promise<{ url: string }> => {
+  if (isDemoMode()) return demo.demoGetStripeConnectUrl();
   const authHeaders = await getAuthHeaders();
   return post(`${API_BASE}/stripe/connect`, { platform: 'mobile', businessType, returnTo }, authHeaders);
 };
 
 export const getStripeAccountStatus = async (): Promise<StripeConnectStatus> => {
+  if (isDemoMode()) return demo.demoGetStripeAccountStatus();
   const authHeaders = await getAuthHeaders();
   return get(`${API_BASE}/stripe/status`, authHeaders);
 };
 
 export const createQuote = async (quoteData: any): Promise<Quote> => {
+  if (isDemoMode()) return demo.demoCreateQuote(quoteData);
   const authHeaders = await getAuthHeaders();
   return post(`${API_BASE}/quotes`, quoteData, authHeaders);
 };
 
 export const getContractorLeads = async (): Promise<Lead[]> => {
+  if (isDemoMode()) return demo.demoGetContractorLeads();
   return [];
 };
 
 export const updateLeadStatus = async (leadId: string, status: 'new' | 'contacted' | 'quoted' | 'archived'): Promise<any> => {
+  if (isDemoMode()) return demo.demoUpdateLeadStatus(leadId, status);
   return { success: true };
 };
 
 export const getContractorQuotes = async (): Promise<Quote[]> => {
+  if (isDemoMode()) return demo.demoGetContractorQuotes();
   const authHeaders = await getAuthHeaders();
   return get(`${API_BASE}/quotes`, authHeaders);
 };
 
 export const getUserQuotes = async (): Promise<Quote[]> => {
+  if (isDemoMode()) return demo.demoGetUserQuotes();
   const authHeaders = await getAuthHeaders();
   return get(`${API_BASE}/quotes`, authHeaders);
 };
 
 export const createCheckoutSession = async (quoteId: string, milestoneId?: string): Promise<{ url: string }> => { 
+  if (isDemoMode()) return demo.demoCreateCheckoutSession(quoteId, milestoneId);
   const authHeaders = await getAuthHeaders(); 
   return post(`${API_BASE}/jobs/checkout`, { quoteId, milestoneId, platform: 'mobile' }, authHeaders); 
 }; 
 
 export const getContractorJobs = async (): Promise<Job[]> => {
+  if (isDemoMode()) return demo.demoGetContractorJobs();
   const authHeaders = await getAuthHeaders();
   return get(`${API_BASE}/jobs`, authHeaders);
 };
 
 export const releaseFunds = async (jobId: string, milestoneId?: string): Promise<any> => {
+  if (isDemoMode()) return demo.demoReleaseFunds(jobId, milestoneId);
   const authHeaders = await getAuthHeaders();
   return post(`${API_BASE}/jobs/${jobId}/release`, { milestoneId }, authHeaders);
 };
 
 export const markJobComplete = async (jobId: string, completionNotes?: string): Promise<any> => {
+  if (isDemoMode()) return demo.demoMarkJobComplete(jobId, completionNotes);
   const authHeaders = await getAuthHeaders();
   return post(`${API_BASE}/jobs/${jobId}/complete`, { completionNotes }, authHeaders);
 };
 
 export const raiseDispute = async (jobId: string, reason: string, milestoneId?: string, evidence?: string[]): Promise<any> => {
+  if (isDemoMode()) return demo.demoRaiseDispute(jobId, reason, milestoneId, evidence);
   const authHeaders = await getAuthHeaders();
   return post(`${API_BASE}/jobs/${jobId}/dispute`, { reason, milestoneId, evidence }, authHeaders);
 };
 
 export const cancelJob = async (jobId: string, reason?: string): Promise<any> => {
+  if (isDemoMode()) return demo.demoCancelJob(jobId, reason);
   const authHeaders = await getAuthHeaders();
   return post(`${API_BASE}/jobs/${jobId}/cancel`, { reason }, authHeaders);
 };
 
 export const refundJob = async (jobId: string, amount?: number, reason?: string): Promise<any> => {
+  if (isDemoMode()) return demo.demoRefundJob(jobId, amount, reason);
   const authHeaders = await getAuthHeaders();
   return post(`${API_BASE}/jobs/${jobId}/refund`, { amount, reason }, authHeaders);
 };
 
 export const createChangeOrder = async (jobId: string, data: { title: string; description: string; amount: number; coType?: 'addition' | 'deduction' }): Promise<any> => {
+  if (isDemoMode()) return demo.demoCreateChangeOrder(jobId, data);
   const authHeaders = await getAuthHeaders();
   return post(`${API_BASE}/jobs/${jobId}/change-order`, data, authHeaders);
 };
 
 export const acceptChangeOrder = async (jobId: string, changeOrderId: string): Promise<any> => {
+  if (isDemoMode()) return demo.demoAcceptChangeOrder(jobId, changeOrderId);
   const authHeaders = await getAuthHeaders();
   return post(`${API_BASE}/jobs/${jobId}/change-order/${changeOrderId}/accept`, {}, authHeaders);
 };
 
 export const declineChangeOrder = async (jobId: string, changeOrderId: string): Promise<any> => {
+  if (isDemoMode()) return demo.demoDeclineChangeOrder(jobId, changeOrderId);
   const authHeaders = await getAuthHeaders();
   return post(`${API_BASE}/jobs/${jobId}/change-order/${changeOrderId}/decline`, {}, authHeaders);
 };
 
 export const getUserJobs = async (): Promise<Job[]> => {
+  if (isDemoMode()) return demo.demoGetUserJobs();
   const authHeaders = await getAuthHeaders();
   return get(`${API_BASE}/jobs`, authHeaders);
 };
 
 
 export const getContractorEarnings = async (): Promise<Earnings> => {
+  if (isDemoMode()) return demo.demoGetContractorEarnings();
   const authHeaders = await getAuthHeaders();
   return get(`${API_BASE}/stripe/earnings`, authHeaders);
 };
 
 export const requestPayout = async (amount?: number): Promise<any> => {
+  if (isDemoMode()) return demo.demoRequestPayout(amount);
   const authHeaders = await getAuthHeaders();
   return post(`${API_BASE}/stripe/payout`, amount != null ? { amount } : {}, authHeaders);
 };
@@ -1105,38 +1173,45 @@ export const requestPayout = async (amount?: number): Promise<any> => {
 // ==========================================
 
 export const getAllUsers = async (params: UserQueryParams): Promise<UsersResponse> => {
+  if (isDemoMode()) return demo.demoGetAllUsers();
   const queryString = new URLSearchParams(params as any).toString();
   const authHeaders = await getAuthHeaders();
   return get(`${API_BASE}/admin/users?${queryString}`, authHeaders);
 };
 
 export const getAllContractors = async (params: ContractorQueryParams): Promise<ContractorsResponse> => {
+  if (isDemoMode()) return demo.demoGetAllContractors();
   const queryString = new URLSearchParams(params as any).toString();
   const authHeaders = await getAuthHeaders();
   return get(`${API_BASE}/admin/contractors?${queryString}`, authHeaders);
 };
 
 export const getPlatformStats = async (): Promise<PlatformStats> => {
+  if (isDemoMode()) return demo.demoGetPlatformStats();
   const authHeaders = await getAuthHeaders();
   return get(`${API_BASE}/admin/stats`, authHeaders);
 };
 
 export const getCloudinarySignature = async (folder: string): Promise<any> => {
+  if (isDemoMode()) return demo.demoGetCloudinarySignature(folder);
   const authHeaders = await getAuthHeaders();
   return post(`${API_BASE}/users/cloudinary-sign`, { folder }, authHeaders);
 };
 
 export const aiSearchContractors = async (query: string, zip?: string, limit?: number): Promise<any> => {
+  if (isDemoMode()) return demo.demoAiSearchContractors(query);
   const authHeaders = await getAuthHeaders();
   return post(`${API_BASE}/contractors/ai-search`, { query, zip, limit }, authHeaders);
 };
 
 export const requestEmailChange = async (newEmail: string, currentPassword: string): Promise<any> => {
+  if (isDemoMode()) return demo.demoRequestEmailChange();
   const authHeaders = await getAuthHeaders();
   return post(`${API_BASE}/users/request-email-change`, { newEmail, currentPassword }, authHeaders);
 };
 
 export const changePassword = async (currentPassword: string, newPassword: string): Promise<any> => {
+  if (isDemoMode()) return demo.demoChangePassword();
   const authHeaders = await getAuthHeaders();
   let firebaseIdToken;
   try {
@@ -1150,6 +1225,7 @@ export const changePassword = async (currentPassword: string, newPassword: strin
 };
 
 export const deleteAccount = async (): Promise<any> => {
+  if (isDemoMode()) return demo.demoDeleteAccount();
   const authHeaders = await getAuthHeaders();
   return del(`${API_BASE}/users/profile`, authHeaders);
 };
@@ -1159,6 +1235,7 @@ export const deleteAccount = async (): Promise<any> => {
 // ==========================================
 
 export const resetPassword = async (token: string, newPassword: string): Promise<any> => {
+  if (isDemoMode()) return demo.demoResetPassword();
   return post(`${API_BASE}/users/reset-password`, { token, newPassword });
 };
 
@@ -1167,6 +1244,7 @@ export const resetPassword = async (token: string, newPassword: string): Promise
 // ==========================================
 
 export const verifyEmailChange = async (token: string): Promise<any> => {
+  if (isDemoMode()) return demo.demoVerifyEmailChange();
   return post(`${API_BASE}/users/verify-email-change`, { token });
 };
 
@@ -1175,16 +1253,19 @@ export const verifyEmailChange = async (token: string): Promise<any> => {
 // ==========================================
 
 export const blockUser = async (userId: string): Promise<any> => {
+  if (isDemoMode()) return demo.demoBlockUser();
   const authHeaders = await getAuthHeaders();
   return post(`${API_BASE}/users/block/${userId}`, {}, authHeaders);
 };
 
 export const unblockUser = async (userId: string): Promise<any> => {
+  if (isDemoMode()) return demo.demoUnblockUser();
   const authHeaders = await getAuthHeaders();
   return post(`${API_BASE}/users/unblock/${userId}`, {}, authHeaders);
 };
 
 export const getBlockedUsers = async (): Promise<any[]> => {
+  if (isDemoMode()) return demo.demoGetBlockedUsers();
   const authHeaders = await getAuthHeaders();
   return get(`${API_BASE}/users/blocked`, authHeaders);
 };
@@ -1194,11 +1275,13 @@ export const getBlockedUsers = async (): Promise<any[]> => {
 // ==========================================
 
 export const createPaymentIntent = async (quoteId: string, milestoneId?: string): Promise<{ clientSecret: string; amount?: number }> => {
+  if (isDemoMode()) return demo.demoCreatePaymentIntent(quoteId, milestoneId);
   const authHeaders = await getAuthHeaders();
   return post(`${API_BASE}/stripe/payment-intent`, { quoteId, milestoneId }, authHeaders);
 };
 
 export const appleSignIn = async (data: { identityToken: string; appleUserIdentifier: string; fullName?: { givenName?: string; familyName?: string }; email?: string }): Promise<any> => {
+  if (isDemoMode()) return demo.demoAppleSignIn();
   const result = await post(`${API_BASE}/users/apple-signin`, data);
   if (result && result.token) {
     await setSecureItem('auth_token', result.token);
@@ -1214,16 +1297,19 @@ export const appleSignIn = async (data: { identityToken: string; appleUserIdenti
 // ==========================================
 
 export const getQuote = async (quoteId: string): Promise<any> => {
+  if (isDemoMode()) return demo.demoGetQuote(quoteId);
   const authHeaders = await getAuthHeaders();
   return get(`${API_BASE}/quotes/${quoteId}`, authHeaders);
 };
 
 export const updateQuoteStatus = async (quoteId: string, status: 'accepted' | 'rejected'): Promise<any> => {
+  if (isDemoMode()) return demo.demoUpdateQuoteStatus(quoteId, status);
   const authHeaders = await getAuthHeaders();
   return put(`${API_BASE}/quotes/${quoteId}/status`, { status }, authHeaders);
 };
 
 export const getPlatformFeePercent = async (): Promise<{ platformFeePercent: number }> => {
+  if (isDemoMode()) return demo.demoGetPlatformFeePercent();
   const authHeaders = await getAuthHeaders();
   return get(`${API_BASE}/quotes/platform-fee-percent`, authHeaders);
 };
@@ -1233,11 +1319,13 @@ export const getPlatformFeePercent = async (): Promise<{ platformFeePercent: num
 // ==========================================
 
 export const resolveDispute = async (jobId: string, action: 'release_all' | 'refund_all' | 'split' | 'resume', notes?: string, splitAmount?: number): Promise<any> => {
+  if (isDemoMode()) return demo.demoResolveDispute();
   const authHeaders = await getAuthHeaders();
   return post(`${API_BASE}/jobs/${jobId}/dispute/resolve`, { action, notes, splitAmount }, authHeaders);
 };
 
 export const cancelDispute = async (jobId: string): Promise<any> => {
+  if (isDemoMode()) return demo.demoCancelDispute();
   const authHeaders = await getAuthHeaders();
   return post(`${API_BASE}/jobs/${jobId}/dispute/cancel`, {}, authHeaders);
 };
@@ -1247,11 +1335,13 @@ export const cancelDispute = async (jobId: string): Promise<any> => {
 // ==========================================
 
 export const getJobById = async (jobId: string): Promise<any> => {
+  if (isDemoMode()) return demo.demoGetJobById(jobId);
   const authHeaders = await getAuthHeaders();
   return get(`${API_BASE}/jobs/${jobId}`, authHeaders);
 };
 
 export const uploadProgressPhoto = async (jobId: string, url: string): Promise<any> => {
+  if (isDemoMode()) return demo.demoUploadProgressPhoto();
   const authHeaders = await getAuthHeaders();
   return post(`${API_BASE}/jobs/${jobId}/progress-photo`, { url }, authHeaders);
 };
@@ -1261,6 +1351,7 @@ export const uploadProgressPhoto = async (jobId: string, url: string): Promise<a
 // ==========================================
 
 export const submitClaim = async (contractorId: string, businessDocumentFile: string): Promise<any> => {
+  if (isDemoMode()) return demo.demoSubmitClaim();
   const authHeaders = await getAuthHeaders();
   return post(`${API_BASE}/contractors/${contractorId}/claim`, { businessDocumentFile }, authHeaders);
 };
@@ -1270,6 +1361,7 @@ export const submitClaim = async (contractorId: string, businessDocumentFile: st
 // ==========================================
 
 export const reportConversation = async (reportedUserId: string, conversationId: string, category: string, reason: string): Promise<any> => {
+  if (isDemoMode()) return demo.demoReportConversation();
   const authHeaders = await getAuthHeaders();
   return post(`${API_BASE}/reports/conversation`, { reportedUserId, conversationId, category, reason }, authHeaders);
 };

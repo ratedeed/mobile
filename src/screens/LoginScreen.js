@@ -20,6 +20,8 @@ import { useAuth } from '../context/AuthContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { BouncingDotsLoader } from '../components/common';
+import { isDemoMode } from '../utils/demoMode';
+import { generateDemoToken, DEMO_USER_ID, DEMO_CONTRACTOR_2_ID, demoUser, demoContractorUser } from '../utils/demoData';
 
 const LoginScreen = () => {
   const isDark = useColorScheme() === 'dark';
@@ -70,6 +72,36 @@ const LoginScreen = () => {
     return unsubscribe;
   }, []);
 
+  const handleDemoLogin = async (role) => {
+    setLoading(true);
+    try {
+      const isContractor = role === 'contractor';
+      const userData = isContractor ? { ...demoContractorUser, _id: DEMO_CONTRACTOR_2_ID, userId: DEMO_CONTRACTOR_2_ID } : demoUser;
+      const userId = isContractor ? DEMO_CONTRACTOR_2_ID : DEMO_USER_ID;
+      const token = generateDemoToken(userId, role, userData.email);
+      await updateBackendToken(token, true, userData);
+      Toast.show({
+        type: 'success',
+        text1: 'Demo Mode',
+        text2: `Signed in as demo ${role}.`,
+      });
+      if (isContractor) {
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Main' }, { name: 'ContractorDashboard' }],
+        });
+      } else if (navigation.canGoBack()) {
+        navigation.goBack();
+      } else {
+        navigation.navigate('Main');
+      }
+    } catch (e) {
+      setApiError(e.message || 'Demo login failed.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleLogin = async () => {
     const trimmedEmail = email.trim().toLowerCase();
     if (!trimmedEmail || !password) {
@@ -80,6 +112,12 @@ const LoginScreen = () => {
     setApiError(null);
     setLoading(true);
     try {
+      if (isDemoMode()) {
+        const isContractor = trimmedEmail.includes('contractor') || trimmedEmail.includes('marcus');
+        await handleDemoLogin(isContractor ? 'contractor' : 'user');
+        return;
+      }
+
       const userCredential = await signInWithEmailAndPassword(auth, trimmedEmail, password);
       const user = userCredential.user;
 
@@ -239,6 +277,12 @@ const LoginScreen = () => {
         }}
         keyboardShouldPersistTaps="handled"
       >
+        {isDemoMode() && (
+          <View className="mb-6 self-center bg-indigo-50 border border-indigo-200 rounded-full px-3 py-1.5 flex-row items-center" style={{ gap: 6 }}>
+            <FontAwesome5 name="film" size={11} color="#4F46E5" />
+            <Text className="text-[11px] font-bold text-indigo-700">DEMO MODE</Text>
+          </View>
+        )}
         {/* Logo */}
         <View className="items-center mb-10">
           <FontAwesome5 name="hammer" size={48} color="#4F46E5" />
@@ -383,6 +427,43 @@ const LoginScreen = () => {
               <Text className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 underline">Sign Up as a Contractor</Text>
             </Pressable>
           </View>
+
+          {/* Demo Login Section */}
+          {isDemoMode() && (
+            <View className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-2xl" style={{ gap: 12 }}>
+              <View className="flex-row items-center" style={{ gap: 8 }}>
+                <FontAwesome5 name="bolt" size={14} color="#b45309" />
+                <Text className="text-[12px] font-bold text-amber-800 uppercase tracking-wider">One-tap demo login</Text>
+              </View>
+              <Text className="text-xs text-amber-700 leading-relaxed">
+                Skip the form and jump into the app with a pre-populated demo account.
+              </Text>
+              <View className="flex-row" style={{ gap: 8 }}>
+                <Pressable
+                  onPress={() => handleDemoLogin('user')}
+                  disabled={loading}
+                  className="flex-1 py-3 rounded-xl items-center bg-white border border-amber-300"
+                  accessibilityLabel="Continue as demo homeowner"
+                  accessibilityRole="button"
+                  style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+                >
+                  <FontAwesome5 name="home" size={14} color="#b45309" />
+                  <Text className="text-xs font-bold text-amber-800 mt-1">As Homeowner</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => handleDemoLogin('contractor')}
+                  disabled={loading}
+                  className="flex-1 py-3 rounded-xl items-center bg-white border border-amber-300"
+                  accessibilityLabel="Continue as demo contractor"
+                  accessibilityRole="button"
+                  style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+                >
+                  <FontAwesome5 name="hard-hat" size={14} color="#b45309" />
+                  <Text className="text-xs font-bold text-amber-800 mt-1">As Contractor</Text>
+                </Pressable>
+              </View>
+            </View>
+          )}
 
           {/* Legal Links */}
           <View className="items-center pt-4 flex-row justify-center" style={{ gap: 8 }}>

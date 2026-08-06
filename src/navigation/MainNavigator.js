@@ -51,6 +51,7 @@ import ContractorSignupScreen from '../screens/ContractorSignupScreen';
 import Typography from '../components/common/Typography';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationsContext';
+import { isDemoMode } from '../utils/demoMode';
 
 import ErrorBoundary from '../components/ErrorBoundary';
 
@@ -268,6 +269,11 @@ function MainTabNavigator() {
               <Typography variant="h4" style={{ color: isDark ? '#FAFAFA' : '#09090B' }}>
                 Ratedeed
               </Typography>
+              {isDemoMode() && (
+                <View style={{ marginLeft: 8, backgroundColor: '#4F46E5', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, flexDirection: 'row', alignItems: 'center' }}>
+                  <RNText style={{ color: '#fff', fontSize: 9, fontWeight: '800', letterSpacing: 0.5 }}>DEMO</RNText>
+                </View>
+              )}
             </View>
           ),
           headerTitle: '',

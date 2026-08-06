@@ -7,6 +7,7 @@ import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationsContext';
 import { savePushToken } from '../utils/apiClient';
+import { isDemoMode } from '../utils/demoMode';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -26,6 +27,7 @@ export const usePushNotifications = () => {
   const pendingNotificationRef = useRef<any>(null);
 
   useEffect(() => {
+    if (isDemoMode()) return;
     const initPush = async () => {
       try {
         const authStatus = await messaging().requestPermission();
@@ -78,6 +80,7 @@ export const usePushNotifications = () => {
   }, []);
 
   useEffect(() => {
+    if (isDemoMode()) return;
     if (isAuthenticated && expoPushToken) {
       savePushToken(expoPushToken).catch((err: any) => {
         console.error('[Push] Failed to save token:', err?.message || err);
@@ -86,6 +89,7 @@ export const usePushNotifications = () => {
   }, [isAuthenticated, expoPushToken]);
 
   useEffect(() => {
+    if (isDemoMode()) return;
     if (!isAuthenticated) return;
     const unsubscribe = messaging().onTokenRefresh(token => {
       if (__DEV__) {
@@ -97,6 +101,7 @@ export const usePushNotifications = () => {
   }, [isAuthenticated]);
 
   useEffect(() => {
+    if (isDemoMode()) return;
     if (!isAuthenticated) return;
     const unsubscribe = messaging().onMessage(async remoteMessage => {
       if (__DEV__) {

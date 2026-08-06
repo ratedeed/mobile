@@ -4,11 +4,12 @@ import * as WebBrowser from 'expo-web-browser';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { createCheckoutSession, createPaymentIntent, getQuote } from '../api';
+import { createCheckoutSession, createPaymentIntent, getQuote, updateQuoteStatus, createCheckoutSession as createCheckoutSessionApi } from '../api';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useStripe, usePlatformPay, confirmPlatformPayPayment, PlatformPay, PlatformPayButton } from '@stripe/stripe-react-native';
 import HapticFeedback from '../utils/haptics';
 import { BouncingDotsLoader } from '../components/common';
+import { isDemoMode } from '../utils/demoMode';
 
 const STEP_LABELS = ['Review', 'Payment', 'Confirmed'];
 
@@ -181,6 +182,15 @@ export default function PaymentFlowScreen() {
     try {
       payingRef.current = true;
       setPaying(true);
+      if (isDemoMode()) {
+        setVerifying(true);
+        await new Promise((r) => setTimeout(r, 1800));
+        await updateQuoteStatus(quoteId, 'accepted');
+        HapticFeedback.success();
+        setVerifying(false);
+        setCurrentStep(2);
+        return;
+      }
       let currentClientSecret = clientSecret;
       if (!currentClientSecret) {
         const response = await createPaymentIntent(quoteId, milestoneId);
@@ -239,6 +249,15 @@ export default function PaymentFlowScreen() {
     try {
       payingRef.current = true;
       setPaying(true);
+      if (isDemoMode()) {
+        setVerifying(true);
+        await new Promise((r) => setTimeout(r, 1800));
+        await updateQuoteStatus(quoteId, 'accepted');
+        HapticFeedback.success();
+        setVerifying(false);
+        setCurrentStep(2);
+        return;
+      }
       let currentClientSecret = clientSecret;
       if (!currentClientSecret) {
         const response = await createPaymentIntent(quoteId, milestoneId);

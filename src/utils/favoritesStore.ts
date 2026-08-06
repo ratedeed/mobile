@@ -2,10 +2,32 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../config';
 import { get, post as apiPost, del } from './apiClient';
 import { getSecureItem } from './secureStore';
+import { isDemoMode } from './demoMode';
 
 const FAVORITES_KEY = 'ratedeed_favorites';
+const SEEDED_KEY = 'ratedeed_favorites_seeded';
+
+const seedFavorites = async (): Promise<string[]> => {
+  return ['contractor-1', 'contractor-3', 'contractor-7'];
+};
 
 export const getFavorites = async (): Promise<string[]> => {
+  if (isDemoMode()) {
+    try {
+      const seeded = await AsyncStorage.getItem(SEEDED_KEY);
+      if (!seeded) {
+        const initial = await seedFavorites();
+        await AsyncStorage.setItem(FAVORITES_KEY, JSON.stringify(initial));
+        await AsyncStorage.setItem(SEEDED_KEY, '1');
+        return initial;
+      }
+      const json = await AsyncStorage.getItem(FAVORITES_KEY);
+      return json ? JSON.parse(json) : [];
+    } catch {
+      return [];
+    }
+  }
+
   const token = await getSecureItem('auth_token');
 
   // 1. Always try server first — this is the single source of truth
@@ -31,6 +53,7 @@ export const getFavorites = async (): Promise<string[]> => {
 };
 
 export const syncFavoritesWithServer = async () => {
+  if (isDemoMode()) return;
   const token = await getSecureItem('auth_token');
   if (!token) return;
 
@@ -51,6 +74,7 @@ export const addFavorite = async (id: string): Promise<void> => {
     const updated = [...current, id];
     await AsyncStorage.setItem(FAVORITES_KEY, JSON.stringify(updated));
   }
+  if (isDemoMode()) return;
   try {
     await apiPost(`${API_BASE_URL}/api/users/favorite/${id}`, {});
   } catch (error) {
@@ -68,6 +92,7 @@ export const removeFavorite = async (id: string): Promise<void> => {
     const updated = current.filter(fid => fid !== id);
     await AsyncStorage.setItem(FAVORITES_KEY, JSON.stringify(updated));
   }
+  if (isDemoMode()) return;
   try {
     await apiPost(`${API_BASE_URL}/api/users/favorite/${id}`, {});
   } catch (error) {

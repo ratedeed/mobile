@@ -179,8 +179,9 @@ const ListingCard = React.memo(({
     </Pressable>
   );
 }, (prevProps, nextProps) => {
-  return prevProps.listing._id === nextProps.listing._id &&
-         prevProps.searchZip === nextProps.searchZip;
+  const prevId = prevProps.listing._id || (prevProps.listing as any).id || prevProps.listing.slug;
+  const nextId = nextProps.listing._id || (nextProps.listing as any).id || nextProps.listing.slug;
+  return prevId === nextId && prevProps.searchZip === nextProps.searchZip;
 });
 
 // ---- SEARCH SCREEN ----
@@ -204,57 +205,83 @@ const BusinessSearchScreen: React.FC = () => {
   const [totalResults, setTotalResults] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [nearbyLabel, setNearbyLabel] = useState('');
-  const isFirstRender = useRef(true);
+  
+  // Track if initial parameter sync from route / AsyncStorage is complete
+  const [isInitialSyncDone, setIsInitialSyncDone] = useState(false);
 
   // Debounced search states to prevent API spam
   const [debouncedZip, setDebouncedZip] = useState(query || '');
   const [debouncedName, setDebouncedName] = useState(routeName || '');
 
+  // Debounce effect: update debounced states 400ms after user stops typing
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedZip(searchZip);
       setDebouncedName(searchName);
-    }, 500);
+    }, 400);
     return () => clearTimeout(timer);
   }, [searchZip, searchName]);
 
-  // Sync route params (deep links) to screen state
+  // Sync route params & cached ZIP code on mount once
   useEffect(() => {
-    if (query !== undefined && query !== '') {
-      setSearchZip(query);
-      setDebouncedZip(query);
-    } else {
-      // Load cached ZIP code instantly if no query is passed
-      AsyncStorage.getItem('ratedeed-detected-zip')
-        .then((cached) => {
-          if (cached && /^\d{5}$/.test(cached.trim())) {
+    let isMounted = true;
+
+    const initParams = async () => {
+      if (query !== undefined && query !== '') {
+        if (isMounted) {
+          setSearchZip(query);
+          setDebouncedZip(query);
+        }
+      } else {
+        try {
+          const cached = await AsyncStorage.getItem('ratedeed-detected-zip');
+          if (isMounted && cached && /^\d{5}$/.test(cached.trim())) {
             const zip = cached.trim();
             setSearchZip(zip);
             setDebouncedZip(zip);
           }
-        })
-        .catch(() => {});
-    }
-    if (routeName !== undefined) {
-      setSearchName(routeName);
-      setDebouncedName(routeName);
-    } else {
-      setSearchName('');
-      setDebouncedName('');
-    }
-    if (searchType === 'category') {
-      setActiveCategory(query || 'all');
-    }
+        } catch (e) {}
+      }
+
+      if (routeName !== undefined) {
+        if (isMounted) {
+          setSearchName(routeName);
+          setDebouncedName(routeName);
+        }
+      } else {
+        if (isMounted) {
+          setSearchName('');
+          setDebouncedName('');
+        }
+      }
+
+      if (searchType === 'category') {
+        if (isMounted) {
+          setActiveCategory(query || 'all');
+        }
+      }
+
+      if (isMounted) {
+        setIsInitialSyncDone(true);
+      }
+    };
+
+    initParams();
+
+    return () => {
+      isMounted = false;
+    };
   }, [query, routeName, searchType]);
 
-  const fetchContractors = useCallback(async (zipOverride?: string, nameOverride?: string) => {
+  const fetchContractors = useCallback(async (zipOverride?: string, nameOverride?: string, catOverride?: string) => {
     try {
       setError(null);
       const zip = (zipOverride !== undefined ? zipOverride : debouncedZip) || '';
       const name = (nameOverride !== undefined ? nameOverride : debouncedName) || '';
+      const cat = catOverride !== undefined ? catOverride : activeCategory;
 
       // 1. If all search fields are empty, clear results and return immediately.
-      if (!zip.trim() && !name.trim() && activeCategory === 'all') {
+      if (!zip.trim() && !name.trim() && cat === 'all') {
         setContractors([]);
         setTotalResults(0);
         setLoading(false);
@@ -264,6 +291,8 @@ const BusinessSearchScreen: React.FC = () => {
 
       // 2. If zip code is partially typed (1-4 characters) and name is empty, don't trigger query.
       if (zip.trim() && zip.trim().length < 5 && !name.trim()) {
+        setLoading(false);
+        setRefreshing(false);
         return;
       }
 
@@ -278,23 +307,24 @@ const BusinessSearchScreen: React.FC = () => {
         filters.name = name.trim();
       }
 
-      if (activeCategory !== 'all') {
-        const cat = CATEGORIES.find(c => c.id === activeCategory);
-        if (cat) filters.type = cat.label;
+      if (cat !== 'all') {
+        const categoryObj = CATEGORIES.find(c => c.id === cat);
+        if (categoryObj) filters.type = categoryObj.label;
       }
 
       let data: any;
       if (useAiAssist) {
-        const queryText = name.trim() || (activeCategory !== 'all' ? (CATEGORIES.find(c => c.id === activeCategory)?.label || '') : 'Contractor');
+        const queryText = name.trim() || (cat !== 'all' ? (CATEGORIES.find(c => c.id === cat)?.label || '') : 'Contractor');
         data = await aiSearchContractors(queryText, zip.trim());
       } else {
         data = await browseContractors(filters);
       }
       
-      // Prevent race conditions: check if the query parameters changed while fetching
+      // Prevent race conditions: check if query params changed while fetching
       const currentZip = (zipOverride !== undefined ? zipOverride : debouncedZip) || '';
       const currentName = (nameOverride !== undefined ? nameOverride : debouncedName) || '';
-      if (currentZip !== zip || currentName !== name) {
+      const currentCat = catOverride !== undefined ? catOverride : activeCategory;
+      if (currentZip !== zip || currentName !== name || currentCat !== cat) {
         return;
       }
 
@@ -312,7 +342,6 @@ const BusinessSearchScreen: React.FC = () => {
 
       setTotalResults(data?.total || list.length);
     } catch (err: any) {
-      // console.error('Error fetching contractors:', err);
       setError(err?.message || 'Failed to fetch contractors. Please try again.');
       setContractors([]);
       setTotalResults(0);
@@ -320,23 +349,25 @@ const BusinessSearchScreen: React.FC = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [debouncedZip, debouncedName, activeCategory]);
+  }, [debouncedZip, debouncedName, activeCategory, useAiAssist]);
 
   const handleSearchSubmit = () => {
     setDebouncedZip(searchZip);
     setDebouncedName(searchName);
-    fetchContractors(searchZip, searchName);
+    fetchContractors(searchZip, searchName, activeCategory);
   };
 
+  // Only trigger fetch after initial parameter sync completes and when debounced zip/name or category change
   useEffect(() => {
-    fetchContractors();
-  }, [fetchContractors]);
+    if (!isInitialSyncDone) return;
+    fetchContractors(debouncedZip, debouncedName, activeCategory);
+  }, [isInitialSyncDone, debouncedZip, debouncedName, activeCategory, useAiAssist]);
 
   const onRefresh = () => { setRefreshing(true); fetchContractors(); };
 
-  const handleCategorySelect = (catId: string) => {
+  const handleCategorySelect = useCallback((catId: string) => {
     setActiveCategory(catId);
-  };
+  }, []);
 
   const renderCard = useCallback(({ item }: { item: Contractor }) => (
     <View className="w-[48%]">
@@ -346,6 +377,7 @@ const BusinessSearchScreen: React.FC = () => {
         onPress={() => {
           if (item.slug) navigation.navigate('BusinessDetail', { slug: item.slug });
           else if (item._id) navigation.navigate('BusinessDetail', { id: item._id });
+          else if ((item as any).id) navigation.navigate('BusinessDetail', { id: (item as any).id });
         }}
       />
     </View>
@@ -373,7 +405,6 @@ const BusinessSearchScreen: React.FC = () => {
               onChangeText={text => { 
                 const sanitized = text.replace(/[^0-9]/g, '');
                 setSearchZip(sanitized.slice(0, 5)); 
-                setActiveCategory('all'); 
               }}
               onSubmitEditing={handleSearchSubmit}
               placeholder="Zip code"
@@ -384,7 +415,7 @@ const BusinessSearchScreen: React.FC = () => {
             />
 
             {searchZip ? (
-              <Pressable onPress={() => setSearchZip('')} className="absolute right-3 top-3">
+              <Pressable onPress={() => { setSearchZip(''); setDebouncedZip(''); }} className="absolute right-3 top-3">
                 <FontAwesome5 name="times" size={14} color={isDark ? '#737373' : '#a3a3a3'} />
               </Pressable>
             ) : null}
@@ -398,7 +429,7 @@ const BusinessSearchScreen: React.FC = () => {
             <FontAwesome5 name="building" size={14} color={isDark ? '#737373' : '#a3a3a3'} style={{ position: 'absolute', left: 12, top: 13, zIndex: 1 }} />
             <TextInput
               value={searchName}
-              onChangeText={text => { setSearchName(text); setActiveCategory('all'); }}
+              onChangeText={text => { setSearchName(text); }}
               onSubmitEditing={handleSearchSubmit}
               placeholder={useAiAssist ? "Describe what you need fixed..." : "Contractor name..."}
               placeholderTextColor="#a3a3a3"
@@ -406,7 +437,7 @@ const BusinessSearchScreen: React.FC = () => {
             />
 
             {searchName ? (
-              <Pressable onPress={() => setSearchName('')} className="absolute right-3 top-3">
+              <Pressable onPress={() => { setSearchName(''); setDebouncedName(''); }} className="absolute right-3 top-3">
                 <FontAwesome5 name="times" size={14} color={isDark ? '#737373' : '#a3a3a3'} />
               </Pressable>
             ) : null}
@@ -432,7 +463,7 @@ const BusinessSearchScreen: React.FC = () => {
 
           {/* Search Button */}
           <Pressable
-            onPress={() => fetchContractors()}
+            onPress={handleSearchSubmit}
             className="bg-indigo-600 rounded-full p-2.5 shrink-0"
           >
             <FontAwesome5 name="search" size={14} color="#fff" />
@@ -483,7 +514,7 @@ const BusinessSearchScreen: React.FC = () => {
         </Text>
       </View>
 
-      {/* Loading State */}
+      {/* Loading State & Results */}
       {loading && contractors.length === 0 ? (
         <View className="flex-1 px-4 py-4">
           <View className="flex-row justify-between mb-4">
@@ -516,19 +547,21 @@ const BusinessSearchScreen: React.FC = () => {
           </Pressable>
         </View>
       ) : displayResults.length > 0 ? (
-        <BouncingRefreshFlatList
-          data={displayResults}
-          renderItem={renderCard}
-          keyExtractor={(item, index) => item._id || item.slug || index.toString()}
-          numColumns={2}
-          columnWrapperStyle={{ justifyContent: 'space-between' }}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 100 }}
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-          windowSize={5}
-          maxToRenderPerBatch={8}
-          removeClippedSubviews={Platform.OS === 'android'}
-        />
+        <View style={{ flex: 1, opacity: loading ? 0.6 : 1.0 }}>
+          <BouncingRefreshFlatList
+            data={displayResults}
+            renderItem={renderCard}
+            keyExtractor={(item, index) => item._id || (item as any).id || item.slug || index.toString()}
+            numColumns={2}
+            columnWrapperStyle={{ justifyContent: 'space-between' }}
+            contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 100 }}
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            windowSize={5}
+            maxToRenderPerBatch={8}
+            removeClippedSubviews={Platform.OS === 'android'}
+          />
+        </View>
       ) : hasSearch ? (
         <View className="flex-1 items-center justify-center py-20">
           <FontAwesome5 name="search" size={48} color={isDark ? '#525252' : '#d4d4d4'} />

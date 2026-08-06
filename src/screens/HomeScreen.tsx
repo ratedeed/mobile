@@ -29,6 +29,8 @@ import { getFavorites, addFavorite, removeFavorite } from '../utils/favoritesSto
 import { useAuth } from '../context/AuthContext';
 import GuestPrompt from '../components/GuestPrompt';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { isDemoMode } from '../utils/demoMode';
+import { DEMO_ZIP } from '../utils/demoData';
 
 type Category = {
   id: string;
@@ -92,6 +94,7 @@ const startPrefetch = () => {
 
   // 1. Geolocation fetch in parallel
   initialZipPromise = (async () => {
+    if (isDemoMode()) return DEMO_ZIP;
     try {
       const response = await fetch('https://free.freeipapi.com/api/json');
       const data = await response.json();
@@ -427,6 +430,13 @@ const HomeScreen = () => {
 
   // Load cached ZIP code instantly on mount to populate the search bar immediately
   useEffect(() => {
+    if (isDemoMode()) {
+      if (!isUserEditedRef.current) {
+        setSearchZip(DEMO_ZIP);
+        setIpZipCode(DEMO_ZIP);
+      }
+      return;
+    }
     let active = true;
     const loadCached = async () => {
       try {
@@ -631,6 +641,16 @@ const HomeScreen = () => {
   }, [navigation, activeCategory, searchZip, loadContractors]);
 
   const fetchLocationAndData = useCallback(async () => {
+    if (isDemoMode()) {
+      if (mountedRef.current) {
+        setIpZipCode(DEMO_ZIP);
+        if (!isUserEditedRef.current) {
+          setSearchZip(DEMO_ZIP);
+        }
+      }
+      await loadContractors(DEMO_ZIP, 1, false, 'all');
+      return;
+    }
     let zip: string | null = null;
     try {
       const cached = await AsyncStorage.getItem('ratedeed-detected-zip');
@@ -659,6 +679,10 @@ const HomeScreen = () => {
   }, [loadContractors]);
 
   useEffect(() => {
+    if (isDemoMode()) {
+      fetchLocationAndData();
+      return;
+    }
     let active = true;
     const initializeLocation = async () => {
       try {
