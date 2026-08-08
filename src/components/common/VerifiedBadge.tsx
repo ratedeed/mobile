@@ -78,46 +78,37 @@ export const VerifiedBadge = memo(function VerifiedBadge({
   style?: any;
 }) {
   const progress = useSharedValue(0);
-  const floatValue = useSharedValue(0);
-
+  const isPlayingRef = React.useRef(false);
   const finalSize = typeof size === 'string' ? SIZE_MAP[size] || 24 : size;
 
   const play = () => {
+    if (isPlayingRef.current) return;
+    isPlayingRef.current = true;
     progress.value = 0;
     progress.value = withTiming(1.3, {
       duration: DURATION * 1.3,
       easing: Easing.linear,
+    }, (finished) => {
+      if (finished) {
+        isPlayingRef.current = false;
+      }
     });
   };
 
   useEffect(() => {
     if (animate) {
       play();
-      floatValue.value = 0;
-      floatValue.value = withDelay(
-        DURATION * 1.3,
-        withRepeat(
-          withTiming(0.65, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
-          -1,
-          true
-        )
-      );
     } else {
       progress.value = 1.3;
-      floatValue.value = withRepeat(
-        withTiming(0.65, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
-        -1,
-        true
-      );
     }
   }, [animate, finalSize]);
 
   // Animated properties matching web implementation
 
-  // 1. Main View scale (up to 4.5x, then shrinks back to 1x) and Translate Y Float
+  // 1. Main View scale (up to 3.6x hero scale, then shrinks back to 1x)
   const mainScaleStyle = useAnimatedStyle(() => {
     const t = progress.value;
-    const HERO_SCALE = 4.5;
+    const HERO_SCALE = 3.6;
     let currentScale = 1;
 
     if (t < 0.15) {
@@ -131,12 +122,9 @@ export const VerifiedBadge = memo(function VerifiedBadge({
       currentScale = 1;
     }
 
-    const floatAmount = t >= 1.3 ? floatValue.value : 0;
-
     return {
       transform: [
         { scale: currentScale },
-        { translateY: floatAmount },
       ],
     };
   });
@@ -311,8 +299,8 @@ export const VerifiedBadge = memo(function VerifiedBadge({
   });
 
   const strokeW = finalSize <= 20 ? 4 : finalSize <= 28 ? 3.5 : finalSize <= 44 ? 3 : 2.5;
-  const showInner = finalSize >= 28 || animate;
-  const showDetails = finalSize >= 44 || animate;
+  const showInner = true;
+  const showDetails = true;
 
   return (
     <Pressable
@@ -443,32 +431,28 @@ export const VerifiedBadge = memo(function VerifiedBadge({
             </AnimatedG>
 
             {/* Marble Dust & Sweeping Glint */}
-            {animate && (
-              <>
-                <AnimatedG animatedProps={dustBaseProps}>
-                  <Ellipse cx="29" cy="67" rx="5" ry="2" fill="#FFF" opacity={0.8} />
-                  <Ellipse cx="71" cy="67" rx="5" ry="2" fill="#FFF" opacity={0.8} />
-                  <Ellipse cx="50" cy="67" rx="7" ry="2" fill="#FFF" opacity={0.6} />
-                </AnimatedG>
-                <AnimatedG animatedProps={dustColProps}>
-                  <Ellipse cx="37" cy="62" rx="4" ry="1.5" fill="#FFF" opacity={0.8} />
-                  <Ellipse cx="50" cy="62" rx="4" ry="1.5" fill="#FFF" opacity="0.8" />
-                  <Ellipse cx="63" cy="62" rx="4" ry="1.5" fill="#FFF" opacity="0.8" />
-                </AnimatedG>
-                <AnimatedG animatedProps={dustRoofProps}>
-                  <Ellipse cx="28" cy="44" rx="5" ry="2" fill="#FFF" opacity={0.8} />
-                  <Ellipse cx="72" cy="44" rx="5" ry="2" fill="#FFF" opacity="0.8" />
-                  <Ellipse cx="50" cy="44" rx="6" ry="2.5" fill="#FFF" opacity="0.6" />
-                </AnimatedG>
+            <AnimatedG animatedProps={dustBaseProps}>
+              <Ellipse cx="29" cy="67" rx="5" ry="2" fill="#FFF" opacity={0.8} />
+              <Ellipse cx="71" cy="67" rx="5" ry="2" fill="#FFF" opacity={0.8} />
+              <Ellipse cx="50" cy="67" rx="7" ry="2" fill="#FFF" opacity={0.6} />
+            </AnimatedG>
+            <AnimatedG animatedProps={dustColProps}>
+              <Ellipse cx="37" cy="62" rx="4" ry="1.5" fill="#FFF" opacity={0.8} />
+              <Ellipse cx="50" cy="62" rx="4" ry="1.5" fill="#FFF" opacity="0.8" />
+              <Ellipse cx="63" cy="62" rx="4" ry="1.5" fill="#FFF" opacity={0.8} />
+            </AnimatedG>
+            <AnimatedG animatedProps={dustRoofProps}>
+              <Ellipse cx="28" cy="44" rx="5" ry="2" fill="#FFF" opacity={0.8} />
+              <Ellipse cx="72" cy="44" rx="5" ry="2" fill="#FFF" opacity={0.8} />
+              <Ellipse cx="50" cy="44" rx="6" ry="2.5" fill="#FFF" opacity={0.6} />
+            </AnimatedG>
 
-                <G clipPath="url(#badge-clip)">
-                  <AnimatedG animatedProps={shineProps}>
-                    <Rect x='-20' y='-50' width='15' height='200' fill="url(#shine-grad)" transform='rotate(35, 50, 50)' />
-                    <Rect x='0' y='-50' width='3' height='200' fill='#FFFFFF' opacity={0.9} transform='rotate(35, 50, 50)' />
-                  </AnimatedG>
-                </G>
-              </>
-            )}
+            <G clipPath="url(#badge-clip)">
+              <AnimatedG animatedProps={shineProps}>
+                <Rect x='-20' y='-50' width='15' height='200' fill="url(#shine-grad)" transform='rotate(35, 50, 50)' />
+                <Rect x='0' y='-50' width='3' height='200' fill='#FFFFFF' opacity={0.9} transform='rotate(35, 50, 50)' />
+              </AnimatedG>
+            </G>
           </G>
         </Svg>
       </Animated.View>

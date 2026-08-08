@@ -701,9 +701,10 @@ const BusinessDetailScreen: React.FC = () => {
               
               {/* Badges Row */}
               <View className="flex-row flex-wrap items-center mt-1.5" style={{ gap: 4 }}>
-                {c.isVerified && (
-                  <View className="bg-indigo-50 dark:bg-indigo-950/30 px-2 py-0.5 rounded-full border border-indigo-100 dark:border-indigo-900/30">
-                    <Text className="text-[9px] font-bold text-indigo-700 dark:text-indigo-400 uppercase">Licensed</Text>
+                {(c.isVerified || (c as any).licenseVerified) && (
+                  <View className="flex-row items-center bg-amber-50 dark:bg-amber-950/30 px-2.5 py-1 rounded-full border border-amber-200 dark:border-amber-900/30" style={{ gap: 4 }}>
+                    <VerifiedBadge size={14} animate={false} />
+                    <Text className="text-[10px] font-bold text-amber-800 dark:text-amber-400">Licensed</Text>
                   </View>
                 )}
                 {c.avgResponseHours !== undefined && c.avgResponseHours !== null && (
