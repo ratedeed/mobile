@@ -201,18 +201,18 @@ const SavedScreen = () => {
             <Text className="text-xs font-bold text-neutral-900 dark:text-neutral-50 mt-1">
               {(() => {
                 const clean = (price || '').trim();
-                if (!clean || clean === '$0' || clean === '$0.00' || clean === '0' || clean.toLowerCase() === 'n/a' || clean.toLowerCase() === 'na') {
+                if (!clean || clean === '$0' || clean === '$0.00' || clean === '0' || clean.toLowerCase() === 'n/a' || clean.toLowerCase() === 'na' || clean.toLowerCase().includes('quote')) {
                   return 'Contact for Quote';
                 }
-                if (/^\$+$/.test(clean)) {
-                  return `Price level: ${clean}`;
-                }
                 if (!/\d/.test(clean)) {
-                  return clean;
+                  return 'Contact for Quote';
                 }
                 const formattedPrice = clean.startsWith('$') ? clean : `$${clean}`;
                 if (clean.toLowerCase().includes('/hr') || clean.toLowerCase().includes('hr') || clean.toLowerCase().includes('hour')) {
                   return `${formattedPrice} starting rate`;
+                }
+                if (clean.includes('–') || clean.includes('-') || clean.includes('+')) {
+                  return formattedPrice;
                 }
                 return `${formattedPrice} project`;
               })()}

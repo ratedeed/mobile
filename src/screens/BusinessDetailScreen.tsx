@@ -856,7 +856,7 @@ const BusinessDetailScreen: React.FC = () => {
                         <View className="flex-1">
                           <View className="flex-row items-center flex-wrap" style={{ gap: 6 }}>
                             <Text className="text-sm font-bold text-neutral-900 dark:text-neutral-50">{name}</Text>
-                            {!!priceRange && (
+                            {!!priceRange && priceRange.toLowerCase() !== 'n/a' && priceRange.toLowerCase() !== 'na' && (
                               <View className="bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-100 dark:border-indigo-900/30 rounded-md px-2 py-0.5">
                                 <Text className="text-[10px] font-semibold text-indigo-600 dark:text-indigo-400">{priceRange}</Text>
                               </View>
@@ -1189,25 +1189,12 @@ const BusinessDetailScreen: React.FC = () => {
       <View className="absolute bottom-0 left-0 right-0 bg-white/95 dark:bg-neutral-950/95 border-t border-neutral-100 dark:border-neutral-800 px-4 py-4 pb-8 flex-row items-center justify-between shadow-lg">
         <View>
           {(() => {
-            const clean = priceMin.trim();
-            if (!clean || clean === '$0' || clean === '$0.00' || clean === '0' || clean.toLowerCase() === 'n/a' || clean.toLowerCase() === 'na') {
+            const clean = (priceMin || '').trim();
+            if (!clean || clean === '$0' || clean === '$0.00' || clean === '0' || clean.toLowerCase() === 'n/a' || clean.toLowerCase() === 'na' || clean.toLowerCase().includes('quote')) {
               return <Text className="text-base font-bold text-neutral-900 dark:text-neutral-50">Contact for Quote</Text>;
             }
-            if (/^\$+$/.test(clean)) {
-              return (
-                <View>
-                  <Text className="text-base font-bold text-neutral-900 dark:text-neutral-50">Contact for Quote</Text>
-                  <Text className="text-[9px] text-neutral-500 uppercase tracking-tighter">Price level: {clean}</Text>
-                </View>
-              );
-            }
             if (!/\d/.test(clean)) {
-              return (
-                <View>
-                  <Text className="text-base font-bold text-neutral-900 dark:text-neutral-50">{clean}</Text>
-                  <Text className="text-[9px] text-neutral-500 uppercase tracking-tighter">Pricing Info</Text>
-                </View>
-              );
+              return <Text className="text-base font-bold text-neutral-900 dark:text-neutral-50">Contact for Quote</Text>;
             }
             const formattedPrice = clean.startsWith('$') ? clean : `$${clean}`;
             const subText = clean.toLowerCase().includes('/hr') || clean.toLowerCase().includes('hr') || clean.toLowerCase().includes('hour')
