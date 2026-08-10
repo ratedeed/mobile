@@ -1380,3 +1380,8 @@ export const requestAffiliatePayout = async (data: { amount: number; payoutMetho
   return post(`${API_BASE}/affiliate/payout`, data, authHeaders);
 };
 
+export const createAffiliateStripeConnect = async (): Promise<{ url: string; stripeAccountId: string }> => {
+  const authHeaders = await getAuthHeaders();
+  return post(`${API_BASE}/affiliate/stripe-connect`, {}, authHeaders);
+};
+

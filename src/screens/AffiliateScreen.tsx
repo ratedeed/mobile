@@ -11,16 +11,18 @@ import {
   Modal,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
+import * as WebBrowser from 'expo-web-browser';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
-import { getAffiliateStats, requestAffiliatePayout } from '../utils/apiClient';
+import { getAffiliateStats, requestAffiliatePayout, createAffiliateStripeConnect } from '../utils/apiClient';
 
 export default function AffiliateScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
 
   const [loading, setLoading] = useState(true);
+  const [connectingStripe, setConnectingStripe] = useState(false);
   const [copied, setCopied] = useState(false);
   const [referralLink, setReferralLink] = useState('');
   const [referralCode, setReferralCode] = useState('');
@@ -61,6 +63,23 @@ export default function AffiliateScreen() {
       console.error('Error fetching affiliate stats:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleConnectStripe = async () => {
+    try {
+      setConnectingStripe(true);
+      const res = await createAffiliateStripeConnect();
+      if (res?.url) {
+        await WebBrowser.openBrowserAsync(res.url);
+        fetchStats();
+      } else {
+        Alert.alert('Error', 'Failed to generate Stripe onboarding link.');
+      }
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to start Stripe Express onboarding');
+    } finally {
+      setConnectingStripe(false);
     }
   };
 
@@ -150,13 +169,16 @@ export default function AffiliateScreen() {
         <View className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-5 flex-row items-center justify-between">
           <View className="flex-1 mr-3">
             <Text className="text-amber-900 font-bold text-xs">Stripe Account Required</Text>
-            <Text className="text-amber-700 text-[11px] mt-0.5">Connect your Stripe account to enable automated payouts.</Text>
+            <Text className="text-amber-700 text-[11px] mt-0.5">Connect your Stripe account to earn & receive automated payouts.</Text>
           </View>
           <TouchableOpacity
-            onPress={() => (navigation as any).navigate('ContractorOnboarding')}
+            onPress={handleConnectStripe}
+            disabled={connectingStripe}
             className="bg-amber-600 px-3 py-2 rounded-xl"
           >
-            <Text className="text-white font-bold text-xs">Connect Stripe</Text>
+            <Text className="text-white font-bold text-xs">
+              {connectingStripe ? 'Loading...' : 'Connect Stripe'}
+            </Text>
           </TouchableOpacity>
         </View>
       )}
