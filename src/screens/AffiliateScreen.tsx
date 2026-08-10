@@ -26,6 +26,7 @@ export default function AffiliateScreen() {
   const [referralCode, setReferralCode] = useState('');
   const [affiliateBalance, setAffiliateBalance] = useState(0);
   const [totalEarned, setTotalEarned] = useState(0);
+  const [hasStripeConnected, setHasStripeConnected] = useState(false);
   const [contractors, setContractors] = useState<any[]>([]);
   const [earnings, setEarnings] = useState<any[]>([]);
   const [payouts, setPayouts] = useState<any[]>([]);
@@ -49,6 +50,7 @@ export default function AffiliateScreen() {
       if (res) {
         setReferralCode(res.referralCode || '');
         setReferralLink(res.referralLink || '');
+        setHasStripeConnected(!!res.hasStripeConnected);
         setAffiliateBalance(res.affiliateBalance || 0);
         setTotalEarned(res.totalAffiliateEarned || 0);
         setContractors(res.referredContractors || []);
@@ -81,6 +83,10 @@ export default function AffiliateScreen() {
   };
 
   const handleRequestPayoutSubmit = async () => {
+    if (!hasStripeConnected) {
+      Alert.alert('Stripe Account Required', 'You must connect your Stripe account before requesting affiliate payouts.');
+      return;
+    }
     const amt = parseFloat(payoutAmount);
     if (isNaN(amt) || amt < 10) {
       Alert.alert('Invalid Amount', 'Minimum payout threshold is $10.00');
@@ -139,6 +145,22 @@ export default function AffiliateScreen() {
         </Text>
       </View>
 
+      {/* Stripe Connection Alert Banner */}
+      {!hasStripeConnected && (
+        <View className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-5 flex-row items-center justify-between">
+          <View className="flex-1 mr-3">
+            <Text className="text-amber-900 font-bold text-xs">Stripe Account Required</Text>
+            <Text className="text-amber-700 text-[11px] mt-0.5">Connect your Stripe account to enable affiliate payouts.</Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => (navigation as any).navigate('ContractorOnboarding')}
+            className="bg-amber-600 px-3 py-2 rounded-xl"
+          >
+            <Text className="text-white font-bold text-xs">Connect Stripe</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* Balance Card */}
       <View className="bg-white rounded-2xl p-5 mb-5 border border-slate-200 shadow-sm flex-row items-center justify-between">
         <View>
@@ -150,11 +172,11 @@ export default function AffiliateScreen() {
         </View>
         <TouchableOpacity
           onPress={() => setShowModal(true)}
-          disabled={affiliateBalance < 1000}
-          className={`px-4 py-3 rounded-xl ${affiliateBalance < 1000 ? 'bg-slate-200' : 'bg-indigo-600'}`}
+          disabled={!hasStripeConnected || affiliateBalance < 1000}
+          className={`px-4 py-3 rounded-xl ${!hasStripeConnected || affiliateBalance < 1000 ? 'bg-slate-200' : 'bg-indigo-600'}`}
         >
-          <Text className={`font-bold text-xs ${affiliateBalance < 1000 ? 'text-slate-500' : 'text-white'}`}>
-            {affiliateBalance < 1000 ? 'Min $10' : 'Withdraw'}
+          <Text className={`font-bold text-xs ${!hasStripeConnected || affiliateBalance < 1000 ? 'text-slate-500' : 'text-white'}`}>
+            {!hasStripeConnected ? 'Connect Stripe' : affiliateBalance < 1000 ? 'Min $10' : 'Withdraw'}
           </Text>
         </TouchableOpacity>
       </View>
