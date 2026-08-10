@@ -13,7 +13,8 @@ import {
   Linking,
   useColorScheme,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { contractorSignup } from '../api';
 import { auth } from '../firebaseConfig';
@@ -55,6 +56,7 @@ const DEFAULT_HOURS = {
 const ContractorSignupScreen = () => {
   const isDark = useColorScheme() === 'dark';
   const navigation = useNavigation();
+  const route = useRoute();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
 
@@ -69,10 +71,16 @@ const ContractorSignupScreen = () => {
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
-    AsyncStorage.getItem('ratedeed_ref_code').then(code => {
-      if (code) setReferralCode(code);
-    }).catch(() => {});
-  }, []);
+    const routeRef = route.params?.ref || route.params?.referralCode;
+    if (routeRef) {
+      setReferralCode(routeRef);
+      AsyncStorage.setItem('ratedeed_ref_code', routeRef).catch(() => {});
+    } else {
+      AsyncStorage.getItem('ratedeed_ref_code').then(code => {
+        if (code) setReferralCode(code);
+      }).catch(() => {});
+    }
+  }, [route.params]);
 
   // Step 2: Business info
   const [companyName, setCompanyName] = useState('');
