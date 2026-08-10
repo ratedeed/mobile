@@ -145,13 +145,19 @@ export default function AffiliateScreen() {
         </Text>
       </View>
 
-      {/* Payout Information Alert Banner */}
+      {/* Stripe Connection Alert Banner */}
       {!hasStripeConnected && (
-        <View className="bg-indigo-50 border border-indigo-200 rounded-2xl p-4 mb-5 flex-row items-center justify-between">
+        <View className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-5 flex-row items-center justify-between">
           <View className="flex-1 mr-3">
-            <Text className="text-indigo-900 font-bold text-xs">Flexible Payout Methods</Text>
-            <Text className="text-indigo-700 text-[11px] mt-0.5">Contractors can connect Stripe. Homeowners & partners can withdraw via PayPal or Zelle.</Text>
+            <Text className="text-amber-900 font-bold text-xs">Stripe Account Required</Text>
+            <Text className="text-amber-700 text-[11px] mt-0.5">Connect your Stripe account to enable automated payouts.</Text>
           </View>
+          <TouchableOpacity
+            onPress={() => (navigation as any).navigate('ContractorOnboarding')}
+            className="bg-amber-600 px-3 py-2 rounded-xl"
+          >
+            <Text className="text-white font-bold text-xs">Connect Stripe</Text>
+          </TouchableOpacity>
         </View>
       )}
 
@@ -166,11 +172,11 @@ export default function AffiliateScreen() {
         </View>
         <TouchableOpacity
           onPress={() => setShowModal(true)}
-          disabled={affiliateBalance < 1000}
-          className={`px-4 py-3 rounded-xl ${affiliateBalance < 1000 ? 'bg-slate-200' : 'bg-indigo-600'}`}
+          disabled={!hasStripeConnected || affiliateBalance < 1000}
+          className={`px-4 py-3 rounded-xl ${!hasStripeConnected || affiliateBalance < 1000 ? 'bg-slate-200' : 'bg-indigo-600'}`}
         >
-          <Text className={`font-bold text-xs ${affiliateBalance < 1000 ? 'text-slate-500' : 'text-white'}`}>
-            {affiliateBalance < 1000 ? 'Min $10' : 'Withdraw'}
+          <Text className={`font-bold text-xs ${!hasStripeConnected || affiliateBalance < 1000 ? 'text-slate-500' : 'text-white'}`}>
+            {!hasStripeConnected ? 'Connect Stripe' : affiliateBalance < 1000 ? 'Min $10' : 'Withdraw'}
           </Text>
         </TouchableOpacity>
       </View>
