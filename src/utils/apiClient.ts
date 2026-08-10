@@ -1365,3 +1365,18 @@ export const reportConversation = async (reportedUserId: string, conversationId:
   const authHeaders = await getAuthHeaders();
   return post(`${API_BASE}/reports/conversation`, { reportedUserId, conversationId, category, reason }, authHeaders);
 };
+
+// ==========================================
+// Affiliate Program
+// ==========================================
+
+export const getAffiliateStats = async (): Promise<any> => {
+  const authHeaders = await getAuthHeaders();
+  return get(`${API_BASE}/affiliate/stats`, authHeaders);
+};
+
+export const requestAffiliatePayout = async (data: { amount: number; payoutMethod?: string; payoutDetails?: string }): Promise<any> => {
+  const authHeaders = await getAuthHeaders();
+  return post(`${API_BASE}/affiliate/payout`, data, authHeaders);
+};
+
