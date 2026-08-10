@@ -47,6 +47,7 @@ import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
 import ContractorSignupScreen from '../screens/ContractorSignupScreen';
+import AffiliateScreen from '../screens/AffiliateScreen';
 
 import Typography from '../components/common/Typography';
 import { useAuth } from '../context/AuthContext';
@@ -407,6 +408,7 @@ export default function MainNavigator() {
       <Stack.Screen name="ContractorOnboarding" component={ContractorOnboardingScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ContractorEditProfile" component={ContractorEditProfileScreen} options={{ headerShown: false }} />
       <Stack.Screen name="EarningsScreen" component={EarningsScreen} options={{ title: 'Earnings', headerShown: false }} />
+      <Stack.Screen name="AffiliateScreen" component={AffiliateScreen} options={{ title: 'Partner Program' }} />
       <Stack.Screen name="Notifications" component={NotificationsScreen} />
       <Stack.Screen name="ChatScreen" component={MessagesScreenWithErrorBoundary} options={{ headerShown: false }} />
       <Stack.Screen name="ActiveJobs" strokeWidth={2.5} component={ActiveJobsScreen} options={{ title: '', headerShown: false }} />

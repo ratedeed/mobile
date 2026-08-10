@@ -481,6 +481,7 @@ const ProfileScreen: React.FC = () => {
       heading: 'Account',
       items: [
         { icon: 'user-edit', label: 'Edit Profile', sheet: 'edit-profile', iconColor: '#4F46E5', iconBg: 'bg-indigo-50 dark:bg-indigo-950' },
+        { icon: 'gift', label: 'Partner Program (Earn 1%)', route: 'AffiliateScreen', iconColor: '#9333EA', iconBg: 'bg-purple-50 dark:bg-purple-950' },
         { icon: 'bell', label: 'Notifications', sheet: 'notifications', iconColor: '#D97706', iconBg: 'bg-amber-50 dark:bg-amber-950' },
       ],
     },
@@ -582,7 +583,7 @@ const ProfileScreen: React.FC = () => {
                 {section.items.map((item, i) => (
                   <Pressable
                     key={item.label}
-                    onPress={() => setActiveSheet(item.sheet)}
+                    onPress={() => item.route ? navigation.navigate(item.route as any) : setActiveSheet(item.sheet)}
                     className={`flex-row items-center px-5 py-[16px] active:bg-neutral-50 dark:active:bg-neutral-800 ${i < section.items.length - 1 ? 'border-b border-neutral-100 dark:border-neutral-800' : ''}`}
                     style={{ gap: 14 }}
                   >
