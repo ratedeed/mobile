@@ -13,7 +13,7 @@ import {
 import * as Clipboard from 'expo-clipboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { FontAwesome5 } from '@vector-icons/fontawesome5';
+import { FontAwesome5 } from '@expo/vector-icons';
 import { getAffiliateStats, requestAffiliatePayout } from '../utils/apiClient';
 
 export default function AffiliateScreen() {

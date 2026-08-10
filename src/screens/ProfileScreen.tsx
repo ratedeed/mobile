@@ -583,7 +583,7 @@ const ProfileScreen: React.FC = () => {
                 {section.items.map((item, i) => (
                   <Pressable
                     key={item.label}
-                    onPress={() => item.route ? navigation.navigate(item.route as any) : setActiveSheet(item.sheet)}
+                    onPress={() => item.route ? navigation.navigate(item.route as any) : setActiveSheet(item.sheet || null)}
                     className={`flex-row items-center px-5 py-[16px] active:bg-neutral-50 dark:active:bg-neutral-800 ${i < section.items.length - 1 ? 'border-b border-neutral-100 dark:border-neutral-800' : ''}`}
                     style={{ gap: 14 }}
                   >
