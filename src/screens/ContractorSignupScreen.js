@@ -65,7 +65,14 @@ const ContractorSignupScreen = () => {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [referralCode, setReferralCode] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    AsyncStorage.getItem('ratedeed_ref_code').then(code => {
+      if (code) setReferralCode(code);
+    }).catch(() => {});
+  }, []);
 
   // Step 2: Business info
   const [companyName, setCompanyName] = useState('');
@@ -245,6 +252,7 @@ const ContractorSignupScreen = () => {
         businessAddress: businessAddress.trim(),
         businessHours: hours,
         firebaseUid: userCreated.uid,
+        referralCode: referralCode.trim() || undefined,
       };
       await contractorSignup(payload);
 
