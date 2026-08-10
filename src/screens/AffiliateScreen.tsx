@@ -344,27 +344,10 @@ export default function AffiliateScreen() {
             </View>
 
             <View>
-              <Text className="text-slate-600 text-xs font-bold mb-1">Payout Method</Text>
-              <View className="flex-row gap-2 mb-2">
-                {[
-                  { id: 'stripe', label: 'Stripe / Bank' },
-                  { id: 'paypal', label: 'PayPal' },
-                  { id: 'zelle', label: 'Zelle' },
-                ].map((m) => (
-                  <TouchableOpacity
-                    key={m.id}
-                    onPress={() => setPayoutMethod(m.id)}
-                    className={`flex-1 py-2 rounded-xl border items-center ${
-                      payoutMethod === m.id
-                        ? 'bg-indigo-50 border-indigo-600'
-                        : 'bg-slate-50 border-slate-200'
-                    }`}
-                  >
-                    <Text className={`text-xs font-bold ${payoutMethod === m.id ? 'text-indigo-600' : 'text-slate-600'}`}>
-                      {m.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+              <Text className="text-slate-600 text-xs font-bold mb-1">Payout Destination</Text>
+              <View className="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                <Text className="text-slate-900 font-bold text-xs">Stripe Express Direct Deposit</Text>
+                <Text className="text-slate-500 text-[11px] mt-0.5">Automated payout directly to your connected bank account.</Text>
               </View>
             </View>
 
