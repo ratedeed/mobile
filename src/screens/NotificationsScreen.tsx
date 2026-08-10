@@ -242,6 +242,8 @@ const NotificationsScreen: React.FC = () => {
       const m = (item.message || '').toLowerCase();
       if (t === 'admin_message' || t === 'new_message' || t === 'message' || m.includes('message')) {
         navigation.navigate('Messages');
+      } else if (t.includes('affiliate') || t.includes('commission') || t.includes('payout') || m.includes('commission') || m.includes('payout')) {
+        navigation.navigate('AffiliateScreen');
       } else if (t.includes('job') || t.includes('milestone') || t.includes('payment') || m.includes('payment') || m.includes('milestone')) {
         navigation.navigate('Jobs');
       }
@@ -359,6 +361,8 @@ const NotificationsScreen: React.FC = () => {
           }
         })();
       }
+    } else if (path.startsWith('/affiliate')) {
+      navigation.navigate('AffiliateScreen');
     }
   };
 
