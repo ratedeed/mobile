@@ -221,6 +221,11 @@ export const usePushNotifications = () => {
           return true;
         }
       }
+
+      if (path.startsWith('/affiliate')) {
+        navigation.navigate('AffiliateScreen');
+        return true;
+      }
       return false;
     };
 
@@ -259,6 +264,12 @@ export const usePushNotifications = () => {
         } else {
           navigation.navigate('Profile');
         }
+      } else if (
+        data?.type === 'affiliate_commission' ||
+        data?.type === 'affiliate_payout_approved' ||
+        data?.type === 'affiliate_payout_rejected'
+      ) {
+        navigation.navigate('AffiliateScreen');
       }
     };
 
