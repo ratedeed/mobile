@@ -41,6 +41,7 @@ export interface ContractorUser {
 
 export interface Contractor {
   _id: string;
+  userId?: string;
   user?: {
     _id: string;
     firstName: string;

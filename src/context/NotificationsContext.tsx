@@ -157,6 +157,15 @@ export const NotificationsProvider: React.FC<{ children: ReactNode }> = ({ child
   const markAllAsRead = useCallback(async () => {
     try {
       await apiClient.markAllNotificationsRead();
+      const convos = await apiClient.fetchConversations().catch(() => []);
+      const unreadConvos = (convos || []).filter((c: any) => c.unreadCount > 0);
+      const { markConversationAsRead } = await import('../api');
+      await Promise.all(
+        unreadConvos.map((c: any) => {
+          const cid = c.conversationId || c._id || c.id;
+          return markConversationAsRead(cid).catch(() => {});
+        })
+      );
       setNotifications(prev => {
         const updated = prev.map(n => ({ ...n, read: true }));
         AsyncStorage.setItem('unreadNotifications', '0');

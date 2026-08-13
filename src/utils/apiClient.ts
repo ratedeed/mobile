@@ -1314,7 +1314,7 @@ export const getQuote = async (quoteId: string): Promise<any> => {
   return get(`${API_BASE}/quotes/${quoteId}`, authHeaders);
 };
 
-export const updateQuoteStatus = async (quoteId: string, status: 'accepted' | 'rejected'): Promise<any> => {
+export const updateQuoteStatus = async (quoteId: string, status: 'accepted' | 'rejected' | 'cancelled' | 'withdrawn'): Promise<any> => {
   if (isDemoMode()) return demo.demoUpdateQuoteStatus(quoteId, status);
   const authHeaders = await getAuthHeaders();
   return put(`${API_BASE}/quotes/${quoteId}/status`, { status }, authHeaders);

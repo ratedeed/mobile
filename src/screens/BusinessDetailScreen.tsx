@@ -302,10 +302,10 @@ const BusinessDetailScreen: React.FC = () => {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
-    const contractorId = contractor?._id || id;
+    const recipientUserId = contractor?.userId || contractor?.user?._id || (typeof contractor?.user === 'string' ? contractor.user : null) || contractor?._id || id;
     setIsQuoteModalVisible(false);
     navigation.navigate('ChatScreen', {
-      recipientId: contractorId,
+      recipientId: recipientUserId,
       recipientName: contractor?.companyName || contractor?.businessName || 'Contractor',
       initialMessage: `Project Quote Request: ${quoteProjectTitle}\n\n${quoteDescription}`
     });

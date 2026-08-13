@@ -525,7 +525,7 @@ export const demoGetQuote = async (quoteId: string) => {
   return quoteById[quoteId] || mutableQuotes[0] || mutableContractorQuotes[0];
 };
 
-export const demoUpdateQuoteStatus = async (quoteId: string, status: 'accepted' | 'rejected') => {
+export const demoUpdateQuoteStatus = async (quoteId: string, status: 'accepted' | 'rejected' | 'cancelled' | 'withdrawn') => {
   await delay(200);
   mutableQuotes = mutableQuotes.map((q: any) => q._id === quoteId ? { ...q, status } : q);
   mutableContractorQuotes = mutableContractorQuotes.map((q: any) => q._id === quoteId ? { ...q, status } : q);

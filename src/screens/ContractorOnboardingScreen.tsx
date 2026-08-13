@@ -291,7 +291,7 @@ export default function ContractorOnboardingScreen() {
       await updateContractorProfile({ onboardingComplete: true } as any);
       navigation.reset({
         index: 0,
-        routes: [{ name: 'Main' }, { name: 'ContractorDashboard' }],
+        routes: [{ name: 'ContractorDashboard' }],
       });
     } catch (err: any) {
       Alert.alert('Error', err?.message || 'Failed to complete onboarding. Please try again.');

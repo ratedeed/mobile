@@ -175,7 +175,7 @@ export const usePushNotifications = () => {
       }
       
       if (path.startsWith('/quote-review')) {
-        const quoteId = path.match(/[?&]quoteId=([^&]+)/)?.[1];
+        const quoteId = path.split('/')[2] || path.match(/[?&]quoteId=([^&]+)/)?.[1];
         if (quoteId) {
           navigation.navigate('QuoteReview', { quoteId });
           return true;
@@ -199,10 +199,10 @@ export const usePushNotifications = () => {
         }
       }
       
-      if (path.startsWith('/payment/')) {
-        const quoteId = path.split('/')[2];
+      if (path.startsWith('/payment')) {
+        const quoteId = path.split('/')[2] || path.match(/[?&]quoteId=([^&]+)/)?.[1];
         if (quoteId) {
-          navigation.navigate('PaymentFlow', { quoteId });
+          navigation.navigate('QuoteReview', { quoteId });
           return true;
         }
       }

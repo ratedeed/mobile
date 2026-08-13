@@ -138,7 +138,7 @@ const linking = {
       Register: 'register',
       ForgotPassword: 'forgot-password',
       ContractorSignup: 'contractor-signup',
-      Affiliate: 'affiliate',
+      AffiliateScreen: 'affiliate',
     },
   },
 };

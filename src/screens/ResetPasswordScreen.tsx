@@ -115,12 +115,34 @@ export default function ResetPasswordScreen() {
           </Text>
         </View>
 
-        {status === 'error' && message && (
-          <View className="bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800 rounded-xl p-4 flex-row items-center mb-6" style={{ gap: 10 }}>
-            <FontAwesome5 name="exclamation-circle" size={16} color="#dc2626" />
-            <Text className="text-sm text-red-700 dark:text-red-300 flex-1">{message}</Text>
+        {!token ? (
+          <View className="bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800 rounded-2xl p-6 items-center mb-6">
+            <FontAwesome5 name="exclamation-triangle" size={32} color="#dc2626" style={{ marginBottom: 12 }} />
+            <Text className="text-base font-bold text-red-900 dark:text-red-200 mb-2 text-center">Invalid Reset Link</Text>
+            <Text className="text-sm text-red-700 dark:text-red-300 text-center mb-6">{message}</Text>
+            <View className="flex-row" style={{ gap: 12 }}>
+              <Pressable
+                onPress={() => navigation.navigate('ForgotPassword' as never)}
+                className="bg-neutral-900 dark:bg-white px-5 py-3 rounded-xl flex-1 items-center"
+              >
+                <Text className="text-white dark:text-neutral-900 font-bold text-xs">Request New Link</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => navigation.navigate('Login' as never)}
+                className="border border-neutral-300 dark:border-neutral-700 px-5 py-3 rounded-xl flex-1 items-center"
+              >
+                <Text className="text-neutral-700 dark:text-neutral-300 font-bold text-xs">Back to Login</Text>
+              </Pressable>
+            </View>
           </View>
-        )}
+        ) : (
+          <>
+            {status === 'error' && message && (
+              <View className="bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800 rounded-xl p-4 flex-row items-center mb-6" style={{ gap: 10 }}>
+                <FontAwesome5 name="exclamation-circle" size={16} color="#dc2626" />
+                <Text className="text-sm text-red-700 dark:text-red-300 flex-1">{message}</Text>
+              </View>
+            )}
 
         <View className="mb-4">
           <Text className="text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-1.5">New Password</Text>
@@ -163,6 +185,8 @@ export default function ResetPasswordScreen() {
             <Text className="text-white font-bold text-base">Reset Password</Text>
           )}
         </Pressable>
+        </>
+        )}
       </View>
     </KeyboardAvoidingView>
   );

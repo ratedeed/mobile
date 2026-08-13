@@ -495,13 +495,15 @@ const HomeScreen = () => {
     zip?: string | null,
     pageNum = 1,
     append = false,
-    categoryId = 'all'
+    categoryId = 'all',
+    nameSearch = ''
   ) => {
     if (isFetchingRef.current && append) return;
     const seq = ++fetchSeqRef.current;
     isFetchingRef.current = true;
 
-    const cacheKey = `${zip || 'all'}_${categoryId}_${pageNum}`;
+    const queryTerm = (nameSearch !== undefined ? nameSearch : searchName).trim();
+    const cacheKey = `${zip || 'all'}_${categoryId}_${queryTerm}_${pageNum}`;
     const cachedEntry = contractorCache.get(cacheKey);
 
     // 1. Handle Cache Hit (Stale-While-Revalidate)
@@ -566,6 +568,7 @@ const HomeScreen = () => {
     // 2. Network Fetch
     try {
       const filters: Record<string, any> = { zip: zip || undefined, page: pageNum, limit: 30 };
+      if (queryTerm) filters.query = queryTerm;
       if (categoryId && categoryId !== 'all') {
         const cat = CATEGORIES.find(c => c.id === categoryId);
         if (cat) filters.type = cat.label;
@@ -800,12 +803,12 @@ const HomeScreen = () => {
 
   const renderListItem = useCallback(
     ({ item }: { item: FlatListItem }) => {
-      if (activeCategory === 'all') {
+      if (activeCategory === 'all' && !searchName.trim()) {
         const cat = item as Category;
         return (
           <CategoryRow
             category={cat}
-            zip={ipZipCode}
+            zip={searchZip || ipZipCode}
             favorites={favorites}
             toggleFav={toggleFav}
             handleContractorPress={handleContractorPress}
@@ -813,7 +816,7 @@ const HomeScreen = () => {
               HapticFeedback.selection();
               requestAnimationFrame(() => {
                 setActiveCategory(cat.id);
-                loadContractors(searchZip || null, 1, false, cat.id);
+                loadContractors(searchZip || null, 1, false, cat.id, searchName);
               });
             }}
             isDark={isDark}
@@ -834,7 +837,7 @@ const HomeScreen = () => {
         </View>
       );
     },
-    [activeCategory, favorites, ipZipCode, isDark, handleContractorPress, toggleFav, loadContractors, searchZip]
+    [activeCategory, favorites, ipZipCode, isDark, handleContractorPress, toggleFav, loadContractors, searchZip, searchName]
   );
 
   const renderHeader = useCallback(
@@ -881,12 +884,17 @@ const HomeScreen = () => {
                 placeholder="Contractor name..."
                 placeholderTextColor="#a3a3a3"
                 value={searchName}
-                onChangeText={setSearchName}
-                onSubmitEditing={() => loadContractors(searchZip || null, 1, false, activeCategory)}
+                onChangeText={(text) => {
+                  setSearchName(text);
+                }}
+                onSubmitEditing={() => loadContractors(searchZip || null, 1, false, activeCategory, searchName)}
               />
               {searchName ? (
                 <Pressable
-                  onPress={() => setSearchName('')}
+                  onPress={() => {
+                    setSearchName('');
+                    loadContractors(searchZip || null, 1, false, activeCategory, '');
+                  }}
                   className="p-2"
                   accessibilityLabel="Clear search"
                   accessibilityRole="button"
@@ -897,7 +905,7 @@ const HomeScreen = () => {
             </View>
             
             <Pressable
-              onPress={() => loadContractors(searchZip || null, 1, false, activeCategory)}
+              onPress={() => loadContractors(searchZip || null, 1, false, activeCategory, searchName)}
               className="bg-indigo-600 rounded-2xl p-3 m-1"
               accessibilityLabel="Search contractors"
               accessibilityRole="button"
@@ -1052,11 +1060,11 @@ const HomeScreen = () => {
   }, [allContractors, searchName]);
 
   const data = useMemo((): FlatListItem[] => {
-    if (activeCategory === 'all') {
+    if (activeCategory === 'all' && !searchName.trim()) {
       return allContractors.length === 0 ? [] : CATEGORIES.filter(cat => cat.id !== 'all');
     }
     return filtered;
-  }, [activeCategory, allContractors.length, filtered]);
+  }, [activeCategory, allContractors.length, filtered, searchName]);
 
   const keyExtractor = (item: FlatListItem) => {
     if ('_id' in item) return item._id;

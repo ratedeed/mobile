@@ -241,9 +241,9 @@ export default function ActiveJobsScreen() {
           filteredQuotes.map(quote => {
             const displayStatus = (quote.jobStatus || quote.status || '').toLowerCase();
             const badge = getStatusBadge(displayStatus);
-            const contractor = quote.contractorId || {};
-            if (!contractor._id && !contractor.id) return null; // Skip if no contractor data
-            const contractorName = contractor.companyName || contractor.businessName || 'Contractor';
+            const rawContractor = quote.contractorId || quote.contractor || {};
+            const contractor = typeof rawContractor === 'object' ? rawContractor : { _id: rawContractor };
+            const contractorName = contractor.companyName || contractor.businessName || contractor.name || 'Contractor';
             const contractorImage = getProfileImageUrl(contractorName, contractor.profilePicture || contractor.imageUrl || '', contractor.category);
 
             return (
@@ -254,16 +254,7 @@ export default function ActiveJobsScreen() {
                   if (quote.jobId) {
                     navigation.navigate('JobDetail', { jobId: quote.jobId });
                   } else {
-                    const firstMilestone = (quote.isMilestone && quote.milestones?.length)
-                      ? quote.milestones.find((m: any) => m.status === 'pending' || !m.status) || quote.milestones[0]
-                      : null;
-                    navigation.navigate('PaymentFlow', {
-                      quoteId: quote._id,
-                      milestoneId: firstMilestone ? (firstMilestone._id || firstMilestone.id) : undefined,
-                      totalAmount: firstMilestone ? firstMilestone.amount : (quote.totalAmount || quote.quoteTotal || 0),
-                      contractorName: quote.contractorId?.companyName || quote.contractorId?.businessName || 'Contractor',
-                      description: quote.description || quote.projectTitle || 'Home Project',
-                    });
+                    navigation.navigate('QuoteReview', { quoteId: quote._id || quote.id });
                   }
                 }}
               >

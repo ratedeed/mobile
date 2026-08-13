@@ -795,6 +795,8 @@ const MessagesScreen = () => {
 
       if (blockedUsersRef.current.has(targetId)) {
         Alert.alert("Blocked", "You cannot send messages to a blocked user.");
+        setNewMessage(messageText);
+        setPendingAttachment(attachment);
         return;
       }
 
@@ -876,6 +878,8 @@ const MessagesScreen = () => {
 
     } catch (e) {
       Alert.alert("Error", e?.message || 'Failed to send message.');
+      setNewMessage(messageText);
+      setPendingAttachment(attachment);
     } finally {
       isSendingMessageRef.current = false;
     }
@@ -1296,8 +1300,9 @@ const MessagesScreen = () => {
         });
         return;
       }
-      const target = conversations[Object.keys(conversations)[0]];
-      if (target) setSelectedConversation(target);
+      if (conversationId) {
+        Alert.alert("Conversation Not Found", "The requested chat could not be found or may have been removed.");
+      }
     }
   }, [route.name, selectedConversation, loading, conversations, conversationId, recipientId, recipientName]);
 

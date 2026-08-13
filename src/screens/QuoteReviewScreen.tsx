@@ -15,6 +15,7 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import { getQuote, updateQuoteStatus } from '../api';
 import HapticFeedback from '../utils/haptics';
 import { BouncingDotsLoader } from '../components/common';
+import { useAuth } from '../context/AuthContext';
 
 export default function QuoteReviewScreen() {
   const colorScheme = useColorScheme();
@@ -22,6 +23,7 @@ export default function QuoteReviewScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const { quoteId } = (route.params || {}) as { quoteId?: string };
+  const { userRole, userId } = useAuth();
 
   const [quote, setQuote] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -32,6 +34,16 @@ export default function QuoteReviewScreen() {
   const [timeLeft, setTimeLeft] = useState('');
   const [isExpired, setIsExpired] = useState(false);
   const [isUrgent, setIsUrgent] = useState(false);
+
+  const isContractorOwner = userRole === 'contractor' || (
+    quote && (
+      quote?.contractorId?.userId === userId ||
+      quote?.contractorId?._id === userId ||
+      quote?.contractor?.userId === userId ||
+      quote?.contractor?._id === userId ||
+      quote?.contractor === userId
+    )
+  );
 
   useEffect(() => {
     if (!quote || !quote.expiresAt) {
@@ -458,40 +470,68 @@ export default function QuoteReviewScreen() {
       {/* Bottom CTA for pending quotes */}
       {(isPending || quote.status === 'accepted') && (
         <View className="absolute bottom-0 left-0 right-0 bg-white dark:bg-neutral-900 border-t border-neutral-200 dark:border-neutral-700 px-4 py-3">
-          <Pressable
-            onPress={handleAccept}
-            disabled={actionLoading !== null || isExpired}
-            className={`py-3.5 rounded-xl items-center flex-row justify-center mb-2 ${
-              isExpired 
-                ? 'bg-neutral-300 dark:bg-neutral-800' 
-                : actionLoading 
-                  ? 'bg-indigo-400' 
-                  : 'bg-indigo-600'
-            }`}
-            style={{ gap: 8 }}
-          >
-            {actionLoading === 'accept' ? (
-              <BouncingDotsLoader size="small" color="#fff" />
-            ) : null}
-            <Text className={`font-bold text-sm ${isExpired ? 'text-neutral-500' : 'text-white'}`}>
-              {quote.status === 'accepted' 
-                ? 'Continue to Payment' 
-                : isExpired 
-                  ? 'Quote Expired' 
-                  : actionLoading === 'accept' 
-                    ? 'Accepting...' 
-                    : `${firstMilestone ? 'Accept & Pay Deposit' : 'Accept & Pay'} $${Number(amountToPayInDollars).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-            </Text>
-            {actionLoading !== 'accept' && !isExpired && <FontAwesome5 name="arrow-right" size={12} color="#fff" />}
-          </Pressable>
-          {isPending && !isExpired && (
-            <Pressable 
-              onPress={() => setShowDeclineConfirm(true)} 
-              disabled={actionLoading !== null} 
-              className="py-2 items-center"
+          {isContractorOwner ? (
+            <Pressable
+              onPress={async () => {
+                if (actionLoading) return;
+                setActionLoading('withdraw');
+                try {
+                  await updateQuoteStatus(quoteId!, 'cancelled');
+                  Alert.alert('Success', 'Quote withdrawn successfully.');
+                  navigation.goBack();
+                } catch (err: any) {
+                  Alert.alert('Error', err?.message || 'Failed to withdraw quote.');
+                } finally {
+                  setActionLoading(null);
+                }
+              }}
+              disabled={actionLoading !== null}
+              className="py-3.5 rounded-xl items-center flex-row justify-center bg-neutral-900 dark:bg-neutral-800"
             >
-              <Text className="text-sm text-neutral-500 dark:text-neutral-400">Decline this quote</Text>
+              {actionLoading === 'withdraw' ? (
+                <BouncingDotsLoader size="small" color="#fff" />
+              ) : (
+                <Text className="font-bold text-sm text-white">Withdraw Quote</Text>
+              )}
             </Pressable>
+          ) : (
+            <>
+              <Pressable
+                onPress={handleAccept}
+                disabled={actionLoading !== null || isExpired}
+                className={`py-3.5 rounded-xl items-center flex-row justify-center mb-2 ${
+                  isExpired 
+                    ? 'bg-neutral-300 dark:bg-neutral-800' 
+                    : actionLoading 
+                      ? 'bg-indigo-400' 
+                      : 'bg-indigo-600'
+                }`}
+                style={{ gap: 8 }}
+              >
+                {actionLoading === 'accept' ? (
+                  <BouncingDotsLoader size="small" color="#fff" />
+                ) : null}
+                <Text className={`font-bold text-sm ${isExpired ? 'text-neutral-500' : 'text-white'}`}>
+                  {quote.status === 'accepted' 
+                    ? 'Continue to Payment' 
+                    : isExpired 
+                      ? 'Quote Expired' 
+                      : actionLoading === 'accept' 
+                        ? 'Accepting...' 
+                        : `${firstMilestone ? 'Accept & Pay Deposit' : 'Accept & Pay'} $${Number(amountToPayInDollars).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                </Text>
+                {actionLoading !== 'accept' && !isExpired && <FontAwesome5 name="arrow-right" size={12} color="#fff" />}
+              </Pressable>
+              {isPending && !isExpired && (
+                <Pressable 
+                  onPress={() => setShowDeclineConfirm(true)} 
+                  disabled={actionLoading !== null} 
+                  className="py-2 items-center"
+                >
+                  <Text className="text-sm text-neutral-500 dark:text-neutral-400">Decline this quote</Text>
+                </Pressable>
+              )}
+            </>
           )}
         </View>
       )}

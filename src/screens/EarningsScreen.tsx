@@ -104,12 +104,18 @@ export default function EarningsScreen() {
     };
   }, []);
 
+  const [hasError, setHasError] = useState(false);
+
   const loadData = useCallback(async () => {
     try {
+      setHasError(false);
       const data = await getContractorEarnings();
       if (isMounted.current) setEarnings(data as any);
     } catch {
-      if (isMounted.current) setEarnings(null);
+      if (isMounted.current) {
+        setHasError(true);
+        setEarnings(null);
+      }
     } finally {
       if (isMounted.current) {
         setLoading(false);
@@ -227,6 +233,23 @@ export default function EarningsScreen() {
   const renderHeader = useCallback(
     () => (
       <View className="py-6">
+        {hasError && (
+          <View className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-2xl p-4 mb-4 flex-row items-center justify-between">
+            <View className="flex-row items-center flex-1 mr-3" style={{ gap: 10 }}>
+              <FontAwesome5 name="exclamation-circle" size={18} color="#dc2626" />
+              <Text className="text-xs text-red-700 dark:text-red-300 font-medium flex-1">
+                Failed to load latest earnings data.
+              </Text>
+            </View>
+            <Pressable
+              onPress={loadData}
+              className="bg-red-600 px-3 py-1.5 rounded-lg"
+            >
+              <Text className="text-xs font-bold text-white">Retry</Text>
+            </Pressable>
+          </View>
+        )}
+
         {/* Available Balance Card */}
         <View className="bg-neutral-900 rounded-2xl p-6 mb-4">
           <View className="flex-row items-center justify-between mb-4">
