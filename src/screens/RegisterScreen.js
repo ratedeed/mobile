@@ -109,11 +109,6 @@ const RegisterScreen = () => {
       return;
     }
 
-    if (!/[^A-Za-z0-9]/.test(password)) {
-      Toast.show({ type: 'error', text1: 'Error', text2: 'Password must contain at least one special character.' });
-      return;
-    }
-
     if (trimmedZip && !/^\d{5}$/.test(trimmedZip)) {
       Toast.show({ type: 'error', text1: 'Error', text2: 'Please enter a valid 5-digit ZIP code.' });
       return;

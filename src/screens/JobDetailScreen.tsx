@@ -433,11 +433,21 @@ export default function JobDetailScreen() {
 
   const status = STATUS_CONFIG[job.status] || STATUS_CONFIG.awaiting_payment;
   const quote = job.quote || {};
-  const isContractor = userRole === 'contractor';
-  const isUser = !isContractor;
+  const isContractorRole = userRole === 'contractor';
   const contractor = job.contractor || {};
   const homeowner = job.user || {};
   const changeOrders = job.changeOrders || [];
+
+  const currentUserId = userId ? String(userId) : null;
+  const homeownerId = homeowner._id ? String(homeowner._id) : (typeof job.user === 'string' ? job.user : '');
+  const contractorId = contractor.userId ? String(contractor.userId) : (contractor._id ? String(contractor._id) : (typeof job.contractor === 'string' ? job.contractor : ''));
+
+  const isJobHomeowner = Boolean(currentUserId && homeownerId && currentUserId === homeownerId);
+  const isJobContractor = Boolean(currentUserId && contractorId && currentUserId === contractorId);
+
+  // Strictly enforce job participant ownership for money & project management actions
+  const isUser = !isContractorRole && (isJobHomeowner || !homeownerId);
+  const isContractor = isContractorRole && (isJobContractor || !contractorId);
 
   const currentStepIndex = (() => {
     if (job.status === 'completed_paid' && job.isReviewed) return 4;

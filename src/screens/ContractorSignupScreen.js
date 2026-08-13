@@ -180,6 +180,14 @@ const ContractorSignupScreen = () => {
       Alert.alert('Error', 'Password must be at least 8 characters.');
       return false;
     }
+    if (!/[A-Z]/.test(password)) {
+      Alert.alert('Weak Password', 'Password must contain at least one uppercase letter.');
+      return false;
+    }
+    if (!/[0-9]/.test(password)) {
+      Alert.alert('Weak Password', 'Password must contain at least one number.');
+      return false;
+    }
     if (password !== confirmPassword) {
       Alert.alert('Error', 'Passwords do not match.');
       return false;

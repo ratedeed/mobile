@@ -483,12 +483,13 @@ const HomeScreen = () => {
       syncFavorites();
     }, [])
   );
-
   useEffect(() => {
     return () => {
       mountedRef.current = false;
     };
   }, []);
+
+  const fetchSeqRef = useRef(0);
 
   const loadContractors = useCallback(async (
     zip?: string | null,
@@ -497,6 +498,7 @@ const HomeScreen = () => {
     categoryId = 'all'
   ) => {
     if (isFetchingRef.current && append) return;
+    const seq = ++fetchSeqRef.current;
     isFetchingRef.current = true;
 
     const cacheKey = `${zip || 'all'}_${categoryId}_${pageNum}`;
@@ -508,7 +510,7 @@ const HomeScreen = () => {
       
       // If fresh, use cache and skip network
       if (!isStale) {
-        if (mountedRef.current) {
+        if (mountedRef.current && seq === fetchSeqRef.current) {
           const list = cachedEntry.data;
           if (append) {
             setAllContractors((prev) => {
@@ -543,21 +545,23 @@ const HomeScreen = () => {
       }
       
       // If stale, render cached data immediately but continue to network fetch
-      if (!append) {
+      if (!append && seq === fetchSeqRef.current) {
         setAllContractors(cachedEntry.data);
         setLoading(false); // Hide loading spinner, show stale data
       }
     } else {
       // No cache found, show loading spinner
       if (pageNum === 1) {
-        setAllContractors([]);
-        setLoading(true);
+        if (seq === fetchSeqRef.current) {
+          setAllContractors([]);
+          setLoading(true);
+        }
       } else {
-        setLoadingMore(true);
+        if (seq === fetchSeqRef.current) setLoadingMore(true);
       }
     }
     
-    setLoadError(false);
+    if (seq === fetchSeqRef.current) setLoadError(false);
 
     // 2. Network Fetch
     try {
@@ -584,7 +588,7 @@ const HomeScreen = () => {
         AsyncStorage.setItem('ratedeed-detected-zip', zip.trim()).catch(() => {});
       }
 
-      if (mountedRef.current) {
+      if (mountedRef.current && seq === fetchSeqRef.current) {
         if (append) {
           setAllContractors((prev) => {
             const existingIds = new Set(prev.map(c => c._id));

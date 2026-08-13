@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 
 interface UseInfiniteScrollOptions {
   initialPage?: number;
@@ -16,9 +16,11 @@ export const useInfiniteScroll = <T>(
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const inFlightRef = useRef(false);
 
   const loadMore = useCallback(async () => {
-    if (loading || !hasMore) return;
+    if (inFlightRef.current || loading || !hasMore) return;
+    inFlightRef.current = true;
 
     setLoading(true);
     setError(null);
@@ -33,6 +35,7 @@ export const useInfiniteScroll = <T>(
       setError(err instanceof Error ? err : new Error('An error occurred'));
     } finally {
       setLoading(false);
+      inFlightRef.current = false;
     }
   }, [fetchFn, loading, hasMore, page]);
 

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
   TextInput,
@@ -40,6 +40,14 @@ const SearchBar: React.FC<SearchBarProps> = ({
   const [localValue, setLocalValue] = useState(value);
   const cancelAnimation = useRef(new Animated.Value(0)).current;
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+    };
+  }, []);
 
   const handleFocus = () => {
     setIsFocused(true);

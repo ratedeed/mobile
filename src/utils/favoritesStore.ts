@@ -67,39 +67,55 @@ export const syncFavoritesWithServer = async () => {
   }
 };
 
+const inFlightToggles = new Set<string>();
+
 export const addFavorite = async (id: string): Promise<void> => {
-  const current = await getFavorites();
-  const alreadyFav = current.includes(id);
-  if (!alreadyFav) {
-    const updated = [...current, id];
-    await AsyncStorage.setItem(FAVORITES_KEY, JSON.stringify(updated));
-  }
-  if (isDemoMode()) return;
+  if (inFlightToggles.has(id)) return;
+  inFlightToggles.add(id);
+
   try {
-    await apiPost(`${API_BASE_URL}/api/users/favorite/${id}`, {});
-  } catch (error) {
+    const current = await getFavorites();
+    const alreadyFav = current.includes(id);
     if (!alreadyFav) {
-      await AsyncStorage.setItem(FAVORITES_KEY, JSON.stringify(current));
+      const updated = [...current, id];
+      await AsyncStorage.setItem(FAVORITES_KEY, JSON.stringify(updated));
     }
-    throw error;
+    if (isDemoMode()) return;
+    try {
+      await apiPost(`${API_BASE_URL}/api/users/favorite/${id}`, {});
+    } catch (error) {
+      if (!alreadyFav) {
+        await AsyncStorage.setItem(FAVORITES_KEY, JSON.stringify(current));
+      }
+      throw error;
+    }
+  } finally {
+    inFlightToggles.delete(id);
   }
 };
 
 export const removeFavorite = async (id: string): Promise<void> => {
-  const current = await getFavorites();
-  const wasFav = current.includes(id);
-  if (wasFav) {
-    const updated = current.filter(fid => fid !== id);
-    await AsyncStorage.setItem(FAVORITES_KEY, JSON.stringify(updated));
-  }
-  if (isDemoMode()) return;
+  if (inFlightToggles.has(id)) return;
+  inFlightToggles.add(id);
+
   try {
-    await apiPost(`${API_BASE_URL}/api/users/favorite/${id}`, {});
-  } catch (error) {
+    const current = await getFavorites();
+    const wasFav = current.includes(id);
     if (wasFav) {
-      await AsyncStorage.setItem(FAVORITES_KEY, JSON.stringify(current));
+      const updated = current.filter(fid => fid !== id);
+      await AsyncStorage.setItem(FAVORITES_KEY, JSON.stringify(updated));
     }
-    throw error;
+    if (isDemoMode()) return;
+    try {
+      await apiPost(`${API_BASE_URL}/api/users/favorite/${id}`, {});
+    } catch (error) {
+      if (wasFav) {
+        await AsyncStorage.setItem(FAVORITES_KEY, JSON.stringify(current));
+      }
+      throw error;
+    }
+  } finally {
+    inFlightToggles.delete(id);
   }
 };
 

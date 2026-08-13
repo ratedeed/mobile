@@ -25,6 +25,7 @@ export const usePushNotifications = () => {
   const [expoPushToken, setExpoPushToken] = useState<string | undefined>();
   const [notification, setNotification] = useState<Notifications.Notification | undefined>();
   const pendingNotificationRef = useRef<any>(null);
+  const hasHandledInitialNotificationRef = useRef<boolean>(false);
 
   useEffect(() => {
     if (isDemoMode()) return;
@@ -286,6 +287,8 @@ export const usePushNotifications = () => {
     });
 
     const checkInitialNotification = async () => {
+      if (hasHandledInitialNotificationRef.current) return;
+      hasHandledInitialNotificationRef.current = true;
       const response = await Notifications.getLastNotificationResponseAsync();
       if (!response) return;
       const data = response.notification.request.content.data;

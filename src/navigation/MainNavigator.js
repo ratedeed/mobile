@@ -344,7 +344,9 @@ export default function MainNavigator() {
         'PaymentFlow',
         'ReviewScreen',
         'DisputeScreen',
-        'ChangeOrderScreen'
+        'ChangeOrderScreen',
+        'JobDetail',
+        'QuoteReview'
       ];
       
       if (currentRoute && protectedScreens.includes(currentRoute.name)) {

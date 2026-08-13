@@ -368,6 +368,7 @@ const ContractorDashboardScreen: React.FC = () => {
     licenseNumber: "",
     zipCodes: [] as string[],
   });
+  const [contractorRawProfile, setContractorRawProfile] = useState<any>(null);
   const [profileSaving, setProfileSaving] = useState(false);
   const [addressSuggestions, setAddressSuggestions] = useState<any[]>([]);
   const [isSearchingAddress, setIsSearchingAddress] = useState(false);
@@ -547,6 +548,7 @@ const ContractorDashboardScreen: React.FC = () => {
       }
 
       if (!isMounted.current) return;
+      setContractorRawProfile(profile);
       const cid = profile._id;
       if (cid) setRealContractorId(cid);
       setOnboardingComplete(profile.onboardingComplete === true);
@@ -2031,7 +2033,7 @@ const ContractorDashboardScreen: React.FC = () => {
               jobs={jobs}
               quotes={quotes}
               reviews={reviews}
-              profile={editableData}
+              profile={{ ...contractorRawProfile, ...editableData }}
               loading={loading}
               onViewAllJobs={() => {
                 setActiveTab('payments');

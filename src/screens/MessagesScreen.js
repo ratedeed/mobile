@@ -329,6 +329,7 @@ const MessagesScreen = () => {
   const messagesRef = useRef();
   const selectedConvRef = useRef();
   selectedConvRef.current = selectedConversation;
+  const isSendingMessageRef = useRef(false);
   const myTypingTimeoutRef = useRef(null);
   const otherTypingTimeoutRef = useRef(null);
   const lastTypingEmit = useRef(0);
@@ -395,6 +396,9 @@ const MessagesScreen = () => {
 
       const convoId = msg.conversationId || msg.conversation;
       setConversations((prev) => {
+        if (!prev[convoId]) {
+          loadConversations();
+        }
         const convo = prev[convoId] || { conversationId: convoId, _id: convoId, participants: [], messages: [], lastMessage: null, unreadCount: 0 };
         const isFromMe = isMessageFromMe(msg);
         const inc = !isFromMe && selectedConvRef.current?.conversationId !== convoId;
@@ -407,19 +411,14 @@ const MessagesScreen = () => {
           if (prev.some((m) => m._id === msg._id)) return prev;
 
           // Dedupe: if the socket echoes back a message from the current user
-          // that matches a still-pending optimistic message (same text, same
-          // conversation, sent within the last 30s), replace the optimistic
+          // that matches a still-pending optimistic message, replace the optimistic
           // one instead of appending a duplicate.
           if (isMessageFromMe(msg)) {
             const msgText = (msg.messageText || '').trim();
-            const now = Date.now();
             const matchIdx = prev.findIndex((m) => {
               if (!m._isOptimistic) return false;
-              if ((m.conversationId || '').startsWith('temp-')) return false;
-              if (m.conversationId !== convoId) return false;
-              if ((m.messageText || '').trim() !== msgText) return false;
-              const age = now - new Date(m.createdAt).getTime();
-              return age >= 0 && age < 30000;
+              if (m.conversationId !== convoId && !m.conversationId?.startsWith('temp-')) return false;
+              return (m.messageText || '').trim() === msgText;
             });
             if (matchIdx >= 0) {
               const next = [...prev];
@@ -659,6 +658,12 @@ const MessagesScreen = () => {
       }
 
       const data = await fetchMessages(conversationId, page, 50);
+
+      // Verify active conversation before applying state update to avoid overwriting list on tab switch
+      const activeCId = selectedConvRef.current?.conversationId || selectedConvRef.current?._id;
+      if (activeCId && activeCId !== conversationId && !conversationId.startsWith("temp-")) {
+        return;
+      }
       const msgs = Array.isArray(data) ? data : data?.messages || [];
       const pagination = Array.isArray(data) ? null : data?.pagination;
       const hasMore = pagination ? pagination.hasMore : false;
@@ -761,7 +766,9 @@ const MessagesScreen = () => {
 
   // ─── Send message ──────────────────────────────────────────────────────────
   const handleSendMessage = async () => {
+    if (isSendingMessageRef.current) return;
     if ((!newMessage.trim() && !pendingAttachment) || !selectedConversation || !currentUserId) return;
+    isSendingMessageRef.current = true;
     shouldScrollToEndRef.current = true;
     HapticFeedback.medium();
 
@@ -774,6 +781,13 @@ const MessagesScreen = () => {
     const stopTargetId = resolveId(selectedConversation.otherParticipant);
     emitTyping(stopCId, currentUserId, false, stopTargetId);
     lastTypingEmit.current = 0;
+
+    // Capture inputs and reset immediately for responsive UX
+    const messageText = newMessage.trim();
+    const attachment = pendingAttachment;
+    const tempId = `temp-${Date.now()}-${Math.random()}`;
+    setNewMessage("");
+    setPendingAttachment(null);
 
     try {
       let cId = selectedConversation.conversationId || selectedConversation._id;
@@ -793,15 +807,6 @@ const MessagesScreen = () => {
           setSelectedConversation(prev => ({ ...prev, conversationId: cId, _id: cId }));
         }
       }
-
-      // Capture inputs and attachment
-      const messageText = newMessage.trim();
-      const attachment = pendingAttachment;
-      const tempId = `temp-${Date.now()}-${Math.random()}`;
-
-      // Reset inputs immediately for responsive UX
-      setNewMessage("");
-      setPendingAttachment(null);
 
       // Create optimistic message (matching web terminology: _isOptimistic, _failed)
       const optimisticMsg = {
@@ -871,6 +876,8 @@ const MessagesScreen = () => {
 
     } catch (e) {
       Alert.alert("Error", e?.message || 'Failed to send message.');
+    } finally {
+      isSendingMessageRef.current = false;
     }
   };
 

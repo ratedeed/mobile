@@ -102,17 +102,24 @@ export default function AnalyticsTab({ jobs, quotes, reviews, profile, loading, 
     return ['completed', 'paid', 'completed_paid', 'completed_pending_release'].includes(status);
   };
 
+  const computedAvgFromReviews = useMemo(() => {
+    const allRev = reviews && reviews.length > 0 ? reviews : filteredReviews;
+    if (!allRev || allRev.length === 0) return 0;
+    const sum = allRev.reduce((acc: number, r: any) => acc + (r.rating || r.stars || 0), 0);
+    return Math.round((sum / allRev.length) * 10) / 10;
+  }, [reviews, filteredReviews]);
+
   const kpiData = useMemo(() => {
     const completedJobs = filteredJobs.filter((j: any) => isCompletedJob(j.status));
     const totalRevenue = completedJobs.reduce((sum: number, j: any) => sum + getJobAmount(j), 0) / 100;
     const activeJobsList = filteredJobs.filter((j: any) => !isCompletedJob(j.status) && !['cancelled', 'refunded', 'rejected', 'declined'].includes(j.status));
-    const avgRating = profile?.averageRating || profile?.rating || 0;
-    const reviewCount = profile?.reviewCount || filteredReviews.length || 0;
+    const avgRating = profile?.averageRating || profile?.rating || computedAvgFromReviews || 0;
+    const reviewCount = profile?.reviewCount || reviews?.length || filteredReviews.length || 0;
     const respondedQuotes = filteredQuotes.filter((q: any) => q.status !== 'pending' && q.status !== 'draft');
-    const responseRate = filteredQuotes.length > 0 ? Math.round((respondedQuotes.length / filteredQuotes.length) * 100) : 100;
+    const responseRate = filteredQuotes.length > 0 ? Math.round((respondedQuotes.length / filteredQuotes.length) * 100) : 0;
 
     return { totalRevenue, activeJobs: activeJobsList.length, responseRate, avgRating, reviewCount };
-  }, [filteredJobs, filteredQuotes, filteredReviews, profile]);
+  }, [filteredJobs, filteredQuotes, filteredReviews, profile, computedAvgFromReviews, reviews]);
 
   const performanceMetrics = useMemo(() => {
     const accepted = filteredQuotes.filter((q: any) => q.status === 'accepted' || isCompletedJob(q.status)).length;
@@ -153,7 +160,7 @@ export default function AnalyticsTab({ jobs, quotes, reviews, profile, loading, 
       const past = new Date(d.getFullYear(), d.getMonth() - i, 1);
       monthlyData[months[past.getMonth()]] = 0;
     }
-    const completedJobs = filteredJobs.filter((j: any) => isCompletedJob(j.status));
+    const completedJobs = jobs.filter((j: any) => isCompletedJob(j.status));
     completedJobs.forEach((j: any) => {
       const dateStr = j.completedAt || j.updatedAt || j.createdAt;
       if (dateStr) {
@@ -165,7 +172,7 @@ export default function AnalyticsTab({ jobs, quotes, reviews, profile, loading, 
       }
     });
     return Object.entries(monthlyData).map(([month, value]) => ({ month, value }));
-  }, [filteredJobs]);
+  }, [jobs]);
 
   const serviceBreakdown = useMemo(() => {
     const completedJobs = filteredJobs.filter((j: any) => isCompletedJob(j.status));

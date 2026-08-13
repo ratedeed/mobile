@@ -408,6 +408,8 @@ export const login = async (email: string, password: string): Promise<any> => {
 export const logout = async (): Promise<void> => {
   if (isDemoMode()) { await demo.demoLogout(); await removeSecureItem('auth_token'); await removeSecureItem('refresh_token'); await AsyncStorage.removeItem(USER_DATA_KEY); return; }
   try {
+    // Attempt token refresh if expired so push-token unregistration succeeds
+    await refreshTokenIfNeeded().catch(() => {});
     const authHeaders = await getAuthHeaders();
     await post(`${API_BASE}/users/push-token`, { token: '' }, authHeaders).catch(() => {});
   } catch {}
@@ -624,6 +626,14 @@ export const initializeSocket = async () => {
     if (isDisconnecting) {
       isInitializingSocket = false;
       return;
+    }
+
+    if (socket) {
+      try {
+        socket.removeAllListeners();
+        socket.disconnect();
+      } catch {}
+      socket = null;
     }
 
     socket = io(API_BASE_URL, {
@@ -1069,12 +1079,14 @@ export const createQuote = async (quoteData: any): Promise<Quote> => {
 
 export const getContractorLeads = async (): Promise<Lead[]> => {
   if (isDemoMode()) return demo.demoGetContractorLeads();
-  return [];
+  const authHeaders = await getAuthHeaders();
+  return get(`${API_BASE}/contractors/leads`, authHeaders);
 };
 
 export const updateLeadStatus = async (leadId: string, status: 'new' | 'contacted' | 'quoted' | 'archived'): Promise<any> => {
   if (isDemoMode()) return demo.demoUpdateLeadStatus(leadId, status);
-  return { success: true };
+  const authHeaders = await getAuthHeaders();
+  return put(`${API_BASE}/contractors/leads/${leadId}`, { status }, authHeaders);
 };
 
 export const getContractorQuotes = async (): Promise<Quote[]> => {
