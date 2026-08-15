@@ -326,6 +326,10 @@ const ProfileScreen: React.FC = () => {
       }
     } catch (err) {
       Sentry.captureException(err);
+      if (isMounted.current) {
+        setUser(null);
+        setStats({ reviews: 0, messages: 0, projects: 0 });
+      }
     } finally {
       if (isMounted.current) { setLoading(false); setRefreshing(false); }
     }
@@ -339,6 +343,9 @@ const ProfileScreen: React.FC = () => {
   useEffect(() => {
     if (isAuthenticated) {
       loadProfile();
+    } else {
+      setUser(null);
+      setStats({ reviews: 0, messages: 0, projects: 0 });
     }
   }, [backendToken, isAuthenticated, loadProfile]);
   const onRefresh = useCallback(() => { setRefreshing(true); loadProfile(); }, [loadProfile]);
@@ -663,12 +670,32 @@ const ProfileScreen: React.FC = () => {
 
       <SettingsSheet title="Notifications" onClose={closeSheet} visible={activeSheet === 'notifications'}>
         <SectionLabel>Push Notifications</SectionLabel>
-        <Toggle label="Job Updates" description="When a contractor responds to your quote request" defaultOn />
-        <Toggle label="New Messages" description="When you receive a new message" defaultOn />
-        <Toggle label="Payment Status" description="When payment is confirmed or released" defaultOn />
+        <Toggle 
+          label="Job Updates" 
+          description="When a contractor responds to your quote request" 
+          defaultOn 
+          onValueChange={(val) => AsyncStorage.setItem('@notif_pref_job_updates', String(val)).catch(() => {})} 
+        />
+        <Toggle 
+          label="New Messages" 
+          description="When you receive a new message" 
+          defaultOn 
+          onValueChange={(val) => AsyncStorage.setItem('@notif_pref_messages', String(val)).catch(() => {})} 
+        />
+        <Toggle 
+          label="Payment Status" 
+          description="When payment is confirmed or released" 
+          defaultOn 
+          onValueChange={(val) => AsyncStorage.setItem('@notif_pref_payments', String(val)).catch(() => {})} 
+        />
         <View className="mt-4">
           <SectionLabel>Email</SectionLabel>
-          <Toggle label="Job Summary" description="Weekly digest of your active projects" defaultOn />
+          <Toggle 
+            label="Job Summary" 
+            description="Weekly digest of your active projects" 
+            defaultOn 
+            onValueChange={(val) => AsyncStorage.setItem('@notif_pref_email_summary', String(val)).catch(() => {})} 
+          />
         </View>
       </SettingsSheet>
 

@@ -30,9 +30,12 @@ export default function PaymentFlowScreen() {
   const [paying, setPaying] = useState(false);
   const [applePayAvailable, setApplePayAvailable] = useState(false);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
-  const [paymentAmount, setPaymentAmount] = useState<number>((route.params?.totalAmount || 0) * 100);
+  const rawTotal = route.params?.totalAmount || 0;
+  const initialCents = rawTotal > 0 && rawTotal < 100 ? rawTotal * 100 : rawTotal;
+  const [paymentAmount, setPaymentAmount] = useState<number>(initialCents);
   const [loadingPaymentIntent, setLoadingPaymentIntent] = useState(true);
   const [verifying, setVerifying] = useState(false);
+  const [hasAttemptedPayment, setHasAttemptedPayment] = useState(false);
   const isMounted = React.useRef(true);
   const payingRef = React.useRef(false);
 
@@ -182,6 +185,7 @@ export default function PaymentFlowScreen() {
     try {
       payingRef.current = true;
       setPaying(true);
+      setHasAttemptedPayment(true);
       if (isDemoMode()) {
         setVerifying(true);
         await new Promise((r) => setTimeout(r, 1800));
@@ -249,6 +253,7 @@ export default function PaymentFlowScreen() {
     try {
       payingRef.current = true;
       setPaying(true);
+      setHasAttemptedPayment(true);
       if (isDemoMode()) {
         setVerifying(true);
         await new Promise((r) => setTimeout(r, 1800));
@@ -393,8 +398,9 @@ export default function PaymentFlowScreen() {
       <ScrollView style={{ flex: 1, paddingHorizontal: 16 }}>
         {/* Step 0: Review */}
         {currentStep === 0 && (() => {
-          const baseAmount = (route.params?.totalAmount || 0) * 100;
-          const processingFee = Math.max(0, paymentAmount - baseAmount);
+          const rawTotalParam = route.params?.totalAmount || 0;
+          const baseAmount = rawTotalParam > 0 && rawTotalParam < 100 ? rawTotalParam * 100 : rawTotalParam;
+          const processingFee = paymentAmount > baseAmount ? (paymentAmount - baseAmount) : Math.round(baseAmount * 0.029 + 30);
 
           return (
             <View style={{ gap: 12 }}>
@@ -491,23 +497,25 @@ export default function PaymentFlowScreen() {
                 )}
               </Pressable>
               
-              <Pressable
-                onPress={() => startPollingPaymentStatus(true)}
-                disabled={paying || isPolling}
-                style={{
-                  width: '100%', paddingVertical: 14, borderRadius: 12, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, marginTop: 12,
-                  backgroundColor: (paying || isPolling) ? '#f5f5f5' : '#f4f4f5', borderWidth: 1, borderColor: '#e4e4e7'
-                }}
-              >
-                {paying || isPolling ? (
-                  <BouncingDotsLoader size="small" color={isDark ? '#a3a3a3' : '#737373'} />
-                ) : (
-                  <FontAwesome5 name="sync" size={12} color={isDark ? '#a3a3a3' : '#737373'} />
-                )}
-                <Text style={{ fontSize: 14, fontWeight: '600', color: isDark ? '#a3a3a3' : '#52525b' }}>
-                  {paying || isPolling ? 'Verifying...' : 'Verify Payment Status'}
-                </Text>
-              </Pressable>
+              {hasAttemptedPayment && (
+                <Pressable
+                  onPress={() => startPollingPaymentStatus(true)}
+                  disabled={paying || isPolling}
+                  style={{
+                    width: '100%', paddingVertical: 14, borderRadius: 12, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, marginTop: 12,
+                    backgroundColor: (paying || isPolling) ? '#f5f5f5' : '#f4f4f5', borderWidth: 1, borderColor: '#e4e4e7'
+                  }}
+                >
+                  {paying || isPolling ? (
+                    <BouncingDotsLoader size="small" color={isDark ? '#a3a3a3' : '#737373'} />
+                  ) : (
+                    <FontAwesome5 name="sync" size={12} color={isDark ? '#a3a3a3' : '#737373'} />
+                  )}
+                  <Text style={{ fontSize: 14, fontWeight: '600', color: isDark ? '#a3a3a3' : '#52525b' }}>
+                    {paying || isPolling ? 'Verifying...' : 'Verify Payment Status'}
+                  </Text>
+                </Pressable>
+              )}
               
               <View style={{ alignItems: 'center', marginTop: 16 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>

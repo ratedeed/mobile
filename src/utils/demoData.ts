@@ -1214,8 +1214,40 @@ export const demoNotifications: any[] = [
 ];
 
 export const demoEarnings = {
+  availableBalance: 4250,
+  pendingPayouts: 1850,
+  totalEarned: 87420,
   totalEarnings: 87420,
   pendingEscrow: 18250,
+  pendingAvailableAt: new Date(Date.now() + 86400000 * 2).toISOString(),
+  transactions: [
+    {
+      _id: 'tx-1',
+      type: 'payment' as const,
+      amount: 2500,
+      status: 'completed',
+      description: 'Milestone 1 release - Kitchen Plumbing',
+      createdAt: daysAgo(1),
+      jobTitle: 'Kitchen Plumbing Renovation'
+    },
+    {
+      _id: 'tx-2',
+      type: 'payout' as const,
+      amount: 3200,
+      status: 'completed',
+      description: 'Payout to checking account ••••4242',
+      createdAt: daysAgo(3)
+    },
+    {
+      _id: 'tx-3',
+      type: 'payment' as const,
+      amount: 1750,
+      status: 'completed',
+      description: 'Milestone 2 release - Panel Upgrade',
+      createdAt: daysAgo(5),
+      jobTitle: '200A Electrical Panel'
+    }
+  ],
   monthlyEarnings: [
     { month: '2026-01', amount: 12400 },
     { month: '2026-02', amount: 9800 },

@@ -100,6 +100,7 @@ const BusinessDetailScreen: React.FC = () => {
   const [contractorPosts, setContractorPosts] = useState<Post[]>([]);
   const [contractorReviews, setContractorReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [isOnline, setIsOnline] = useState(false);
@@ -172,7 +173,9 @@ const BusinessDetailScreen: React.FC = () => {
   };
 
   const loadContractorDetails = async () => {
+    if (!id) return;
     try {
+      setLoadError(null);
       if (isMounted.current) setLoading(true);
       let data;
       if (params.id) {
@@ -243,9 +246,10 @@ const BusinessDetailScreen: React.FC = () => {
       // console.error('Failed to load similar contractors:', e);
         }
       }
-    } catch (error) {
-      // console.error('Error loading contractor:', error);
-      Alert.alert('Error', 'Failed to load contractor details');
+    } catch (error: any) {
+      if (isMounted.current) {
+        setLoadError(error?.message || 'Failed to load contractor details');
+      }
     } finally {
       if (isMounted.current) setLoading(false);
     }
@@ -363,6 +367,39 @@ const BusinessDetailScreen: React.FC = () => {
   }
 
   if (!contractor) {
+    if (loadError) {
+      return (
+        <View className="flex-1 bg-white dark:bg-neutral-950 items-center justify-center p-6">
+          <View className="w-16 h-16 bg-red-50 dark:bg-red-950/40 rounded-full items-center justify-center mb-4">
+            <FontAwesome5 name="wifi" size={24} color="#dc2626" />
+          </View>
+          <Text className="text-lg font-bold text-neutral-900 dark:text-white mb-2 text-center">Unable to Load Profile</Text>
+          <Text className="text-sm text-neutral-500 dark:text-neutral-400 text-center mb-6 max-w-xs">
+            We couldn't connect to the server to load this contractor's profile. Please check your internet connection.
+          </Text>
+          <View className="flex-row" style={{ gap: 12 }}>
+            <Pressable
+              onPress={() => {
+                setLoading(true);
+                loadContractorDetails();
+              }}
+              className="bg-indigo-600 px-6 py-3 rounded-xl flex-row items-center justify-center"
+              style={{ gap: 8 }}
+            >
+              <FontAwesome5 name="redo-alt" size={14} color="#fff" />
+              <Text className="text-white font-bold text-sm">Retry</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => navigation.goBack()}
+              className="border border-neutral-300 dark:border-neutral-700 px-6 py-3 rounded-xl items-center justify-center"
+            >
+              <Text className="text-neutral-700 dark:text-neutral-300 font-bold text-sm">Go Back</Text>
+            </Pressable>
+          </View>
+        </View>
+      );
+    }
+
     return (
       <View className="flex-1 bg-white dark:bg-neutral-950 items-center justify-center p-6">
         <FontAwesome5 name="exclamation-circle" size={48} color="#d4d4d4" />
@@ -756,7 +793,7 @@ const BusinessDetailScreen: React.FC = () => {
           {/* Stats Row Grid (Dynamic values for new/existing contractors) */}
           {(() => {
             const yearsVal = c.yearsInBusiness || c.yearsExperience || 0;
-            const onTimeVal = (c as any).onTimeRate || 98;
+            const onTimeVal = (c as any).onTimeRate;
             const stats = [
               {
                 icon: 'users',
@@ -765,17 +802,17 @@ const BusinessDetailScreen: React.FC = () => {
               },
               {
                 icon: 'star',
-                value: reviewCount > 0 ? avgRating.toFixed(2) : 'New',
+                value: reviewCount > 0 ? avgRating.toFixed(1) : 'New',
                 label: 'Rating',
               },
               {
                 icon: 'briefcase',
-                value: yearsVal > 0 ? `${yearsVal}+` : 'New',
-                label: yearsVal > 0 ? 'Years Active' : 'Business',
+                value: yearsVal > 0 ? `${yearsVal} yrs` : 'New',
+                label: yearsVal > 0 ? 'Experience' : 'Business',
               },
               {
                 icon: 'check-circle',
-                value: reviewCount > 0 ? `${onTimeVal}%` : '100%',
+                value: onTimeVal ? `${onTimeVal}%` : (reviewCount > 0 ? '98%' : '—'),
                 label: 'On-time rate',
               },
             ];

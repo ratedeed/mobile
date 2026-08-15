@@ -445,9 +445,9 @@ export default function JobDetailScreen() {
   const isJobHomeowner = Boolean(currentUserId && homeownerId && currentUserId === homeownerId);
   const isJobContractor = Boolean(currentUserId && contractorId && currentUserId === contractorId);
 
-  // Strictly enforce job participant ownership for money & project management actions
-  const isUser = !isContractorRole && (isJobHomeowner || !homeownerId);
-  const isContractor = isContractorRole && (isJobContractor || !contractorId);
+  // Strictly enforce job participant ownership for money & project management actions (fail closed)
+  const isUser = !isContractorRole && isJobHomeowner;
+  const isContractor = isContractorRole && isJobContractor;
 
   const currentStepIndex = (() => {
     if (job.status === 'completed_paid' && job.isReviewed) return 4;

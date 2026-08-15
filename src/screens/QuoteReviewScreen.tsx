@@ -35,7 +35,7 @@ export default function QuoteReviewScreen() {
   const [isExpired, setIsExpired] = useState(false);
   const [isUrgent, setIsUrgent] = useState(false);
 
-  const isContractorOwner = userRole === 'contractor' || (
+  const isContractorOwner = userRole === 'contractor' && Boolean(
     quote && (
       quote?.contractorId?.userId === userId ||
       quote?.contractorId?._id === userId ||
@@ -346,7 +346,7 @@ export default function QuoteReviewScreen() {
                   ) : null}
                 </View>
                 <Text className="text-sm font-semibold text-neutral-900 dark:text-white">
-                  ${Number(item.amount || 0).toFixed(2)}
+                  ${(Number(item.amount || 0) / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </Text>
               </View>
             ))}

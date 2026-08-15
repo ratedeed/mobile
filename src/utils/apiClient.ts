@@ -193,7 +193,7 @@ const hasAuthHeader = (headers: Record<string, string>): boolean => {
 export const get = async (url: string, headers: Record<string, string> = {}, signal?: AbortSignal): Promise<any> => {
   const makeRequest = async (timeoutSignal?: AbortSignal) => {
     const currentHeaders = { ...headers };
-    if (!hasAuthHeader(currentHeaders)) {
+    if (!hasAuthHeader(headers)) {
       const authH = await getAuthHeaders();
       Object.keys(currentHeaders).forEach(k => {
         if (k.toLowerCase() === 'authorization') delete currentHeaders[k];
@@ -209,7 +209,7 @@ export const get = async (url: string, headers: Record<string, string> = {}, sig
 export const post = async (url: string, data: any, headers: Record<string, string> = {}, signal?: AbortSignal): Promise<any> => {
   const makeRequest = async (timeoutSignal?: AbortSignal) => {
     const currentHeaders: Record<string, string> = { 'Content-Type': 'application/json', ...headers };
-    if (!hasAuthHeader(currentHeaders)) {
+    if (!hasAuthHeader(headers)) {
       const authH = await getAuthHeaders();
       Object.keys(currentHeaders).forEach(k => {
         if (k.toLowerCase() === 'authorization') delete currentHeaders[k];
@@ -224,13 +224,13 @@ export const post = async (url: string, data: any, headers: Record<string, strin
     });
   };
   const response = await executeRequest(makeRequest, 30000, signal);
-  return handleResponse(response);
+  return handleResponse(response, () => makeRequest());
 };
 
 export const put = async (url: string, data: any, headers: Record<string, string> = {}, signal?: AbortSignal): Promise<any> => {
   const makeRequest = async (timeoutSignal?: AbortSignal) => {
     const currentHeaders: Record<string, string> = { 'Content-Type': 'application/json', ...headers };
-    if (!hasAuthHeader(currentHeaders)) {
+    if (!hasAuthHeader(headers)) {
       const authH = await getAuthHeaders();
       Object.keys(currentHeaders).forEach(k => {
         if (k.toLowerCase() === 'authorization') delete currentHeaders[k];
@@ -240,13 +240,13 @@ export const put = async (url: string, data: any, headers: Record<string, string
     return fetch(url, { method: 'PUT', headers: currentHeaders, body: JSON.stringify(data), signal: timeoutSignal || signal });
   };
   const response = await executeRequest(makeRequest, 30000, signal);
-  return handleResponse(response);
+  return handleResponse(response, () => makeRequest());
 };
 
 export const del = async (url: string, headers: Record<string, string> = {}, signal?: AbortSignal): Promise<any> => {
   const makeRequest = async (timeoutSignal?: AbortSignal) => {
     const currentHeaders = { ...headers };
-    if (!hasAuthHeader(currentHeaders)) {
+    if (!hasAuthHeader(headers)) {
       const authH = await getAuthHeaders();
       Object.keys(currentHeaders).forEach(k => {
         if (k.toLowerCase() === 'authorization') delete currentHeaders[k];
@@ -256,7 +256,7 @@ export const del = async (url: string, headers: Record<string, string> = {}, sig
     return fetch(url, { method: 'DELETE', headers: currentHeaders, signal: timeoutSignal || signal });
   };
   const response = await executeRequest(makeRequest, 30000, signal);
-  return handleResponse(response);
+  return handleResponse(response, () => makeRequest());
 };
 
 // ---- Normalization Helpers (Ported from web version) ----
