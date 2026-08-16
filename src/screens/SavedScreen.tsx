@@ -27,6 +27,7 @@ import HapticFeedback from '../utils/haptics';
 import { useAuth } from '../context/AuthContext';
 
 import { CategoryIcon } from '../components/common/CategoryIcon';
+import { VerifiedBadge } from '../components/common/VerifiedBadge';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -177,6 +178,12 @@ const SavedScreen = () => {
             <Pressable onPress={() => handleRemove(contractorId)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} className="absolute top-2 right-2 p-1">
               <Heart size={24} color="rgba(225,29,72,1)" weight="fill" />
             </Pressable>
+
+            {((item as any).isVerified || (item as any).licenseVerified) && (
+              <View className="absolute top-2 left-2" style={{ zIndex: 60, overflow: 'visible' }}>
+                <VerifiedBadge size="sm" animate={false} />
+              </View>
+            )}
           </View>
           <View className="mt-2">
             <Text

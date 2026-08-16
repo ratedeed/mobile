@@ -488,15 +488,6 @@ const BusinessDetailScreen: React.FC = () => {
     ...(portfolio || []).flatMap((p: any) => p.images || (p.imageUrl ? [p.imageUrl] : [])).slice(0, 7)
   ].filter(img => typeof img === 'string' && img.length > 0);
 
-  const serviceBadges = (() => {
-    const badges: { icon: string; label: string }[] = [];
-    if (c.isVerified) badges.push({ icon: 'shield-alt', label: 'Licensed & Insured' });
-    if (services.some((s: any) => typeof s !== 'string' && s.emergencyAvailable)) badges.push({ icon: 'ambulance', label: '24/7 Emergency' });
-    if (c.isVerified) badges.push({ icon: 'bolt', label: 'Same-Day Service' });
-    if (badges.length === 0 && ((c as any).yearsInBusiness || 0) > 5) badges.push({ icon: 'award', label: 'Experienced Professional' });
-    return badges;
-  })();
-
   const featuredReview = normalizedReviews.length >= 3
     ? normalizedReviews.reduce((best: any, r: any) => {
         if (r.rating > best.rating) return r;
@@ -715,9 +706,14 @@ const BusinessDetailScreen: React.FC = () => {
             </View>
             {/* Business details */}
             <View className="flex-1 pl-[84px] pr-2">
-              <Text className="text-xl font-bold text-neutral-900 dark:text-neutral-50 leading-tight" numberOfLines={2}>
-                {c.companyName || c.businessName || 'Company'}
-              </Text>
+              <View className="flex-row items-center flex-wrap" style={{ gap: 6 }}>
+                <Text className="text-xl font-bold text-neutral-900 dark:text-neutral-50 leading-tight" numberOfLines={2}>
+                  {c.companyName || c.businessName || 'Company'}
+                </Text>
+                {(c.isVerified || (c as any).licenseVerified) && (
+                  <VerifiedBadge size={18} animate={false} />
+                )}
+              </View>
               <View className="flex-row items-center mt-1" style={{ gap: 4 }}>
                 <FontAwesome5 name="star" solid size={11} color="#eab308" />
                 <Text className="text-xs font-semibold text-neutral-800 dark:text-neutral-200">
@@ -736,16 +732,10 @@ const BusinessDetailScreen: React.FC = () => {
                 </View>
               )}
               
-              {/* Badges Row */}
-              <View className="flex-row flex-wrap items-center mt-1.5" style={{ gap: 4 }}>
-                {(c.isVerified || (c as any).licenseVerified) && (
-                  <View className="flex-row items-center bg-amber-50 dark:bg-amber-950/30 px-2.5 py-1 rounded-full border border-amber-200 dark:border-amber-900/30" style={{ gap: 4 }}>
-                    <VerifiedBadge size={14} animate={false} />
-                    <Text className="text-[10px] font-bold text-amber-800 dark:text-amber-400">Licensed</Text>
-                  </View>
-                )}
-                {c.avgResponseHours !== undefined && c.avgResponseHours !== null && (
-                  (() => {
+              {/* Response Time Badge */}
+              {c.avgResponseHours !== undefined && c.avgResponseHours !== null && (
+                <View className="flex-row flex-wrap items-center mt-1.5" style={{ gap: 4 }}>
+                  {(() => {
                     const hrs = c.avgResponseHours;
                     let text = '';
                     let colorClass = '';
@@ -773,9 +763,9 @@ const BusinessDetailScreen: React.FC = () => {
                         <Text className={`text-[9px] font-bold ${textClass}`}>{text}</Text>
                       </View>
                     );
-                  })()
-                )}
-              </View>
+                  })()}
+                </View>
+              )}
             </View>
 
             {/* Escrow Protected Trust Badge Card */}
@@ -789,6 +779,51 @@ const BusinessDetailScreen: React.FC = () => {
               </Text>
             </View>
           </View>
+
+          {/* Quick Highlights (Airbnb Style) */}
+          {((c.isVerified || (c as any).licenseVerified) || (c.yearsInBusiness || c.yearsExperience || 0) > 0 || (c.avgResponseHours !== undefined && c.avgResponseHours !== null)) && (
+            <View className="py-4 border-y border-neutral-100 dark:border-neutral-800 mt-5" style={{ gap: 14 }}>
+              {(c.isVerified || (c as any).licenseVerified) && (
+                <View className="flex-row items-center" style={{ gap: 12 }}>
+                  <View className="w-10 h-10 rounded-full bg-amber-50 dark:bg-amber-950/40 border border-amber-200/60 dark:border-amber-900/40 items-center justify-center">
+                    <FontAwesome5 name="shield-alt" size={16} color="#d97706" />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-sm font-semibold text-neutral-900 dark:text-neutral-50">Licensed & Verified</Text>
+                    <Text className="text-xs text-neutral-500 dark:text-neutral-400">
+                      {c.licenseNumber ? `License #${c.licenseNumber} verified by Ratedeed` : 'Trade license & identity verified'}
+                    </Text>
+                  </View>
+                </View>
+              )}
+              {(c.yearsInBusiness || c.yearsExperience || 0) > 0 && (
+                <View className="flex-row items-center" style={{ gap: 12 }}>
+                  <View className="w-10 h-10 rounded-full bg-neutral-100 dark:bg-neutral-800 items-center justify-center">
+                    <FontAwesome5 name="award" size={16} color="#525252" />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-sm font-semibold text-neutral-900 dark:text-neutral-50">
+                      {c.yearsInBusiness || c.yearsExperience} years experience
+                    </Text>
+                    <Text className="text-xs text-neutral-500 dark:text-neutral-400">In the business</Text>
+                  </View>
+                </View>
+              )}
+              {c.avgResponseHours !== undefined && c.avgResponseHours !== null && (
+                <View className="flex-row items-center" style={{ gap: 12 }}>
+                  <View className="w-10 h-10 rounded-full bg-neutral-100 dark:bg-neutral-800 items-center justify-center">
+                    <FontAwesome5 name="clock" size={16} color="#525252" />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-sm font-semibold text-neutral-900 dark:text-neutral-50">
+                      {c.avgResponseHours < 1 ? 'Responds in <1h' : `Responds in ~${Math.round(c.avgResponseHours)}h`}
+                    </Text>
+                    <Text className="text-xs text-neutral-500 dark:text-neutral-400">Typical response time</Text>
+                  </View>
+                </View>
+              )}
+            </View>
+          )}
 
           {/* Stats Row Grid (Dynamic values for new/existing contractors) */}
           {(() => {
@@ -818,7 +853,7 @@ const BusinessDetailScreen: React.FC = () => {
             ];
 
             return (
-              <View className="flex-row justify-between items-center py-4 border-y border-neutral-100 dark:border-neutral-800 mt-6 bg-neutral-50/50 dark:bg-neutral-900/30 rounded-xl px-2">
+              <View className="flex-row justify-between items-center py-4 border-b border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/30 rounded-xl px-2 mt-4">
                 {stats.map((stat, idx) => (
                   <View key={idx} className="flex-1 items-center justify-center" style={{
                     borderRightWidth: idx < stats.length - 1 ? 1 : 0,
@@ -1385,7 +1420,11 @@ const BusinessDetailScreen: React.FC = () => {
             <View className="bg-white dark:bg-neutral-950 rounded-t-3xl p-6">
             <View className="flex-row justify-between items-center mb-4">
               <Text className="text-xl font-bold text-neutral-900 dark:text-white">Claim This Profile</Text>
-              <Pressable onPress={() => { setShowClaimModal(false); setClaimDocumentFile(null); setClaimError(null); }} className="w-8 h-8 items-center justify-center rounded-full">
+              <Pressable 
+                onPress={() => { setShowClaimModal(false); setClaimDocumentFile(null); setClaimError(null); }} 
+                hitSlop={8}
+                className="w-8 h-8 items-center justify-center rounded-full"
+              >
                 <FontAwesome5 name="times" size={14} color={isDark ? "#a3a3a3" : "#737373"} />
               </Pressable>
             </View>

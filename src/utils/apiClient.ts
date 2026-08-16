@@ -324,7 +324,8 @@ export const normalizeApiContractor = (c: any): Contractor => {
       businessName: companyName,
       category,
       description: data.description || data.bio || '',
-      isVerified: data.isVerified || data.isTopRated || data.licenseStatus === 'Verified' || data.licenseStatus === 'approved' || false,
+      licenseVerified: data.licenseVerified || data.isVerified || data.isTopRated || data.licenseStatus === 'Verified' || data.licenseStatus === 'approved' || false,
+      isVerified: data.licenseVerified || data.isVerified || data.isTopRated || data.licenseStatus === 'Verified' || data.licenseStatus === 'approved' || false,
       averageRating: data.averageRating || data.rating || 0,
       reviewCount: data.numReviews !== undefined && data.numReviews !== null
         ? Number(data.numReviews)
