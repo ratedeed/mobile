@@ -236,11 +236,11 @@ const BusinessDetailScreen: React.FC = () => {
       // Fetch similar contractors by category (matching web version)
       if (data?.category) {
         try {
-          const similarData = await browseContractors({ type: data.category, limit: 8 });
+          const similarData = await browseContractors({ type: data.category, limit: 20 });
           const list = similarData?.contractors || (Array.isArray(similarData) ? similarData : []);
           const filtered = list
             .filter((sc: any) => (sc._id || sc.id) !== contractorId)
-            .slice(0, 6);
+            .slice(0, 15);
           if (isMounted.current) setSimilarContractors(filtered);
         } catch (e) {
       // console.error('Failed to load similar contractors:', e);
@@ -1206,7 +1206,7 @@ const BusinessDetailScreen: React.FC = () => {
                 <Text className="text-lg font-bold text-neutral-900 dark:text-neutral-50 tracking-tight">Similar contractors</Text>
                 <Text className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">Explore other verified professionals in {c.category || 'this trade'}</Text>
               </View>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 28, paddingRight: 16 }}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 20, paddingRight: 16 }}>
                 {similarContractors.map((sc, i) => {
                   const scName = sc.companyName || sc.businessName || 'Contractor';
                   const scRating = sc.averageRating || sc.rating || 0;
@@ -1215,7 +1215,7 @@ const BusinessDetailScreen: React.FC = () => {
                   const scState = sc.contactInfo?.state && !isMongoIdStr(sc.contactInfo.state) ? sc.contactInfo.state : '';
                   const rawLocation = [scCity, scState].filter(Boolean).join(', ') || sc.location || '';
                   const scLocation = rawLocation.replace(/^\d{4,5}\s*,\s*/, '').replace(/^\d{4,5}\s+/, '');
-                  const scCover = getCoverImageUrl(scName, (sc as any).bannerUrl || sc.bannerImage || (sc as any).imageUrl || sc.profilePicture || '', sc.category, 560, 538);
+                  const scCover = getCoverImageUrl(scName, (sc as any).bannerUrl || sc.bannerImage || (sc as any).imageUrl || sc.profilePicture || '', sc.category, 480, 460);
                   const scId = sc._id || (sc as any).id;
                   return (
                     <Pressable
@@ -1223,10 +1223,10 @@ const BusinessDetailScreen: React.FC = () => {
                       onPress={() => {
                         navigation.push('BusinessDetail' as any, { id: scId } as any);
                       }}
-                      className="w-[280px] bg-transparent active:scale-[0.98]"
+                      className="w-[230px] bg-transparent active:scale-[0.98]"
                     >
-                      {/* Photo: aspect-ratio 1.04 / 1, radius 14px, margin-bottom 12px */}
-                      <View style={{ aspectRatio: 1.04 }} className="relative rounded-[14px] overflow-hidden bg-neutral-100 dark:bg-neutral-850 mb-[12px]">
+                      {/* Photo: aspect-ratio 1.04 / 1, radius 12px, margin-bottom 10px */}
+                      <View style={{ aspectRatio: 1.04 }} className="relative rounded-[12px] overflow-hidden bg-neutral-100 dark:bg-neutral-850 mb-[10px]">
                         {isSvgUrl(scCover) ? (
                           <View className="w-full h-full">
                             <SvgImage uri={scCover} width="100%" height="100%" />
@@ -1235,28 +1235,28 @@ const BusinessDetailScreen: React.FC = () => {
                           <Image source={{ uri: scCover }} className="w-full h-full" resizeMode="cover" />
                         )}
                         {(sc.isVerified || (sc as any).licenseVerified) && (
-                          <View className="absolute top-3 left-3 bg-white/95 dark:bg-neutral-900/90 rounded-full px-2.5 py-1 flex-row items-center" style={{ gap: 4 }}>
-                            <VerifiedBadge size={12} animate={false} />
-                            <Text className="text-[10px] font-bold text-neutral-800 dark:text-neutral-200">Verified</Text>
+                          <View className="absolute top-2.5 left-2.5 bg-white/95 dark:bg-neutral-900/90 rounded-full px-2 py-0.5 flex-row items-center" style={{ gap: 3.5 }}>
+                            <VerifiedBadge size={11} animate={false} />
+                            <Text className="text-[9px] font-bold text-neutral-800 dark:text-neutral-200">Verified</Text>
                           </View>
                         )}
                       </View>
 
                       {/* Text below photo */}
                       <View>
-                        {/* Title: 16px, weight 600, line-height 1.25, margin-bottom 4px */}
-                        <Text className="text-[16px] font-semibold text-neutral-900 dark:text-neutral-50 leading-[1.25] mb-[4px]" numberOfLines={2}>
+                        {/* Title: 15px, weight 600, line-height 1.25, margin-bottom 3px */}
+                        <Text className="text-[15px] font-semibold text-neutral-900 dark:text-neutral-50 leading-[1.25] mb-[3px]" numberOfLines={2}>
                           {scName}
                         </Text>
 
-                        {/* Location / Rating row: 14px, line-height 1.43 */}
+                        {/* Location / Rating row: 13px, line-height 1.4 */}
                         <View className="flex-row items-center" style={{ gap: 4 }}>
-                          <Text className="text-[14px] text-neutral-900 dark:text-neutral-100 font-normal flex-1" numberOfLines={1}>
+                          <Text className="text-[13px] text-neutral-900 dark:text-neutral-100 font-normal flex-1" numberOfLines={1}>
                             {scLocation || sc.category || 'Local Pro'}
                           </Text>
-                          <Text className="text-[14px] text-neutral-500 dark:text-neutral-400">·</Text>
-                          <Text className="text-[14px] font-medium text-neutral-900 dark:text-neutral-100">★</Text>
-                          <Text className="text-[14px] font-normal text-neutral-900 dark:text-neutral-100">
+                          <Text className="text-[13px] text-neutral-500 dark:text-neutral-400">·</Text>
+                          <Text className="text-[13px] font-medium text-neutral-900 dark:text-neutral-100">★</Text>
+                          <Text className="text-[13px] font-normal text-neutral-900 dark:text-neutral-100">
                             {scReviews > 0 ? scRating.toFixed(2) : 'New'}
                           </Text>
                         </View>
