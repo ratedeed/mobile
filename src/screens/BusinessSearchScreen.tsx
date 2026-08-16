@@ -154,11 +154,13 @@ const ListingCard = React.memo(({
           </View>
         )}
         <View className="flex-row items-center flex-wrap mt-1.5" style={{ gap: 6 }}>
-          <EstimateBadge
-            type={(listing as any).estimatePolicy?.type === 'service_fee' ? 'applied_credit' : 'free'}
-            feeAmount={(listing as any).estimatePolicy?.feeAmount || 75}
-            size="sm"
-          />
+          {(listing as any).estimatePolicy?.type || (listing as any).hasFreeEstimates ? (
+            <EstimateBadge
+              type={(listing as any).estimatePolicy?.type === 'service_fee' ? 'applied_credit' : ((listing as any).estimatePolicy?.type || 'free')}
+              feeAmount={(listing as any).estimatePolicy?.feeAmount || 75}
+              size="sm"
+            />
+          ) : null}
           <View className="flex-row items-center" style={{ gap: 4 }}>
             <FontAwesome5 name="lock" size={9} color="#16a34a" />
             <Text className="text-[11px] font-semibold text-neutral-600 dark:text-neutral-400">Escrow Protected</Text>

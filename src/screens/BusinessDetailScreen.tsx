@@ -735,11 +735,13 @@ const BusinessDetailScreen: React.FC = () => {
               
               {/* Estimate Policy & Response Time Badges */}
               <View className="flex-row flex-wrap items-center mt-2" style={{ gap: 6 }}>
-                <EstimateBadge
-                  type={c.estimatePolicy?.type === 'service_fee' ? 'applied_credit' : (c.estimatePolicy?.type || 'free')}
-                  feeAmount={c.estimatePolicy?.feeAmount || 75}
-                  size="sm"
-                />
+                {(c.estimatePolicy?.type || (c as any).hasFreeEstimates) && (
+                  <EstimateBadge
+                    type={c.estimatePolicy?.type === 'service_fee' ? 'applied_credit' : (c.estimatePolicy?.type || 'free')}
+                    feeAmount={c.estimatePolicy?.feeAmount || 75}
+                    size="sm"
+                  />
+                )}
                 {c.avgResponseHours !== undefined && c.avgResponseHours !== null && (() => {
                   const hrs = c.avgResponseHours;
                   let text = '';
