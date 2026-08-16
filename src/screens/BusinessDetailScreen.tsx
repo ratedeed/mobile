@@ -32,6 +32,7 @@ import { requestPhotoLibraryPermission } from '../utils/permissions';
 import { getCoverImageUrl, getProfileImageUrl, isSvgUrl } from '../utils/avatarUtils';
 import { isFavorite, addFavorite, removeFavorite } from '../utils/favoritesStore';
 import { VerifiedBadge } from '../components/common/VerifiedBadge';
+import { EstimateBadge } from '../components/common/EstimateBadge';
 import { SkeletonLoader } from '../components/common/SkeletonLoader';
 import ServiceAreaMap from '../components/common/ServiceAreaMap';
 import { useAuth } from '../context/AuthContext';
@@ -732,40 +733,43 @@ const BusinessDetailScreen: React.FC = () => {
                 </View>
               )}
               
-              {/* Response Time Badge */}
-              {c.avgResponseHours !== undefined && c.avgResponseHours !== null && (
-                <View className="flex-row flex-wrap items-center mt-1.5" style={{ gap: 4 }}>
-                  {(() => {
-                    const hrs = c.avgResponseHours;
-                    let text = '';
-                    let colorClass = '';
-                    let textClass = '';
-                    if (hrs < 1) {
-                      text = '⚡ Responds in <1h';
-                      colorClass = 'bg-emerald-50 border-emerald-100 dark:bg-emerald-950/20 dark:border-emerald-900/30';
-                      textClass = 'text-emerald-700 dark:text-emerald-400';
-                    } else if (hrs < 4) {
-                      text = `⚡ Responds in ~${Math.round(hrs)}h`;
-                      colorClass = 'bg-emerald-50 border-emerald-100 dark:bg-emerald-950/20 dark:border-emerald-900/30';
-                      textClass = 'text-emerald-700 dark:text-emerald-400';
-                    } else if (hrs < 24) {
-                      text = `⏱️ Responds in ~${Math.round(hrs)}h`;
-                      colorClass = 'bg-amber-50 border-amber-100 dark:bg-amber-950/20 dark:border-amber-900/30';
-                      textClass = 'text-amber-700 dark:text-amber-400';
-                    } else {
-                      const days = Math.round(hrs / 24);
-                      text = `🕐 Responds in ~${days}d`;
-                      colorClass = 'bg-neutral-50 border-neutral-200 dark:bg-neutral-900/30 dark:border-neutral-800';
-                      textClass = 'text-neutral-600 dark:text-neutral-400';
-                    }
-                    return (
-                      <View className={`px-2 py-0.5 rounded-full border ${colorClass}`}>
-                        <Text className={`text-[9px] font-bold ${textClass}`}>{text}</Text>
-                      </View>
-                    );
-                  })()}
-                </View>
-              )}
+              {/* Estimate Policy & Response Time Badges */}
+              <View className="flex-row flex-wrap items-center mt-2" style={{ gap: 6 }}>
+                <EstimateBadge
+                  type={c.estimatePolicy?.type === 'service_fee' ? 'applied_credit' : (c.estimatePolicy?.type || 'free')}
+                  feeAmount={c.estimatePolicy?.feeAmount || 75}
+                  size="sm"
+                />
+                {c.avgResponseHours !== undefined && c.avgResponseHours !== null && (() => {
+                  const hrs = c.avgResponseHours;
+                  let text = '';
+                  let colorClass = '';
+                  let textClass = '';
+                  if (hrs < 1) {
+                    text = '⚡ Responds in <1h';
+                    colorClass = 'bg-emerald-50 border-emerald-100 dark:bg-emerald-950/20 dark:border-emerald-900/30';
+                    textClass = 'text-emerald-700 dark:text-emerald-400';
+                  } else if (hrs < 4) {
+                    text = `⚡ Responds in ~${Math.round(hrs)}h`;
+                    colorClass = 'bg-emerald-50 border-emerald-100 dark:bg-emerald-950/20 dark:border-emerald-900/30';
+                    textClass = 'text-emerald-700 dark:text-emerald-400';
+                  } else if (hrs < 24) {
+                    text = `⏱️ Responds in ~${Math.round(hrs)}h`;
+                    colorClass = 'bg-amber-50 border-amber-100 dark:bg-amber-950/20 dark:border-amber-900/30';
+                    textClass = 'text-amber-700 dark:text-amber-400';
+                  } else {
+                    const days = Math.round(hrs / 24);
+                    text = `🕐 Responds in ~${days}d`;
+                    colorClass = 'bg-neutral-50 border-neutral-200 dark:bg-neutral-900/30 dark:border-neutral-800';
+                    textClass = 'text-neutral-600 dark:text-neutral-400';
+                  }
+                  return (
+                    <View className={`px-2 py-0.5 rounded-full border ${colorClass}`}>
+                      <Text className={`text-[9px] font-bold ${textClass}`}>{text}</Text>
+                    </View>
+                  );
+                })()}
+              </View>
             </View>
 
             {/* Escrow Protected Trust Badge Card */}
@@ -780,50 +784,102 @@ const BusinessDetailScreen: React.FC = () => {
             </View>
           </View>
 
-          {/* Quick Highlights (Airbnb Style) */}
-          {((c.isVerified || (c as any).licenseVerified) || (c.yearsInBusiness || c.yearsExperience || 0) > 0 || (c.avgResponseHours !== undefined && c.avgResponseHours !== null)) && (
-            <View className="py-4 border-y border-neutral-100 dark:border-neutral-800 mt-5" style={{ gap: 14 }}>
-              {(c.isVerified || (c as any).licenseVerified) && (
+          {/* Quick Highlights */}
+          <View className="py-4 border-y border-neutral-100 dark:border-neutral-800 mt-5" style={{ gap: 14 }}>
+            {/* Estimate Policy Highlight */}
+            {(() => {
+              const ep = (c as any).estimatePolicy;
+              if (ep?.type === 'service_fee') {
+                return (
+                  <View className="flex-row items-center" style={{ gap: 12 }}>
+                    <View className="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200/60 dark:border-indigo-900/40 items-center justify-center">
+                      <FontAwesome5 name="calculator" size={15} color="#4f46e5" />
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-sm font-semibold text-neutral-900 dark:text-neutral-50">
+                        ${ep.feeAmount || 75} Diagnostic / Service Call Fee
+                      </Text>
+                      <Text className="text-xs text-neutral-500 dark:text-neutral-400">
+                        {ep.feeWaivedIfHired !== false ? 'Waived toward total cost if you proceed with repair' : 'Standard on-site diagnostic trip fee'}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              }
+              if (ep?.type === 'virtual_only') {
+                return (
+                  <View className="flex-row items-center" style={{ gap: 12 }}>
+                    <View className="w-10 h-10 rounded-full bg-purple-50 dark:bg-purple-950/40 border border-purple-200/60 dark:border-purple-900/40 items-center justify-center">
+                      <FontAwesome5 name="camera" size={15} color="#7c3aed" />
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-sm font-semibold text-neutral-900 dark:text-neutral-50">
+                        Free Photo / Online Estimates
+                      </Text>
+                      <Text className="text-xs text-neutral-500 dark:text-neutral-400">
+                        Send project photos via chat for a preliminary quote
+                      </Text>
+                    </View>
+                  </View>
+                );
+              }
+              return (
                 <View className="flex-row items-center" style={{ gap: 12 }}>
-                  <View className="w-10 h-10 rounded-full bg-amber-50 dark:bg-amber-950/40 border border-amber-200/60 dark:border-amber-900/40 items-center justify-center">
-                    <FontAwesome5 name="shield-alt" size={16} color="#d97706" />
+                  <View className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/60 dark:border-emerald-900/40 items-center justify-center">
+                    <FontAwesome5 name="check-circle" size={15} color="#059669" />
                   </View>
                   <View className="flex-1">
-                    <Text className="text-sm font-semibold text-neutral-900 dark:text-neutral-50">Licensed & Verified</Text>
+                    <Text className="text-sm font-semibold text-neutral-900 dark:text-neutral-50">
+                      100% Free Project Estimates
+                    </Text>
                     <Text className="text-xs text-neutral-500 dark:text-neutral-400">
-                      {c.licenseNumber ? `License #${c.licenseNumber} verified by Ratedeed` : 'Trade license & identity verified'}
+                      No obligation · Free consultation
                     </Text>
                   </View>
                 </View>
-              )}
-              {(c.yearsInBusiness || c.yearsExperience || 0) > 0 && (
-                <View className="flex-row items-center" style={{ gap: 12 }}>
-                  <View className="w-10 h-10 rounded-full bg-neutral-100 dark:bg-neutral-800 items-center justify-center">
-                    <FontAwesome5 name="award" size={16} color="#525252" />
-                  </View>
-                  <View className="flex-1">
-                    <Text className="text-sm font-semibold text-neutral-900 dark:text-neutral-50">
-                      {c.yearsInBusiness || c.yearsExperience} years experience
-                    </Text>
-                    <Text className="text-xs text-neutral-500 dark:text-neutral-400">In the business</Text>
-                  </View>
+              );
+            })()}
+
+            {(c.isVerified || (c as any).licenseVerified) && (
+              <View className="flex-row items-center" style={{ gap: 12 }}>
+                <View className="w-10 h-10 rounded-full bg-amber-50 dark:bg-amber-950/40 border border-amber-200/60 dark:border-amber-900/40 items-center justify-center">
+                  <FontAwesome5 name="shield-alt" size={16} color="#d97706" />
                 </View>
-              )}
-              {c.avgResponseHours !== undefined && c.avgResponseHours !== null && (
-                <View className="flex-row items-center" style={{ gap: 12 }}>
-                  <View className="w-10 h-10 rounded-full bg-neutral-100 dark:bg-neutral-800 items-center justify-center">
-                    <FontAwesome5 name="clock" size={16} color="#525252" />
-                  </View>
-                  <View className="flex-1">
-                    <Text className="text-sm font-semibold text-neutral-900 dark:text-neutral-50">
-                      {c.avgResponseHours < 1 ? 'Responds in <1h' : `Responds in ~${Math.round(c.avgResponseHours)}h`}
-                    </Text>
-                    <Text className="text-xs text-neutral-500 dark:text-neutral-400">Typical response time</Text>
-                  </View>
+                <View className="flex-1">
+                  <Text className="text-sm font-semibold text-neutral-900 dark:text-neutral-50">Licensed & Verified</Text>
+                  <Text className="text-xs text-neutral-500 dark:text-neutral-400">
+                    {c.licenseNumber ? `License #${c.licenseNumber} verified by Ratedeed` : 'Trade license & identity verified'}
+                  </Text>
                 </View>
-              )}
-            </View>
-          )}
+              </View>
+            )}
+            {(c.yearsInBusiness || c.yearsExperience || 0) > 0 && (
+              <View className="flex-row items-center" style={{ gap: 12 }}>
+                <View className="w-10 h-10 rounded-full bg-neutral-100 dark:bg-neutral-800 items-center justify-center">
+                  <FontAwesome5 name="award" size={16} color="#525252" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-sm font-semibold text-neutral-900 dark:text-neutral-50">
+                    {c.yearsInBusiness || c.yearsExperience} years experience
+                  </Text>
+                  <Text className="text-xs text-neutral-500 dark:text-neutral-400">In the business</Text>
+                </View>
+              </View>
+            )}
+            {c.avgResponseHours !== undefined && c.avgResponseHours !== null && (
+              <View className="flex-row items-center" style={{ gap: 12 }}>
+                <View className="w-10 h-10 rounded-full bg-neutral-100 dark:bg-neutral-800 items-center justify-center">
+                  <FontAwesome5 name="clock" size={16} color="#525252" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-sm font-semibold text-neutral-900 dark:text-neutral-50">
+                    {c.avgResponseHours < 1 ? 'Responds in <1h' : `Responds in ~${Math.round(c.avgResponseHours)}h`}
+                  </Text>
+                  <Text className="text-xs text-neutral-500 dark:text-neutral-400">Typical response time</Text>
+                </View>
+              </View>
+            )}
+          </View>
 
           {/* Stats Row Grid (Dynamic values for new/existing contractors) */}
           {(() => {
@@ -1206,7 +1262,7 @@ const BusinessDetailScreen: React.FC = () => {
                 <Text className="text-lg font-bold text-neutral-900 dark:text-neutral-50 tracking-tight">Similar contractors</Text>
                 <Text className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">Explore other verified professionals in {c.category || 'this trade'}</Text>
               </View>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingRight: 16 }}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 14, paddingRight: 16 }}>
                 {similarContractors.map((sc, i) => {
                   const scName = sc.companyName || sc.businessName || 'Contractor';
                   const scRating = sc.averageRating || sc.rating || 0;
@@ -1215,7 +1271,7 @@ const BusinessDetailScreen: React.FC = () => {
                   const scState = sc.contactInfo?.state && !isMongoIdStr(sc.contactInfo.state) ? sc.contactInfo.state : '';
                   const rawLocation = [scCity, scState].filter(Boolean).join(', ') || sc.location || '';
                   const scLocation = rawLocation.replace(/^\d{4,5}\s*,\s*/, '').replace(/^\d{4,5}\s+/, '');
-                  const scCover = getCoverImageUrl(scName, (sc as any).bannerUrl || sc.bannerImage || (sc as any).imageUrl || sc.profilePicture || '', sc.category, 300, 288);
+                  const scCover = getCoverImageUrl(scName, (sc as any).bannerUrl || sc.bannerImage || (sc as any).imageUrl || sc.profilePicture || '', sc.category, 360, 345, 0, true);
                   const scId = sc._id || (sc as any).id;
                   return (
                     <Pressable
@@ -1223,10 +1279,10 @@ const BusinessDetailScreen: React.FC = () => {
                       onPress={() => {
                         navigation.push('BusinessDetail' as any, { id: scId } as any);
                       }}
-                      className="w-[110px] bg-transparent active:scale-[0.98]"
+                      className="w-[165px] bg-transparent active:scale-[0.98]"
                     >
-                      {/* Photo: aspect-ratio 1.04 / 1, radius 10px, margin-bottom 6px */}
-                      <View style={{ aspectRatio: 1.04 }} className="relative rounded-[10px] overflow-hidden bg-neutral-100 dark:bg-neutral-850 mb-1.5">
+                      {/* Photo: aspect-ratio 1.04 / 1, radius 12px, margin-bottom 8px */}
+                      <View style={{ aspectRatio: 1.04 }} className="relative rounded-xl overflow-hidden bg-neutral-100 dark:bg-neutral-850 mb-2">
                         {isSvgUrl(scCover) ? (
                           <View className="w-full h-full">
                             <SvgImage uri={scCover} width="100%" height="100%" />
@@ -1235,32 +1291,32 @@ const BusinessDetailScreen: React.FC = () => {
                           <Image source={{ uri: scCover }} className="w-full h-full" resizeMode="cover" />
                         )}
                         {(sc.isVerified || (sc as any).licenseVerified) && (
-                          <View className="absolute top-1.5 left-1.5 bg-white/95 dark:bg-neutral-900/90 rounded-full px-1.5 py-0.5 flex-row items-center" style={{ gap: 2 }}>
-                            <VerifiedBadge size={8} animate={false} />
-                            <Text className="text-[7px] font-bold text-neutral-800 dark:text-neutral-200">Verified</Text>
+                          <View className="absolute top-2 left-2 bg-white/95 dark:bg-neutral-900/90 rounded-full px-1.5 py-0.5 flex-row items-center" style={{ gap: 2.5 }}>
+                            <VerifiedBadge size={10} animate={false} />
+                            <Text className="text-[8px] font-bold text-neutral-800 dark:text-neutral-200">Verified</Text>
                           </View>
                         )}
                       </View>
 
                       {/* Text below photo */}
                       <View>
-                        {/* Title: 12px, weight 600, 2 lines */}
+                        {/* Title: 13.5px, weight 600, 2 lines */}
                         <Text 
-                          className="text-[12px] font-semibold text-neutral-900 dark:text-neutral-50 leading-[15px]" 
+                          className="text-[13.5px] font-semibold text-neutral-900 dark:text-neutral-50 leading-[17px]" 
                           numberOfLines={2}
-                          style={{ minHeight: 30 }}
+                          style={{ minHeight: 34 }}
                         >
                           {scName}
                         </Text>
 
-                        {/* Location / Rating row */}
-                        <View className="flex-row items-center mt-0.5" style={{ gap: 2.5 }}>
-                          <Text className="text-[11px] text-neutral-600 dark:text-neutral-400 shrink" numberOfLines={1}>
-                            {scLocation || sc.category || 'Local'}
+                        {/* Location / Rating row: tight inline */}
+                        <View className="flex-row items-center mt-0.5 flex-wrap" style={{ gap: 3 }}>
+                          <Text className="text-[12px] text-neutral-600 dark:text-neutral-400" numberOfLines={1} style={{ maxWidth: 95 }}>
+                            {scLocation || sc.category || 'Local Pro'}
                           </Text>
-                          <Text className="text-[10px] text-neutral-400">·</Text>
-                          <Text className="text-[10px] font-medium text-neutral-900 dark:text-neutral-100">★</Text>
-                          <Text className="text-[11px] font-medium text-neutral-900 dark:text-neutral-100">
+                          <Text className="text-[12px] text-neutral-400">·</Text>
+                          <Text className="text-[11px] font-medium text-neutral-900 dark:text-neutral-100">★</Text>
+                          <Text className="text-[12px] font-medium text-neutral-900 dark:text-neutral-100">
                             {scReviews > 0 ? scRating.toFixed(1) : 'New'}
                           </Text>
                         </View>
@@ -1280,12 +1336,42 @@ const BusinessDetailScreen: React.FC = () => {
       <View className="absolute bottom-0 left-0 right-0 bg-white/95 dark:bg-neutral-950/95 border-t border-neutral-100 dark:border-neutral-800 px-4 py-4 pb-8 flex-row items-center justify-between shadow-lg">
         <View>
           {(() => {
+            const ep = (c as any).estimatePolicy;
+            if (ep?.type === 'service_fee') {
+              return (
+                <View>
+                  <Text className="text-base font-bold text-neutral-900 dark:text-neutral-50">${ep.feeAmount || 75}</Text>
+                  <Text className="text-[9px] text-neutral-500 uppercase tracking-tighter">
+                    {ep.feeWaivedIfHired !== false ? 'Service Call · Waived if hired' : 'Diagnostic Trip Fee'}
+                  </Text>
+                </View>
+              );
+            }
+            if (ep?.type === 'virtual_only') {
+              return (
+                <View>
+                  <Text className="text-base font-bold text-neutral-900 dark:text-neutral-50">Free Photo Estimate</Text>
+                  <Text className="text-[9px] text-neutral-500 uppercase tracking-tighter">Send photos via chat</Text>
+                </View>
+              );
+            }
+            const priceMin = (c.servicesOffered?.[0] as any)?.priceEstimate || (c.servicesOffered?.[0] as any)?.priceRange || c.priceRange || c.pricing || '';
             const clean = (priceMin || '').trim();
             if (!clean || clean === '$0' || clean === '$0.00' || clean === '0' || clean.toLowerCase() === 'n/a' || clean.toLowerCase() === 'na' || clean.toLowerCase().includes('quote')) {
-              return <Text className="text-base font-bold text-neutral-900 dark:text-neutral-50">Contact for Quote</Text>;
+              return (
+                <View>
+                  <Text className="text-base font-bold text-neutral-900 dark:text-neutral-50">Free Estimate</Text>
+                  <Text className="text-[9px] text-neutral-500 uppercase tracking-tighter">No obligation quote</Text>
+                </View>
+              );
             }
             if (!/\d/.test(clean)) {
-              return <Text className="text-base font-bold text-neutral-900 dark:text-neutral-50">Contact for Quote</Text>;
+              return (
+                <View>
+                  <Text className="text-base font-bold text-neutral-900 dark:text-neutral-50">Free Estimate</Text>
+                  <Text className="text-[9px] text-neutral-500 uppercase tracking-tighter">No obligation quote</Text>
+                </View>
+              );
             }
             const formattedPrice = clean.startsWith('$') ? clean : `$${clean}`;
             const subText = clean.toLowerCase().includes('/hr') || clean.toLowerCase().includes('hr') || clean.toLowerCase().includes('hour')

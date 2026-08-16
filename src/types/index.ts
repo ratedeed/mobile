@@ -102,12 +102,17 @@ export interface Contractor {
   licenseNumber?: string;
   licenseStatus?: string;
   licenseDocument?: string;
-  verificationNotes?: string;
   status?: string;
   onboardingComplete?: boolean;
   portfolio?: PortfolioItem[];
   posts?: Post[];
   avgResponseHours?: number | null;
+  estimatePolicy?: {
+    type: 'free' | 'service_fee' | 'virtual_only';
+    feeAmount?: number;
+    feeWaivedIfHired?: boolean;
+    notes?: string;
+  };
   reviewsList?: Review[];
   insuranceInfo?: string;
   yearsExperience?: number;

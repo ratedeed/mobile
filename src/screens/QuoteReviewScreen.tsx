@@ -325,6 +325,41 @@ export default function QuoteReviewScreen() {
           </View>
         </View>
 
+        {/* Diagnostic Quote Explainer */}
+        {quote.quoteType === 'diagnostic' && (
+          <View className="bg-indigo-50 dark:bg-indigo-950/40 rounded-2xl p-4 border border-indigo-100 dark:border-indigo-900/50 mb-4" style={{ gap: 10 }}>
+            <View className="flex-row items-center" style={{ gap: 10 }}>
+              <View className="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-900/50 items-center justify-center">
+                <FontAwesome5 name="calculator" size={13} color="#4f46e5" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-sm font-bold text-indigo-900 dark:text-indigo-200">Diagnostic & No-Show Guarantee</Text>
+                <Text className="text-[11px] text-indigo-700 dark:text-indigo-400">100% Escrow Protected by Ratedeed</Text>
+              </View>
+            </View>
+            <View className="bg-white/70 dark:bg-neutral-900/60 p-3 rounded-xl border border-indigo-100/60 dark:border-indigo-900/40" style={{ gap: 6 }}>
+              <View className="flex-row items-start" style={{ gap: 6 }}>
+                <FontAwesome5 name="check-circle" size={11} color="#059669" style={{ marginTop: 2 }} />
+                <Text className="text-xs text-indigo-950 dark:text-indigo-200 flex-1 leading-4">
+                  <Text className="font-bold">No-Show Protection:</Text> If the contractor fails to show up, you receive an immediate 100% full refund.
+                </Text>
+              </View>
+              <View className="flex-row items-start" style={{ gap: 6 }}>
+                <FontAwesome5 name="check-circle" size={11} color="#059669" style={{ marginTop: 2 }} />
+                <Text className="text-xs text-indigo-950 dark:text-indigo-200 flex-1 leading-4">
+                  <Text className="font-bold">Held in Escrow:</Text> Payment is safely held by Ratedeed and not released until the inspection occurs.
+                </Text>
+              </View>
+              <View className="flex-row items-start" style={{ gap: 6 }}>
+                <FontAwesome5 name="check-circle" size={11} color="#059669" style={{ marginTop: 2 }} />
+                <Text className="text-xs text-indigo-950 dark:text-indigo-200 flex-1 leading-4">
+                  <Text className="font-bold">100% Repair Credit:</Text> Credited in full against your repair bill if you proceed with this pro.
+                </Text>
+              </View>
+            </View>
+          </View>
+        )}
+
         {/* Contractor Notes */}
         {quote.contractorNotes ? (
           <View className="bg-white dark:bg-neutral-900 rounded-xl p-4 border border-neutral-100 dark:border-neutral-800 mb-4">
@@ -351,11 +386,32 @@ export default function QuoteReviewScreen() {
               </View>
             ))}
 
+            {/* Diagnostic Fee Credit */}
+            {quote.diagnosticFeeCredit > 0 && (
+              <View className="flex-row justify-between items-center bg-emerald-50 dark:bg-emerald-950/40 p-2.5 rounded-lg my-2 border border-emerald-100 dark:border-emerald-900/50">
+                <View className="flex-row items-center flex-1 mr-2" style={{ gap: 6 }}>
+                  <FontAwesome5 name="check-circle" size={12} color="#059669" />
+                  <View>
+                    <Text className="text-xs font-bold text-emerald-800 dark:text-emerald-200">Diagnostic Fee Credit</Text>
+                    <Text className="text-[10px] text-emerald-700 dark:text-emerald-300">Credited from previous diagnostic fee</Text>
+                  </View>
+                </View>
+                <Text className="text-sm font-bold text-emerald-700 dark:text-emerald-300">
+                  -${(Number(quote.diagnosticFeeCredit) / (quote.diagnosticFeeCredit > 1000 ? 100 : 1)).toFixed(2)}
+                </Text>
+              </View>
+            )}
+
             {total > 0 && (
               <>
                 <View className="border-t border-neutral-200 dark:border-neutral-700 my-3" />
                 <View className="flex-row justify-between items-center">
-                  <Text className="text-base font-bold text-neutral-900 dark:text-white">Total</Text>
+                  <View>
+                    <Text className="text-base font-bold text-neutral-900 dark:text-white">Total Amount Due</Text>
+                    {quote.diagnosticFeeCredit > 0 && (
+                      <Text className="text-[10px] text-neutral-400">Credit applied</Text>
+                    )}
+                  </View>
                   <Text className="text-xl font-bold text-neutral-900 dark:text-white">${Number(totalInDollars).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
                 </View>
               </>

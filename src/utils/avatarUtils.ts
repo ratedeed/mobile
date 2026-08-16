@@ -295,15 +295,14 @@ export function generateBannerDataUrl(
   category?: string,
   size: BannerSize | number = { width: 1600, height: 800 },
   heightArg?: number,
-  // ↓ NEW: fraction of banner height to shift the text block downward.
-  //        Pass ~0.12 for mobile layouts where a nav bar is overlaid at top.
-  verticalBias: number = 0
+  verticalBias: number = 0,
+  hideText: boolean = false
 ): string {
   const { width: w, height: h } = typeof size === 'number'
     ? { width: size, height: heightArg || 400 }
     : { width: size.width, height: size.height };
 
-  const cacheKey = `bn-${name}-${category}-${w}x${h}-${verticalBias}`;
+  const cacheKey = `bn-${name}-${category}-${w}x${h}-${verticalBias}-${hideText ? 'notext' : 'text'}`;
   if (bannerCache.has(cacheKey)) return bannerCache.get(cacheKey)!;
 
   const config = getGradientConfig(category, name);
@@ -348,12 +347,12 @@ export function generateBannerDataUrl(
   const dyTitle = titleFontSize * 0.35;
   const dyCategory = categoryFontSize * 0.35;
 
-  const nameSvg = lines.map((line, i) =>
+  const nameSvg = hideText ? '' : lines.map((line, i) =>
     `<text x="${w / 2}" y="${startY + i * lineHeight}" dy="${dyTitle}" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', sans-serif" font-size="${titleFontSize}" font-weight="800" fill="#ffffff">${escapeXml(line)}</text>`
   ).join('\n  ');
 
   let categorySvg = '';
-  if (hasCategory) {
+  if (hasCategory && !hideText) {
     const separatorY = groupTopY + titleBlockHeight + separatorGap;
     const categoryY  = separatorY + separatorSize + categoryGap + categoryFontSize / 2;
 
@@ -391,11 +390,12 @@ export function getCoverImageUrl(
   category?: string,
   width: number = 1600,
   height: number = 800,
-  verticalBias: number = 0
+  verticalBias: number = 0,
+  hideText: boolean = false
 ): string {
   return isRealImageUrl(coverImage)
     ? coverImage
-    : generateBannerDataUrl(name, category, { width, height }, undefined, verticalBias);
+    : generateBannerDataUrl(name, category, { width, height }, undefined, verticalBias, hideText);
 }
 
 export function getAvatarUrl(profilePicture: string, name: string, category?: string, size: number = 200): string {

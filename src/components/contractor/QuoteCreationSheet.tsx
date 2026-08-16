@@ -10,6 +10,7 @@ import {
   Platform,
   Image,
   Alert,
+  useColorScheme,
 } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { createQuoteFromChat, getStripeAccountStatus, getPlatformFeePercent } from '../../utils/apiClient';
@@ -108,6 +109,13 @@ export default function QuoteCreationSheet({
   category,
   onCreated,
 }: QuoteCreationSheetProps) {
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
+
+  const [quoteType, setQuoteType] = useState<'repair' | 'diagnostic'>('repair');
+  const [applyDiagnosticCredit, setApplyDiagnosticCredit] = useState<boolean>(false);
+  const [diagnosticCreditAmount, setDiagnosticCreditAmount] = useState<string>('75');
+
   const [projectName, setProjectName] = useState('');
   const [cat, setCat] = useState(category || services[0] || 'Plumbers');
   const [description, setDescription] = useState('');
@@ -121,6 +129,22 @@ export default function QuoteCreationSheet({
   const [error, setError] = useState('');
   const [activePicker, setActivePicker] = useState<null | 'startDate' | 'startTime' | 'endDate' | 'endTime'>(null);
   const [pickerVisible, setPickerVisible] = useState(false);
+
+  const handleSelectQuoteType = (type: 'repair' | 'diagnostic') => {
+    setQuoteType(type);
+    if (type === 'diagnostic') {
+      setProjectName('Diagnostic & Troubleshooting Service');
+      setDescription('On-site diagnostic inspection and troubleshooting service');
+      setLineItems([{ description: 'Diagnostic Service Call & Troubleshooting', amount: '75' }]);
+      if (!endDate) setEndDate(startDate);
+    } else {
+      if (projectName === 'Diagnostic & Troubleshooting Service') setProjectName('');
+      if (description === 'On-site diagnostic inspection and troubleshooting service') setDescription('');
+      if (lineItems.length === 1 && lineItems[0].description === 'Diagnostic Service Call & Troubleshooting') {
+        setLineItems([{ description: '', amount: '' }]);
+      }
+    }
+  };
 
   // Stripe Connection State
   const [stripeStatus, setStripeStatus] = useState<any>(null);
@@ -192,7 +216,9 @@ export default function QuoteCreationSheet({
     setLineItems(prev => prev.map((item, i) => i === index ? { ...item, [field]: finalValue } : item));
   };
 
-  const total = lineItems.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+  const rawTotal = lineItems.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+  const creditDeduction = (quoteType === 'repair' && applyDiagnosticCredit) ? (parseFloat(diagnosticCreditAmount) || 0) : 0;
+  const total = Math.max(0, rawTotal - creditDeduction);
   const platformFee = Math.round(total * (feePercent / 100) * 100) / 100;
   const subtotal = total - platformFee;
   const isMilestone = total >= 5000;
@@ -204,7 +230,7 @@ export default function QuoteCreationSheet({
   const timeOrderValid = !(isSameDay && startMins !== null && endMins !== null && endMins <= startMins);
 
   const isValid = projectName.trim() && 
-    description.trim().length >= 10 && 
+    description.trim().length >= 5 && 
     startDate.trim() && 
     endDate.trim() && 
     new Date(endDate) >= new Date(startDate) &&
@@ -379,8 +405,11 @@ export default function QuoteCreationSheet({
 
       await createQuoteFromChat({
         conversationId,
-        projectName: projectName.trim(),
-        serviceType: cat,
+        quoteType,
+        diagnosticFeeCredit: (quoteType === 'repair' && applyDiagnosticCredit) ? creditDeduction : 0,
+        originalTotal: rawTotal,
+        projectName: projectName.trim() || (quoteType === 'diagnostic' ? 'Diagnostic Dispatch' : 'Project Quote'),
+        serviceType: quoteType === 'diagnostic' ? 'Diagnostic & Troubleshooting' : cat,
         description: description.trim(),
         lineItems: validItems,
         estimatedStartDate: startDate,
@@ -394,6 +423,9 @@ export default function QuoteCreationSheet({
       });
 
       // Reset
+      setQuoteType('repair');
+      setApplyDiagnosticCredit(false);
+      setDiagnosticCreditAmount('75');
       setProjectName('');
       setCat(category || services[0] || 'Plumbers');
       setDescription('');
@@ -484,6 +516,53 @@ export default function QuoteCreationSheet({
             </View>
           )}
 
+          {/* Quote Type Toggle */}
+          <View className="mb-4 bg-neutral-100 dark:bg-neutral-800 p-1 rounded-2xl flex-row" style={{ gap: 4 }}>
+            <Pressable
+              onPress={() => handleSelectQuoteType('repair')}
+              className={`flex-1 py-2.5 rounded-xl flex-row items-center justify-center ${
+                quoteType === 'repair'
+                  ? 'bg-white dark:bg-neutral-900 shadow-sm'
+                  : ''
+              }`}
+              style={{ gap: 6 }}
+            >
+              <FontAwesome5 name="file-invoice-dollar" size={12} color={quoteType === 'repair' ? (isDark ? '#fff' : '#171717') : '#737373'} />
+              <Text className={`text-[12px] font-bold ${quoteType === 'repair' ? 'text-neutral-900 dark:text-white' : 'text-neutral-500'}`}>
+                Job Quote
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => handleSelectQuoteType('diagnostic')}
+              className={`flex-1 py-2.5 rounded-xl flex-row items-center justify-center ${
+                quoteType === 'diagnostic'
+                  ? 'bg-indigo-600 shadow-sm'
+                  : ''
+              }`}
+              style={{ gap: 6 }}
+            >
+              <FontAwesome5 name="calculator" size={12} color={quoteType === 'diagnostic' ? '#fff' : '#737373'} />
+              <Text className={`text-[12px] font-bold ${quoteType === 'diagnostic' ? 'text-white' : 'text-neutral-500'}`}>
+                Diagnostic Fee
+              </Text>
+            </Pressable>
+          </View>
+
+          {/* Diagnostic Explainer */}
+          {quoteType === 'diagnostic' && (
+            <View className="mb-4 bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/50 rounded-2xl p-3.5 flex-row" style={{ gap: 10 }}>
+              <View className="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-900/50 items-center justify-center shrink-0 mt-0.5">
+                <FontAwesome5 name="info-circle" size={14} color="#4f46e5" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-xs font-bold text-indigo-900 dark:text-indigo-200">Diagnostic Service Call Quote</Text>
+                <Text className="text-[11px] text-indigo-700 dark:text-indigo-300 mt-0.5 leading-4">
+                  Homeowner approves and pays this fee in-app. When you send the repair quote later, this fee will automatically be credited toward their total bill.
+                </Text>
+              </View>
+            </View>
+          )}
+
           {/* Project Name */}
           <View className="mb-4">
             <Text className="text-[12px] font-semibold text-neutral-700 dark:text-neutral-300 mb-1.5">Project name</Text>
@@ -497,26 +576,28 @@ export default function QuoteCreationSheet({
           </View>
 
           {/* Category */}
-          <View className="mb-4">
-            <Text className="text-[12px] font-semibold text-neutral-700 dark:text-neutral-300 mb-1.5">Category</Text>
-            <View className="flex-row flex-wrap" style={{ gap: 6 }}>
-              {CATEGORIES.map((c) => (
-                <Pressable
-                  key={c}
-                  onPress={() => setCat(c)}
-                  className={`px-3 py-1.5 rounded-full border ${
-                    cat === c
-                      ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-300 dark:border-indigo-700'
-                      : 'bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-700'
-                  }`}
-                >
-                  <Text className={`text-[12px] font-medium ${cat === c ? 'text-indigo-700 dark:text-indigo-300' : 'text-neutral-600 dark:text-neutral-400'}`}>
-                    {c}
-                  </Text>
-                </Pressable>
-              ))}
+          {quoteType !== 'diagnostic' && (
+            <View className="mb-4">
+              <Text className="text-[12px] font-semibold text-neutral-700 dark:text-neutral-300 mb-1.5">Category</Text>
+              <View className="flex-row flex-wrap" style={{ gap: 6 }}>
+                {CATEGORIES.map((c) => (
+                  <Pressable
+                    key={c}
+                    onPress={() => setCat(c)}
+                    className={`px-3 py-1.5 rounded-full border ${
+                      cat === c
+                        ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-300 dark:border-indigo-700'
+                        : 'bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-700'
+                    }`}
+                  >
+                    <Text className={`text-[12px] font-medium ${cat === c ? 'text-indigo-700 dark:text-indigo-300' : 'text-neutral-600 dark:text-neutral-400'}`}>
+                      {c}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
             </View>
-          </View>
+          )}
 
           {/* Description */}
           <View className="mb-4">
@@ -696,15 +777,59 @@ export default function QuoteCreationSheet({
                 )}
               </View>
             ))}
+
+            {/* If Repair Quote, show Diagnostic Credit Deduction Toggle */}
+            {quoteType === 'repair' && (
+              <View className="mt-1 p-3.5 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/50 rounded-2xl" style={{ gap: 8 }}>
+                <Pressable
+                  onPress={() => setApplyDiagnosticCredit(!applyDiagnosticCredit)}
+                  className="flex-row items-center"
+                  style={{ gap: 8 }}
+                >
+                  <View className={`w-5 h-5 rounded items-center justify-center border ${applyDiagnosticCredit ? 'bg-emerald-600 border-emerald-600' : 'border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-800'}`}>
+                    {applyDiagnosticCredit && <FontAwesome5 name="check" size={10} color="#fff" />}
+                  </View>
+                  <Text className="text-xs font-bold text-emerald-900 dark:text-emerald-200">
+                    Apply Diagnostic Fee Credit (-${diagnosticCreditAmount || 75})
+                  </Text>
+                </Pressable>
+                {applyDiagnosticCredit && (
+                  <View className="flex-row items-center pl-7 pt-1" style={{ gap: 8 }}>
+                    <Text className="text-xs text-emerald-700 dark:text-emerald-300">Credit amount:</Text>
+                    <View className="w-24 flex-row items-center border border-emerald-200 dark:border-emerald-800 rounded-xl bg-white dark:bg-neutral-900 px-2 py-1">
+                      <Text className="text-xs text-neutral-400 font-bold">$</Text>
+                      <TextInput
+                        value={diagnosticCreditAmount}
+                        onChangeText={setDiagnosticCreditAmount}
+                        placeholder="75"
+                        keyboardType="decimal-pad"
+                        className="flex-1 text-xs font-bold text-neutral-900 dark:text-white py-0.5 ml-1"
+                      />
+                    </View>
+                  </View>
+                )}
+              </View>
+            )}
           </View>
 
           {/* Pricing Summary */}
           {total > 0 && (
             <View className="mb-4 p-3.5 bg-neutral-50 dark:bg-neutral-900 rounded-2xl border border-neutral-100 dark:border-neutral-800" style={{ gap: 6 }}>
-              <View className="flex-row justify-between">
+              <View className="flex-row justify-between items-center">
                 <Text className="text-[12px] text-neutral-500 dark:text-neutral-400 font-medium">Customer Total</Text>
-                <Text className="text-[13px] font-bold text-neutral-900 dark:text-neutral-50">${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
+                <View className="flex-row items-center" style={{ gap: 6 }}>
+                  {quoteType === 'repair' && applyDiagnosticCredit && creditDeduction > 0 && (
+                    <Text className="text-[11px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded">-${creditDeduction} credit</Text>
+                  )}
+                  <Text className="text-[13px] font-bold text-neutral-900 dark:text-neutral-50">${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
+                </View>
               </View>
+              {quoteType === 'repair' && applyDiagnosticCredit && creditDeduction > 0 && (
+                <View className="flex-row justify-between">
+                  <Text className="text-[11px] text-neutral-400">Original Total</Text>
+                  <Text className="text-[11px] text-neutral-400 line-through">${rawTotal.toFixed(2)}</Text>
+                </View>
+              )}
               <View className="flex-row justify-between">
                 <Text className="text-[12px] text-neutral-500 dark:text-neutral-400">Platform fee ({feePercent}%)</Text>
                 <Text className="text-[12px] text-neutral-400">${platformFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
@@ -793,7 +918,9 @@ export default function QuoteCreationSheet({
             ) : (
               <>
                 <FontAwesome5 name="paper-plane" size={12} color={isValid && !stripeLoading && isStripeConnected ? '#fff' : '#a3a3a3'} />
-                <Text className={`text-[14px] font-bold ${isValid && !stripeLoading && isStripeConnected ? 'text-white' : 'text-neutral-400 dark:text-neutral-500'}`}>Send Quote</Text>
+                <Text className={`text-[14px] font-bold ${isValid && !stripeLoading && isStripeConnected ? 'text-white' : 'text-neutral-400 dark:text-neutral-500'}`}>
+                  {quoteType === 'diagnostic' ? 'Send Dispatch Quote' : 'Send Quote'}
+                </Text>
               </>
             )}
           </Pressable>

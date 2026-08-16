@@ -22,6 +22,7 @@ import { Contractor } from '../types';
 import { getCoverImageUrl, isSvgUrl } from '../utils/avatarUtils';
 import { getFavorites, addFavorite, removeFavorite } from '../utils/favoritesStore';
 import { VerifiedBadge } from '../components/common/VerifiedBadge';
+import { EstimateBadge } from '../components/common/EstimateBadge';
 import { SkeletonLoader } from '../components/common/SkeletonLoader';
 import { BouncingRefreshFlatList } from '../components/common';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -152,9 +153,16 @@ const ListingCard = React.memo(({
             )}
           </View>
         )}
-        <View className="flex-row items-center mt-1" style={{ gap: 4 }}>
-          <FontAwesome5 name="lock" size={10} color="#16a34a" />
-          <Text className="text-[12px] font-semibold text-neutral-700 dark:text-neutral-300">Escrow Protected</Text>
+        <View className="flex-row items-center flex-wrap mt-1.5" style={{ gap: 6 }}>
+          <EstimateBadge
+            type={(listing as any).estimatePolicy?.type === 'service_fee' ? 'applied_credit' : 'free'}
+            feeAmount={(listing as any).estimatePolicy?.feeAmount || 75}
+            size="sm"
+          />
+          <View className="flex-row items-center" style={{ gap: 4 }}>
+            <FontAwesome5 name="lock" size={9} color="#16a34a" />
+            <Text className="text-[11px] font-semibold text-neutral-600 dark:text-neutral-400">Escrow Protected</Text>
+          </View>
         </View>
         <Text className="text-xs font-bold text-neutral-900 dark:text-neutral-50 mt-1">
           {(() => {

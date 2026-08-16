@@ -25,7 +25,7 @@ import { useAuth } from '../context/AuthContext';
 import { requestPhotoLibraryPermission } from '../utils/permissions';
 import { parsePriceRange, formatPriceRange } from '../utils/price';
 
-type EditSection = 'about' | 'services' | 'portfolio' | 'posts' | 'verification' | null;
+type EditSection = 'about' | 'estimate' | 'services' | 'portfolio' | 'posts' | 'verification' | null;
 
 interface ServiceItem {
   name: string;
@@ -65,6 +65,12 @@ export default function ContractorEditProfileScreen() {
   const [companyName, setCompanyName] = useState('');
   const [category, setCategory] = useState('');
   const [location, setLocation] = useState('');
+
+  // Estimate Policy state
+  const [estimateType, setEstimateType] = useState<'free' | 'service_fee' | 'virtual_only'>('free');
+  const [feeAmount, setFeeAmount] = useState<string>('75');
+  const [feeWaivedIfHired, setFeeWaivedIfHired] = useState<boolean>(true);
+  const [estimateNotes, setEstimateNotes] = useState<string>('');
 
   // Address autocomplete
   const [addressSuggestions, setAddressSuggestions] = useState<any[]>([]);
@@ -141,6 +147,17 @@ export default function ContractorEditProfileScreen() {
       const rawBanners = data.bannerImages || [];
       const banners = (Array.isArray(rawBanners) && rawBanners.length > 0) ? rawBanners : (bannerUrl ? [bannerUrl] : []);
       setBannerPics(banners);
+
+      if (data.estimatePolicy) {
+        if (data.estimatePolicy.type) setEstimateType(data.estimatePolicy.type);
+        if (data.estimatePolicy.feeAmount !== undefined && data.estimatePolicy.feeAmount !== null) {
+          setFeeAmount(data.estimatePolicy.feeAmount.toString());
+        }
+        if (data.estimatePolicy.feeWaivedIfHired !== undefined) {
+          setFeeWaivedIfHired(data.estimatePolicy.feeWaivedIfHired);
+        }
+        if (data.estimatePolicy.notes) setEstimateNotes(data.estimatePolicy.notes);
+      }
 
       if (Array.isArray(data.servicesOffered)) {
         setServices(data.servicesOffered.map((s: any) => {
@@ -220,17 +237,47 @@ export default function ContractorEditProfileScreen() {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
-        quality: 0.7,
+        allowsEditing: true,
+        quality: 0.8,
       });
+
       if (!result.canceled && result.assets && result.assets.length > 0) {
         setLicenseDocUri(result.assets[0].uri);
       }
     } catch (err: any) {
-      Alert.alert('Error', err?.message || 'Failed to pick document');
+      Alert.alert('Error', err?.message || 'Failed to pick license document');
     }
   };
 
-  const pickPortfolioImage = async (index: number) => {
+  const addService = () => {
+    setServices([...services, { name: '', description: '', minPrice: '', maxPrice: '', contactForQuote: false }]);
+  };
+
+  const updateService = (index: number, field: keyof ServiceItem, value: any) => {
+    const updated = [...services];
+    updated[index] = { ...updated[index], [field]: value };
+    setServices(updated);
+  };
+
+  const removeService = (index: number) => {
+    setServices(services.filter((_, i) => i !== index));
+  };
+
+  const addProject = () => {
+    setPortfolio([...portfolio, { id: `new-${Date.now()}`, title: '', images: [], category: '' }]);
+  };
+
+  const updateProject = (index: number, field: keyof PortfolioProject, value: any) => {
+    const updated = [...portfolio];
+    updated[index] = { ...updated[index], [field]: value };
+    setPortfolio(updated);
+  };
+
+  const removeProject = (index: number) => {
+    setPortfolio(portfolio.filter((_, i) => i !== index));
+  };
+
+  const handlePortfolioImageUpload = async (projectIndex: number) => {
     const hasPermission = await requestPhotoLibraryPermission();
     if (!hasPermission) return;
 
@@ -238,19 +285,16 @@ export default function ContractorEditProfileScreen() {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
         allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.7,
+        quality: 0.8,
       });
+
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        const updated = [...portfolio];
-        updated[index] = {
-          ...updated[index],
-          localUri: result.assets[0].uri,
-        };
-        setPortfolio(updated);
+        const localUri = result.assets[0].uri;
+        const currentImages = portfolio[projectIndex]?.images || [];
+        updateProject(projectIndex, 'images', [...currentImages, localUri]);
       }
     } catch (err: any) {
-      Alert.alert('Error', err?.message || 'Failed to pick image');
+      Alert.alert('Error', err?.message || 'Failed to add photo');
     }
   };
 
@@ -281,13 +325,17 @@ export default function ContractorEditProfileScreen() {
         finalCoverImageUrl = await uploadToCloudinary(bannerPicUri, CLOUDINARY_FOLDERS.CONTRACTOR_BANNER);
       }
 
+      // Process portfolio images
       const updatedPortfolio = await Promise.all(
         portfolio.map(async (p) => {
-          let projectImages = [...(p.images || [])];
-          if (p.localUri) {
-            const cloudinaryUrl = await uploadToCloudinary(p.localUri, CLOUDINARY_FOLDERS.PORTFOLIO);
-            projectImages = [cloudinaryUrl];
-          }
+          const projectImages = await Promise.all(
+            (p.images || []).map(async (imgUri) => {
+              if (imgUri.startsWith('file://') || imgUri.startsWith('content://')) {
+                return await uploadToCloudinary(imgUri, CLOUDINARY_FOLDERS.PORTFOLIO);
+              }
+              return imgUri;
+            })
+          );
           return {
             name: p.title || undefined,
             description: p.description || undefined,
@@ -306,6 +354,12 @@ export default function ContractorEditProfileScreen() {
         businessAddress: location || undefined,
         zipCodesCovered: serviceArea.split(',').map(s => s.trim()).filter(Boolean),
         licenseNumber: licenseNumber || undefined,
+        estimatePolicy: {
+          type: estimateType,
+          feeAmount: estimateType === 'service_fee' ? parseFloat(feeAmount) || 75 : 0,
+          feeWaivedIfHired: estimateType === 'service_fee' ? feeWaivedIfHired : false,
+          notes: estimateNotes
+        },
         profilePicture: finalProfilePicUrl || undefined,
         bannerUrl: finalCoverImageUrl || undefined,
         bannerImage: finalCoverImageUrl || undefined,
@@ -368,14 +422,6 @@ export default function ContractorEditProfileScreen() {
   const toggleSection = (section: EditSection) => {
     setActiveSection(activeSection === section ? null : section);
   };
-
-  const addService = () => setServices([...services, { name: '', description: '', minPrice: '', maxPrice: '', contactForQuote: false }]);
-  const updateService = (index: number, field: keyof ServiceItem, value: any) => {
-    const updated = [...services];
-    updated[index] = { ...updated[index], [field]: value };
-    setServices(updated);
-  };
-  const removeService = (index: number) => setServices(services.filter((_, i) => i !== index));
 
   if (loading) {
     return (
@@ -719,6 +765,139 @@ export default function ContractorEditProfileScreen() {
             )}
           </View>
 
+          {/* Estimate & Service Call Policy Section */}
+          <View className="bg-white dark:bg-neutral-950 rounded-xl border border-neutral-100 dark:border-neutral-800 overflow-hidden">
+            <TouchableOpacity onPress={() => toggleSection('estimate')} className="px-4 py-3.5 flex-row items-center justify-between">
+              <View className="flex-row items-center flex-1">
+                <View className="w-8 h-8 rounded-lg items-center justify-center bg-emerald-50 dark:bg-emerald-950/50">
+                  <FontAwesome5 name="calculator" size={14} color="#059669" />
+                </View>
+                <View className="ml-3 flex-1">
+                  <Text className="text-sm font-bold text-neutral-900 dark:text-white">Estimate & Service Policy</Text>
+                  <Text className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                    {estimateType === 'free'
+                      ? '✓ 100% Free Project Estimates'
+                      : estimateType === 'service_fee'
+                      ? `$${feeAmount || 75} Diagnostic Fee ${feeWaivedIfHired ? '(Waived if hired)' : ''}`
+                      : '⚡ Free Photo / Online Quotes'}
+                  </Text>
+                </View>
+              </View>
+              <View className={`w-5 h-5 rounded-full items-center justify-center ${activeSection === 'estimate' ? 'bg-indigo-600' : 'bg-neutral-100 dark:bg-neutral-800'}`}>
+                <FontAwesome5 name="chevron-down" size={10} color={activeSection === 'estimate' ? '#fff' : (isDark ? '#737373' : '#a3a3a3')} />
+              </View>
+            </TouchableOpacity>
+
+            {activeSection === 'estimate' && (
+              <View className="px-4 pb-4 pt-3 border-t border-neutral-100 dark:border-neutral-800" style={{ gap: 10 }}>
+                <Text className="text-xs text-neutral-500 dark:text-neutral-400">
+                  Set clear pricing expectations for homeowners before they request a quote.
+                </Text>
+
+                {/* Option 1: Free Estimates */}
+                <TouchableOpacity
+                  onPress={() => setEstimateType('free')}
+                  className={`p-3.5 rounded-xl border-2 ${
+                    estimateType === 'free'
+                      ? 'border-emerald-600 bg-emerald-50/50 dark:bg-emerald-950/20'
+                      : 'border-neutral-200 dark:border-neutral-800'
+                  }`}
+                >
+                  <View className="flex-row items-center justify-between">
+                    <View className="flex-row items-center" style={{ gap: 8 }}>
+                      <View className={`w-4 h-4 rounded-full border-2 items-center justify-center ${
+                        estimateType === 'free' ? 'border-emerald-600 bg-emerald-600' : 'border-neutral-400'
+                      }`}>
+                        {estimateType === 'free' && <View className="w-1.5 h-1.5 rounded-full bg-white" />}
+                      </View>
+                      <Text className="text-sm font-bold text-neutral-900 dark:text-white">100% Free Estimates</Text>
+                    </View>
+                    <View className="bg-emerald-100 dark:bg-emerald-900 px-2 py-0.5 rounded-full">
+                      <Text className="text-[10px] font-bold text-emerald-800 dark:text-emerald-200">Popular</Text>
+                    </View>
+                  </View>
+                  <Text className="text-xs text-neutral-500 dark:text-neutral-400 mt-1 ml-6">
+                    Free on-site or remote project estimates with no upfront cost.
+                  </Text>
+                </TouchableOpacity>
+
+                {/* Option 2: Diagnostic / Service Call Fee */}
+                <TouchableOpacity
+                  onPress={() => setEstimateType('service_fee')}
+                  className={`p-3.5 rounded-xl border-2 ${
+                    estimateType === 'service_fee'
+                      ? 'border-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/20'
+                      : 'border-neutral-200 dark:border-neutral-800'
+                  }`}
+                >
+                  <View className="flex-row items-center" style={{ gap: 8 }}>
+                    <View className={`w-4 h-4 rounded-full border-2 items-center justify-center ${
+                      estimateType === 'service_fee' ? 'border-indigo-600 bg-indigo-600' : 'border-neutral-400'
+                    }`}>
+                      {estimateType === 'service_fee' && <View className="w-1.5 h-1.5 rounded-full bg-white" />}
+                    </View>
+                    <Text className="text-sm font-bold text-neutral-900 dark:text-white">Diagnostic / Service Call Fee</Text>
+                  </View>
+                  <Text className="text-xs text-neutral-500 dark:text-neutral-400 mt-1 ml-6">
+                    For emergency troubleshooting, diagnostic visits, or trip fees.
+                  </Text>
+
+                  {estimateType === 'service_fee' && (
+                    <View className="mt-3 pt-3 border-t border-indigo-100 dark:border-neutral-800" style={{ gap: 10 }}>
+                      <View>
+                        <Text className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">Fee Amount ($ USD)</Text>
+                        <TextInput
+                          value={feeAmount}
+                          onChangeText={setFeeAmount}
+                          keyboardType="numeric"
+                          placeholder="75"
+                          placeholderTextColor={isDark ? '#737373' : '#a3a3a3'}
+                          className="w-full border border-neutral-200 dark:border-neutral-700 rounded-xl px-3 py-2 text-sm text-neutral-900 dark:text-white font-bold"
+                        />
+                      </View>
+                      <TouchableOpacity
+                        onPress={() => setFeeWaivedIfHired(!feeWaivedIfHired)}
+                        className="flex-row items-center"
+                        style={{ gap: 8 }}
+                      >
+                        <View className={`w-4 h-4 rounded border items-center justify-center ${
+                          feeWaivedIfHired ? 'bg-indigo-600 border-indigo-600' : 'border-neutral-400'
+                        }`}>
+                          {feeWaivedIfHired && <FontAwesome5 name="check" size={10} color="#fff" />}
+                        </View>
+                        <Text className="text-xs text-neutral-800 dark:text-neutral-200 flex-1">
+                          Waive/apply fee toward repair if homeowner hires you (Recommended)
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </TouchableOpacity>
+
+                {/* Option 3: Virtual Photo Quotes */}
+                <TouchableOpacity
+                  onPress={() => setEstimateType('virtual_only')}
+                  className={`p-3.5 rounded-xl border-2 ${
+                    estimateType === 'virtual_only'
+                      ? 'border-purple-600 bg-purple-50/50 dark:bg-purple-950/20'
+                      : 'border-neutral-200 dark:border-neutral-800'
+                  }`}
+                >
+                  <View className="flex-row items-center" style={{ gap: 8 }}>
+                    <View className={`w-4 h-4 rounded-full border-2 items-center justify-center ${
+                      estimateType === 'virtual_only' ? 'border-purple-600 bg-purple-600' : 'border-neutral-400'
+                    }`}>
+                      {estimateType === 'virtual_only' && <View className="w-1.5 h-1.5 rounded-full bg-white" />}
+                    </View>
+                    <Text className="text-sm font-bold text-neutral-900 dark:text-white">Free Photo / Online Quotes Only</Text>
+                  </View>
+                  <Text className="text-xs text-neutral-500 dark:text-neutral-400 mt-1 ml-6">
+                    Homeowners send photos/video via chat for a preliminary estimate.
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+
           {/* Services Section */}
           <View className="bg-white dark:bg-neutral-950 rounded-xl border border-neutral-100 dark:border-neutral-800 overflow-hidden">
             <TouchableOpacity onPress={() => toggleSection('services')} className="px-4 py-3.5 flex-row items-center justify-between">
@@ -848,7 +1027,7 @@ export default function ContractorEditProfileScreen() {
                     
                     <View className="flex-row items-center">
                         <TouchableOpacity 
-                          onPress={() => pickPortfolioImage(index)}
+                          onPress={() => handlePortfolioImageUpload(index)}
                           className="w-12 h-12 rounded-lg bg-neutral-200 dark:bg-neutral-700 overflow-hidden mr-3 items-center justify-center border border-neutral-300 dark:border-neutral-600"
                         >
                             {project.localUri || (project.images && project.images[0]) ? (

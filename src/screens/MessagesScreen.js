@@ -1129,8 +1129,19 @@ const MessagesScreen = () => {
                   {/* Title & Badge Row */}
                   <View className="p-4 pb-2">
                     <View className="flex-row items-center justify-between">
-                      <View className="px-2 py-0.5 rounded bg-neutral-100 dark:bg-neutral-700">
-                        <Text className="text-[10px] font-bold text-neutral-800 dark:text-neutral-200 uppercase tracking-wider">{msg.quote.serviceType || msg.quote.category || 'Service'}</Text>
+                      <View className="flex-row items-center" style={{ gap: 6 }}>
+                        <View className={`px-2 py-0.5 rounded ${msg.quote.quoteType === 'diagnostic' ? (isDark ? 'bg-indigo-900/50' : 'bg-indigo-50') : 'bg-neutral-100 dark:bg-neutral-700'}`}>
+                          <Text className={`text-[10px] font-bold uppercase tracking-wider ${msg.quote.quoteType === 'diagnostic' ? 'text-indigo-600 dark:text-indigo-300' : 'text-neutral-800 dark:text-neutral-200'}`}>
+                            {msg.quote.quoteType === 'diagnostic' ? '📋 Diagnostic Dispatch' : (msg.quote.serviceType || msg.quote.category || 'Service')}
+                          </Text>
+                        </View>
+                        {msg.quote.diagnosticFeeCredit > 0 && (
+                          <View className="px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/40">
+                            <Text className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
+                              ✓ ${(msg.quote.diagnosticFeeCredit > 1000 ? msg.quote.diagnosticFeeCredit / 100 : msg.quote.diagnosticFeeCredit).toFixed(0)} Credit Applied
+                            </Text>
+                          </View>
+                        )}
                       </View>
                       <View className="flex-row items-center" style={{ gap: 4 }}>
                         <FontAwesome5 name="star" size={10} color="#eab308" solid />
@@ -1181,6 +1192,16 @@ const MessagesScreen = () => {
                         <Text className="text-[13px] font-semibold text-neutral-800 dark:text-neutral-200">${(() => { const a = (msg.quote.subtotal || msg.quote.totalAmount || 0) / 100; return Number.isFinite(a) ? a.toLocaleString() : '0'; })()}</Text>
                       </View>
                     )}
+
+                    {/* Diagnostic Fee Credit row */}
+                    {msg.quote.diagnosticFeeCredit > 0 && (
+                      <View className="flex-row justify-between p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/40">
+                        <Text className="text-[12px] font-bold text-emerald-800 dark:text-emerald-200">Diagnostic Fee Credit</Text>
+                        <Text className="text-[12px] font-bold text-emerald-700 dark:text-emerald-300">
+                          -${(Number(msg.quote.diagnosticFeeCredit) / (msg.quote.diagnosticFeeCredit > 1000 ? 100 : 1)).toFixed(2)}
+                        </Text>
+                      </View>
+                    )}
                     
                     <View className="h-px bg-neutral-100 dark:bg-neutral-800 my-1" />
                     
@@ -1193,10 +1214,15 @@ const MessagesScreen = () => {
                     </View>
                   </View>
                   
-                  {/* Escrow notice */}
-                  <View className="mx-4 mb-4 p-3 rounded-xl flex-row items-start" style={{ gap: 8, backgroundColor: isDark ? '#1e293b' : '#f8fafc', borderWidth: 1, borderColor: isDark ? '#334155' : '#e2e8f0' }}>
-                    <FontAwesome5 name="shield-alt" size={13} color={isDark ? "#94a3b8" : "#64748b"} style={{ marginTop: 2 }} />
-                    <Text className="text-[11px] flex-1 leading-[16px] text-neutral-500 dark:text-neutral-400">Escrow Protected — {isMe ? 'Funds are held safely and released to you once the homeowner verifies the work is complete.' : 'Payments are held safely and only released when you verify the work is completed.'}</Text>
+                  {/* Escrow / Guarantee notice */}
+                  <View className="mx-4 mb-4 p-3 rounded-xl flex-row items-start" style={{ gap: 8, backgroundColor: msg.quote.quoteType === 'diagnostic' ? (isDark ? '#1e1b4b' : '#eef2ff') : (isDark ? '#1e293b' : '#f8fafc'), borderWidth: 1, borderColor: msg.quote.quoteType === 'diagnostic' ? (isDark ? '#3730a3' : '#c7d2fe') : (isDark ? '#334155' : '#e2e8f0') }}>
+                    <FontAwesome5 name="shield-alt" size={13} color={msg.quote.quoteType === 'diagnostic' ? '#4f46e5' : (isDark ? "#94a3b8" : "#64748b")} style={{ marginTop: 2 }} />
+                    <Text className={`text-[11px] flex-1 leading-[16px] ${msg.quote.quoteType === 'diagnostic' ? (isDark ? 'text-indigo-300' : 'text-indigo-900') : 'text-neutral-500 dark:text-neutral-400'}`}>
+                      {msg.quote.quoteType === 'diagnostic' 
+                        ? 'Diagnostic Fee Protection: This fee will be 100% credited toward your final repair quote if you proceed.'
+                        : (isMe ? 'Funds are held safely and released to you once the homeowner verifies the work is complete.' : 'Payments are held safely and only released when you verify the work is completed.')
+                      }
+                    </Text>
                   </View>
 
                   {/* Action button */}
