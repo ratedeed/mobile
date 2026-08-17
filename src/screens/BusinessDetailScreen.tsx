@@ -323,7 +323,7 @@ const BusinessDetailScreen: React.FC = () => {
     setReportSubmitting(true);
     try {
       const contractorId = contractor?._id || id;
-      await apiPost(`${API_BASE_URL}/api/reports`, { contractorId, reason: reportReason });
+      await apiPost(`${API_BASE_URL}/api/reports/contractor`, { contractorId, reason: reportReason });
       Alert.alert('Success', 'Report submitted');
       setShowReportDialog(false);
       setReportReason('');

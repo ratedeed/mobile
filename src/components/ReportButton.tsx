@@ -85,14 +85,28 @@ const ReportButton: React.FC<ReportButtonProps> = ({
 
     setIsSubmitting(true);
     try {
-      const reportData = {
-        reportedItem: reportedItemId,
-        onModel,
+      const payload: any = {
         reason: selectedReason,
-        additionalDetails: additionalDetails.trim() || undefined,
+        details: additionalDetails.trim() || undefined,
       };
 
-      await apiPost(`${API_BASE_URL}/api/reports`, reportData);
+      let endpoint = `${API_BASE_URL}/api/reports`;
+      if (onModel === 'Contractor') {
+        endpoint = `${API_BASE_URL}/api/reports/contractor`;
+        payload.contractorId = reportedItemId;
+      } else if (onModel === 'Post') {
+        endpoint = `${API_BASE_URL}/api/reports/post`;
+        payload.postId = reportedItemId;
+      } else if (onModel === 'User') {
+        endpoint = `${API_BASE_URL}/api/reports/conversation`;
+        payload.reportedUserId = reportedItemId;
+        payload.category = selectedReason;
+      } else {
+        payload.reportedItemId = reportedItemId;
+        payload.onModel = onModel;
+      }
+
+      await apiPost(endpoint, payload);
 
       setSubmitted(true);
     } catch (error) {
