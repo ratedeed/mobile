@@ -690,13 +690,6 @@ const ContractorDashboardScreen: React.FC = () => {
     }
   }, [loadData, (route.params as any)?.initialTab, (route.params as any)?.stripe_return, (route.params as any)?.openCreatePost]);
 
-
-  useEffect(() => {
-    if (!loading && !onboardingComplete && realContractorId) {
-      navigation.navigate('ContractorOnboarding');
-    }
-  }, [loading, onboardingComplete, realContractorId, navigation]);
-
   useEffect(() => {
     return () => {
       if (addressSearchTimer.current) clearTimeout(addressSearchTimer.current);

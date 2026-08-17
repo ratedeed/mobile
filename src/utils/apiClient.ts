@@ -1004,6 +1004,18 @@ export const markNotificationUnread = async (notificationId: string): Promise<vo
   return put(`${API_BASE}/notifications/${notificationId}/unread`, {}, authHeaders);
 };
 
+export const getNotificationPreferences = async (): Promise<{ push: boolean; jobUpdates: boolean; messages: boolean; payments: boolean; promotions: boolean }> => {
+  if (isDemoMode()) return { push: true, jobUpdates: true, messages: true, payments: true, promotions: false };
+  const authHeaders = await getAuthHeaders();
+  return get(`${API_BASE}/users/notification-preferences`, authHeaders);
+};
+
+export const updateNotificationPreferences = async (prefs: { push?: boolean; jobUpdates?: boolean; messages?: boolean; payments?: boolean; promotions?: boolean }): Promise<any> => {
+  if (isDemoMode()) return prefs;
+  const authHeaders = await getAuthHeaders();
+  return put(`${API_BASE}/users/notification-preferences`, prefs, authHeaders);
+};
+
 // ==========================================
 // User API
 // ==========================================

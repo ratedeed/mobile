@@ -223,6 +223,22 @@ export const usePushNotifications = () => {
         }
       }
 
+      if (path.startsWith('/c/') || path.startsWith('/contractors/')) {
+        const slug = path.split('/')[2];
+        if (slug) {
+          navigation.navigate('BusinessDetail', { slug });
+          return true;
+        }
+      }
+
+      if (path.startsWith('/post/')) {
+        const postId = path.split('/')[2];
+        if (postId) {
+          navigation.navigate('Explore', { postId });
+          return true;
+        }
+      }
+
       if (path.startsWith('/affiliate')) {
         navigation.navigate('AffiliateScreen');
         return true;

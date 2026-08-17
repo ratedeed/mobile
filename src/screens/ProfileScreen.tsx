@@ -25,7 +25,7 @@ import * as ImagePicker from "expo-image-picker";
 import { uploadToCloudinary, CLOUDINARY_FOLDERS } from "../utils/cloudinary";
 import { requestPhotoLibraryPermission } from '../utils/permissions';
 
-import { getUserProfile, updateUserProfile, getBlockedUsers, unblockUser, getUserJobs, listConversations, getContractorProfile } from '../api';
+import { getUserProfile, updateUserProfile, getBlockedUsers, unblockUser, getUserJobs, listConversations, getContractorProfile, getNotificationPreferences, updateNotificationPreferences } from '../api';
 import { useAuth } from '../context/AuthContext';
 import * as Sentry from '@sentry/react-native';
 import { User } from '../types';
@@ -46,11 +46,29 @@ type RootStackParamList = {
 };
 
 // ─── Toggle ───────────────────────────────────────────────────────────
-function Toggle({ label, description, defaultOn = false, onValueChange }: { label: string; description: string; defaultOn?: boolean; onValueChange?: (val: boolean) => void }) {
-  const [on, setOn] = useState(defaultOn);
+function Toggle({
+  label,
+  description,
+  value,
+  defaultOn = false,
+  onValueChange,
+  disabled = false
+}: {
+  label: string;
+  description?: string;
+  value?: boolean;
+  defaultOn?: boolean;
+  onValueChange?: (val: boolean) => void;
+  disabled?: boolean;
+}) {
+  const isControlled = value !== undefined;
+  const [internalOn, setInternalOn] = useState(defaultOn);
+  const on = isControlled ? value : internalOn;
+
   const handleToggle = () => {
+    if (disabled) return;
     const next = !on;
-    setOn(next);
+    if (!isControlled) setInternalOn(next);
     onValueChange?.(next);
   };
   return (
@@ -59,7 +77,7 @@ function Toggle({ label, description, defaultOn = false, onValueChange }: { labe
         <Text className="text-[15px] font-medium text-neutral-900 dark:text-neutral-50">{label}</Text>
         {description ? <Text className="text-[13px] text-neutral-400 dark:text-neutral-500 mt-0.5 leading-4">{description}</Text> : null}
       </View>
-      <Pressable onPress={handleToggle} hitSlop={8}>
+      <Pressable onPress={handleToggle} hitSlop={8} disabled={disabled}>
         <View className={`w-[51px] h-[31px] rounded-full p-[2px] ${on ? 'bg-neutral-900 dark:bg-neutral-100' : 'bg-neutral-300 dark:bg-neutral-700'}`}>
           <View
             className={`w-[27px] h-[27px] rounded-full bg-white dark:bg-neutral-800 ${on ? 'ml-[20px]' : 'ml-0'}`}
@@ -248,7 +266,52 @@ const ProfileScreen: React.FC = () => {
     try { setHapticsEnabled(enabled); await AsyncStorage.setItem('haptics_enabled', enabled.toString()); } catch { /* */ }
   };
 
-  useFocusEffect(useCallback(() => { fetchIpZipCode(); loadHapticsSetting(); }, [fetchIpZipCode, loadHapticsSetting]));
+  const [notifPrefs, setNotifPrefs] = useState({
+    push: true,
+    jobUpdates: true,
+    messages: true,
+    payments: true,
+    promotions: false
+  });
+  const [notifLoading, setNotifLoading] = useState(false);
+  const [notifSaving, setNotifSaving] = useState(false);
+
+  const loadNotifPrefs = useCallback(async () => {
+    setNotifLoading(true);
+    try {
+      const prefs = await getNotificationPreferences();
+      if (prefs) {
+        setNotifPrefs({
+          push: prefs.push !== false,
+          jobUpdates: prefs.jobUpdates !== false,
+          messages: prefs.messages !== false,
+          payments: prefs.payments !== false,
+          promotions: prefs.promotions === true
+        });
+      }
+    } catch {
+      // Non-critical
+    } finally {
+      setNotifLoading(false);
+    }
+  }, []);
+
+  const handleTogglePref = async (key: keyof typeof notifPrefs, val: boolean) => {
+    const previous = { ...notifPrefs };
+    const updated = { ...notifPrefs, [key]: val };
+    setNotifPrefs(updated);
+    setNotifSaving(true);
+    try {
+      await updateNotificationPreferences({ [key]: val });
+    } catch {
+      setNotifPrefs(previous);
+      Alert.alert('Error', 'Failed to save notification preference. Please try again.');
+    } finally {
+      setNotifSaving(false);
+    }
+  };
+
+  useFocusEffect(useCallback(() => { fetchIpZipCode(); loadHapticsSetting(); loadNotifPrefs(); }, [fetchIpZipCode, loadHapticsSetting, loadNotifPrefs]));
 
   const [editData, setEditData] = useState({ firstName: '', lastName: '', email: '', zipCode: '' });
   const [saving, setSaving] = useState(false);
@@ -669,34 +732,50 @@ const ProfileScreen: React.FC = () => {
       </SettingsSheet>
 
       <SettingsSheet title="Notifications" onClose={closeSheet} visible={activeSheet === 'notifications'}>
-        <SectionLabel>Push Notifications</SectionLabel>
-        <Toggle 
-          label="Job Updates" 
-          description="When a contractor responds to your quote request" 
-          defaultOn 
-          onValueChange={(val) => AsyncStorage.setItem('@notif_pref_job_updates', String(val)).catch(() => {})} 
-        />
-        <Toggle 
-          label="New Messages" 
-          description="When you receive a new message" 
-          defaultOn 
-          onValueChange={(val) => AsyncStorage.setItem('@notif_pref_messages', String(val)).catch(() => {})} 
-        />
-        <Toggle 
-          label="Payment Status" 
-          description="When payment is confirmed or released" 
-          defaultOn 
-          onValueChange={(val) => AsyncStorage.setItem('@notif_pref_payments', String(val)).catch(() => {})} 
-        />
-        <View className="mt-4">
-          <SectionLabel>Email</SectionLabel>
-          <Toggle 
-            label="Job Summary" 
-            description="Weekly digest of your active projects" 
-            defaultOn 
-            onValueChange={(val) => AsyncStorage.setItem('@notif_pref_email_summary', String(val)).catch(() => {})} 
-          />
-        </View>
+        {notifLoading ? (
+          <View className="py-8 items-center justify-center">
+            <BouncingDotsLoader size="small" color="#4F46E5" />
+          </View>
+        ) : (
+          <>
+            <SectionLabel>Push Notifications & Alerts</SectionLabel>
+            <Toggle 
+              label="Push Notifications" 
+              description="Allow RateDeed to send notifications to this device" 
+              value={notifPrefs.push} 
+              onValueChange={(val) => handleTogglePref('push', val)}
+              disabled={notifSaving}
+            />
+            <Toggle 
+              label="Job Updates" 
+              description="When a contractor responds, quote status changes, or work updates" 
+              value={notifPrefs.jobUpdates} 
+              onValueChange={(val) => handleTogglePref('jobUpdates', val)}
+              disabled={notifSaving}
+            />
+            <Toggle 
+              label="New Messages" 
+              description="When you receive a new chat message" 
+              value={notifPrefs.messages} 
+              onValueChange={(val) => handleTogglePref('messages', val)}
+              disabled={notifSaving}
+            />
+            <Toggle 
+              label="Payment Status" 
+              description="When milestone payments are funded, confirmed, or released" 
+              value={notifPrefs.payments} 
+              onValueChange={(val) => handleTogglePref('payments', val)}
+              disabled={notifSaving}
+            />
+            <Toggle 
+              label="Promotions & Matches" 
+              description="New contractor recommendations, matches, and special offers" 
+              value={notifPrefs.promotions} 
+              onValueChange={(val) => handleTogglePref('promotions', val)}
+              disabled={notifSaving}
+            />
+          </>
+        )}
       </SettingsSheet>
 
       <SettingsSheet title="Privacy & Security" onClose={closeSheet} visible={activeSheet === 'privacy'}>

@@ -23,7 +23,7 @@ interface NotificationsContextType {
 const NotificationsContext = createContext<NotificationsContextType | undefined>(undefined);
 
 export const NotificationsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const { isAuthenticated, userId } = useAuth();
+  const { isAuthenticated } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -37,34 +37,18 @@ export const NotificationsProvider: React.FC<{ children: ReactNode }> = ({ child
       setIsLoading(true);
       setError(null);
       try {
-        const data = await apiClient.getNotifications();
-        let notifs = Array.isArray(data) ? data : [];
-        try {
-          const convos = await apiClient.fetchConversations();
-          const unreadConvos = (convos || []).filter((c: any) => c.unreadCount > 0);
-          const count = unreadConvos.reduce((sum: number, c: any) => sum + (c.unreadCount || 0), 0);
-          setUnreadMessagesCount(count);
-          const syntheticNotifs = unreadConvos.map((c: any) => {
-            const otherParticipant = (c.participants || []).find((p: any) => {
-              const pid = p._id?.toString() || p.id?.toString() || p;
-              return pid !== userId?.toString();
-            });
-            const name = otherParticipant ? (otherParticipant.businessName || otherParticipant.companyName || `${otherParticipant.firstName || ''} ${otherParticipant.lastName || ''}`.trim() || 'RateDeed Support') : 'RateDeed Support';
-            return {
-              _id: `msg-notif-${c.conversationId}`,
-              type: 'new_message',
-              message: `New message from ${name}`,
-              read: false,
-              createdAt: c.lastMessage?.createdAt || new Date().toISOString(),
-              link: `/messages/${c.conversationId}`,
-              sender: otherParticipant,
-            } as any;
-          });
-          notifs = notifs.filter(n => !(n.type === 'new_message' && n.link && syntheticNotifs.some(sn => sn.link === n.link)));
-          notifs = [...syntheticNotifs, ...notifs].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        } catch {
-          }
+        const [notifData, convos] = await Promise.all([
+          apiClient.getNotifications().catch(() => []),
+          apiClient.fetchConversations().catch(() => [])
+        ]);
+
+        const notifs: Notification[] = Array.isArray(notifData) ? notifData : ((notifData as any)?.notifications || []);
+        const unreadConvos = (convos || []).filter((c: any) => c.unreadCount > 0);
+        const msgCount = unreadConvos.reduce((sum: number, c: any) => sum + (c.unreadCount || 0), 0);
+        
+        setUnreadMessagesCount(msgCount);
         setNotifications(notifs);
+
         const unread = notifs.filter((n: Notification) => !n.read).length;
         await AsyncStorage.setItem('unreadNotifications', unread.toString());
       } catch (err) {
@@ -73,7 +57,7 @@ export const NotificationsProvider: React.FC<{ children: ReactNode }> = ({ child
         setIsLoading(false);
       }
     };
-  }, [isAuthenticated, userId]);
+  }, [isAuthenticated]);
 
   // Auto-refresh on socket events
   useEffect(() => {
@@ -83,10 +67,10 @@ export const NotificationsProvider: React.FC<{ children: ReactNode }> = ({ child
       refreshRef.current?.();
     };
     const handleNewMessage = () => {
-      refreshRef.current?.();
+      refreshUnreadMessagesCount();
     };
     const handleMessageRead = () => {
-      refreshRef.current?.();
+      refreshUnreadMessagesCount();
     };
 
     apiClient.onNewNotification(handleNewNotification);
@@ -135,14 +119,7 @@ export const NotificationsProvider: React.FC<{ children: ReactNode }> = ({ child
 
   const markAsRead = useCallback(async (id: string) => {
     try {
-      if (!id.startsWith('msg-notif-')) {
-        await apiClient.markNotificationRead(id);
-      } else {
-        // It's a synthetic message notification, mark the conversation as read
-        const conversationId = id.replace('msg-notif-', '');
-        await apiClient.markConversationAsRead(conversationId);
-      }
-      
+      await apiClient.markNotificationRead(id);
       setNotifications(prev => {
         const updated = prev.map(n => n._id === id ? { ...n, read: true } : n);
         const unread = updated.filter((n: Notification) => !n.read).length;
@@ -157,21 +134,11 @@ export const NotificationsProvider: React.FC<{ children: ReactNode }> = ({ child
   const markAllAsRead = useCallback(async () => {
     try {
       await apiClient.markAllNotificationsRead();
-      const convos = await apiClient.fetchConversations().catch(() => []);
-      const unreadConvos = (convos || []).filter((c: any) => c.unreadCount > 0);
-      const { markConversationAsRead } = await import('../api');
-      await Promise.all(
-        unreadConvos.map((c: any) => {
-          const cid = c.conversationId || c._id || c.id;
-          return markConversationAsRead(cid).catch(() => {});
-        })
-      );
       setNotifications(prev => {
         const updated = prev.map(n => ({ ...n, read: true }));
         AsyncStorage.setItem('unreadNotifications', '0');
         return updated;
       });
-      setUnreadMessagesCount(0);
     } catch {
       /* non-critical */
     }
@@ -183,16 +150,9 @@ export const NotificationsProvider: React.FC<{ children: ReactNode }> = ({ child
       const newReadState = !(notification?.read ?? true);
 
       if (newReadState) {
-        if (!id.startsWith('msg-notif-')) {
-          await apiClient.markNotificationRead(id);
-        } else {
-          const conversationId = id.replace('msg-notif-', '');
-          await apiClient.markConversationAsRead(conversationId);
-        }
+        await apiClient.markNotificationRead(id);
       } else {
-        if (!id.startsWith('msg-notif-')) {
-          await apiClient.markNotificationUnread?.(id);
-        }
+        await apiClient.markNotificationUnread(id);
       }
 
       setNotifications(prev => {
@@ -208,9 +168,7 @@ export const NotificationsProvider: React.FC<{ children: ReactNode }> = ({ child
 
   const deleteNotification = useCallback(async (id: string) => {
     try {
-      if (!id.startsWith('msg-notif-')) {
-        await apiClient.deleteNotification(id);
-      }
+      await apiClient.deleteNotification(id);
       setNotifications(prev => {
         const updated = prev.filter(n => n._id !== id);
         const unread = updated.filter((n: Notification) => !n.read).length;
@@ -261,9 +219,9 @@ export const NotificationsProvider: React.FC<{ children: ReactNode }> = ({ child
   );
 };
 
-export const useNotifications = () => {
+export const useNotifications = (): NotificationsContextType => {
   const context = useContext(NotificationsContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useNotifications must be used within a NotificationsProvider');
   }
   return context;
