@@ -114,6 +114,7 @@ export interface Contractor {
     notes?: string;
   };
   reviewsList?: Review[];
+  reviewsSummary?: string;
   insuranceInfo?: string;
   yearsExperience?: number;
   responseTimeMinutes?: number;

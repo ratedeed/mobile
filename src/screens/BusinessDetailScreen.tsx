@@ -431,7 +431,10 @@ const BusinessDetailScreen: React.FC = () => {
         profilePicture
       },
       rating: r.rating || 5,
-      comment: r.comment || r.text || r.title || '',
+      title: r.title || '',
+      comment: r.comment || r.text || '',
+      reply: r.reply || r.contractorReply || '',
+      repliedAt: r.repliedAt || '',
       createdAt: r.createdAt || new Date().toISOString(),
     };
   });
@@ -1180,6 +1183,48 @@ const BusinessDetailScreen: React.FC = () => {
 
             {normalizedReviews.length > 0 ? (
               <View>
+                {/* AI Review Summary & Highlights */}
+                {((c.tags && c.tags.length > 0) || c.reviewsSummary) && (
+                  <View className="mb-6 bg-emerald-50/40 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/40 rounded-2xl p-4">
+                    <View className="flex-row items-center justify-between mb-2">
+                      <View className="flex-row items-center" style={{ gap: 6 }}>
+                        <View className="w-2 h-2 rounded-full bg-emerald-500" />
+                        <Text className="text-xs font-bold text-neutral-800 dark:text-neutral-200">Review Highlights</Text>
+                      </View>
+                      {c.reviewsSummary && (
+                        <View className="bg-emerald-100 dark:bg-emerald-900/60 px-2 py-0.5 rounded">
+                          <Text className="text-[9px] font-bold text-emerald-800 dark:text-emerald-300">AI Summary</Text>
+                        </View>
+                      )}
+                    </View>
+
+                    {c.reviewsSummary ? (
+                      <Text className="text-xs text-neutral-700 dark:text-neutral-300 leading-relaxed mb-3">
+                        {c.reviewsSummary}
+                      </Text>
+                    ) : null}
+
+                    {c.tags && c.tags.length > 0 && (
+                      <View className="flex-row flex-wrap" style={{ gap: 6 }}>
+                        {c.tags.map((tag: any, tIdx: number) => {
+                          const tagLabel = typeof tag === 'string' ? tag : tag?.label || tag?.name || '';
+                          if (!tagLabel) return null;
+                          return (
+                            <View
+                              key={tIdx}
+                              className="flex-row items-center bg-white dark:bg-neutral-900 px-3 py-1.5 rounded-full border border-emerald-100 dark:border-emerald-900/60"
+                              style={{ gap: 4 }}
+                            >
+                              <FontAwesome5 name="check" size={9} color="#059669" />
+                              <Text className="text-[11px] font-bold text-emerald-800 dark:text-emerald-300">{tagLabel}</Text>
+                            </View>
+                          );
+                        })}
+                      </View>
+                    )}
+                  </View>
+                )}
+
                 {/* Featured Client Say Testimonial Card */}
                 {featuredReview && (
                   <View className="mb-6 bg-neutral-50/50 dark:bg-neutral-900/30 border border-neutral-100 dark:border-neutral-800/80 rounded-2xl p-4">
@@ -1234,7 +1279,21 @@ const BusinessDetailScreen: React.FC = () => {
                           <Text className="text-xs font-bold text-neutral-900 dark:text-neutral-50">{review.rating}</Text>
                         </View>
                       </View>
+                      {review.title ? (
+                        <Text className="text-xs font-bold text-neutral-900 dark:text-neutral-100 mb-1">{review.title}</Text>
+                      ) : null}
                       <Text className="text-sm text-neutral-600 dark:text-neutral-400 leading-5">{review.comment}</Text>
+
+                      {/* Contractor Response */}
+                      {review.reply ? (
+                        <View className="mt-3 p-3 bg-neutral-50 dark:bg-neutral-900/60 rounded-xl border-l-2 border-indigo-600">
+                          <View className="flex-row items-center mb-1" style={{ gap: 6 }}>
+                            <FontAwesome5 name="reply" size={10} color="#4f46e5" />
+                            <Text className="text-[11px] font-bold text-neutral-900 dark:text-neutral-100">Response from {c.companyName || 'Contractor'}</Text>
+                          </View>
+                          <Text className="text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed">{review.reply}</Text>
+                        </View>
+                      ) : null}
                     </View>
                   ))}
                 </View>

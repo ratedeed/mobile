@@ -283,7 +283,7 @@ export default function ActiveJobsScreen() {
                       <Text className="text-[11px] text-neutral-400 dark:text-neutral-500 font-medium">{formatDate(quote.createdAt)}</Text>
                     </View>
 
-                    {['completed', 'completed_paid'].includes(displayStatus) && !quote.hasReview && (
+                    {displayStatus === 'completed_paid' && !quote.hasReview && (
                       <Pressable
                         onPress={() => navigation.navigate('ReviewScreen', {
                           quoteId: quote._id,
