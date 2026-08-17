@@ -807,6 +807,38 @@ export const offNewNotification = (callback?: (notification: any) => void) => {
   removeActiveListener("newNotification", callback);
 };
 
+export const onNotificationRead = (callback: (data: { id: string }) => void) => {
+  addActiveListener("notificationRead", callback);
+};
+
+export const offNotificationRead = (callback?: (data: { id: string }) => void) => {
+  removeActiveListener("notificationRead", callback);
+};
+
+export const onNotificationUnread = (callback: (data: { id: string }) => void) => {
+  addActiveListener("notificationUnread", callback);
+};
+
+export const offNotificationUnread = (callback?: (data: { id: string }) => void) => {
+  removeActiveListener("notificationUnread", callback);
+};
+
+export const onNotificationsAllRead = (callback: () => void) => {
+  addActiveListener("notificationsAllRead", callback);
+};
+
+export const offNotificationsAllRead = (callback?: () => void) => {
+  removeActiveListener("notificationsAllRead", callback);
+};
+
+export const onNotificationDeleted = (callback: (data: { id: string }) => void) => {
+  addActiveListener("notificationDeleted", callback);
+};
+
+export const offNotificationDeleted = (callback?: (data: { id: string }) => void) => {
+  removeActiveListener("notificationDeleted", callback);
+};
+
 export const emitTyping = (conversationId: string, userId: string, isTyping: boolean, recipientId?: string) => {
   if (socket?.connected) {
     socket.emit('typing', { conversationId, userId, isTyping, recipientId });

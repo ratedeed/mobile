@@ -72,15 +72,60 @@ export const NotificationsProvider: React.FC<{ children: ReactNode }> = ({ child
     const handleMessageRead = () => {
       refreshUnreadMessagesCount();
     };
+    const handleNotificationRead = (data: { id: string }) => {
+      if (data?.id) {
+        setNotifications(prev => {
+          const updated = prev.map(n => n._id === data.id ? { ...n, read: true } : n);
+          const unread = updated.filter(n => !n.read).length;
+          AsyncStorage.setItem('unreadNotifications', unread.toString());
+          return updated;
+        });
+      }
+    };
+    const handleNotificationUnread = (data: { id: string }) => {
+      if (data?.id) {
+        setNotifications(prev => {
+          const updated = prev.map(n => n._id === data.id ? { ...n, read: false } : n);
+          const unread = updated.filter(n => !n.read).length;
+          AsyncStorage.setItem('unreadNotifications', unread.toString());
+          return updated;
+        });
+      }
+    };
+    const handleNotificationsAllRead = () => {
+      setNotifications(prev => {
+        const updated = prev.map(n => ({ ...n, read: true }));
+        AsyncStorage.setItem('unreadNotifications', '0');
+        return updated;
+      });
+    };
+    const handleNotificationDeleted = (data: { id: string }) => {
+      if (data?.id) {
+        setNotifications(prev => {
+          const updated = prev.filter(n => n._id !== data.id);
+          const unread = updated.filter(n => !n.read).length;
+          AsyncStorage.setItem('unreadNotifications', unread.toString());
+          return updated;
+        });
+      }
+    };
 
     apiClient.onNewNotification(handleNewNotification);
     apiClient.onNewMessage(handleNewMessage);
     apiClient.onMessageRead(handleMessageRead);
+    apiClient.onNotificationRead(handleNotificationRead);
+    apiClient.onNotificationUnread(handleNotificationUnread);
+    apiClient.onNotificationsAllRead(handleNotificationsAllRead);
+    apiClient.onNotificationDeleted(handleNotificationDeleted);
 
     return () => {
       apiClient.offNewNotification(handleNewNotification);
       apiClient.offNewMessage(handleNewMessage);
       apiClient.offMessageRead(handleMessageRead);
+      apiClient.offNotificationRead(handleNotificationRead);
+      apiClient.offNotificationUnread(handleNotificationUnread);
+      apiClient.offNotificationsAllRead(handleNotificationsAllRead);
+      apiClient.offNotificationDeleted(handleNotificationDeleted);
     };
   }, [isAuthenticated]);
 
