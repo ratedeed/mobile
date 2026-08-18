@@ -779,6 +779,30 @@ export const offMessageRead = (callback?: (data: any) => void) => {
   removeActiveListener("messageRead", callback);
 };
 
+export const onMessagesRead = (callback: (data: any) => void) => {
+  addActiveListener("messagesRead", callback);
+};
+
+export const offMessagesRead = (callback?: (data: any) => void) => {
+  removeActiveListener("messagesRead", callback);
+};
+
+export const onMessageUpdated = (callback: (data: any) => void) => {
+  addActiveListener("messageUpdated", callback);
+};
+
+export const offMessageUpdated = (callback?: (data: any) => void) => {
+  removeActiveListener("messageUpdated", callback);
+};
+
+export const onMessageDeleted = (callback: (data: any) => void) => {
+  addActiveListener("messageDeleted", callback);
+};
+
+export const offMessageDeleted = (callback?: (data: any) => void) => {
+  removeActiveListener("messageDeleted", callback);
+};
+
 export const onTyping = (callback: (data: any) => void) => {
   addActiveListener("typing", callback);
 };
@@ -913,6 +937,16 @@ export const findOrCreateConversation = async (participantIds: string[]): Promis
 };
 
 export const createConversation = findOrCreateConversation;
+
+export const updateMessage = async (messageId: string, messageText: string): Promise<any> => {
+  const authHeaders = await getAuthHeaders();
+  return put(`${API_BASE}/messages/${messageId}`, { messageText }, authHeaders);
+};
+
+export const deleteMessage = async (messageId: string): Promise<any> => {
+  const authHeaders = await getAuthHeaders();
+  return del(`${API_BASE}/messages/${messageId}`, authHeaders);
+};
 
 export const deleteConversation = async (conversationId: string): Promise<any> => {
   if (isDemoMode()) return demo.demoDeleteConversation(conversationId);

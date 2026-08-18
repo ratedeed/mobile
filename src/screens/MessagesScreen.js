@@ -38,6 +38,14 @@ import {
   offNewMessage,
   onMessageRead,
   offMessageRead,
+  onMessagesRead,
+  offMessagesRead,
+  onMessageUpdated,
+  offMessageUpdated,
+  onMessageDeleted,
+  offMessageDeleted,
+  updateMessage,
+  deleteMessage,
   onTyping,
   offTyping,
   onUserOnlineStatus,
@@ -302,6 +310,7 @@ const MessagesScreen = () => {
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
+  const [editingMessage, setEditingMessage] = useState(null);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -442,6 +451,24 @@ const MessagesScreen = () => {
 
     const handleRead = ({ messageId }) => setMessages((prev) => prev.map((m) => (m._id === messageId ? { ...m, read: true } : m)));
 
+    const handleMessagesRead = ({ conversationId, readerId }) => {
+      setMessages((prev) => prev.map((m) => {
+        const sId = resolveId(m.senderId);
+        if (sId !== readerId) {
+          return { ...m, read: true };
+        }
+        return m;
+      }));
+    };
+
+    const handleMessageUpdated = (updatedMsg) => {
+      setMessages((prev) => prev.map((m) => (m._id === updatedMsg._id ? updatedMsg : m)));
+    };
+
+    const handleMessageDeleted = ({ messageId }) => {
+      setMessages((prev) => prev.map((m) => (m._id === messageId ? { ...m, isDeleted: true, messageText: 'This message was deleted', attachmentUrl: undefined, quoteId: undefined } : m)));
+    };
+
     const handleTyping = ({ conversationId, userId: typerId }) => {
       if (selectedConvRef.current?.conversationId === conversationId && !myIds.has(resolveId(typerId))) {
         setIsOtherTyping(true);
@@ -454,12 +481,18 @@ const MessagesScreen = () => {
 
     onNewMessage(handleNewMessage);
     onMessageRead(handleRead);
+    onMessagesRead(handleMessagesRead);
+    onMessageUpdated(handleMessageUpdated);
+    onMessageDeleted(handleMessageDeleted);
     onTyping(handleTyping);
     onUserOnlineStatus(handleStatus);
 
     return () => {
       offNewMessage(handleNewMessage);
       offMessageRead(handleRead);
+      offMessagesRead(handleMessagesRead);
+      offMessageUpdated(handleMessageUpdated);
+      offMessageDeleted(handleMessageDeleted);
       offTyping(handleTyping);
       offUserOnlineStatus(handleStatus);
       leaveConversationSocket(selectedConvRef.current?._id);
@@ -781,6 +814,21 @@ const MessagesScreen = () => {
     const stopTargetId = resolveId(selectedConversation.otherParticipant);
     emitTyping(stopCId, currentUserId, false, stopTargetId);
     lastTypingEmit.current = 0;
+
+    // If editing an existing message
+    if (editingMessage) {
+      const messageText = newMessage.trim();
+      if (!messageText) return;
+      try {
+        await updateMessage(editingMessage._id, messageText);
+        setMessages(prev => prev.map(m => m._id === editingMessage._id ? { ...m, messageText, isEdited: true } : m));
+        setEditingMessage(null);
+        setNewMessage("");
+      } catch (err) {
+        Alert.alert("Error", err?.message || "Failed to update message");
+      }
+      return;
+    }
 
     // Capture inputs and reset immediately for responsive UX
     const messageText = newMessage.trim();
@@ -1138,7 +1186,7 @@ const MessagesScreen = () => {
                         {msg.quote.diagnosticFeeCredit > 0 && (
                           <View className="px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/40">
                             <Text className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
-                              ✓ ${(msg.quote.diagnosticFeeCredit > 1000 ? msg.quote.diagnosticFeeCredit / 100 : msg.quote.diagnosticFeeCredit).toFixed(0)} Credit Applied
+                              ✓ ${(Number(msg.quote.diagnosticFeeCredit) / 100).toFixed(0)} Credit Applied
                             </Text>
                           </View>
                         )}
@@ -1151,63 +1199,50 @@ const MessagesScreen = () => {
                     
                     <Text className="text-[18px] font-bold text-neutral-900 dark:text-white mt-2 leading-[22px]">{msg.quote.projectTitle || msg.quote.projectName || 'Project Quote'}</Text>
                     
-                    {msg.quote.description && (
+                    {msg.quote.description ? (
                       <Text className="text-[13px] text-neutral-500 dark:text-neutral-400 mt-1 leading-[18px]">{msg.quote.description}</Text>
-                    )}
+                    ) : null}
                   </View>
 
-                  {/* Dates & contractor name */}
-                  <View className="px-4 pb-3 flex-row items-center justify-between" style={{ borderBottomWidth: 1, borderBottomColor: isDark ? '#262626' : '#f5f5f5' }}>
-                    <Text className="text-[12px] text-neutral-400 dark:text-neutral-500">Sent by <Text className="font-semibold text-neutral-700 dark:text-neutral-300">{msg.quote?.contractor?.companyName || msg.quote?.contractor?.businessName || (isMe ? 'You' : chatName)}</Text></Text>
-                    {(msg.quote.estimatedStartDate || msg.quote.estimatedCompletionDate) && (
-                      <View className="flex-row items-center" style={{ gap: 4 }}>
-                        <FontAwesome5 name="calendar" size={11} color={isDark ? "#a3a3a3" : "#737373"} />
-                        <Text className="text-[12px] font-semibold text-neutral-700 dark:text-neutral-300">
-                          {(() => { 
-                            try { 
-                              const start = new Date(msg.quote.estimatedStartDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                              const end = new Date(msg.quote.estimatedCompletionDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                              return `${start} - ${end}`;
-                            } catch { 
-                              return 'TBD'; 
-                            } 
-                          })()}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                  
-                  {/* Line items */}
-                  <View className="p-4 py-3" style={{ gap: 9 }}>
-                    {(msg.quote.lineItems || []).length > 0 ? (
-                      msg.quote.lineItems.map((item, idx) => (
-                        <View key={idx} className="flex-row justify-between">
-                          <Text className="text-[13px] text-neutral-600 dark:text-neutral-300 flex-1 mr-3" numberOfLines={1}>{item.description || item.label || `Item ${idx + 1}`}</Text>
-                          <Text className="text-[13px] font-semibold text-neutral-800 dark:text-neutral-200">${((item.amount || 0) / 100).toLocaleString()}</Text>
+                  {/* Line items (show first 2) */}
+                  {Array.isArray(msg.quote.lineItems) && msg.quote.lineItems.length > 0 && (
+                    <View className="px-4 py-2 mx-4 mb-2 rounded-xl bg-neutral-50 dark:bg-neutral-900/60" style={{ gap: 6 }}>
+                      {msg.quote.lineItems.slice(0, 2).map((item, i) => (
+                        <View key={i} className="flex-row justify-between items-center">
+                          <Text className="text-[12px] text-neutral-600 dark:text-neutral-300 flex-1 mr-2" numberOfLines={1}>{item.description}</Text>
+                          <Text className="text-[12px] font-semibold text-neutral-800 dark:text-neutral-200">${((item.amount || 0) / 100).toLocaleString()}</Text>
                         </View>
-                      ))
-                    ) : (
-                      <View className="flex-row justify-between">
-                        <Text className="text-[13px] text-neutral-600 dark:text-neutral-300">Project Cost</Text>
+                      ))}
+                      {msg.quote.lineItems.length > 2 && (
+                        <Text className="text-[11px] text-neutral-400 font-medium">+ {msg.quote.lineItems.length - 2} more item{msg.quote.lineItems.length - 2 > 1 ? 's' : ''}</Text>
+                      )}
+                    </View>
+                  )}
+
+                  {/* Pricing Breakdown */}
+                  <View className="px-4 py-2.5 mx-4 mb-3 rounded-xl bg-neutral-50 dark:bg-neutral-900/60" style={{ gap: 5 }}>
+                    {msg.quote.diagnosticFeeCredit > 0 && (
+                      <View className="flex-row justify-between items-center">
+                        <Text className="text-[12px] text-neutral-500 dark:text-neutral-400">Original Subtotal</Text>
                         <Text className="text-[13px] font-semibold text-neutral-800 dark:text-neutral-200">${(() => { const a = (msg.quote.subtotal || msg.quote.totalAmount || 0) / 100; return Number.isFinite(a) ? a.toLocaleString() : '0'; })()}</Text>
                       </View>
                     )}
 
                     {/* Diagnostic Fee Credit row */}
                     {msg.quote.diagnosticFeeCredit > 0 && (
-                      <View className="flex-row justify-between p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/40">
-                        <Text className="text-[12px] font-bold text-emerald-800 dark:text-emerald-200">Diagnostic Fee Credit</Text>
-                        <Text className="text-[12px] font-bold text-emerald-700 dark:text-emerald-300">
-                          -${(Number(msg.quote.diagnosticFeeCredit) / (msg.quote.diagnosticFeeCredit > 1000 ? 100 : 1)).toFixed(2)}
+                      <View className="flex-row justify-between items-center">
+                        <Text className="text-[12px] text-emerald-700 dark:text-emerald-300 font-medium">Diagnostic Fee Credit</Text>
+                        <Text className="text-[13px] font-semibold text-emerald-700 dark:text-emerald-300">
+                          -${(Number(msg.quote.diagnosticFeeCredit) / 100).toFixed(2)}
                         </Text>
                       </View>
                     )}
                     
-                    <View className="h-px bg-neutral-100 dark:bg-neutral-800 my-1" />
+                    <View className="h-px bg-neutral-200 dark:bg-neutral-800 my-1" />
                     
                     <View className="flex-row justify-between items-center">
                       <Text className="text-[14px] font-bold text-neutral-900 dark:text-white">Total price</Text>
-                      <Text className="text-[19px] font-extrabold text-neutral-900 dark:text-white">${(() => {
+                      <Text className="text-[18px] font-extrabold text-neutral-900 dark:text-white">${(() => {
                         const amount = msg.quote.totalAmount != null ? msg.quote.totalAmount / 100 : msg.quote.total != null ? msg.quote.total : 0;
                         return Number.isFinite(amount) ? amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00';
                       })()}</Text>
@@ -1258,13 +1293,55 @@ const MessagesScreen = () => {
                   </View>
                 )}
               </>
+            ) : (msg.type === "change_order" || msg.changeOrderId) && (msg.changeOrder || msg.changeOrderId) ? (
+              <>
+                <View className="w-full bg-white dark:bg-neutral-800 rounded-2xl border border-neutral-200 dark:border-neutral-700 p-4" style={[{ shadowColor: "#000", shadowOpacity: isDark ? 0 : 0.04, shadowRadius: 10, shadowOffset: { height: 3 }, elevation: isDark ? 0 : 3 }]}>
+                  <View className="flex-row items-center justify-between mb-2">
+                    <View className="flex-row items-center" style={{ gap: 6 }}>
+                      <FontAwesome5 name="file-invoice-dollar" size={14} color="#f59e0b" />
+                      <Text className="text-[13px] font-bold text-neutral-900 dark:text-white">Change Order</Text>
+                    </View>
+                    {msg.changeOrder?.amount != null ? (
+                      <Text className="text-[14px] font-extrabold text-neutral-900 dark:text-white">
+                        {msg.changeOrder.amount >= 0 ? `+$${(msg.changeOrder.amount / 100).toFixed(2)}` : `-$${(Math.abs(msg.changeOrder.amount) / 100).toFixed(2)}`}
+                      </Text>
+                    ) : null}
+                  </View>
+                  <Text className="text-[13px] text-neutral-800 dark:text-neutral-200 font-semibold mb-1">
+                    {msg.changeOrder?.title || msg.messageText}
+                  </Text>
+                  {msg.changeOrder?.description ? (
+                    <Text className="text-[12px] text-neutral-500 dark:text-neutral-400 mb-3" numberOfLines={3}>
+                      {msg.changeOrder.description}
+                    </Text>
+                  ) : null}
+                  <View className="py-2 px-3 rounded-lg bg-neutral-50 dark:bg-neutral-700/50 flex-row items-center" style={{ gap: 6 }}>
+                    <FontAwesome5 name="info-circle" size={11} color="#6b7280" />
+                    <Text className="text-[11px] text-neutral-600 dark:text-neutral-300 font-medium">
+                      {msg.changeOrder?.status === 'accepted' ? 'Accepted by homeowner' : msg.changeOrder?.status === 'declined' ? 'Declined' : 'Pending review'}
+                    </Text>
+                  </View>
+                </View>
+                {(msg.isLastInGroup || msg._failed) && (
+                  <View className={`flex-row items-center mt-1 px-1 ${isMe ? "justify-end" : "justify-start"}`} style={{ gap: 4 }}>
+                    <Text className="text-[10px] text-neutral-400 font-medium">{msg.timeStr || (msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "")}</Text>
+                    {isMe && !msg._isOptimistic && !msg._failed && <FontAwesome5 name={msg.read ? "check-double" : "check"} size={9} color={msg.read ? "#4F46E5" : "#4F46E5"} solid={msg.read} />}
+                  </View>
+                )}
+              </>
             ) : (
               <>
-                <View className={`px-[16px] py-[11px] ${isMe ? `bg-neutral-900 ${msg.isFirstInGroup ? "rounded-2xl rounded-tr-md" : "rounded-2xl"}` : `bg-neutral-100 dark:bg-neutral-800 ${msg.isFirstInGroup ? "rounded-2xl rounded-tl-md" : "rounded-2xl"}`}`} style={[!isMe ? { shadowColor: isDark ? "transparent" : "#000", shadowOpacity: isDark ? 0 : 0.02, shadowRadius: 6, shadowOffset: { height: 1 }, elevation: isDark ? 0 : 1 } : undefined]}>
+                <Pressable
+                  onLongPress={() => handleMessageLongPress(msg)}
+                  delayLongPress={300}
+                  className={`px-[16px] py-[11px] ${isMe ? `bg-neutral-900 ${msg.isFirstInGroup ? "rounded-2xl rounded-tr-md" : "rounded-2xl"}` : `bg-neutral-100 dark:bg-neutral-800 ${msg.isFirstInGroup ? "rounded-2xl rounded-tl-md" : "rounded-2xl"}`}`}
+                  style={[!isMe ? { shadowColor: isDark ? "transparent" : "#000", shadowOpacity: isDark ? 0 : 0.02, shadowRadius: 6, shadowOffset: { height: 1 }, elevation: isDark ? 0 : 1 } : undefined]}
+                >
                   {msg.attachmentUrl && isImageAttachment(msg.attachmentUrl) && <Pressable onPress={() => { setActiveImage(msg.attachmentUrl); setLightboxVisible(true); }} className="mb-1.5 -mx-[2px] -mt-[2px] overflow-hidden" style={{ borderRadius: msg.isFirstInGroup ? 14 : 16 }}><Image source={{ uri: msg.attachmentUrl }} style={{ width: 240, height: 180 }} resizeMode="cover" /></Pressable>}
                   {msg.attachmentUrl && !isImageAttachment(msg.attachmentUrl) && <Pressable onPress={() => Linking.openURL(msg.attachmentUrl)} className={`flex-row items-center p-2.5 rounded-xl mb-1.5 border ${isMe ? "bg-white/10 border-white/20" : "bg-neutral-50 dark:bg-neutral-700 border-neutral-200 dark:border-neutral-600"}`}><FontAwesome5 name="file-alt" size={14} color={isMe ? "white" : (isDark ? "#a3a3a3" : "#737373")} /><Text className={`text-[12px] ml-2 font-semibold ${isMe ? "text-white" : "text-neutral-600 dark:text-neutral-300"}`}>View Attachment</Text></Pressable>}
                   {msg.messageText ? <Text className={`text-[15px] leading-[22px] ${isMe ? "text-white" : "text-neutral-800 dark:text-neutral-100"}`}>{msg.messageText}</Text> : null}
-                </View>
+                  {msg.isEdited && <Text className="text-[9px] text-neutral-400 italic mt-0.5">Edited</Text>}
+                </Pressable>
                 {(msg.isLastInGroup || msg._failed) && (
                   <View className={`flex-row items-center mt-1 px-1 ${isMe ? "justify-end" : "justify-start"}`} style={{ gap: 4 }}>
                     {msg._failed && (
@@ -1286,7 +1363,7 @@ const MessagesScreen = () => {
         </View>
       </View>
     );
-  }, [chatAvatar, chatName, isDark, navigation, setActiveImage, setLightboxVisible, handleRetryMessage]);
+  }, [chatAvatar, chatName, isDark, navigation, setActiveImage, setLightboxVisible, handleRetryMessage, handleMessageLongPress]);
 
   const filteredConversations = useMemo(() => {
     return Object.values(conversations)
