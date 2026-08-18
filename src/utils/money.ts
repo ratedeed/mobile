@@ -46,3 +46,46 @@ export function dollarsToCents(dollars: number | null | undefined): number {
   if (dollars == null || isNaN(Number(dollars))) return 0;
   return Math.round(Number(dollars) * 100);
 }
+
+/**
+ * Format raw string prices or price ranges safely for cards and detail views
+ */
+export function formatPriceString(raw: string | null | undefined): string {
+  if (!raw) return 'Contact for Quote';
+  const clean = String(raw).trim();
+  if (
+    !clean ||
+    clean.toLowerCase().includes('quote') ||
+    clean.toLowerCase().includes('n/a') ||
+    clean.toLowerCase() === 'na' ||
+    clean === '$0' ||
+    clean === '$0.00' ||
+    clean === '0' ||
+    clean === '$$' ||
+    clean === '$$$'
+  ) {
+    return 'Contact for Quote';
+  }
+
+  const numbers = clean.match(/\d[\d,.]*/g);
+  if (numbers && numbers.length >= 2) {
+    const n1 = Number(numbers[0].replace(/,/g, ''));
+    const n2 = Number(numbers[1].replace(/,/g, ''));
+    if (!isNaN(n1) && !isNaN(n2) && n1 > 0 && n2 > 0) {
+      const low = Math.min(n1, n2);
+      const high = Math.max(n1, n2);
+      if (low === high) return `$${low.toLocaleString()}`;
+      return `$${low.toLocaleString()} – $${high.toLocaleString()}`;
+    }
+  } else if (numbers && numbers.length === 1) {
+    const n = Number(numbers[0].replace(/,/g, ''));
+    if (!isNaN(n) && n > 0) {
+      if (clean.toLowerCase().includes('/hr') || clean.toLowerCase().includes('hr') || clean.toLowerCase().includes('hour')) {
+        return `$${n.toLocaleString()} / hr`;
+      }
+      return `$${n.toLocaleString()}`;
+    }
+  }
+
+  return 'Contact for Quote';
+}

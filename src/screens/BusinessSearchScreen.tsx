@@ -25,6 +25,7 @@ import { VerifiedBadge } from '../components/common/VerifiedBadge';
 import { EstimateBadge } from '../components/common/EstimateBadge';
 import { SkeletonLoader } from '../components/common/SkeletonLoader';
 import { BouncingRefreshFlatList } from '../components/common';
+import { formatPriceString } from '../utils/money';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Categories matching web version (same as HomeScreen)
@@ -167,23 +168,7 @@ const ListingCard = React.memo(({
           </View>
         </View>
         <Text className="text-xs font-bold text-neutral-900 dark:text-neutral-50 mt-1">
-          {(() => {
-            const clean = (price || '').trim();
-            if (!clean || clean === '$0' || clean === '$0.00' || clean === '0' || clean.toLowerCase() === 'n/a' || clean.toLowerCase() === 'na' || clean.toLowerCase().includes('quote')) {
-              return 'Contact for Quote';
-            }
-            if (!/\d/.test(clean)) {
-              return 'Contact for Quote';
-            }
-            const formattedPrice = clean.startsWith('$') ? clean : `$${clean}`;
-            if (clean.toLowerCase().includes('/hr') || clean.toLowerCase().includes('hr') || clean.toLowerCase().includes('hour')) {
-              return `${formattedPrice} starting rate`;
-            }
-            if (clean.includes('–') || clean.includes('-') || clean.includes('+')) {
-              return formattedPrice;
-            }
-            return `${formattedPrice} project`;
-          })()}
+          {formatPriceString(price)}
         </Text>
       </View>
     </Pressable>
