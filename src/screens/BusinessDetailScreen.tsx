@@ -34,6 +34,7 @@ import { isFavorite, addFavorite, removeFavorite } from '../utils/favoritesStore
 import { VerifiedBadge } from '../components/common/VerifiedBadge';
 import { EstimateBadge } from '../components/common/EstimateBadge';
 import { SkeletonLoader } from '../components/common/SkeletonLoader';
+import { formatPriceString } from '../utils/money';
 import ServiceAreaMap from '../components/common/ServiceAreaMap';
 import { useAuth } from '../context/AuthContext';
 import GuestPrompt from '../components/GuestPrompt';
@@ -738,9 +739,9 @@ const BusinessDetailScreen: React.FC = () => {
               
               {/* Estimate Policy & Response Time Badges */}
               <View className="flex-row flex-wrap items-center mt-2" style={{ gap: 6 }}>
-                {(c.estimatePolicy?.type || (c as any).hasFreeEstimates) && (
+                {((c.estimatePolicy && c.estimatePolicy.enabled !== false && c.estimatePolicy.type && c.estimatePolicy.type !== 'none') || (c as any).hasFreeEstimates) && (
                   <EstimateBadge
-                    type={c.estimatePolicy?.type === 'service_fee' ? 'applied_credit' : (c.estimatePolicy?.type || 'free')}
+                    type={c.estimatePolicy?.type === 'service_fee' ? 'applied_credit' : (c.estimatePolicy?.type === 'virtual_only' ? 'virtual_only' : 'free')}
                     feeAmount={c.estimatePolicy?.feeAmount || 75}
                     size="sm"
                   />
@@ -794,6 +795,10 @@ const BusinessDetailScreen: React.FC = () => {
             {/* Estimate Policy Highlight */}
             {(() => {
               const ep = (c as any).estimatePolicy;
+              const hasFree = (c as any).hasFreeEstimates;
+              const isEnabled = ep ? (ep.enabled !== false && ep.type && ep.type !== 'none') : !!hasFree;
+              if (!isEnabled) return null;
+
               if (ep?.type === 'service_fee') {
                 return (
                   <View className="flex-row items-center" style={{ gap: 12 }}>
@@ -828,21 +833,24 @@ const BusinessDetailScreen: React.FC = () => {
                   </View>
                 );
               }
-              return (
-                <View className="flex-row items-center" style={{ gap: 12 }}>
-                  <View className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/60 dark:border-emerald-900/40 items-center justify-center">
-                    <FontAwesome5 name="check-circle" size={15} color="#059669" />
+              if (ep?.type === 'free' || hasFree) {
+                return (
+                  <View className="flex-row items-center" style={{ gap: 12 }}>
+                    <View className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/60 dark:border-emerald-900/40 items-center justify-center">
+                      <FontAwesome5 name="check-circle" size={15} color="#059669" />
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-sm font-semibold text-neutral-900 dark:text-neutral-50">
+                        100% Free Project Estimates
+                      </Text>
+                      <Text className="text-xs text-neutral-500 dark:text-neutral-400">
+                        No obligation · Free consultation
+                      </Text>
+                    </View>
                   </View>
-                  <View className="flex-1">
-                    <Text className="text-sm font-semibold text-neutral-900 dark:text-neutral-50">
-                      100% Free Project Estimates
-                    </Text>
-                    <Text className="text-xs text-neutral-500 dark:text-neutral-400">
-                      No obligation · Free consultation
-                    </Text>
-                  </View>
-                </View>
-              );
+                );
+              }
+              return null;
             })()}
 
             {(c.isVerified || (c as any).licenseVerified) && (
@@ -1332,7 +1340,7 @@ const BusinessDetailScreen: React.FC = () => {
                   const scState = sc.contactInfo?.state && !isMongoIdStr(sc.contactInfo.state) ? sc.contactInfo.state : '';
                   const rawLocation = [scCity, scState].filter(Boolean).join(', ') || sc.location || '';
                   const scLocation = rawLocation.replace(/^\d{4,5}\s*,\s*/, '').replace(/^\d{4,5}\s+/, '');
-                  const scCover = getCoverImageUrl(scName, (sc as any).bannerUrl || sc.bannerImage || (sc as any).imageUrl || sc.profilePicture || '', sc.category, 360, 345, 0, true);
+                  const scCover = getCoverImageUrl(scName, (sc as any).bannerUrl || sc.bannerImage || (sc as any).imageUrl || sc.profilePicture || '', sc.category, 360, 345, 0, false);
                   const scId = sc._id || (sc as any).id;
                   return (
                     <Pressable
@@ -1417,31 +1425,20 @@ const BusinessDetailScreen: React.FC = () => {
               );
             }
             const priceMin = (c.servicesOffered?.[0] as any)?.priceEstimate || (c.servicesOffered?.[0] as any)?.priceRange || c.priceRange || c.pricing || '';
-            const clean = (priceMin || '').trim();
-            if (!clean || clean === '$0' || clean === '$0.00' || clean === '0' || clean.toLowerCase() === 'n/a' || clean.toLowerCase() === 'na' || clean.toLowerCase().includes('quote')) {
+            const formatted = formatPriceString(priceMin);
+            if (formatted !== 'Contact for Quote') {
+              const isRange = formatted.includes('–');
               return (
                 <View>
-                  <Text className="text-base font-bold text-neutral-900 dark:text-neutral-50">Free Estimate</Text>
-                  <Text className="text-[9px] text-neutral-500 uppercase tracking-tighter">No obligation quote</Text>
+                  <Text className="text-base font-bold text-neutral-900 dark:text-neutral-50">{isRange ? formatted : `From ${formatted}`}</Text>
+                  <Text className="text-[9px] text-neutral-500 uppercase tracking-tighter">{isRange ? 'Estimated Price' : 'Starting Price'}</Text>
                 </View>
               );
             }
-            if (!/\d/.test(clean)) {
-              return (
-                <View>
-                  <Text className="text-base font-bold text-neutral-900 dark:text-neutral-50">Free Estimate</Text>
-                  <Text className="text-[9px] text-neutral-500 uppercase tracking-tighter">No obligation quote</Text>
-                </View>
-              );
-            }
-            const formattedPrice = clean.startsWith('$') ? clean : `$${clean}`;
-            const subText = clean.toLowerCase().includes('/hr') || clean.toLowerCase().includes('hr') || clean.toLowerCase().includes('hour')
-              ? 'Starting Rate' 
-              : 'Starting Project Price';
             return (
               <View>
-                <Text className="text-base font-bold text-neutral-900 dark:text-neutral-50">From {formattedPrice}</Text>
-                <Text className="text-[9px] text-neutral-500 uppercase tracking-tighter">{subText}</Text>
+                <Text className="text-base font-bold text-neutral-900 dark:text-neutral-50">Contact for Quote</Text>
+                <Text className="text-[9px] text-neutral-500 uppercase tracking-tighter">Free Estimate</Text>
               </View>
             );
           })()}

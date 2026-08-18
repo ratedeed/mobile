@@ -12,6 +12,7 @@ import {
   Platform,
   FlatList,
   useColorScheme,
+  Switch,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
@@ -67,6 +68,7 @@ export default function ContractorEditProfileScreen() {
   const [location, setLocation] = useState('');
 
   // Estimate Policy state
+  const [estimateEnabled, setEstimateEnabled] = useState<boolean>(false);
   const [estimateType, setEstimateType] = useState<'free' | 'service_fee' | 'virtual_only'>('free');
   const [feeAmount, setFeeAmount] = useState<string>('75');
   const [feeWaivedIfHired, setFeeWaivedIfHired] = useState<boolean>(true);
@@ -149,7 +151,13 @@ export default function ContractorEditProfileScreen() {
       setBannerPics(banners);
 
       if (data.estimatePolicy) {
-        if (data.estimatePolicy.type) setEstimateType(data.estimatePolicy.type);
+        const isEnabled = data.estimatePolicy.enabled !== undefined
+          ? !!data.estimatePolicy.enabled
+          : (data.estimatePolicy.type && data.estimatePolicy.type !== 'none');
+        setEstimateEnabled(isEnabled);
+        if (data.estimatePolicy.type && data.estimatePolicy.type !== 'none') {
+          setEstimateType(data.estimatePolicy.type);
+        }
         if (data.estimatePolicy.feeAmount !== undefined && data.estimatePolicy.feeAmount !== null) {
           setFeeAmount(data.estimatePolicy.feeAmount.toString());
         }
@@ -157,6 +165,11 @@ export default function ContractorEditProfileScreen() {
           setFeeWaivedIfHired(data.estimatePolicy.feeWaivedIfHired);
         }
         if (data.estimatePolicy.notes) setEstimateNotes(data.estimatePolicy.notes);
+      } else if (data.hasFreeEstimates) {
+        setEstimateEnabled(true);
+        setEstimateType('free');
+      } else {
+        setEstimateEnabled(false);
       }
 
       if (Array.isArray(data.servicesOffered)) {
@@ -353,12 +366,13 @@ export default function ContractorEditProfileScreen() {
         address: location || undefined,
         businessAddress: location || undefined,
         zipCodesCovered: serviceArea.split(',').map(s => s.trim()).filter(Boolean),
-        licenseNumber: licenseNumber || undefined,
+        hasFreeEstimates: estimateEnabled && estimateType === 'free',
         estimatePolicy: {
-          type: estimateType,
-          feeAmount: estimateType === 'service_fee' ? parseFloat(feeAmount) || 75 : 0,
-          feeWaivedIfHired: estimateType === 'service_fee' ? feeWaivedIfHired : false,
-          notes: estimateNotes
+          enabled: estimateEnabled,
+          type: estimateEnabled ? estimateType : 'none',
+          feeAmount: estimateEnabled && estimateType === 'service_fee' ? parseFloat(feeAmount) || 75 : 0,
+          feeWaivedIfHired: estimateEnabled && estimateType === 'service_fee' ? feeWaivedIfHired : false,
+          notes: estimateEnabled ? estimateNotes : '',
         },
         profilePicture: finalProfilePicUrl || undefined,
         bannerUrl: finalCoverImageUrl || undefined,
@@ -769,13 +783,15 @@ export default function ContractorEditProfileScreen() {
           <View className="bg-white dark:bg-neutral-950 rounded-xl border border-neutral-100 dark:border-neutral-800 overflow-hidden">
             <TouchableOpacity onPress={() => toggleSection('estimate')} className="px-4 py-3.5 flex-row items-center justify-between">
               <View className="flex-row items-center flex-1">
-                <View className="w-8 h-8 rounded-lg items-center justify-center bg-emerald-50 dark:bg-emerald-950/50">
-                  <FontAwesome5 name="calculator" size={14} color="#059669" />
+                <View className={`w-8 h-8 rounded-lg items-center justify-center ${estimateEnabled ? 'bg-emerald-50 dark:bg-emerald-950/50' : 'bg-neutral-100 dark:bg-neutral-800'}`}>
+                  <FontAwesome5 name="calculator" size={14} color={estimateEnabled ? '#059669' : (isDark ? '#737373' : '#a3a3a3')} />
                 </View>
                 <View className="ml-3 flex-1">
                   <Text className="text-sm font-bold text-neutral-900 dark:text-white">Estimate & Service Policy</Text>
                   <Text className="text-[11px] text-neutral-500 dark:text-neutral-400">
-                    {estimateType === 'free'
+                    {!estimateEnabled
+                      ? 'Off · No badge displayed'
+                      : estimateType === 'free'
                       ? '✓ 100% Free Project Estimates'
                       : estimateType === 'service_fee'
                       ? `$${feeAmount || 75} Diagnostic Fee ${feeWaivedIfHired ? '(Waived if hired)' : ''}`
@@ -789,111 +805,137 @@ export default function ContractorEditProfileScreen() {
             </TouchableOpacity>
 
             {activeSection === 'estimate' && (
-              <View className="px-4 pb-4 pt-3 border-t border-neutral-100 dark:border-neutral-800" style={{ gap: 10 }}>
-                <Text className="text-xs text-neutral-500 dark:text-neutral-400">
-                  Set clear pricing expectations for homeowners before they request a quote.
-                </Text>
-
-                {/* Option 1: Free Estimates */}
-                <TouchableOpacity
-                  onPress={() => setEstimateType('free')}
-                  className={`p-3.5 rounded-xl border-2 ${
-                    estimateType === 'free'
-                      ? 'border-emerald-600 bg-emerald-50/50 dark:bg-emerald-950/20'
-                      : 'border-neutral-200 dark:border-neutral-800'
-                  }`}
-                >
-                  <View className="flex-row items-center justify-between">
-                    <View className="flex-row items-center" style={{ gap: 8 }}>
-                      <View className={`w-4 h-4 rounded-full border-2 items-center justify-center ${
-                        estimateType === 'free' ? 'border-emerald-600 bg-emerald-600' : 'border-neutral-400'
-                      }`}>
-                        {estimateType === 'free' && <View className="w-1.5 h-1.5 rounded-full bg-white" />}
-                      </View>
-                      <Text className="text-sm font-bold text-neutral-900 dark:text-white">100% Free Estimates</Text>
-                    </View>
-                    <View className="bg-emerald-100 dark:bg-emerald-900 px-2 py-0.5 rounded-full">
-                      <Text className="text-[10px] font-bold text-emerald-800 dark:text-emerald-200">Popular</Text>
-                    </View>
+              <View className="px-4 pb-4 pt-3 border-t border-neutral-100 dark:border-neutral-800" style={{ gap: 12 }}>
+                {/* On / Off Toggle Row */}
+                <View className="flex-row items-center justify-between p-3 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800">
+                  <View className="flex-1 pr-3">
+                    <Text className="text-sm font-bold text-neutral-900 dark:text-white">Display Estimate Policy</Text>
+                    <Text className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                      Show an estimate badge & policy highlight on your public profile and search results.
+                    </Text>
                   </View>
-                  <Text className="text-xs text-neutral-500 dark:text-neutral-400 mt-1 ml-6">
-                    Free on-site or remote project estimates with no upfront cost.
-                  </Text>
-                </TouchableOpacity>
+                  <Switch
+                    value={estimateEnabled}
+                    onValueChange={setEstimateEnabled}
+                    trackColor={{ false: isDark ? '#333' : '#d4d4d4', true: '#10b981' }}
+                    thumbColor={estimateEnabled ? '#ffffff' : '#f4f4f5'}
+                  />
+                </View>
 
-                {/* Option 2: Diagnostic / Service Call Fee */}
-                <TouchableOpacity
-                  onPress={() => setEstimateType('service_fee')}
-                  className={`p-3.5 rounded-xl border-2 ${
-                    estimateType === 'service_fee'
-                      ? 'border-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/20'
-                      : 'border-neutral-200 dark:border-neutral-800'
-                  }`}
-                >
-                  <View className="flex-row items-center" style={{ gap: 8 }}>
-                    <View className={`w-4 h-4 rounded-full border-2 items-center justify-center ${
-                      estimateType === 'service_fee' ? 'border-indigo-600 bg-indigo-600' : 'border-neutral-400'
-                    }`}>
-                      {estimateType === 'service_fee' && <View className="w-1.5 h-1.5 rounded-full bg-white" />}
-                    </View>
-                    <Text className="text-sm font-bold text-neutral-900 dark:text-white">Diagnostic / Service Call Fee</Text>
+                {!estimateEnabled ? (
+                  <View className="p-3.5 rounded-xl bg-neutral-100/70 dark:bg-neutral-900/50 border border-dashed border-neutral-200 dark:border-neutral-800">
+                    <Text className="text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed">
+                      Estimate policy is currently <Text className="font-semibold text-neutral-700 dark:text-neutral-300">turned off</Text>. No estimate badges or diagnostic fee tags will appear on your public listing.
+                    </Text>
                   </View>
-                  <Text className="text-xs text-neutral-500 dark:text-neutral-400 mt-1 ml-6">
-                    For emergency troubleshooting, diagnostic visits, or trip fees.
-                  </Text>
+                ) : (
+                  <>
+                    <Text className="text-xs text-neutral-500 dark:text-neutral-400">
+                      Select how you provide estimates and service consultations:
+                    </Text>
 
-                  {estimateType === 'service_fee' && (
-                    <View className="mt-3 pt-3 border-t border-indigo-100 dark:border-neutral-800" style={{ gap: 10 }}>
-                      <View>
-                        <Text className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">Fee Amount ($ USD)</Text>
-                        <TextInput
-                          value={feeAmount}
-                          onChangeText={setFeeAmount}
-                          keyboardType="numeric"
-                          placeholder="75"
-                          placeholderTextColor={isDark ? '#737373' : '#a3a3a3'}
-                          className="w-full border border-neutral-200 dark:border-neutral-700 rounded-xl px-3 py-2 text-sm text-neutral-900 dark:text-white font-bold"
-                        />
-                      </View>
-                      <TouchableOpacity
-                        onPress={() => setFeeWaivedIfHired(!feeWaivedIfHired)}
-                        className="flex-row items-center"
-                        style={{ gap: 8 }}
-                      >
-                        <View className={`w-4 h-4 rounded border items-center justify-center ${
-                          feeWaivedIfHired ? 'bg-indigo-600 border-indigo-600' : 'border-neutral-400'
-                        }`}>
-                          {feeWaivedIfHired && <FontAwesome5 name="check" size={10} color="#fff" />}
+                    {/* Option 1: Free Estimates */}
+                    <TouchableOpacity
+                      onPress={() => setEstimateType('free')}
+                      className={`p-3.5 rounded-xl border-2 ${
+                        estimateType === 'free'
+                          ? 'border-emerald-600 bg-emerald-50/50 dark:bg-emerald-950/20'
+                          : 'border-neutral-200 dark:border-neutral-800'
+                      }`}
+                    >
+                      <View className="flex-row items-center justify-between">
+                        <View className="flex-row items-center" style={{ gap: 8 }}>
+                          <View className={`w-4 h-4 rounded-full border-2 items-center justify-center ${
+                            estimateType === 'free' ? 'border-emerald-600 bg-emerald-600' : 'border-neutral-400'
+                          }`}>
+                            {estimateType === 'free' && <View className="w-1.5 h-1.5 rounded-full bg-white" />}
+                          </View>
+                          <Text className="text-sm font-bold text-neutral-900 dark:text-white">100% Free Estimates</Text>
                         </View>
-                        <Text className="text-xs text-neutral-800 dark:text-neutral-200 flex-1">
-                          Waive/apply fee toward repair if homeowner hires you (Recommended)
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
-                </TouchableOpacity>
+                        <View className="bg-emerald-100 dark:bg-emerald-900 px-2 py-0.5 rounded-full">
+                          <Text className="text-[10px] font-bold text-emerald-800 dark:text-emerald-200">Popular</Text>
+                        </View>
+                      </View>
+                      <Text className="text-xs text-neutral-500 dark:text-neutral-400 mt-1 ml-6">
+                        Free on-site or remote project estimates with no upfront cost.
+                      </Text>
+                    </TouchableOpacity>
 
-                {/* Option 3: Virtual Photo Quotes */}
-                <TouchableOpacity
-                  onPress={() => setEstimateType('virtual_only')}
-                  className={`p-3.5 rounded-xl border-2 ${
-                    estimateType === 'virtual_only'
-                      ? 'border-purple-600 bg-purple-50/50 dark:bg-purple-950/20'
-                      : 'border-neutral-200 dark:border-neutral-800'
-                  }`}
-                >
-                  <View className="flex-row items-center" style={{ gap: 8 }}>
-                    <View className={`w-4 h-4 rounded-full border-2 items-center justify-center ${
-                      estimateType === 'virtual_only' ? 'border-purple-600 bg-purple-600' : 'border-neutral-400'
-                    }`}>
-                      {estimateType === 'virtual_only' && <View className="w-1.5 h-1.5 rounded-full bg-white" />}
-                    </View>
-                    <Text className="text-sm font-bold text-neutral-900 dark:text-white">Free Photo / Online Quotes Only</Text>
-                  </View>
-                  <Text className="text-xs text-neutral-500 dark:text-neutral-400 mt-1 ml-6">
-                    Homeowners send photos/video via chat for a preliminary estimate.
-                  </Text>
-                </TouchableOpacity>
+                    {/* Option 2: Diagnostic / Service Call Fee */}
+                    <TouchableOpacity
+                      onPress={() => setEstimateType('service_fee')}
+                      className={`p-3.5 rounded-xl border-2 ${
+                        estimateType === 'service_fee'
+                          ? 'border-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/20'
+                          : 'border-neutral-200 dark:border-neutral-800'
+                      }`}
+                    >
+                      <View className="flex-row items-center" style={{ gap: 8 }}>
+                        <View className={`w-4 h-4 rounded-full border-2 items-center justify-center ${
+                          estimateType === 'service_fee' ? 'border-indigo-600 bg-indigo-600' : 'border-neutral-400'
+                        }`}>
+                          {estimateType === 'service_fee' && <View className="w-1.5 h-1.5 rounded-full bg-white" />}
+                        </View>
+                        <Text className="text-sm font-bold text-neutral-900 dark:text-white">Diagnostic / Service Call Fee</Text>
+                      </View>
+                      <Text className="text-xs text-neutral-500 dark:text-neutral-400 mt-1 ml-6">
+                        For emergency troubleshooting, diagnostic visits, or trip fees.
+                      </Text>
+
+                      {estimateType === 'service_fee' && (
+                        <View className="mt-3 pt-3 border-t border-indigo-100 dark:border-neutral-800" style={{ gap: 10 }}>
+                          <View>
+                            <Text className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">Fee Amount ($ USD)</Text>
+                            <TextInput
+                              value={feeAmount}
+                              onChangeText={setFeeAmount}
+                              keyboardType="numeric"
+                              placeholder="75"
+                              placeholderTextColor={isDark ? '#737373' : '#a3a3a3'}
+                              className="w-full border border-neutral-200 dark:border-neutral-700 rounded-xl px-3 py-2 text-sm text-neutral-900 dark:text-white font-bold"
+                            />
+                          </View>
+                          <TouchableOpacity
+                            onPress={() => setFeeWaivedIfHired(!feeWaivedIfHired)}
+                            className="flex-row items-center"
+                            style={{ gap: 8 }}
+                          >
+                            <View className={`w-4 h-4 rounded border items-center justify-center ${
+                              feeWaivedIfHired ? 'bg-indigo-600 border-indigo-600' : 'border-neutral-400'
+                            }`}>
+                              {feeWaivedIfHired && <FontAwesome5 name="check" size={10} color="#fff" />}
+                            </View>
+                            <Text className="text-xs text-neutral-800 dark:text-neutral-200 flex-1">
+                              Waive/apply fee toward repair if homeowner hires you (Recommended)
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+                      )}
+                    </TouchableOpacity>
+
+                    {/* Option 3: Virtual Photo Quotes */}
+                    <TouchableOpacity
+                      onPress={() => setEstimateType('virtual_only')}
+                      className={`p-3.5 rounded-xl border-2 ${
+                        estimateType === 'virtual_only'
+                          ? 'border-purple-600 bg-purple-50/50 dark:bg-purple-950/20'
+                          : 'border-neutral-200 dark:border-neutral-800'
+                      }`}
+                    >
+                      <View className="flex-row items-center" style={{ gap: 8 }}>
+                        <View className={`w-4 h-4 rounded-full border-2 items-center justify-center ${
+                          estimateType === 'virtual_only' ? 'border-purple-600 bg-purple-600' : 'border-neutral-400'
+                        }`}>
+                          {estimateType === 'virtual_only' && <View className="w-1.5 h-1.5 rounded-full bg-white" />}
+                        </View>
+                        <Text className="text-sm font-bold text-neutral-900 dark:text-white">Free Photo / Online Quotes Only</Text>
+                      </View>
+                      <Text className="text-xs text-neutral-500 dark:text-neutral-400 mt-1 ml-6">
+                        Homeowners send photos/video via chat for a preliminary estimate.
+                      </Text>
+                    </TouchableOpacity>
+                  </>
+                )}
               </View>
             )}
           </View>

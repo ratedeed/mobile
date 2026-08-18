@@ -155,9 +155,9 @@ const ListingCard = React.memo(({
           </View>
         )}
         <View className="flex-row items-center flex-wrap mt-1.5" style={{ gap: 6 }}>
-          {(listing as any).estimatePolicy?.type || (listing as any).hasFreeEstimates ? (
+          {(((listing as any).estimatePolicy && (listing as any).estimatePolicy.enabled !== false && (listing as any).estimatePolicy.type && (listing as any).estimatePolicy.type !== 'none') || (listing as any).hasFreeEstimates) ? (
             <EstimateBadge
-              type={(listing as any).estimatePolicy?.type === 'service_fee' ? 'applied_credit' : ((listing as any).estimatePolicy?.type || 'free')}
+              type={(listing as any).estimatePolicy?.type === 'service_fee' ? 'applied_credit' : ((listing as any).estimatePolicy?.type === 'virtual_only' ? 'virtual_only' : 'free')}
               feeAmount={(listing as any).estimatePolicy?.feeAmount || 75}
               size="sm"
             />

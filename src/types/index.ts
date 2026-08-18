@@ -107,8 +107,10 @@ export interface Contractor {
   portfolio?: PortfolioItem[];
   posts?: Post[];
   avgResponseHours?: number | null;
+  hasFreeEstimates?: boolean;
   estimatePolicy?: {
-    type: 'free' | 'service_fee' | 'virtual_only';
+    enabled?: boolean;
+    type: 'free' | 'service_fee' | 'virtual_only' | 'none';
     feeAmount?: number;
     feeWaivedIfHired?: boolean;
     notes?: string;
