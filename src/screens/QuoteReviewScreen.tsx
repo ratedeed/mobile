@@ -16,6 +16,7 @@ import { getQuote, updateQuoteStatus } from '../api';
 import HapticFeedback from '../utils/haptics';
 import { BouncingDotsLoader } from '../components/common';
 import { useAuth } from '../context/AuthContext';
+import { scheduleOneHourReminder, exportToCalendar } from '../utils/reminderScheduler';
 
 export default function QuoteReviewScreen() {
   const colorScheme = useColorScheme();
@@ -114,13 +115,28 @@ export default function QuoteReviewScreen() {
 
         const data = await getQuote(quoteId);
         setQuote(data);
+
+        // Schedule 1-hour push notification reminder strictly for diagnostic dispatches
+        if (data?.quoteType === 'diagnostic' && (data?.estimatedStartDate || data?.startDate)) {
+          scheduleOneHourReminder({
+            id: data._id || data.id || quoteId || '',
+            quoteType: data.quoteType,
+            projectName: data.projectName,
+            startDate: data.estimatedStartDate || data.startDate,
+            startTime: data.startTime,
+            endTime: data.endTime,
+            jobAddress: data.jobAddress,
+            clientName: isContractorOwner ? (data.user?.firstName || 'Homeowner') : (data.contractor?.companyName || 'Contractor'),
+            isContractor: isContractorOwner,
+          }).catch(() => {});
+        }
       } catch (err: any) {
         setError(err?.message || 'Failed to load quote.');
       } finally {
         setLoading(false);
       }
     })();
-  }, [quoteId]);
+  }, [quoteId, isContractorOwner]);
 
   // Acceptance requires payment — go straight to payment flow
   const handleAccept = async () => {
@@ -488,6 +504,7 @@ export default function QuoteReviewScreen() {
                     <Text className="text-[11px] font-medium text-neutral-400 dark:text-neutral-500 uppercase">Start Date</Text>
                     <Text className="text-sm font-bold text-neutral-800 dark:text-neutral-100">
                       {new Date(quote.estimatedStartDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      {quote.startTime ? ` at ${quote.startTime}` : ''}
                     </Text>
                   </View>
                 </View>
@@ -501,11 +518,49 @@ export default function QuoteReviewScreen() {
                     <Text className="text-[11px] font-medium text-neutral-400 dark:text-neutral-500 uppercase">Completion</Text>
                     <Text className="text-sm font-bold text-neutral-800 dark:text-neutral-100">
                       {new Date(quote.estimatedCompletionDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      {quote.endTime ? ` at ${quote.endTime}` : ''}
                     </Text>
                   </View>
                 </View>
               )}
             </View>
+
+            {quote.estimatedStartDate && (
+              <View className="mt-3 pt-3 border-t border-neutral-100 dark:border-neutral-800 flex-row items-center justify-between" style={{ gap: 8 }}>
+                {quote.quoteType === 'diagnostic' ? (
+                  <View className="flex-row items-center flex-1" style={{ gap: 6 }}>
+                    <View className="w-6 h-6 rounded-full bg-amber-50 dark:bg-amber-950/40 items-center justify-center">
+                      <FontAwesome5 name="bell" size={11} color="#d97706" solid />
+                    </View>
+                    <Text className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                      1-Hr Push Reminder Active
+                    </Text>
+                  </View>
+                ) : (
+                  <View className="flex-1" />
+                )}
+                <Pressable
+                  onPress={() => {
+                    HapticFeedback.selection();
+                    exportToCalendar({
+                      id: quote._id || quote.id || quoteId || '',
+                      quoteType: quote.quoteType,
+                      projectName: quote.projectName,
+                      startDate: quote.estimatedStartDate,
+                      startTime: quote.startTime,
+                      endTime: quote.endTime,
+                      jobAddress: quote.jobAddress,
+                      clientName: isContractorOwner ? (quote.user?.firstName || 'Homeowner') : (quote.contractor?.companyName || 'Contractor'),
+                    });
+                  }}
+                  className="px-2.5 py-1.5 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex-row items-center active:opacity-75"
+                  style={{ gap: 5 }}
+                >
+                  <FontAwesome5 name="calendar-alt" size={11} color={isDark ? "#e5e5e5" : "#404040"} />
+                  <Text className="text-xs font-bold text-neutral-800 dark:text-neutral-200">Add to Calendar</Text>
+                </Pressable>
+              </View>
+            )}
           </View>
         ) : null}
 

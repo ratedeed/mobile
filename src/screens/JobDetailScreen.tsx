@@ -36,6 +36,7 @@ import { uploadToCloudinary, CLOUDINARY_FOLDERS } from '../utils/cloudinary';
 import { requestPhotoLibraryPermission } from '../utils/permissions';
 import { BouncingDotsLoader, BouncingRefreshScrollView } from '../components/common';
 import ImageLightbox from '../components/ImageLightbox';
+import { scheduleOneHourReminder, exportToCalendar } from '../utils/reminderScheduler';
 
 type RootStackParamList = {
   JobDetail: { jobId: string };
@@ -123,6 +124,21 @@ export default function JobDetailScreen() {
     try {
       const data = await getJobById(jobId);
       setJob(data);
+
+      if (data?.quote?.quoteType === 'diagnostic' && (data?.quote?.estimatedStartDate || data?.startDate)) {
+        const isContractor = userRole === 'contractor';
+        scheduleOneHourReminder({
+          id: data._id || jobId,
+          quoteType: 'diagnostic',
+          projectName: data.quote?.projectName || 'Diagnostic Dispatch',
+          startDate: data.quote?.estimatedStartDate || data.startDate,
+          startTime: data.quote?.startTime,
+          endTime: data.quote?.endTime,
+          jobAddress: data.quote?.jobAddress || data.jobAddress,
+          clientName: isContractor ? (data.user?.firstName || 'Homeowner') : (data.contractor?.companyName || 'Contractor'),
+          isContractor,
+        }).catch(() => {});
+      }
     } catch (e) {
       Alert.alert('Error', 'Failed to load job details');
     } finally {
@@ -751,6 +767,41 @@ export default function JobDetailScreen() {
                   </Text>
                 </View>
               )}
+
+              <View className="mt-3 pt-3 border-t border-neutral-100 dark:border-neutral-800 flex-row items-center justify-between" style={{ gap: 8 }}>
+                {quote.quoteType === 'diagnostic' ? (
+                  <View className="flex-row items-center flex-1" style={{ gap: 6 }}>
+                    <View className="w-6 h-6 rounded-full bg-amber-50 dark:bg-amber-950/40 items-center justify-center">
+                      <FontAwesome5 name="bell" size={11} color="#d97706" solid />
+                    </View>
+                    <Text className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                      1-Hr Push Reminder Active
+                    </Text>
+                  </View>
+                ) : (
+                  <View className="flex-1" />
+                )}
+                <Pressable
+                  onPress={() => {
+                    HapticFeedback.selection();
+                    exportToCalendar({
+                      id: job?._id || jobId,
+                      quoteType: quote.quoteType,
+                      projectName: quote.projectName,
+                      startDate: quote.estimatedStartDate,
+                      startTime: quote.startTime,
+                      endTime: quote.endTime,
+                      jobAddress: quote.jobAddress,
+                      clientName: userRole === 'contractor' ? (job?.user?.firstName || 'Homeowner') : (job?.contractor?.companyName || 'Contractor'),
+                    });
+                  }}
+                  className="px-2.5 py-1.5 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex-row items-center active:opacity-75"
+                  style={{ gap: 5 }}
+                >
+                  <FontAwesome5 name="calendar-alt" size={11} color="#404040" />
+                  <Text className="text-xs font-bold text-neutral-800 dark:text-neutral-200">Add to Calendar</Text>
+                </Pressable>
+              </View>
             </View>
           )}
 

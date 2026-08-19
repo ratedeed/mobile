@@ -23,6 +23,7 @@ import { uploadToCloudinary, CLOUDINARY_FOLDERS } from '../../utils/cloudinary';
 import { requestPhotoLibraryPermission } from '../../utils/permissions';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import HapticFeedback from '../../utils/haptics';
+import { scheduleOneHourReminder } from '../../utils/reminderScheduler';
 
 const CATEGORIES = ['Plumbers', 'Electricians', 'Painters', 'Landscapers', 'HVAC', 'Roofers', 'Carpenters', 'Cleaners', 'Handymen', 'Home Builders'];
 
@@ -403,7 +404,7 @@ export default function QuoteCreationSheet({
           amount: parseFloat(item.amount) || 0,
         }));
 
-      await createQuoteFromChat({
+      const sentQuote = await createQuoteFromChat({
         conversationId,
         quoteType,
         diagnosticFeeCredit: (quoteType === 'repair' && applyDiagnosticCredit) ? creditDeduction : 0,
@@ -421,6 +422,21 @@ export default function QuoteCreationSheet({
         contractorNotes: notes.trim() || undefined,
         photos: uploadedPhotoUrls,
       });
+
+      // Schedule 1-hour push reminder on device for diagnostic dispatch
+      if (quoteType === 'diagnostic' && startDate) {
+        scheduleOneHourReminder({
+          id: sentQuote?.quote?._id || sentQuote?.quote?.id || sentQuote?._id || conversationId || String(Date.now()),
+          quoteType,
+          projectName: projectName.trim() || (quoteType === 'diagnostic' ? 'Diagnostic Dispatch' : 'Project Quote'),
+          startDate,
+          startTime: startTime.trim(),
+          endTime: endTime.trim(),
+          jobAddress: jobAddress.trim(),
+          clientName: recipientName,
+          isContractor: true,
+        }).catch(() => {});
+      }
 
       // Reset
       setQuoteType('repair');
