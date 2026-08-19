@@ -57,6 +57,7 @@ import {
   unblockUser,
   getBlockedUsers,
   getStripeAccountStatus,
+  updateQuoteStatus,
 } from "../api";
 import { useAuth } from "../context/AuthContext";
 import { useContractor } from "../context/ContractorContext";
@@ -172,6 +173,22 @@ function formatChatDate(dateStr) {
     if (d.toDateString() === new Date(now - 86400000).toDateString()) return "Yesterday";
     return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
   } catch { return ""; }
+}
+
+function getQuoteExpiryDisplay(expiresAt) {
+  if (!expiresAt) return null;
+  try {
+    const diff = new Date(expiresAt).getTime() - Date.now();
+    if (diff <= 0) return "Expired";
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    if (days > 0) return `Expires in ${days}d ${hours}h`;
+    if (hours > 0) return `Expires in ${hours}h ${mins}m`;
+    return `Expires in ${mins}m`;
+  } catch {
+    return null;
+  }
 }
 
 // ─── Typing Indicator ─────────────────────────────────────────────────────────
@@ -1049,6 +1066,37 @@ const MessagesScreen = () => {
     Alert.alert("Message Options", undefined, options);
   }, [isMessageFromMe]);
 
+  const handleWithdrawQuote = useCallback((quoteId) => {
+    if (!quoteId) return;
+    Alert.alert(
+      "Withdraw Quote",
+      "Are you sure you want to withdraw this quote? The homeowner will no longer be able to accept it.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Withdraw",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await updateQuoteStatus(quoteId, "withdrawn");
+              setMessages((prev) =>
+                prev.map((m) =>
+                  (m.quote?._id === quoteId || m.quote?.id === quoteId || m.quoteId === quoteId)
+                    ? { ...m, quote: { ...m.quote, status: "withdrawn" } }
+                    : m
+                )
+              );
+              HapticFeedback.warning();
+              Alert.alert("Quote Withdrawn", "This quote has been successfully withdrawn.");
+            } catch (err) {
+              Alert.alert("Error", err?.message || "Failed to withdraw quote.");
+            }
+          },
+        },
+      ]
+    );
+  }, []);
+
   const handleTextChange = useCallback((text) => {
     setNewMessage(text);
     const cId = selectedConversation?.conversationId;
@@ -1227,128 +1275,402 @@ const MessagesScreen = () => {
             {(msg.type === "quote" || msg.quoteId) && msg.quote ? (
               <>
                 <View className="w-full bg-white dark:bg-neutral-800 rounded-2xl border border-neutral-200 dark:border-neutral-700 overflow-hidden" style={[{ shadowColor: "#000", shadowOpacity: isDark ? 0 : 0.04, shadowRadius: 10, shadowOffset: { height: 3 }, elevation: isDark ? 0 : 3 }]}>
-                  {/* Beautiful cover image */}
+                  {/* Status Banner when not pending */}
                   {(() => {
-                    const cName = msg.quote?.contractor?.companyName || msg.quote?.contractor?.businessName || selectedConversation?.otherParticipant?.companyName || selectedConversation?.otherParticipant?.firstName || 'Contractor';
-                    const cImage = msg.quote?.contractor?.bannerImage || msg.quote?.contractor?.coverImage || selectedConversation?.otherParticipant?.bannerImage || selectedConversation?.otherParticipant?.coverImage || '';
-                    const cCat = msg.quote?.contractor?.category || selectedConversation?.otherParticipant?.category || '';
-                    const coverUrl = getCoverImageUrl(cName, cImage, cCat, 600, 300);
-                    return isSvgUrl(coverUrl) ? (
-                      <View className="w-full h-36 bg-neutral-100"><SvgImage uri={coverUrl} width="100%" height="100%" /></View>
-                    ) : (
-                      <Image source={{ uri: coverUrl }} className="w-full h-36 bg-neutral-100" resizeMode="cover" />
-                    );
+                    const qStatus = msg.quote.status || 'pending';
+                    if (qStatus === 'accepted' || qStatus === 'funded_in_progress') {
+                      return (
+                        <View className="px-4 py-2.5 flex-row items-center bg-emerald-50 dark:bg-emerald-950/40 border-b border-emerald-100 dark:border-emerald-900/40">
+                          <FontAwesome5 name="check-circle" size={12} color="#059669" solid />
+                          <Text className="text-[12px] font-bold ml-2 text-emerald-800 dark:text-emerald-300">Quote Accepted — Project Confirmed!</Text>
+                        </View>
+                      );
+                    }
+                    if (qStatus === 'rejected' || qStatus === 'declined') {
+                      return (
+                        <View className="px-4 py-2.5 flex-row items-center bg-red-50 dark:bg-red-950/40 border-b border-red-100 dark:border-red-900/40">
+                          <FontAwesome5 name="times-circle" size={12} color="#dc2626" solid />
+                          <Text className="text-[12px] font-bold ml-2 text-red-800 dark:text-red-300">Quote Declined</Text>
+                        </View>
+                      );
+                    }
+                    if (qStatus === 'withdrawn' || qStatus === 'cancelled') {
+                      return (
+                        <View className="px-4 py-2.5 flex-row items-center bg-neutral-100 dark:bg-neutral-700/50 border-b border-neutral-200 dark:border-neutral-700">
+                          <FontAwesome5 name="minus-circle" size={12} color="#6b7280" solid />
+                          <Text className="text-[12px] font-bold ml-2 text-neutral-700 dark:text-neutral-300">Quote Withdrawn</Text>
+                        </View>
+                      );
+                    }
+                    if (qStatus === 'expired') {
+                      return (
+                        <View className="px-4 py-2.5 flex-row items-center bg-amber-50 dark:bg-amber-950/40 border-b border-amber-100 dark:border-amber-900/40">
+                          <FontAwesome5 name="clock" size={12} color="#d97706" />
+                          <Text className="text-[12px] font-bold ml-2 text-amber-800 dark:text-amber-300">Quote Expired</Text>
+                        </View>
+                      );
+                    }
+                    return null;
                   })()}
-                  
-                  {msg.quote.status && msg.quote.status !== 'pending' && msg.quote.status !== 'pending_user_approval' && (
-                    <View className={`px-4 py-2 flex-row items-center border-b ${msg.quote.status === 'accepted' || msg.quote.status === 'funded_in_progress' ? (isDark ? 'bg-emerald-900/40 border-emerald-800' : 'bg-emerald-50 border-emerald-100') : msg.quote.status === 'rejected' || msg.quote.status === 'declined' ? (isDark ? 'bg-red-900/40 border-red-800' : 'bg-red-50 border-red-100') : (isDark ? 'bg-amber-900/40 border-amber-800' : 'bg-amber-50 border-amber-100')}`}>
-                      <FontAwesome5 name={msg.quote.status === 'accepted' || msg.quote.status === 'funded_in_progress' ? 'check-circle' : msg.quote.status === 'rejected' || msg.quote.status === 'declined' ? 'times-circle' : 'clock'} size={12} color={msg.quote.status === 'accepted' || msg.quote.status === 'funded_in_progress' ? (isDark ? '#6ee7b7' : '#059669') : msg.quote.status === 'rejected' || msg.quote.status === 'declined' ? (isDark ? '#fca5a5' : '#dc2626') : (isDark ? '#fcd34d' : '#d97706')} />
-                      <Text className={`text-[12px] font-semibold ml-2 ${msg.quote.status === 'accepted' || msg.quote.status === 'funded_in_progress' ? (isDark ? 'text-emerald-300' : 'text-emerald-700') : msg.quote.status === 'rejected' || msg.quote.status === 'declined' ? (isDark ? 'text-red-300' : 'text-red-700') : (isDark ? 'text-amber-300' : 'text-amber-700')}`}>
-                        {msg.quote.status === 'accepted' || msg.quote.status === 'funded_in_progress' ? 'Quote Accepted' : msg.quote.status === 'rejected' || msg.quote.status === 'declined' ? 'Quote Declined' : 'Pending Review'}
-                      </Text>
-                    </View>
-                  )}
-                  
-                  {/* Title & Badge Row */}
-                  <View className="p-4 pb-2">
-                    <View className="flex-row items-center justify-between">
-                      <View className="flex-row items-center" style={{ gap: 6 }}>
-                        <View className={`px-2 py-0.5 rounded ${msg.quote.quoteType === 'diagnostic' ? (isDark ? 'bg-indigo-900/50' : 'bg-indigo-50') : 'bg-neutral-100 dark:bg-neutral-700'}`}>
-                          <Text className={`text-[10px] font-bold uppercase tracking-wider ${msg.quote.quoteType === 'diagnostic' ? 'text-indigo-600 dark:text-indigo-300' : 'text-neutral-800 dark:text-neutral-200'}`}>
-                            {msg.quote.quoteType === 'diagnostic' ? '📋 Diagnostic Dispatch' : (msg.quote.serviceType || msg.quote.category || 'Service')}
-                          </Text>
-                        </View>
-                        {msg.quote.diagnosticFeeCredit > 0 && (
-                          <View className="px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/40">
-                            <Text className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
-                              ✓ ${(Number(msg.quote.diagnosticFeeCredit) / 100).toFixed(0)} Credit Applied
-                            </Text>
-                          </View>
-                        )}
-                      </View>
-                      <View className="flex-row items-center" style={{ gap: 4 }}>
-                        <FontAwesome5 name="star" size={10} color="#eab308" solid />
-                        <Text className="text-[12px] font-semibold text-neutral-800 dark:text-neutral-200">{msg.quote.contractor?.averageRating || '5.0'}</Text>
-                      </View>
-                    </View>
-                    
-                    <Text className="text-[18px] font-bold text-neutral-900 dark:text-white mt-2 leading-[22px]">{msg.quote.projectTitle || msg.quote.projectName || 'Project Quote'}</Text>
-                    
-                    {msg.quote.description ? (
-                      <Text className="text-[13px] text-neutral-500 dark:text-neutral-400 mt-1 leading-[18px]">{msg.quote.description}</Text>
-                    ) : null}
-                  </View>
 
-                  {/* Line items (show first 2) */}
-                  {Array.isArray(msg.quote.lineItems) && msg.quote.lineItems.length > 0 && (
-                    <View className="px-4 py-2 mx-4 mb-2 rounded-xl bg-neutral-50 dark:bg-neutral-900/60" style={{ gap: 6 }}>
-                      {msg.quote.lineItems.slice(0, 2).map((item, i) => (
-                        <View key={i} className="flex-row justify-between items-center">
-                          <Text className="text-[12px] text-neutral-600 dark:text-neutral-300 flex-1 mr-2" numberOfLines={1}>{item.description}</Text>
-                          <Text className="text-[12px] font-semibold text-neutral-800 dark:text-neutral-200">${((item.amount || 0) / 100).toLocaleString()}</Text>
+                  {/* Header: Homeowner perspective (Contractor Avatar & Info) vs Contractor perspective (Project Quote badge) */}
+                  {!isMe ? (
+                    <View className="p-4 pb-3 flex-row items-center border-b border-neutral-100 dark:border-neutral-700/60" style={{ gap: 12 }}>
+                      {(() => {
+                        const contractorName = msg.quote.contractor?.companyName || msg.quote.contractor?.businessName || selectedConversation?.otherParticipant?.companyName || selectedConversation?.otherParticipant?.firstName || 'Contractor';
+                        const contractorAvatar = getProfileImageUrl(contractorName, msg.quote.contractor?.profilePicture || selectedConversation?.otherParticipant?.profilePicture || '', msg.quote.contractor?.category || selectedConversation?.otherParticipant?.category);
+                        const isVerified = msg.quote.contractor?.isVerified || selectedConversation?.otherParticipant?.isVerified || selectedConversation?.otherParticipant?.isTopRated;
+                        const rating = msg.quote.contractor?.averageRating || selectedConversation?.otherParticipant?.averageRating || '5.0';
+                        const city = msg.quote.contractor?.city || selectedConversation?.otherParticipant?.city || '';
+
+                        return (
+                          <>
+                            {isSvgUrl(contractorAvatar) ? (
+                              <View className="w-11 h-11 rounded-full overflow-hidden shrink-0">
+                                <SvgImage uri={contractorAvatar} width="100%" height="100%" />
+                              </View>
+                            ) : (
+                              <Image source={{ uri: contractorAvatar }} className="w-11 h-11 rounded-full bg-neutral-100 dark:bg-neutral-700 shrink-0" />
+                            )}
+                            <View className="flex-1 min-w-0">
+                              <View className="flex-row items-center" style={{ gap: 4 }}>
+                                <Text className="text-[14px] font-bold text-neutral-900 dark:text-white truncate" numberOfLines={1}>{contractorName}</Text>
+                                {isVerified && <VerifiedBadge size={13} animate={false} />}
+                              </View>
+                              <View className="flex-row items-center mt-0.5" style={{ gap: 8 }}>
+                                <View className="flex-row items-center" style={{ gap: 3 }}>
+                                  <FontAwesome5 name="star" size={10} color="#eab308" solid />
+                                  <Text className="text-[11px] font-semibold text-neutral-800 dark:text-neutral-200">{rating}</Text>
+                                </View>
+                                {city ? (
+                                  <View className="flex-row items-center" style={{ gap: 3 }}>
+                                    <FontAwesome5 name="map-marker-alt" size={9} color="#9ca3af" />
+                                    <Text className="text-[11px] text-neutral-400 truncate" numberOfLines={1}>{city}</Text>
+                                  </View>
+                                ) : null}
+                              </View>
+                            </View>
+                          </>
+                        );
+                      })()}
+                    </View>
+                  ) : (
+                    <View className="p-3.5 pb-2.5 flex-row items-center justify-between border-b border-neutral-100 dark:border-neutral-700/60">
+                      <View className="flex-row items-center" style={{ gap: 6 }}>
+                        <FontAwesome5 name="file-invoice-dollar" size={13} color="#4F46E5" />
+                        <Text className="text-[13px] font-bold text-neutral-900 dark:text-white">Project Quote Sent</Text>
+                      </View>
+                      {(!msg.quote.status || msg.quote.status === 'pending' || msg.quote.status === 'pending_user_approval') && (
+                        <View className="px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/40 border border-amber-200/60 dark:border-amber-800/40">
+                          <Text className="text-[10px] font-bold text-amber-700 dark:text-amber-300">Awaiting Response</Text>
                         </View>
-                      ))}
-                      {msg.quote.lineItems.length > 2 && (
-                        <Text className="text-[11px] text-neutral-400 font-medium">+ {msg.quote.lineItems.length - 2} more item{msg.quote.lineItems.length - 2 > 1 ? 's' : ''}</Text>
                       )}
                     </View>
                   )}
 
-                  {/* Pricing Breakdown */}
-                  <View className="px-4 py-2.5 mx-4 mb-3 rounded-xl bg-neutral-50 dark:bg-neutral-900/60" style={{ gap: 5 }}>
-                    {msg.quote.diagnosticFeeCredit > 0 && (
-                      <View className="flex-row justify-between items-center">
-                        <Text className="text-[12px] text-neutral-500 dark:text-neutral-400">Original Subtotal</Text>
-                        <Text className="text-[13px] font-semibold text-neutral-800 dark:text-neutral-200">${(() => { const a = (msg.quote.subtotal || msg.quote.totalAmount || 0) / 100; return Number.isFinite(a) ? a.toLocaleString() : '0'; })()}</Text>
-                      </View>
-                    )}
-
-                    {/* Diagnostic Fee Credit row */}
-                    {msg.quote.diagnosticFeeCredit > 0 && (
-                      <View className="flex-row justify-between items-center">
-                        <Text className="text-[12px] text-emerald-700 dark:text-emerald-300 font-medium">Diagnostic Fee Credit</Text>
-                        <Text className="text-[13px] font-semibold text-emerald-700 dark:text-emerald-300">
-                          -${(Number(msg.quote.diagnosticFeeCredit) / 100).toFixed(2)}
+                  {/* Body Content */}
+                  <View className="p-4 pb-2">
+                    {/* Category & Badges */}
+                    <View className="flex-row items-center flex-wrap" style={{ gap: 6 }}>
+                      <View className={`px-2 py-0.5 rounded ${msg.quote.quoteType === 'diagnostic' ? (isDark ? 'bg-indigo-900/50' : 'bg-indigo-50') : (isDark ? 'bg-neutral-700' : 'bg-neutral-100')}`}>
+                        <Text className={`text-[10px] font-bold uppercase tracking-wider ${msg.quote.quoteType === 'diagnostic' ? 'text-indigo-600 dark:text-indigo-300' : 'text-neutral-800 dark:text-neutral-200'}`}>
+                          {msg.quote.quoteType === 'diagnostic' ? '📋 Diagnostic Dispatch' : (msg.quote.serviceType || msg.quote.category || 'Service')}
                         </Text>
                       </View>
-                    )}
-                    
-                    <View className="h-px bg-neutral-200 dark:bg-neutral-800 my-1" />
-                    
-                    <View className="flex-row justify-between items-center">
-                      <Text className="text-[14px] font-bold text-neutral-900 dark:text-white">Total price</Text>
-                      <Text className="text-[18px] font-extrabold text-neutral-900 dark:text-white">${(() => {
-                        const amount = msg.quote.totalAmount != null ? msg.quote.totalAmount / 100 : msg.quote.total != null ? msg.quote.total : 0;
-                        return Number.isFinite(amount) ? amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00';
-                      })()}</Text>
+                      {msg.quote.diagnosticFeeCredit > 0 && (
+                        <View className="px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/40">
+                          <Text className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
+                            ✓ ${(Number(msg.quote.diagnosticFeeCredit) > 1000 ? Number(msg.quote.diagnosticFeeCredit) / 100 : Number(msg.quote.diagnosticFeeCredit)).toFixed(0)} Credit Applied
+                          </Text>
+                        </View>
+                      )}
+                      {msg.quote.revisions > 0 && (
+                        <View className="px-2 py-0.5 rounded bg-purple-50 dark:bg-purple-950/40">
+                          <Text className="text-[10px] font-bold text-purple-700 dark:text-purple-300">Revision #{msg.quote.revisions}</Text>
+                        </View>
+                      )}
                     </View>
-                  </View>
-                  
-                  {/* Escrow / Guarantee notice */}
-                  <View className="mx-4 mb-4 p-3 rounded-xl flex-row items-start" style={{ gap: 8, backgroundColor: msg.quote.quoteType === 'diagnostic' ? (isDark ? '#1e1b4b' : '#eef2ff') : (isDark ? '#1e293b' : '#f8fafc'), borderWidth: 1, borderColor: msg.quote.quoteType === 'diagnostic' ? (isDark ? '#3730a3' : '#c7d2fe') : (isDark ? '#334155' : '#e2e8f0') }}>
-                    <FontAwesome5 name="shield-alt" size={13} color={msg.quote.quoteType === 'diagnostic' ? '#4f46e5' : (isDark ? "#94a3b8" : "#64748b")} style={{ marginTop: 2 }} />
-                    <Text className={`text-[11px] flex-1 leading-[16px] ${msg.quote.quoteType === 'diagnostic' ? (isDark ? 'text-indigo-300' : 'text-indigo-900') : 'text-neutral-500 dark:text-neutral-400'}`}>
-                      {msg.quote.quoteType === 'diagnostic' 
-                        ? 'Diagnostic Fee Protection: This fee will be 100% credited toward your final repair quote if you proceed.'
-                        : (isMe ? 'Funds are held safely and released to you once the homeowner verifies the work is complete.' : 'Payments are held safely and only released when you verify the work is completed.')
-                      }
+
+                    {/* Project Title & Scope */}
+                    <Text className="text-[17px] font-bold text-neutral-900 dark:text-white mt-2 leading-[22px]">
+                      {msg.quote.projectName || msg.quote.projectTitle || msg.quote.title || 'Project Quote'}
                     </Text>
+
+                    {msg.quote.description ? (
+                      <Text className="text-[13px] text-neutral-600 dark:text-neutral-300 mt-1 leading-[18px]" numberOfLines={4}>
+                        {msg.quote.description}
+                      </Text>
+                    ) : null}
+
+                    {/* Timeline / Dates */}
+                    {(() => {
+                      const startDateStr = msg.quote.startDate || msg.quote.estimatedStartDate;
+                      const durationStr = msg.quote.estimatedDuration;
+                      const formattedStart = startDateStr ? (() => {
+                        try {
+                          const d = new Date(startDateStr);
+                          return !isNaN(d.getTime()) ? d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : String(startDateStr);
+                        } catch { return null; }
+                      })() : null;
+
+                      if (!formattedStart && !durationStr) return null;
+
+                      return (
+                        <View className="flex-row items-center mt-3 pt-2.5 border-t border-neutral-100 dark:border-neutral-700/50" style={{ gap: 14 }}>
+                          {formattedStart && (
+                            <View className="flex-row items-center" style={{ gap: 5 }}>
+                              <FontAwesome5 name="calendar-alt" size={11} color="#6b7280" />
+                              <Text className="text-[11px] font-medium text-neutral-600 dark:text-neutral-300">Start: {formattedStart}</Text>
+                            </View>
+                          )}
+                          {durationStr && (
+                            <View className="flex-row items-center" style={{ gap: 5 }}>
+                              <FontAwesome5 name="clock" size={11} color="#6b7280" />
+                              <Text className="text-[11px] font-medium text-neutral-500 dark:text-neutral-400">{durationStr}</Text>
+                            </View>
+                          )}
+                        </View>
+                      );
+                    })()}
                   </View>
 
-                  {/* Action button */}
+                  {/* Line Items */}
+                  {Array.isArray(msg.quote.lineItems) && msg.quote.lineItems.length > 0 && (
+                    <View className="px-4 py-2.5 mx-4 mb-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-900/60" style={{ gap: 6 }}>
+                      {msg.quote.lineItems.slice(0, 4).map((item, i) => {
+                        const itemAmt = item.amount != null ? (Number(item.amount) > 1000 ? Number(item.amount) / 100 : Number(item.amount)) : 0;
+                        return (
+                          <View key={i} className="flex-row justify-between items-center">
+                            <Text className="text-[12px] text-neutral-600 dark:text-neutral-300 flex-1 mr-2" numberOfLines={1}>
+                              {item.description || item.label || `Item ${i + 1}`}
+                            </Text>
+                            <Text className="text-[12px] font-semibold text-neutral-800 dark:text-neutral-200">
+                              ${itemAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </Text>
+                          </View>
+                        );
+                      })}
+                      {msg.quote.lineItems.length > 4 && (
+                        <Text className="text-[11px] text-neutral-400 font-medium">+ {msg.quote.lineItems.length - 4} more items</Text>
+                      )}
+                    </View>
+                  )}
+
+                  {/* Financial Breakdown (Contractor view shows Platform fee & Net Payout; Homeowner view shows Total) */}
+                  {(() => {
+                    const rawTotal = msg.quote.totalAmount != null ? (Number(msg.quote.totalAmount) > 1000 ? Number(msg.quote.totalAmount) / 100 : Number(msg.quote.totalAmount)) : (msg.quote.total != null ? Number(msg.quote.total) : 0);
+                    const subtotal = msg.quote.subtotal != null ? (Number(msg.quote.subtotal) > 1000 ? Number(msg.quote.subtotal) / 100 : Number(msg.quote.subtotal)) : rawTotal;
+                    const diagCredit = msg.quote.diagnosticFeeCredit != null ? (Number(msg.quote.diagnosticFeeCredit) > 1000 ? Number(msg.quote.diagnosticFeeCredit) / 100 : Number(msg.quote.diagnosticFeeCredit)) : 0;
+                    const platformFee = msg.quote.platformFee != null ? (Number(msg.quote.platformFee) > 1000 ? Number(msg.quote.platformFee) / 100 : Number(msg.quote.platformFee)) : (rawTotal * 0.05);
+                    const contractorPayout = Math.max(0, rawTotal - platformFee);
+
+                    return (
+                      <View className="px-4 py-2.5 mx-4 mb-3 rounded-xl bg-neutral-50 dark:bg-neutral-900/60" style={{ gap: 5 }}>
+                        {diagCredit > 0 && (
+                          <View className="flex-row justify-between items-center">
+                            <Text className="text-[12px] text-emerald-700 dark:text-emerald-300 font-medium">Diagnostic Fee Credit</Text>
+                            <Text className="text-[12px] font-semibold text-emerald-700 dark:text-emerald-300">
+                              -${diagCredit.toFixed(2)}
+                            </Text>
+                          </View>
+                        )}
+
+                        {isMe && platformFee > 0 && (
+                          <View className="flex-row justify-between items-center">
+                            <Text className="text-[12px] text-neutral-500 dark:text-neutral-400">RateDeed Platform Fee (5%)</Text>
+                            <Text className="text-[12px] text-neutral-500 dark:text-neutral-400">
+                              -${platformFee.toFixed(2)}
+                            </Text>
+                          </View>
+                        )}
+
+                        <View className="h-px bg-neutral-200 dark:bg-neutral-800 my-1" />
+
+                        <View className="flex-row justify-between items-center">
+                          <Text className="text-[14px] font-bold text-neutral-900 dark:text-white">
+                            {isMe ? 'Total Project Price' : 'Total Price'}
+                          </Text>
+                          <Text className="text-[18px] font-extrabold text-neutral-900 dark:text-white">
+                            ${rawTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </Text>
+                        </View>
+
+                        {isMe && (
+                          <View className="flex-row justify-between items-center pt-1 mt-0.5 border-t border-neutral-200/60 dark:border-neutral-800">
+                            <Text className="text-[12px] font-bold text-indigo-600 dark:text-indigo-400">Your Net Payout</Text>
+                            <Text className="text-[13px] font-extrabold text-indigo-600 dark:text-indigo-400">
+                              ${contractorPayout.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                    );
+                  })()}
+
+                  {/* Escrow / Guarantee Notice */}
+                  {(() => {
+                    const rawTotal = msg.quote.totalAmount != null ? (Number(msg.quote.totalAmount) > 1000 ? Number(msg.quote.totalAmount) / 100 : Number(msg.quote.totalAmount)) : (msg.quote.total != null ? Number(msg.quote.total) : 0);
+                    const isMilestone = rawTotal >= 5000;
+                    const isDiagnostic = msg.quote.quoteType === 'diagnostic';
+
+                    if (isDiagnostic) {
+                      return (
+                        <View className="mx-4 mb-3.5 p-3 rounded-xl flex-row items-start bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/40" style={{ gap: 8 }}>
+                          <FontAwesome5 name="shield-alt" size={13} color="#4F46E5" style={{ marginTop: 2 }} />
+                          <Text className="text-[11px] flex-1 leading-[16px] text-indigo-900 dark:text-indigo-200">
+                            Diagnostic Fee Protection: This fee will be 100% credited toward your final repair quote if you proceed.
+                          </Text>
+                        </View>
+                      );
+                    }
+
+                    if (isMilestone) {
+                      return (
+                        <View className="mx-4 mb-3.5 p-3 rounded-xl bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/40">
+                          <View className="flex-row items-center mb-1.5" style={{ gap: 6 }}>
+                            <FontAwesome5 name="shield-alt" size={12} color="#4F46E5" />
+                            <Text className="text-[11px] font-bold text-indigo-900 dark:text-indigo-200">Milestone Escrow Applied</Text>
+                          </View>
+                          <View className="flex-row justify-between text-[11px] pt-1 border-t border-indigo-200/50 dark:border-indigo-800/40">
+                            <Text className="text-[10px] text-indigo-700 dark:text-indigo-300">Deposit 30% (${(rawTotal * 0.3).toFixed(0)})</Text>
+                            <Text className="text-[10px] text-indigo-700 dark:text-indigo-300">Midpoint 30% (${(rawTotal * 0.3).toFixed(0)})</Text>
+                            <Text className="text-[10px] text-indigo-700 dark:text-indigo-300">Completion 40% (${(rawTotal * 0.4).toFixed(0)})</Text>
+                          </View>
+                        </View>
+                      );
+                    }
+
+                    return (
+                      <View className="mx-4 mb-3.5 p-3 rounded-xl flex-row items-start bg-neutral-50 dark:bg-neutral-900/80 border border-neutral-200/60 dark:border-neutral-700" style={{ gap: 8 }}>
+                        <FontAwesome5 name="shield-alt" size={12} color={isDark ? "#94a3b8" : "#64748b"} style={{ marginTop: 2 }} />
+                        <Text className="text-[11px] flex-1 leading-[16px] text-neutral-600 dark:text-neutral-300">
+                          {isMe
+                            ? 'Funds are held safely in escrow and released to you once the homeowner verifies the work is complete.'
+                            : 'Payments are held safely in escrow and only released when you verify the work is completed.'}
+                        </Text>
+                      </View>
+                    );
+                  })()}
+
+                  {/* Expiration Countdown Banner (when active) */}
+                  {(() => {
+                    const qStatus = msg.quote.status || 'pending';
+                    const isPending = qStatus === 'pending' || qStatus === 'pending_user_approval';
+                    const expiryText = isPending ? getQuoteExpiryDisplay(msg.quote.expiresAt) : null;
+                    if (!expiryText || expiryText === 'Expired') return null;
+
+                    return (
+                      <View className="mx-4 mb-3 px-3 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200/60 dark:border-amber-800/40 flex-row items-center" style={{ gap: 6 }}>
+                        <FontAwesome5 name="clock" size={11} color="#d97706" />
+                        <Text className="text-[11px] font-semibold text-amber-800 dark:text-amber-300">{expiryText}</Text>
+                      </View>
+                    );
+                  })()}
+
+                  {/* Action Buttons */}
                   <View className="px-4 pb-4">
                     {isMe ? (
-                      <View className="py-3.5 rounded-xl items-center justify-center flex-row" style={{ gap: 6, backgroundColor: isDark ? '#262626' : '#f5f5f5' }}>
-                        <FontAwesome5 name={msg.quote.status === 'accepted' || msg.quote.status === 'funded_in_progress' ? 'check-circle' : msg.quote.status === 'rejected' || msg.quote.status === 'declined' ? 'times-circle' : 'paper-plane'} size={12} color={isDark ? '#a3a3a3' : '#737373'} />
-                        <Text className="text-[14px] font-bold text-neutral-500 dark:text-neutral-400">
-                          {msg.quote.status === 'accepted' || msg.quote.status === 'funded_in_progress' ? 'Quote Accepted' : msg.quote.status === 'rejected' || msg.quote.status === 'declined' ? 'Quote Declined' : 'Quote Sent — Awaiting Response'}
-                        </Text>
-                      </View>
+                      (() => {
+                        const qStatus = msg.quote.status || 'pending';
+                        const isPending = qStatus === 'pending' || qStatus === 'pending_user_approval';
+                        const quoteId = msg.quote._id || msg.quote.id || msg.quoteId;
+
+                        if (isPending) {
+                          return (
+                            <View className="flex-row items-center" style={{ gap: 8 }}>
+                              <Pressable
+                                onPress={() => handleWithdrawQuote(quoteId)}
+                                className="flex-1 py-3 rounded-xl items-center justify-center border border-red-200 dark:border-red-900/60 bg-red-50/50 dark:bg-red-950/20 active:opacity-70"
+                                accessibilityLabel="Withdraw quote"
+                                accessibilityRole="button"
+                              >
+                                <Text className="text-[13px] font-bold text-red-600 dark:text-red-400">Withdraw</Text>
+                              </Pressable>
+                              <Pressable
+                                onPress={() => navigation.navigate('QuoteReview', { quoteId })}
+                                className="flex-1 py-3 bg-neutral-900 dark:bg-neutral-100 rounded-xl items-center justify-center active:opacity-80"
+                                accessibilityLabel="View quote details"
+                                accessibilityRole="button"
+                              >
+                                <Text className="text-[13px] font-bold text-white dark:text-neutral-900">View Quote</Text>
+                              </Pressable>
+                            </View>
+                          );
+                        }
+
+                        if (qStatus === 'accepted' || qStatus === 'funded_in_progress') {
+                          return (
+                            <Pressable
+                              onPress={() => navigation.navigate('JobDetail', { quoteId })}
+                              className="py-3.5 bg-emerald-600 rounded-xl items-center justify-center flex-row"
+                              style={{ gap: 6 }}
+                              accessibilityLabel="View active job"
+                              accessibilityRole="button"
+                            >
+                              <Text className="text-[14px] font-bold text-white">View Active Job</Text>
+                              <FontAwesome5 name="arrow-right" size={11} color="white" />
+                            </Pressable>
+                          );
+                        }
+
+                        return (
+                          <Pressable
+                            onPress={() => navigation.navigate('QuoteReview', { quoteId })}
+                            className="py-3 border border-neutral-200 dark:border-neutral-700 rounded-xl items-center justify-center"
+                            accessibilityLabel="View quote details"
+                            accessibilityRole="button"
+                          >
+                            <Text className="text-[13px] font-semibold text-neutral-600 dark:text-neutral-300">View Quote Details</Text>
+                          </Pressable>
+                        );
+                      })()
                     ) : (
-                      <Pressable onPress={() => navigation.navigate('QuoteReview', { quoteId: msg.quoteId || msg.quote.id || msg.quote._id })} className="py-3.5 bg-neutral-900 dark:bg-neutral-100 rounded-xl items-center flex-row justify-center" style={{ gap: 6 }} accessibilityLabel="Review quote details" accessibilityRole="button">
-                        <Text className="text-[14px] font-bold text-white dark:text-neutral-900">Review Details</Text>
-                        <FontAwesome5 name="arrow-right" size={11} color={isDark ? "#171717" : "#FFFFFF"} />
-                      </Pressable>
+                      (() => {
+                        const qStatus = msg.quote.status || 'pending';
+                        const isPending = qStatus === 'pending' || qStatus === 'pending_user_approval';
+                        const quoteId = msg.quote._id || msg.quote.id || msg.quoteId;
+
+                        if (isPending) {
+                          return (
+                            <Pressable
+                              onPress={() => navigation.navigate('QuoteReview', { quoteId })}
+                              className="py-3.5 bg-neutral-900 dark:bg-neutral-100 rounded-xl items-center flex-row justify-center active:opacity-85"
+                              style={{ gap: 6 }}
+                              accessibilityLabel="Review and accept quote"
+                              accessibilityRole="button"
+                            >
+                              <Text className="text-[14px] font-bold text-white dark:text-neutral-900">Review & Accept Quote</Text>
+                              <FontAwesome5 name="arrow-right" size={11} color={isDark ? "#171717" : "#FFFFFF"} />
+                            </Pressable>
+                          );
+                        }
+
+                        if (qStatus === 'accepted' || qStatus === 'funded_in_progress') {
+                          return (
+                            <Pressable
+                              onPress={() => navigation.navigate('JobDetail', { quoteId })}
+                              className="py-3.5 bg-emerald-600 rounded-xl items-center justify-center flex-row"
+                              style={{ gap: 6 }}
+                              accessibilityLabel="View active job and escrow"
+                              accessibilityRole="button"
+                            >
+                              <Text className="text-[14px] font-bold text-white">View Active Job & Escrow</Text>
+                              <FontAwesome5 name="arrow-right" size={11} color="white" />
+                            </Pressable>
+                          );
+                        }
+
+                        return (
+                          <Pressable
+                            onPress={() => navigation.navigate('QuoteReview', { quoteId })}
+                            className="py-3 border border-neutral-200 dark:border-neutral-700 rounded-xl items-center justify-center"
+                            accessibilityLabel="View quote details"
+                            accessibilityRole="button"
+                          >
+                            <Text className="text-[13px] font-semibold text-neutral-600 dark:text-neutral-300">View Quote Details</Text>
+                          </Pressable>
+                        );
+                      })()
                     )}
                   </View>
                 </View>
@@ -1438,7 +1760,7 @@ const MessagesScreen = () => {
         </View>
       </View>
     );
-  }, [chatAvatar, chatName, isDark, navigation, setActiveImage, setLightboxVisible, handleRetryMessage, handleMessageLongPress]);
+  }, [chatAvatar, chatName, isDark, navigation, setActiveImage, setLightboxVisible, handleRetryMessage, handleMessageLongPress, handleWithdrawQuote]);
 
   const filteredConversations = useMemo(() => {
     return Object.values(conversations)
