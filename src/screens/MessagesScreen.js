@@ -22,6 +22,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColorScheme } from "nativewind";
 import ImageLightbox from "../components/ImageLightbox";
 import * as ImagePicker from "expo-image-picker";
+import * as Clipboard from "expo-clipboard";
 import { requestPhotoLibraryPermission } from "../utils/permissions";
 import {
   fetchConversations,
@@ -973,6 +974,80 @@ const MessagesScreen = () => {
       );
     }
   }, [selectedConversation, currentUserId]);
+
+  const handleMessageLongPress = useCallback((msg) => {
+    if (!msg || msg.isDeleted || msg.type === "system") return;
+    HapticFeedback.selection();
+
+    const isMe = isMessageFromMe(msg);
+    const options = [];
+
+    if (msg.messageText) {
+      options.push({
+        text: "Copy Text",
+        onPress: async () => {
+          try {
+            await Clipboard.setStringAsync(msg.messageText);
+            Alert.alert("Copied", "Message copied to clipboard.");
+          } catch {}
+        },
+      });
+    }
+
+    if (isMe && !msg._failed && !msg._isOptimistic) {
+      if (msg.messageText && !msg.attachmentUrl) {
+        options.push({
+          text: "Edit Message",
+          onPress: () => {
+            setEditingMessage(msg);
+            setNewMessage(msg.messageText);
+          },
+        });
+      }
+
+      options.push({
+        text: "Delete Message",
+        style: "destructive",
+        onPress: () => {
+          Alert.alert(
+            "Delete Message",
+            "Are you sure you want to delete this message?",
+            [
+              { text: "Cancel", style: "cancel" },
+              {
+                text: "Delete",
+                style: "destructive",
+                onPress: async () => {
+                  try {
+                    await deleteMessage(msg._id);
+                    setMessages((prev) =>
+                      prev.map((m) =>
+                        m._id === msg._id
+                          ? {
+                              ...m,
+                              isDeleted: true,
+                              messageText: "This message was deleted",
+                              attachmentUrl: undefined,
+                              quoteId: undefined,
+                            }
+                          : m
+                      )
+                    );
+                  } catch (err) {
+                    Alert.alert("Error", err?.message || "Failed to delete message");
+                  }
+                },
+              },
+            ]
+          );
+        },
+      });
+    }
+
+    options.push({ text: "Cancel", style: "cancel" });
+
+    Alert.alert("Message Options", undefined, options);
+  }, [isMessageFromMe]);
 
   const handleTextChange = useCallback((text) => {
     setNewMessage(text);
