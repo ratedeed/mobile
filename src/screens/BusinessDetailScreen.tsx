@@ -866,6 +866,19 @@ const BusinessDetailScreen: React.FC = () => {
                 </View>
               </View>
             )}
+            {c.showCompletedJobs !== false && ((c.completedJobsCount ?? 0) > 0 || ((c as any).jobsCompleted ?? 0) > 0) && (
+              <View className="flex-row items-center" style={{ gap: 12 }}>
+                <View className="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200/60 dark:border-indigo-900/40 items-center justify-center">
+                  <FontAwesome5 name="check-double" size={14} color="#4f46e5" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-sm font-semibold text-neutral-900 dark:text-neutral-50">
+                    {c.completedJobsCount || (c as any).jobsCompleted} Completed Job{(c.completedJobsCount || (c as any).jobsCompleted) !== 1 ? 's' : ''}
+                  </Text>
+                  <Text className="text-xs text-neutral-500 dark:text-neutral-400">Successfully fulfilled on RateDeed</Text>
+                </View>
+              </View>
+            )}
             {(c.yearsInBusiness || c.yearsExperience || 0) > 0 && (
               <View className="flex-row items-center" style={{ gap: 12 }}>
                 <View className="w-10 h-10 rounded-full bg-neutral-100 dark:bg-neutral-800 items-center justify-center">

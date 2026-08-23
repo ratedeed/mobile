@@ -108,6 +108,8 @@ export interface Contractor {
   posts?: Post[];
   avgResponseHours?: number | null;
   hasFreeEstimates?: boolean;
+  showCompletedJobs?: boolean;
+  completedJobsCount?: number;
   estimatePolicy?: {
     enabled?: boolean;
     type: 'free' | 'service_fee' | 'virtual_only' | 'none';

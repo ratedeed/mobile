@@ -63,6 +63,7 @@ export default function ContractorEditProfileScreen() {
   const [description, setDescription] = useState('');
   const [serviceArea, setServiceArea] = useState('');
   const [licenseNumber, setLicenseNumber] = useState('');
+  const [showCompletedJobs, setShowCompletedJobs] = useState<boolean>(true);
   const [companyName, setCompanyName] = useState('');
   const [category, setCategory] = useState('');
   const [location, setLocation] = useState('');
@@ -140,6 +141,7 @@ export default function ContractorEditProfileScreen() {
       setDescription(data.description || '');
       setServiceArea(data.zipCodesCovered?.join(', ') || (data as any).serviceZipCodes?.join(', ') || '');
       setLicenseNumber(data.licenseNumber || '');
+      setShowCompletedJobs(data.showCompletedJobs !== undefined ? !!data.showCompletedJobs : true);
       setCompanyName(data.companyName || data.businessName || '');
       setCategory(data.category || '');
       setLocation((data as any).businessAddress || (data as any).address || '');
@@ -366,6 +368,8 @@ export default function ContractorEditProfileScreen() {
         address: location || undefined,
         businessAddress: location || undefined,
         zipCodesCovered: serviceArea.split(',').map(s => s.trim()).filter(Boolean),
+        licenseNumber: licenseNumber || undefined,
+        showCompletedJobs,
         hasFreeEstimates: estimateEnabled && estimateType === 'free',
         estimatePolicy: {
           enabled: estimateEnabled,
@@ -774,6 +778,20 @@ export default function ContractorEditProfileScreen() {
                 <View>
                   <Text className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 mb-1">Public License Number</Text>
                   <TextInput value={licenseNumber} onChangeText={setLicenseNumber} placeholderTextColor={isDark ? '#737373' : '#a3a3a3'} className="w-full border border-neutral-200 dark:border-neutral-700 rounded-xl px-3 py-2.5 text-sm text-neutral-900 dark:text-white" />
+                </View>
+                <View className="flex-row items-center justify-between p-3.5 bg-neutral-50 dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 mt-1">
+                  <View className="flex-1 pr-3">
+                    <Text className="text-xs font-semibold text-neutral-900 dark:text-white">Show Completed Jobs</Text>
+                    <Text className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5">
+                      Display your verified RateDeed completed job count publicly on your profile.
+                    </Text>
+                  </View>
+                  <Switch
+                    value={showCompletedJobs}
+                    onValueChange={setShowCompletedJobs}
+                    trackColor={{ false: isDark ? '#3f3f46' : '#d4d4d4', true: '#4f46e5' }}
+                    thumbColor="#ffffff"
+                  />
                 </View>
               </View>
             )}
