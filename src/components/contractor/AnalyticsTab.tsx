@@ -99,7 +99,7 @@ export default function AnalyticsTab({ jobs, quotes, reviews, profile, loading, 
 
   const isCompletedJob = (status?: string) => {
     if (!status) return false;
-    return ['completed', 'paid', 'completed_paid', 'completed_pending_release'].includes(status);
+    return ['completed_paid', 'paid'].includes(status);
   };
 
   const computedAvgFromReviews = useMemo(() => {
