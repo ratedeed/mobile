@@ -939,9 +939,22 @@ const ContractorDashboardScreen: React.FC = () => {
 
   // ---- Computed values ----
   const jobAmount = (j: any) => j.totalAmount || j.amount || j.quote?.totalAmount || j.quote?.subtotal || j.amountFunded || 0;
+  const jobFundedEscrow = (j: any) => {
+    if (j.isMilestone && Array.isArray(j.milestones) && j.milestones.length > 0) {
+      const fundedM = j.milestones.filter((m: any) => m.status === 'funded').reduce((s: number, m: any) => s + (m.amount || 0), 0);
+      if (fundedM > 0) return fundedM;
+    }
+    if (j.amountFunded !== undefined && j.amountFunded !== null && j.amountFunded > 0) {
+      return j.amountFunded;
+    }
+    if (['funded_in_progress', 'completed_pending_release'].includes(j.status)) {
+      return j.totalAmount || j.amount || j.quote?.totalAmount || j.quote?.subtotal || 0;
+    }
+    return 0;
+  };
   const totalEarnings = jobs.filter(j => j.status === 'completed_paid').reduce((sum, j) => sum + jobAmount(j), 0);
-  const pendingEscrow = jobs.filter(j => ['funded_in_progress', 'partially_funded', 'completed_pending_release'].includes(j.status)).reduce((sum, j) => sum + jobAmount(j), 0);
-  const activeJobsCount = jobs.filter(j => ['funded_in_progress', 'partially_funded', 'awaiting_payment'].includes(j.status)).length;
+  const pendingEscrow = jobs.filter(j => ['funded_in_progress', 'partially_funded', 'completed_pending_release'].includes(j.status)).reduce((sum, j) => sum + jobFundedEscrow(j), 0);
+  const activeJobsCount = jobs.filter(j => ['funded_in_progress', 'partially_funded', 'awaiting_payment', 'completed_pending_release'].includes(j.status)).length;
   const avgRating = reviews.length > 0 ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length : 0;
   const ratingBreakdown = [5, 4, 3, 2, 1].map(stars => ({
     stars,
@@ -1152,42 +1165,41 @@ const ContractorDashboardScreen: React.FC = () => {
             </ScrollView>
           </View>
         </View>
-
         {/* ==================== Tab Content ==================== */}
         <View className="px-4 py-6">
 
           {/* TAB: Today */}
           {activeTab === 'today' && (
-            <View style={{ gap: 16 }}>
-              {/* Operational Overview */}
-              <OperationalOverviewCard
-                contractorName={contractorName}
-                activeJobsCount={jobs.filter((j: any) => ['funded_in_progress', 'partially_funded'].includes(j.status)).length}
-                unreadConversationsCount={conversations.filter(c => c.unreadCount > 0).length}
-                onViewSchedule={() => setActiveTab('calendar')}
-                onViewEarnings={() => { setActiveTab('payments'); setPaymentSubTab('overview'); }}
-              />
+          <View style={{ gap: 16 }}>
+            {/* Operational Overview */}
+            <OperationalOverviewCard
+              contractorName={contractorName}
+              activeJobsCount={activeJobsCount}
+              unreadConversationsCount={conversations.filter(c => c.unreadCount > 0).length}
+              onViewSchedule={() => setActiveTab('calendar')}
+              onViewEarnings={() => { setActiveTab('payments'); setPaymentSubTab('overview'); }}
+            />
 
-              {/* Trust & Verification Onboarding Status checklist */}
-              <TrustActionRequiredCard
-                onboardingComplete={onboardingComplete}
-                licenseStatus={licenseStatus}
-                stripeStatus={stripeStatus}
-                onConnectStripe={() => { setActiveTab('payments'); setPaymentSubTab('overview'); }}
-                onVerifyLicense={() => setShowEditProfile(true)}
-              />
+            {/* Trust & Verification Onboarding Status checklist */}
+            <TrustActionRequiredCard
+              onboardingComplete={onboardingComplete}
+              licenseStatus={licenseStatus}
+              stripeStatus={stripeStatus}
+              onConnectStripe={() => { setActiveTab('payments'); setPaymentSubTab('overview'); }}
+              onVerifyLicense={() => setShowEditProfile(true)}
+            />
 
-              {/* KPI Cards Grid */}
-              <DashboardKpiGrid
-                activeJobsCount={jobs.filter((j: any) => ['funded_in_progress', 'partially_funded'].includes(j.status)).length}
-                unreadChatsCount={conversations.filter(c => c.unreadCount > 0).length}
-                quotesCount={quotes.length}
-                availableBalanceText={formatCurrency(((_earnings?.availableBalance ?? 0)) / 100)}
-                onPressActiveJobs={() => { setActiveTab('payments'); setPaymentSubTab('jobs'); }}
-                onPressUnreadChats={() => navigation.navigate('Main', { screen: 'Messages' } as any)}
-                onPressQuotes={() => { setActiveTab('payments'); setPaymentSubTab('quotes'); }}
-                onPressBalance={() => { setActiveTab('payments'); setPaymentSubTab('overview'); }}
-              />
+            {/* KPI Cards Grid */}
+            <DashboardKpiGrid
+              activeJobsCount={activeJobsCount}
+              unreadChatsCount={conversations.filter(c => c.unreadCount > 0).length}
+              quotesCount={quotes.length}
+              availableBalanceText={formatCurrency(((_earnings?.availableBalance ?? 0)) / 100)}
+              onPressActiveJobs={() => { setActiveTab('payments'); setPaymentSubTab('jobs'); }}
+              onPressUnreadChats={() => navigation.navigate('Main', { screen: 'Messages' } as any)}
+              onPressQuotes={() => { setActiveTab('payments'); setPaymentSubTab('quotes'); }}
+              onPressBalance={() => { setActiveTab('payments'); setPaymentSubTab('overview'); }}
+            />
 
               {/* Recent Chats Section */}
               <View className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4">
