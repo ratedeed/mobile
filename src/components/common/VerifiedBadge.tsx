@@ -1,5 +1,5 @@
 import React, { useEffect, memo, useCallback, useId } from 'react';
-import { Pressable, View, StyleSheet } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import Svg, {
   G,
   Circle,
@@ -24,7 +24,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 const DURATION = 2600;
-const HERO_SCALE = 3.8; // Dramatic high-impact hero pop
+const HERO_SCALE = 3.6; // High-impact hero pop
 
 const SIZE_MAP: Record<string, number> = {
   sm: 28,
@@ -76,8 +76,6 @@ export const VerifiedBadge = memo(function VerifiedBadge({
 }) {
   const uid = useId().replace(/:/g, '-');
   const finalSize = typeof size === 'string' ? SIZE_MAP[size] || 28 : size;
-  const heroPx = Math.round(finalSize * HERO_SCALE);
-  const restingRatio = 1 / HERO_SCALE;
 
   const progress = useSharedValue(animate ? 0 : 1.3);
   const isPlayingRef = React.useRef(false);
@@ -111,69 +109,69 @@ export const VerifiedBadge = memo(function VerifiedBadge({
     }
   }, [animate, play, progress]);
 
-  // 1. Master Container Animation (Scales HD SVG canvas from 0 -> 1.0 Hero -> restingRatio)
-  const masterContainerStyle = useAnimatedStyle(() => {
+  // 1. Master Container Animation (Scale & Anchor Origin)
+  const masterAnimatedStyle = useAnimatedStyle(() => {
     const t = progress.value;
-    let currentRelativeScale = restingRatio;
+    let currentScale = 1.0;
 
     if (t < 0.15) {
-      // Phase 1: Pop zoom out to Hero Scale (3.8x)
+      // Phase 1: Zoom out to Hero Scale (3.6x)
       const popProg = sub(t, 0, 0.15);
-      currentRelativeScale = Math.max(0.001, easeOutBack(popProg));
+      currentScale = Math.max(0.001, easeOutBack(popProg) * HERO_SCALE);
     } else if (t < 0.80) {
-      // Phase 2: Hold Hero Scale during Roman Temple construction
-      currentRelativeScale = 1.0;
+      // Phase 2: Hold Hero Scale during Temple construction
+      currentScale = HERO_SCALE;
     } else if (t < 1.05) {
-      // Phase 3: Smoothly shrink back to standard resting badge size
+      // Phase 3: Smoothly shrink back to standard resting size (1.0x)
       const shrinkProg = sub(t, 0.80, 1.05);
-      currentRelativeScale = 1.0 - (1.0 - restingRatio) * easeInOutCubic(shrinkProg);
+      currentScale = HERO_SCALE - (HERO_SCALE - 1.0) * easeInOutCubic(shrinkProg);
     } else {
-      // Phase 4: Resting size
-      currentRelativeScale = restingRatio;
+      // Phase 4: Resting size (1.0x)
+      currentScale = 1.0;
     }
 
     const isHeroActive = t > 0.01 && t < 1.05;
 
-    // Anchor positioning so it scales cleanly from top-left, top-right, or center
+    // Anchor calculation so scaling expands INTO the card without clipping outside top/left boundaries
     let translateX = 0;
     let translateY = 0;
     if (transformOrigin === 'top-left') {
-      translateX = -(heroPx * (1 - currentRelativeScale)) / 2;
-      translateY = -(heroPx * (1 - currentRelativeScale)) / 2;
+      translateX = (finalSize * (currentScale - 1.0)) / 2;
+      translateY = (finalSize * (currentScale - 1.0)) / 2;
     } else if (transformOrigin === 'top-right') {
-      translateX = (heroPx * (1 - currentRelativeScale)) / 2;
-      translateY = -(heroPx * (1 - currentRelativeScale)) / 2;
+      translateX = -(finalSize * (currentScale - 1.0)) / 2;
+      translateY = (finalSize * (currentScale - 1.0)) / 2;
     }
 
     return {
-      zIndex: isHeroActive ? 999 : 20,
+      zIndex: isHeroActive ? 9999 : 20,
       elevation: isHeroActive ? 30 : 3,
       transform: [
         { translateX },
         { translateY },
-        { scale: currentRelativeScale },
+        { scale: currentScale },
       ],
       shadowColor: '#000',
-      shadowOffset: { width: 0, height: isHeroActive ? 12 : 2 },
-      shadowOpacity: isHeroActive ? 0.4 : 0.15,
-      shadowRadius: isHeroActive ? 16 : 3,
+      shadowOffset: { width: 0, height: isHeroActive ? 10 : 2 },
+      shadowOpacity: isHeroActive ? 0.35 : 0.12,
+      shadowRadius: isHeroActive ? 14 : 3,
     };
   });
 
-  // 2. Foundation Base Animation (rises & expands upward from bottom)
+  // 2. Foundation Base Animation
   const baseAnimatedStyle = useAnimatedStyle(() => {
     const t = progress.value;
     const buildBase = easeOutExpo(sub(t, 0.15, 0.35));
     return {
       opacity: sub(t, 0.12, 0.20),
       transform: [
-        { translateY: (1 - buildBase) * (heroPx * 0.08) },
+        { translateY: (1 - buildBase) * 4 },
         { scaleY: Math.max(0.001, buildBase) },
       ],
     };
   });
 
-  // 3. Base Marble Dust Impact Burst
+  // 3. Base Dust Impact Burst
   const dustBaseAnimatedStyle = useAnimatedStyle(() => {
     const t = progress.value;
     const baseHit = sub(t, 0.32, 0.42);
@@ -185,14 +183,14 @@ export const VerifiedBadge = memo(function VerifiedBadge({
     };
   });
 
-  // 4. Columns Sequential Rising Animation (Left -> Center -> Right)
+  // 4. Columns Sequential Rising Animation
   const col1AnimatedStyle = useAnimatedStyle(() => {
     const t = progress.value;
     const buildCol1 = easeOutExpo(sub(t, 0.25, 0.45));
     return {
       opacity: sub(t, 0.22, 0.30),
       transform: [
-        { translateY: (1 - buildCol1) * (heroPx * 0.12) },
+        { translateY: (1 - buildCol1) * 6 },
         { scaleY: Math.max(0.001, buildCol1) },
       ],
     };
@@ -204,7 +202,7 @@ export const VerifiedBadge = memo(function VerifiedBadge({
     return {
       opacity: sub(t, 0.27, 0.35),
       transform: [
-        { translateY: (1 - buildCol2) * (heroPx * 0.12) },
+        { translateY: (1 - buildCol2) * 6 },
         { scaleY: Math.max(0.001, buildCol2) },
       ],
     };
@@ -216,7 +214,7 @@ export const VerifiedBadge = memo(function VerifiedBadge({
     return {
       opacity: sub(t, 0.32, 0.40),
       transform: [
-        { translateY: (1 - buildCol3) * (heroPx * 0.12) },
+        { translateY: (1 - buildCol3) * 6 },
         { scaleY: Math.max(0.001, buildCol3) },
       ],
     };
@@ -234,14 +232,14 @@ export const VerifiedBadge = memo(function VerifiedBadge({
     };
   });
 
-  // 6. Roof Pediment Snap Animation (Drop from top with bounce)
+  // 6. Roof Pediment Snap Animation
   const roofAnimatedStyle = useAnimatedStyle(() => {
     const t = progress.value;
     const buildRoof = easeOutBack(sub(t, 0.45, 0.70));
     return {
       opacity: sub(t, 0.42, 0.50),
       transform: [
-        { translateY: (1 - buildRoof) * -(heroPx * 0.15) },
+        { translateY: (1 - buildRoof) * -8 },
         { scale: Math.max(0.001, buildRoof) },
       ],
     };
@@ -276,7 +274,7 @@ export const VerifiedBadge = memo(function VerifiedBadge({
     const t = progress.value;
     const shineProg = sub(t, 1.05, 1.25);
     const opacity = shineProg > 0 && shineProg < 1 ? 0.95 : 0;
-    const translateX = -(heroPx * 1.2) + shineProg * (heroPx * 2.4);
+    const translateX = -60 + shineProg * 120;
     return {
       opacity,
       transform: [
@@ -299,21 +297,16 @@ export const VerifiedBadge = memo(function VerifiedBadge({
       <Animated.View
         style={[
           styles.masterHeroCanvas,
-          {
-            width: heroPx,
-            height: heroPx,
-            top: (finalSize - heroPx) / 2,
-            left: (finalSize - heroPx) / 2,
-          },
-          masterContainerStyle,
+          { width: finalSize, height: finalSize },
+          masterAnimatedStyle,
         ]}
       >
-        {/* Layer 0: Coin Background, Outer Beaded Rim & Milled Edges (Rendered at Full HD Vector Resolution) */}
-        <Svg width={heroPx} height={heroPx} viewBox="0 0 100 100" style={StyleSheet.absoluteFill}>
+        {/* Layer 0: Coin Background, Outer Beaded Rim & Milled Edges with 100% Solid Opaque Backing */}
+        <Svg width={finalSize} height={finalSize} viewBox="0 0 100 100" style={StyleSheet.absoluteFill}>
           <Defs>
             <RadialGradient id={`badge-bg-${uid}`} cx="50%" cy="50%" r="50%">
               <Stop offset="0%" stopColor="#FFFFFF" />
-              <Stop offset="60%" stopColor="#F9F6F0" />
+              <Stop offset="60%" stopColor="#FAF7F0" />
               <Stop offset="100%" stopColor="#EAE5D9" />
             </RadialGradient>
             <LinearGradient id={`gold-grad-${uid}`} x1="0" y1="0" x2="1" y2="1">
@@ -341,7 +334,8 @@ export const VerifiedBadge = memo(function VerifiedBadge({
             <Path id={`text-arc-${uid}`} d="M 6,50 A 44,44 0 0,0 94,50" />
           </Defs>
 
-          {/* Marble Disc & Gold Borders */}
+          {/* 100% Solid Opaque Backing (Guarantees NO background text/images ever show through) */}
+          <Circle cx="50" cy="50" r="49.5" fill="#FAF7F0" />
           <Circle cx="50" cy="50" r="49" fill={`url(#badge-bg-${uid})`} />
           <Circle cx="50" cy="50" r="46.5" fill="none" stroke={`url(#gold-grad-${uid})`} strokeWidth={3.5} />
           <Circle cx="50" cy="50" r="44" fill="none" stroke={`url(#gold-grad-${uid})`} strokeWidth={0.6} opacity={0.6} />
@@ -369,12 +363,13 @@ export const VerifiedBadge = memo(function VerifiedBadge({
           </G>
 
           <Circle cx="50" cy="50" r="35" fill="none" stroke={`url(#gold-dark-${uid})`} strokeWidth={0.75} />
+          <Circle cx="50" cy="50" r="34.5" fill="#FAF7F0" />
           <Circle cx="50" cy="50" r="34.5" fill={`url(#badge-bg-${uid})`} />
         </Svg>
 
         {/* Layer 1: Chiseled Arc Text */}
         <Animated.View style={[StyleSheet.absoluteFill, textAnimatedStyle]}>
-          <Svg width={heroPx} height={heroPx} viewBox="0 0 100 100">
+          <Svg width={finalSize} height={finalSize} viewBox="0 0 100 100">
             <Defs>
               <Path id={`text-arc-layer-${uid}`} d="M 6,50 A 44,44 0 0,0 94,50" />
             </Defs>
@@ -395,7 +390,7 @@ export const VerifiedBadge = memo(function VerifiedBadge({
 
         {/* Layer 2: Foundation Base */}
         <Animated.View style={[StyleSheet.absoluteFill, baseAnimatedStyle]}>
-          <Svg width={heroPx} height={heroPx} viewBox="0 0 100 100">
+          <Svg width={finalSize} height={finalSize} viewBox="0 0 100 100">
             <Defs>
               <LinearGradient id={`gold-grad-base-${uid}`} x1="0" y1="0" x2="1" y2="1">
                 <Stop offset="0%" stopColor="#FFECA8" />
@@ -414,7 +409,7 @@ export const VerifiedBadge = memo(function VerifiedBadge({
 
         {/* Layer 3: Column 1 (Left Pillar) */}
         <Animated.View style={[StyleSheet.absoluteFill, col1AnimatedStyle]}>
-          <Svg width={heroPx} height={heroPx} viewBox="0 0 100 100">
+          <Svg width={finalSize} height={finalSize} viewBox="0 0 100 100">
             <Defs>
               <LinearGradient id={`gold-col-1-${uid}`} x1="0" y1="0" x2="1" y2="0">
                 <Stop offset="0%" stopColor="#AA7C11" />
@@ -435,7 +430,7 @@ export const VerifiedBadge = memo(function VerifiedBadge({
 
         {/* Layer 4: Column 2 (Center Pillar) */}
         <Animated.View style={[StyleSheet.absoluteFill, col2AnimatedStyle]}>
-          <Svg width={heroPx} height={heroPx} viewBox="0 0 100 100">
+          <Svg width={finalSize} height={finalSize} viewBox="0 0 100 100">
             <Defs>
               <LinearGradient id={`gold-col-2-${uid}`} x1="0" y1="0" x2="1" y2="0">
                 <Stop offset="0%" stopColor="#AA7C11" />
@@ -456,7 +451,7 @@ export const VerifiedBadge = memo(function VerifiedBadge({
 
         {/* Layer 5: Column 3 (Right Pillar) */}
         <Animated.View style={[StyleSheet.absoluteFill, col3AnimatedStyle]}>
-          <Svg width={heroPx} height={heroPx} viewBox="0 0 100 100">
+          <Svg width={finalSize} height={finalSize} viewBox="0 0 100 100">
             <Defs>
               <LinearGradient id={`gold-col-3-${uid}`} x1="0" y1="0" x2="1" y2="0">
                 <Stop offset="0%" stopColor="#AA7C11" />
@@ -477,7 +472,7 @@ export const VerifiedBadge = memo(function VerifiedBadge({
 
         {/* Layer 6: Roof Pediment */}
         <Animated.View style={[StyleSheet.absoluteFill, roofAnimatedStyle]}>
-          <Svg width={heroPx} height={heroPx} viewBox="0 0 100 100">
+          <Svg width={finalSize} height={finalSize} viewBox="0 0 100 100">
             <Defs>
               <LinearGradient id={`gold-grad-roof-${uid}`} x1="0" y1="0" x2="1" y2="1">
                 <Stop offset="0%" stopColor="#FFECA8" />
@@ -493,7 +488,7 @@ export const VerifiedBadge = memo(function VerifiedBadge({
             </Defs>
             <Polygon points="50,26 72,44 28,44" fill={`url(#gold-grad-roof-${uid})`} />
             <Polygon points="50,30 65,42 35,42" fill={`url(#gold-dark-roof-${uid})`} />
-            <Circle cx={50} cy={38} r={2.5} fill={`url(#gold-grad-roof-${uid})`} />
+            <Circle cx="50" cy="38" r={2.5} fill={`url(#gold-grad-roof-${uid})`} />
             <Rect x={28} y={44} width={44} height={3} rx={0.5} fill={`url(#gold-grad-roof-${uid})`} />
             <Rect x={31} y={47} width={38} height={1.5} fill={`url(#gold-dark-roof-${uid})`} />
           </Svg>
@@ -501,7 +496,7 @@ export const VerifiedBadge = memo(function VerifiedBadge({
 
         {/* Layer 7: Marble Dust Burst Effects */}
         <Animated.View style={[StyleSheet.absoluteFill, dustBaseAnimatedStyle]}>
-          <Svg width={heroPx} height={heroPx} viewBox="0 0 100 100">
+          <Svg width={finalSize} height={finalSize} viewBox="0 0 100 100">
             <Ellipse cx="29" cy="67" rx="5" ry="2" fill="#FFFFFF" opacity={0.85} />
             <Ellipse cx="71" cy="67" rx="5" ry="2" fill="#FFFFFF" opacity={0.85} />
             <Ellipse cx="50" cy="67" rx="7" ry="2" fill="#FFFFFF" opacity={0.65} />
@@ -509,7 +504,7 @@ export const VerifiedBadge = memo(function VerifiedBadge({
         </Animated.View>
 
         <Animated.View style={[StyleSheet.absoluteFill, dustColAnimatedStyle]}>
-          <Svg width={heroPx} height={heroPx} viewBox="0 0 100 100">
+          <Svg width={finalSize} height={finalSize} viewBox="0 0 100 100">
             <Ellipse cx="37" cy="62" rx="4" ry="1.5" fill="#FFFFFF" opacity={0.85} />
             <Ellipse cx="50" cy="62" rx="4" ry="1.5" fill="#FFFFFF" opacity={0.85} />
             <Ellipse cx="63" cy="62" rx="4" ry="1.5" fill="#FFFFFF" opacity={0.85} />
@@ -517,7 +512,7 @@ export const VerifiedBadge = memo(function VerifiedBadge({
         </Animated.View>
 
         <Animated.View style={[StyleSheet.absoluteFill, dustRoofAnimatedStyle]}>
-          <Svg width={heroPx} height={heroPx} viewBox="0 0 100 100">
+          <Svg width={finalSize} height={finalSize} viewBox="0 0 100 100">
             <Ellipse cx="28" cy="44" rx="5" ry="2" fill="#FFFFFF" opacity={0.85} />
             <Ellipse cx="72" cy="44" rx="5" ry="2" fill="#FFFFFF" opacity={0.85} />
             <Ellipse cx="50" cy="44" rx="6" ry="2.5" fill="#FFFFFF" opacity={0.65} />
@@ -529,7 +524,7 @@ export const VerifiedBadge = memo(function VerifiedBadge({
           pointerEvents="none"
           style={[
             styles.shineContainer,
-            { width: heroPx * 1.5, height: heroPx * 1.5 },
+            { width: finalSize * 1.5, height: finalSize * 1.5 },
             shineAnimatedStyle,
           ]}
         >
@@ -558,9 +553,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   masterHeroCanvas: {
-    position: 'absolute',
+    position: 'relative',
     overflow: 'visible',
     borderRadius: 9999,
+    backgroundColor: '#FAF7F0',
   },
   shineContainer: {
     position: 'absolute',
