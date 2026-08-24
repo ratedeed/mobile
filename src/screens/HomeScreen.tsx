@@ -241,7 +241,7 @@ const ListingCard = memo(({ listing, isFavorite, onToggleFavorite, detectedZip, 
 
       {(listing.isVerified || (listing as any).licenseVerified) && (
         <View className="absolute top-2 left-2" style={{ zIndex: 60, overflow: 'visible' }}>
-          <VerifiedBadge size="sm" animate={true} />
+          <VerifiedBadge size={28} animate={true} transformOrigin="top-left" />
         </View>
       )}
 

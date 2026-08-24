@@ -1,5 +1,5 @@
-import React, { useEffect, memo } from 'react';
-import { Pressable } from 'react-native';
+import React, { useEffect, memo, useCallback } from 'react';
+import { Pressable, View, StyleSheet } from 'react-native';
 import Svg, {
   G,
   Circle,
@@ -18,23 +18,17 @@ import Svg, {
 } from 'react-native-svg';
 import Animated, {
   useSharedValue,
-  useAnimatedProps,
   useAnimatedStyle,
   withTiming,
-  withDelay,
-  withRepeat,
   Easing,
 } from 'react-native-reanimated';
 
-const AnimatedG = Animated.createAnimatedComponent(G);
-const AnimatedCircle = Animated.createAnimatedComponent(Circle);
-
-const DURATION = 2800;
+const DURATION = 2600;
 
 const SIZE_MAP: Record<string, number> = {
-  sm: 16,
-  md: 24,
-  lg: 44,
+  sm: 28,
+  md: 34,
+  lg: 48,
 };
 
 // --- Easing Worklets ---
@@ -65,50 +59,57 @@ const sub = (t: number, s: number, e: number) => {
 };
 
 export const VerifiedBadge = memo(function VerifiedBadge({
-  size = 24,
+  size = 28,
   animate = true,
   variant,
   text,
   style,
+  transformOrigin = 'top-left',
 }: {
   size?: number | string;
   animate?: boolean;
   variant?: string;
   text?: string;
   style?: any;
+  transformOrigin?: 'top-left' | 'top-right' | 'center';
 }) {
-  const progress = useSharedValue(0);
+  const progress = useSharedValue(animate ? 0 : 1.3);
   const isPlayingRef = React.useRef(false);
-  const finalSize = typeof size === 'string' ? SIZE_MAP[size] || 24 : size;
+  const finalSize = typeof size === 'string' ? SIZE_MAP[size] || 28 : size;
 
-  const play = () => {
+  const play = useCallback(() => {
     if (isPlayingRef.current) return;
     isPlayingRef.current = true;
     progress.value = 0;
-    progress.value = withTiming(1.3, {
-      duration: DURATION * 1.3,
-      easing: Easing.linear,
-    }, (finished) => {
-      if (finished) {
-        isPlayingRef.current = false;
+    progress.value = withTiming(
+      1.3,
+      {
+        duration: DURATION * 1.3,
+        easing: Easing.linear,
+      },
+      (finished) => {
+        if (finished) {
+          isPlayingRef.current = false;
+        }
       }
-    });
-  };
+    );
+  }, [progress]);
 
   useEffect(() => {
     if (animate) {
-      play();
+      const timer = setTimeout(() => {
+        play();
+      }, 200);
+      return () => clearTimeout(timer);
     } else {
       progress.value = 1.3;
     }
-  }, [animate, finalSize]);
+  }, [animate, play, progress]);
 
-  // Animated properties matching web implementation
-
-  // 1. Main View scale (up to 3.6x hero scale, then shrinks back to 1x)
-  const mainScaleStyle = useAnimatedStyle(() => {
+  // 1. Hero Scale Pop Container (3.2x pop, anchored to transformOrigin)
+  const containerAnimatedStyle = useAnimatedStyle(() => {
     const t = progress.value;
-    const HERO_SCALE = 3.6;
+    const HERO_SCALE = 3.2;
     let currentScale = 1;
 
     if (t < 0.15) {
@@ -122,342 +123,438 @@ export const VerifiedBadge = memo(function VerifiedBadge({
       currentScale = 1;
     }
 
+    const isHeroActive = t > 0.01 && t < 1.05;
+
+    // Anchor calculation for transform origin
+    let translateX = 0;
+    let translateY = 0;
+    if (transformOrigin === 'top-left') {
+      translateX = (finalSize * (currentScale - 1)) / 2;
+      translateY = (finalSize * (currentScale - 1)) / 2;
+    } else if (transformOrigin === 'top-right') {
+      translateX = -(finalSize * (currentScale - 1)) / 2;
+      translateY = (finalSize * (currentScale - 1)) / 2;
+    }
+
     return {
+      zIndex: isHeroActive ? 999 : 50,
+      elevation: isHeroActive ? 25 : 4,
       transform: [
+        { translateX },
+        { translateY },
         { scale: currentScale },
       ],
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: isHeroActive ? 8 : 2 },
+      shadowOpacity: isHeroActive ? 0.35 : 0.15,
+      shadowRadius: isHeroActive ? 12 : 3,
     };
   });
 
-  // 2. Inner Ring & Solid Fill Opacities
-  const irProps = useAnimatedProps(() => {
-    const t = progress.value;
-    return {
-      opacity: easeOutCubic(sub(t, 0.05, 0.20)),
-    };
-  });
-
-  const sfProps = useAnimatedProps(() => {
-    const t = progress.value;
-    return {
-      opacity: easeOutCubic(sub(t, 0.08, 0.22)),
-    };
-  });
-
-  // 3. Foundation Base
-  const baseProps = useAnimatedProps(() => {
+  // 2. Foundation Base Animation (scaleY from bottom)
+  const baseAnimatedStyle = useAnimatedStyle(() => {
     const t = progress.value;
     const buildBase = easeOutExpo(sub(t, 0.15, 0.35));
     return {
+      opacity: sub(t, 0.12, 0.20),
       transform: [
-        { translateX: 50 },
-        { translateY: 67.5 },
+        { translateY: (1 - buildBase) * 4 },
         { scaleY: Math.max(0.001, buildBase) },
-        { translateX: -50 },
-        { translateY: -67.5 },
       ],
     };
   });
 
-  const dustBaseProps = useAnimatedProps(() => {
+  // 3. Base Dust Impact Animation
+  const dustBaseAnimatedStyle = useAnimatedStyle(() => {
     const t = progress.value;
     const baseHit = sub(t, 0.32, 0.42);
-    const opacity = baseHit > 0 && baseHit < 1 ? 1 - baseHit : 0;
-    const scale = baseHit > 0 && baseHit < 1 ? easeOutExpo(baseHit) * 1.5 : 0.001;
+    const opacity = baseHit > 0 && baseHit < 1 ? (1 - baseHit) * 0.9 : 0;
+    const scale = baseHit > 0 && baseHit < 1 ? easeOutExpo(baseHit) * 1.4 : 0.001;
     return {
       opacity,
-      transform: [
-        { translateX: 50 },
-        { translateY: 67 },
-        { scale },
-        { translateX: -50 },
-        { translateY: -67 },
-      ],
+      transform: [{ scale }],
     };
   });
 
-  // 4. Columns
-  const col1Props = useAnimatedProps(() => {
+  // 4. Columns Sequential Rising Animation
+  const col1AnimatedStyle = useAnimatedStyle(() => {
     const t = progress.value;
     const buildCol1 = easeOutExpo(sub(t, 0.25, 0.45));
     return {
+      opacity: sub(t, 0.22, 0.30),
       transform: [
-        { translateX: 37.25 },
-        { translateY: 62 },
+        { translateY: (1 - buildCol1) * 6 },
         { scaleY: Math.max(0.001, buildCol1) },
-        { translateX: -37.25 },
-        { translateY: -62 },
       ],
     };
   });
 
-  const col2Props = useAnimatedProps(() => {
+  const col2AnimatedStyle = useAnimatedStyle(() => {
     const t = progress.value;
     const buildCol2 = easeOutExpo(sub(t, 0.30, 0.50));
     return {
+      opacity: sub(t, 0.27, 0.35),
       transform: [
-        { translateX: 50 },
-        { translateY: 62 },
+        { translateY: (1 - buildCol2) * 6 },
         { scaleY: Math.max(0.001, buildCol2) },
-        { translateX: -50 },
-        { translateY: -62 },
       ],
     };
   });
 
-  const col3Props = useAnimatedProps(() => {
+  const col3AnimatedStyle = useAnimatedStyle(() => {
     const t = progress.value;
     const buildCol3 = easeOutExpo(sub(t, 0.35, 0.55));
     return {
+      opacity: sub(t, 0.32, 0.40),
       transform: [
-        { translateX: 62.75 },
-        { translateY: 62 },
+        { translateY: (1 - buildCol3) * 6 },
         { scaleY: Math.max(0.001, buildCol3) },
-        { translateX: -62.75 },
-        { translateY: -62 },
       ],
     };
   });
 
-  const dustColProps = useAnimatedProps(() => {
+  // 5. Column Dust Impact Animation
+  const dustColAnimatedStyle = useAnimatedStyle(() => {
     const t = progress.value;
     const colHit = sub(t, 0.52, 0.62);
-    const opacity = colHit > 0 && colHit < 1 ? 1 - colHit : 0;
-    const scale = colHit > 0 && colHit < 1 ? easeOutExpo(colHit) * 1.5 : 0.001;
+    const opacity = colHit > 0 && colHit < 1 ? (1 - colHit) * 0.9 : 0;
+    const scale = colHit > 0 && colHit < 1 ? easeOutExpo(colHit) * 1.4 : 0.001;
     return {
       opacity,
-      transform: [
-        { translateX: 50 },
-        { translateY: 62 },
-        { scale },
-        { translateX: -50 },
-        { translateY: -62 },
-      ],
+      transform: [{ scale }],
     };
   });
 
-  // 5. Roof
-  const roofProps = useAnimatedProps(() => {
+  // 6. Roof Pediment Snap Animation (Drop from top with bounce)
+  const roofAnimatedStyle = useAnimatedStyle(() => {
     const t = progress.value;
     const buildRoof = easeOutBack(sub(t, 0.45, 0.70));
     return {
+      opacity: sub(t, 0.42, 0.50),
       transform: [
-        { translateX: 50 },
-        { translateY: 48.5 },
+        { translateY: (1 - buildRoof) * -8 },
         { scale: Math.max(0.001, buildRoof) },
-        { translateX: -50 },
-        { translateY: -48.5 },
       ],
     };
   });
 
-  const dustRoofProps = useAnimatedProps(() => {
+  // 7. Roof Dust Impact Animation
+  const dustRoofAnimatedStyle = useAnimatedStyle(() => {
     const t = progress.value;
     const roofHit = sub(t, 0.65, 0.75);
-    const opacity = roofHit > 0 && roofHit < 1 ? 1 - roofHit : 0;
-    const scale = roofHit > 0 && roofHit < 1 ? easeOutExpo(roofHit) * 1.5 : 0.001;
+    const opacity = roofHit > 0 && roofHit < 1 ? (1 - roofHit) * 0.9 : 0;
+    const scale = roofHit > 0 && roofHit < 1 ? easeOutExpo(roofHit) * 1.4 : 0.001;
     return {
       opacity,
-      transform: [
-        { translateX: 50 },
-        { translateY: 44 },
-        { scale },
-        { translateX: -50 },
-        { translateY: -44 },
-      ],
+      transform: [{ scale }],
     };
   });
 
-  // 6. Text Arc Fade & Scale
-  const textProps = useAnimatedProps(() => {
+  // 8. Chiseled Arc Text Animation
+  const textAnimatedStyle = useAnimatedStyle(() => {
     const t = progress.value;
     const textProg = sub(t, 0.65, 0.85);
     return {
       opacity: easeOutCubic(textProg),
       transform: [
-        { translateX: 50 },
-        { translateY: 50 },
         { scale: 1.15 - easeOutCubic(textProg) * 0.15 },
-        { translateX: -50 },
-        { translateY: -50 },
       ],
     };
   });
 
-  // 7. Gold Shine Sweeping Glint
-  const shineProps = useAnimatedProps(() => {
+  // 9. Sweeping Gold Shine Glint Animation
+  const shineAnimatedStyle = useAnimatedStyle(() => {
     const t = progress.value;
     const shineProg = sub(t, 1.05, 1.25);
-    const opacity = shineProg > 0 && shineProg < 1 ? 1 : 0;
-    const translateX = -140 + shineProg * 280;
+    const opacity = shineProg > 0 && shineProg < 1 ? 0.95 : 0;
+    const translateX = -100 + shineProg * 200;
     return {
       opacity,
       transform: [
         { translateX },
+        { rotate: '35deg' },
       ],
     };
   });
 
   const strokeW = finalSize <= 20 ? 4 : finalSize <= 28 ? 3.5 : finalSize <= 44 ? 3 : 2.5;
-  const showInner = true;
-  const showDetails = true;
 
   return (
     <Pressable
       onPress={play}
+      hitSlop={8}
       style={[
-        {
-          width: finalSize,
-          height: finalSize,
-          position: 'relative',
-          zIndex: 50,
-          overflow: 'visible',
-        },
+        styles.wrapper,
+        { width: finalSize, height: finalSize },
         style,
       ]}
     >
-      <Animated.View style={[{ width: finalSize, height: finalSize, overflow: 'visible' }, mainScaleStyle]}>
-        <Svg
-          width={finalSize}
-          height={finalSize}
-          viewBox='0 0 100 100'
-          style={{ overflow: 'visible' }}
-        >
+      <Animated.View
+        style={[
+          styles.badgeContainer,
+          { width: finalSize, height: finalSize },
+          containerAnimatedStyle,
+        ]}
+      >
+        {/* Layer 0: Coin Background, Outer Beaded Rim & Milled Edges */}
+        <Svg width={finalSize} height={finalSize} viewBox="0 0 100 100" style={StyleSheet.absoluteFill}>
           <Defs>
             <RadialGradient id="badge-bg" cx="50%" cy="50%" r="50%">
-              <Stop offset='0%' stopColor='#FFFFFF' />
-              <Stop offset='60%' stopColor='#F9F6F0' />
-              <Stop offset='100%' stopColor='#EAE5D9' />
+              <Stop offset="0%" stopColor="#FFFFFF" />
+              <Stop offset="60%" stopColor="#F9F6F0" />
+              <Stop offset="100%" stopColor="#EAE5D9" />
             </RadialGradient>
-            <LinearGradient id="gold-grad" x1='0' y1='0' x2='1' y2='1'>
-              <Stop offset='0%' stopColor='#FFECA8' />
-              <Stop offset='25%' stopColor='#D4AF37' />
-              <Stop offset='50%' stopColor='#AA7C11' />
-              <Stop offset='75%' stopColor='#D4AF37' />
-              <Stop offset='100%' stopColor='#8A6308' />
+            <LinearGradient id="gold-grad" x1="0" y1="0" x2="1" y2="1">
+              <Stop offset="0%" stopColor="#FFECA8" />
+              <Stop offset="25%" stopColor="#D4AF37" />
+              <Stop offset="50%" stopColor="#AA7C11" />
+              <Stop offset="75%" stopColor="#D4AF37" />
+              <Stop offset="100%" stopColor="#8A6308" />
             </LinearGradient>
-            <LinearGradient id="gold-dark" x1='0' y1='0' x2='0' y2='1'>
-              <Stop offset='0%' stopColor='#B38B22' />
-              <Stop offset='100%' stopColor='#755811' />
+            <LinearGradient id="gold-dark" x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0%" stopColor="#B38B22" />
+              <Stop offset="100%" stopColor="#755811" />
             </LinearGradient>
-            <LinearGradient id="gold-col" x1='0' y1='0' x2='1' y2='0'>
-              <Stop offset='0%' stopColor='#AA7C11' />
-              <Stop offset='30%' stopColor='#FCE79A' />
-              <Stop offset='70%' stopColor='#D4AF37' />
-              <Stop offset='100%' stopColor='#755811' />
+            <LinearGradient id="gold-col" x1="0" y1="0" x2="1" y2="0">
+              <Stop offset="0%" stopColor="#AA7C11" />
+              <Stop offset="30%" stopColor="#FCE79A" />
+              <Stop offset="70%" stopColor="#D4AF37" />
+              <Stop offset="100%" stopColor="#755811" />
             </LinearGradient>
-            <LinearGradient id="shine-grad" x1='0' y1='0' x2='1' y2='0'>
-              <Stop offset='0%' stopColor='#FFFFFF' stopOpacity={0} />
-              <Stop offset='50%' stopColor='#FFFFFF' stopOpacity={0.8} />
-              <Stop offset='100%' stopColor='#FFFFFF' stopOpacity={0} />
+            <LinearGradient id="shine-grad" x1="0" y1="0" x2="1" y2="0">
+              <Stop offset="0%" stopColor="#FFFFFF" stopOpacity={0} />
+              <Stop offset="50%" stopColor="#FFFFFF" stopOpacity={0.9} />
+              <Stop offset="100%" stopColor="#FFFFFF" stopOpacity={0} />
             </LinearGradient>
-            <ClipPath id="badge-clip">
-              <Circle cx='50' cy='50' r='46.5' />
-            </ClipPath>
-            <Path id="text-arc" d='M 6,50 A 44,44 0 0,0 94,50' />
+            <Path id="text-arc" d="M 6,50 A 44,44 0 0,0 94,50" />
           </Defs>
 
+          {/* Marble Disc & Gold Borders */}
+          <Circle cx="50" cy="50" r="49" fill="url(#badge-bg)" />
+          <Circle cx="50" cy="50" r="46.5" fill="none" stroke="url(#gold-grad)" strokeWidth={strokeW} />
+          <Circle cx="50" cy="50" r="44" fill="none" stroke="url(#gold-grad)" strokeWidth={0.5} opacity={0.6} />
+
+          {/* Milled Gold Edge Ticks */}
           <G>
-            <Circle cx='50' cy='50' r={49} fill="url(#badge-bg)" />
-            <Circle cx='50' cy='50' r={46.5} fill='none' stroke="url(#gold-grad)" strokeWidth={strokeW} />
-            {showInner && <Circle cx='50' cy='50' r={44} fill='none' stroke="url(#gold-grad)" strokeWidth={0.5} opacity={0.6} />}
-            
-            <G>
-              {[...Array(48)].map((_, i) => {
-                const a = (i / 48) * Math.PI * 2;
-                const x1 = (50 + 42.5 * Math.cos(a)).toFixed(2);
-                const y1 = (50 + 42.5 * Math.sin(a)).toFixed(2);
-                const x2 = (50 + 44.5 * Math.cos(a)).toFixed(2);
-                const y2 = (50 + 44.5 * Math.sin(a)).toFixed(2);
-                return (
-                  <Line
-                    key={i}
-                    x1={x1}
-                    y1={y1}
-                    x2={x2}
-                    y2={y2}
-                    stroke="url(#gold-grad)"
-                    strokeWidth={finalSize < 40 ? 1 : 0.75}
-                  />
-                );
-              })}
-            </G>
-
-            <AnimatedCircle cx='50' cy='50' r={35} fill='none' stroke="url(#gold-dark)" strokeWidth={0.75} animatedProps={irProps} />
-            <AnimatedCircle cx='50' cy='50' r={34.5} fill="url(#badge-bg)" animatedProps={sfProps} />
-            
-            {showDetails && (
-              <AnimatedG animatedProps={textProps}>
-                <SvgText
-                  fontSize={6.4}
-                  fontWeight='bold'
-                  fill='#4A3100'
-                  letterSpacing={1.5}
-                  fontFamily="Georgia"
-                  textAnchor='middle'
-                >
-                  <TextPath href="#text-arc" startOffset='50%'>✦ RATEDEED · VERIFIED ✦</TextPath>
-                </SvgText>
-              </AnimatedG>
-            )}
-
-            <AnimatedG animatedProps={baseProps}>
-              <Rect x={32} y={62} width={36} height={2.5} rx={0.5} fill="url(#gold-grad)" />
-              <Rect x={29} y={64.5} width={42} height={3} rx={0.5} fill="url(#gold-dark)" />
-            </AnimatedG>
-
-            <AnimatedG animatedProps={col1Props}>
-              <Rect x={35} y={49.5} width={4.5} height={11.5} fill="url(#gold-col)" />
-              <Polygon points='34,48.5 40.5,48.5 39.5,49.5 35,49.5' fill="url(#gold-grad)" />
-              <Polygon points='35,61 39.5,61 40.5,62 34,62' fill="url(#gold-grad)" />
-            </AnimatedG>
-            <AnimatedG animatedProps={col2Props}>
-              <Rect x={47.75} y={49.5} width={4.5} height={11.5} fill="url(#gold-col)" />
-              <Polygon points='46.75,48.5 53.25,48.5 52.25,49.5 47.75,49.5' fill="url(#gold-grad)" />
-              <Polygon points='47.75,61 52.25,61 53.25,62 46.75,62' fill="url(#gold-grad)" />
-            </AnimatedG>
-            <AnimatedG animatedProps={col3Props}>
-              <Rect x={60.5} y={49.5} width={4.5} height={11.5} fill="url(#gold-col)" />
-              <Polygon points='59.5,48.5 66,48.5 65,49.5 60.5,49.5' fill="url(#gold-grad)" />
-              <Polygon points='60.5,61 65,61 66,62 59.5,62' fill="url(#gold-grad)" />
-            </AnimatedG>
-
-            <AnimatedG animatedProps={roofProps}>
-              <Polygon points='50,26 72,44 28,44' fill="url(#gold-grad)" />
-              <Polygon points='50,30 65,42 35,42' fill="url(#gold-dark)" />
-              <Circle cx={50} cy={38} r={2.5} fill="url(#gold-grad)" />
-              <Rect x={28} y={44} width={44} height={3} rx={0.5} fill="url(#gold-grad)" />
-              <Rect x={31} y={47} width={38} height={1.5} fill="url(#gold-dark)" />
-            </AnimatedG>
-
-            {/* Marble Dust & Sweeping Glint */}
-            <AnimatedG animatedProps={dustBaseProps}>
-              <Ellipse cx="29" cy="67" rx="5" ry="2" fill="#FFF" opacity={0.8} />
-              <Ellipse cx="71" cy="67" rx="5" ry="2" fill="#FFF" opacity={0.8} />
-              <Ellipse cx="50" cy="67" rx="7" ry="2" fill="#FFF" opacity={0.6} />
-            </AnimatedG>
-            <AnimatedG animatedProps={dustColProps}>
-              <Ellipse cx="37" cy="62" rx="4" ry="1.5" fill="#FFF" opacity={0.8} />
-              <Ellipse cx="50" cy="62" rx="4" ry="1.5" fill="#FFF" opacity="0.8" />
-              <Ellipse cx="63" cy="62" rx="4" ry="1.5" fill="#FFF" opacity={0.8} />
-            </AnimatedG>
-            <AnimatedG animatedProps={dustRoofProps}>
-              <Ellipse cx="28" cy="44" rx="5" ry="2" fill="#FFF" opacity={0.8} />
-              <Ellipse cx="72" cy="44" rx="5" ry="2" fill="#FFF" opacity={0.8} />
-              <Ellipse cx="50" cy="44" rx="6" ry="2.5" fill="#FFF" opacity={0.6} />
-            </AnimatedG>
-
-            <G clipPath="url(#badge-clip)">
-              <AnimatedG animatedProps={shineProps}>
-                <Rect x='-20' y='-50' width='15' height='200' fill="url(#shine-grad)" transform='rotate(35, 50, 50)' />
-                <Rect x='0' y='-50' width='3' height='200' fill='#FFFFFF' opacity={0.9} transform='rotate(35, 50, 50)' />
-              </AnimatedG>
-            </G>
+            {[...Array(48)].map((_, i) => {
+              const a = (i / 48) * Math.PI * 2;
+              const x1 = 50 + 42.5 * Math.cos(a);
+              const y1 = 50 + 42.5 * Math.sin(a);
+              const x2 = 50 + 44.5 * Math.cos(a);
+              const y2 = 50 + 44.5 * Math.sin(a);
+              return (
+                <Line
+                  key={i}
+                  x1={x1}
+                  y1={y1}
+                  x2={x2}
+                  y2={y2}
+                  stroke="url(#gold-grad)"
+                  strokeWidth={finalSize < 40 ? 1 : 0.75}
+                />
+              );
+            })}
           </G>
+
+          <Circle cx="50" cy="50" r="35" fill="none" stroke="url(#gold-dark)" strokeWidth={0.75} />
+          <Circle cx="50" cy="50" r="34.5" fill="url(#badge-bg)" />
         </Svg>
+
+        {/* Layer 1: Chiseled Arc Text */}
+        <Animated.View style={[StyleSheet.absoluteFill, textAnimatedStyle]}>
+          <Svg width={finalSize} height={finalSize} viewBox="0 0 100 100">
+            <Defs>
+              <Path id="text-arc-layer" d="M 6,50 A 44,44 0 0,0 94,50" />
+            </Defs>
+            <SvgText
+              fontSize={6.4}
+              fontWeight="bold"
+              fill="#4A3100"
+              letterSpacing={1.5}
+              fontFamily="Georgia"
+              textAnchor="middle"
+            >
+              <TextPath href="#text-arc-layer" startOffset="50%">
+                ✦ RATEDEED · VERIFIED ✦
+              </TextPath>
+            </SvgText>
+          </Svg>
+        </Animated.View>
+
+        {/* Layer 2: Foundation Base */}
+        <Animated.View style={[StyleSheet.absoluteFill, baseAnimatedStyle]}>
+          <Svg width={finalSize} height={finalSize} viewBox="0 0 100 100">
+            <Defs>
+              <LinearGradient id="gold-grad-base" x1="0" y1="0" x2="1" y2="1">
+                <Stop offset="0%" stopColor="#FFECA8" />
+                <Stop offset="50%" stopColor="#D4AF37" />
+                <Stop offset="100%" stopColor="#8A6308" />
+              </LinearGradient>
+              <LinearGradient id="gold-dark-base" x1="0" y1="0" x2="0" y2="1">
+                <Stop offset="0%" stopColor="#B38B22" />
+                <Stop offset="100%" stopColor="#755811" />
+              </LinearGradient>
+            </Defs>
+            <Rect x={32} y={62} width={36} height={2.5} rx={0.5} fill="url(#gold-grad-base)" />
+            <Rect x={29} y={64.5} width={42} height={3} rx={0.5} fill="url(#gold-dark-base)" />
+          </Svg>
+        </Animated.View>
+
+        {/* Layer 3: Column 1 (Left Pillar) */}
+        <Animated.View style={[StyleSheet.absoluteFill, col1AnimatedStyle]}>
+          <Svg width={finalSize} height={finalSize} viewBox="0 0 100 100">
+            <Defs>
+              <LinearGradient id="gold-col-1" x1="0" y1="0" x2="1" y2="0">
+                <Stop offset="0%" stopColor="#AA7C11" />
+                <Stop offset="30%" stopColor="#FCE79A" />
+                <Stop offset="70%" stopColor="#D4AF37" />
+                <Stop offset="100%" stopColor="#755811" />
+              </LinearGradient>
+              <LinearGradient id="gold-grad-col1" x1="0" y1="0" x2="1" y2="1">
+                <Stop offset="0%" stopColor="#FFECA8" />
+                <Stop offset="100%" stopColor="#8A6308" />
+              </LinearGradient>
+            </Defs>
+            <Rect x={35} y={49.5} width={4.5} height={11.5} fill="url(#gold-col-1)" />
+            <Polygon points="34,48.5 40.5,48.5 39.5,49.5 35,49.5" fill="url(#gold-grad-col1)" />
+            <Polygon points="35,61 39.5,61 40.5,62 34,62" fill="url(#gold-grad-col1)" />
+          </Svg>
+        </Animated.View>
+
+        {/* Layer 4: Column 2 (Center Pillar) */}
+        <Animated.View style={[StyleSheet.absoluteFill, col2AnimatedStyle]}>
+          <Svg width={finalSize} height={finalSize} viewBox="0 0 100 100">
+            <Defs>
+              <LinearGradient id="gold-col-2" x1="0" y1="0" x2="1" y2="0">
+                <Stop offset="0%" stopColor="#AA7C11" />
+                <Stop offset="30%" stopColor="#FCE79A" />
+                <Stop offset="70%" stopColor="#D4AF37" />
+                <Stop offset="100%" stopColor="#755811" />
+              </LinearGradient>
+              <LinearGradient id="gold-grad-col2" x1="0" y1="0" x2="1" y2="1">
+                <Stop offset="0%" stopColor="#FFECA8" />
+                <Stop offset="100%" stopColor="#8A6308" />
+              </LinearGradient>
+            </Defs>
+            <Rect x={47.75} y={49.5} width={4.5} height={11.5} fill="url(#gold-col-2)" />
+            <Polygon points="46.75,48.5 53.25,48.5 52.25,49.5 47.75,49.5" fill="url(#gold-grad-col2)" />
+            <Polygon points="47.75,61 52.25,61 53.25,62 46.75,62" fill="url(#gold-grad-col2)" />
+          </Svg>
+        </Animated.View>
+
+        {/* Layer 5: Column 3 (Right Pillar) */}
+        <Animated.View style={[StyleSheet.absoluteFill, col3AnimatedStyle]}>
+          <Svg width={finalSize} height={finalSize} viewBox="0 0 100 100">
+            <Defs>
+              <LinearGradient id="gold-col-3" x1="0" y1="0" x2="1" y2="0">
+                <Stop offset="0%" stopColor="#AA7C11" />
+                <Stop offset="30%" stopColor="#FCE79A" />
+                <Stop offset="70%" stopColor="#D4AF37" />
+                <Stop offset="100%" stopColor="#755811" />
+              </LinearGradient>
+              <LinearGradient id="gold-grad-col3" x1="0" y1="0" x2="1" y2="1">
+                <Stop offset="0%" stopColor="#FFECA8" />
+                <Stop offset="100%" stopColor="#8A6308" />
+              </LinearGradient>
+            </Defs>
+            <Rect x={60.5} y={49.5} width={4.5} height={11.5} fill="url(#gold-col-3)" />
+            <Polygon points="59.5,48.5 66,48.5 65,49.5 60.5,49.5" fill="url(#gold-grad-col3)" />
+            <Polygon points="60.5,61 65,61 66,62 59.5,62" fill="url(#gold-grad-col3)" />
+          </Svg>
+        </Animated.View>
+
+        {/* Layer 6: Roof Pediment */}
+        <Animated.View style={[StyleSheet.absoluteFill, roofAnimatedStyle]}>
+          <Svg width={finalSize} height={finalSize} viewBox="0 0 100 100">
+            <Defs>
+              <LinearGradient id="gold-grad-roof" x1="0" y1="0" x2="1" y2="1">
+                <Stop offset="0%" stopColor="#FFECA8" />
+                <Stop offset="25%" stopColor="#D4AF37" />
+                <Stop offset="50%" stopColor="#AA7C11" />
+                <Stop offset="75%" stopColor="#D4AF37" />
+                <Stop offset="100%" stopColor="#8A6308" />
+              </LinearGradient>
+              <LinearGradient id="gold-dark-roof" x1="0" y1="0" x2="0" y2="1">
+                <Stop offset="0%" stopColor="#B38B22" />
+                <Stop offset="100%" stopColor="#755811" />
+              </LinearGradient>
+            </Defs>
+            <Polygon points="50,26 72,44 28,44" fill="url(#gold-grad-roof)" />
+            <Polygon points="50,30 65,42 35,42" fill="url(#gold-dark-roof)" />
+            <Circle cx={50} cy={38} r={2.5} fill="url(#gold-grad-roof)" />
+            <Rect x={28} y={44} width={44} height={3} rx={0.5} fill="url(#gold-grad-roof)" />
+            <Rect x={31} y={47} width={38} height={1.5} fill="url(#gold-dark-roof)" />
+          </Svg>
+        </Animated.View>
+
+        {/* Layer 7: Marble Dust Burst Effects */}
+        <Animated.View style={[StyleSheet.absoluteFill, dustBaseAnimatedStyle]}>
+          <Svg width={finalSize} height={finalSize} viewBox="0 0 100 100">
+            <Ellipse cx="29" cy="67" rx="5" ry="2" fill="#FFFFFF" opacity={0.85} />
+            <Ellipse cx="71" cy="67" rx="5" ry="2" fill="#FFFFFF" opacity={0.85} />
+            <Ellipse cx="50" cy="67" rx="7" ry="2" fill="#FFFFFF" opacity={0.65} />
+          </Svg>
+        </Animated.View>
+
+        <Animated.View style={[StyleSheet.absoluteFill, dustColAnimatedStyle]}>
+          <Svg width={finalSize} height={finalSize} viewBox="0 0 100 100">
+            <Ellipse cx="37" cy="62" rx="4" ry="1.5" fill="#FFFFFF" opacity={0.85} />
+            <Ellipse cx="50" cy="62" rx="4" ry="1.5" fill="#FFFFFF" opacity={0.85} />
+            <Ellipse cx="63" cy="62" rx="4" ry="1.5" fill="#FFFFFF" opacity={0.85} />
+          </Svg>
+        </Animated.View>
+
+        <Animated.View style={[StyleSheet.absoluteFill, dustRoofAnimatedStyle]}>
+          <Svg width={finalSize} height={finalSize} viewBox="0 0 100 100">
+            <Ellipse cx="28" cy="44" rx="5" ry="2" fill="#FFFFFF" opacity={0.85} />
+            <Ellipse cx="72" cy="44" rx="5" ry="2" fill="#FFFFFF" opacity={0.85} />
+            <Ellipse cx="50" cy="44" rx="6" ry="2.5" fill="#FFFFFF" opacity={0.65} />
+          </Svg>
+        </Animated.View>
+
+        {/* Layer 8: Finishing Sweeping Gold Glint */}
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.shineContainer,
+            { width: finalSize * 1.6, height: finalSize * 1.6 },
+            shineAnimatedStyle,
+          ]}
+        >
+          <Svg width="100%" height="100%" viewBox="0 0 100 100">
+            <Defs>
+              <LinearGradient id="glint-grad" x1="0" y1="0" x2="1" y2="0">
+                <Stop offset="0%" stopColor="#FFFFFF" stopOpacity={0} />
+                <Stop offset="50%" stopColor="#FFFFFF" stopOpacity={0.9} />
+                <Stop offset="100%" stopColor="#FFFFFF" stopOpacity={0} />
+              </LinearGradient>
+            </Defs>
+            <Rect x="40" y="0" width="20" height="100" fill="url(#glint-grad)" />
+            <Rect x="48" y="0" width="4" height="100" fill="#FFFFFF" opacity={0.95} />
+          </Svg>
+        </Animated.View>
       </Animated.View>
     </Pressable>
   );
+});
+
+const styles = StyleSheet.create({
+  wrapper: {
+    position: 'relative',
+    overflow: 'visible',
+  },
+  badgeContainer: {
+    position: 'relative',
+    overflow: 'visible',
+    borderRadius: 9999,
+  },
+  shineContainer: {
+    position: 'absolute',
+    top: '-30%',
+    left: '-30%',
+    overflow: 'hidden',
+    borderRadius: 9999,
+  },
 });
 
 export default VerifiedBadge;
