@@ -716,7 +716,7 @@ const BusinessDetailScreen: React.FC = () => {
                   {c.companyName || c.businessName || 'Company'}
                 </Text>
                 {(c.isVerified || (c as any).licenseVerified) && (
-                  <VerifiedBadge size={18} animate={false} />
+                  <VerifiedBadge size={26} animate={true} transformOrigin="center" />
                 )}
               </View>
               <View className="flex-row items-center mt-1" style={{ gap: 4 }}>

@@ -1,4 +1,4 @@
-import React, { useEffect, memo, useCallback } from 'react';
+import React, { useEffect, memo, useCallback, useId } from 'react';
 import { Pressable, View, StyleSheet } from 'react-native';
 import Svg, {
   G,
@@ -24,6 +24,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 const DURATION = 2600;
+const HERO_SCALE = 3.8; // Dramatic high-impact hero pop
 
 const SIZE_MAP: Record<string, number> = {
   sm: 28,
@@ -73,9 +74,13 @@ export const VerifiedBadge = memo(function VerifiedBadge({
   style?: any;
   transformOrigin?: 'top-left' | 'top-right' | 'center';
 }) {
+  const uid = useId().replace(/:/g, '-');
+  const finalSize = typeof size === 'string' ? SIZE_MAP[size] || 28 : size;
+  const heroPx = Math.round(finalSize * HERO_SCALE);
+  const restingRatio = 1 / HERO_SCALE;
+
   const progress = useSharedValue(animate ? 0 : 1.3);
   const isPlayingRef = React.useRef(false);
-  const finalSize = typeof size === 'string' ? SIZE_MAP[size] || 28 : size;
 
   const play = useCallback(() => {
     if (isPlayingRef.current) return;
@@ -99,91 +104,95 @@ export const VerifiedBadge = memo(function VerifiedBadge({
     if (animate) {
       const timer = setTimeout(() => {
         play();
-      }, 200);
+      }, 150);
       return () => clearTimeout(timer);
     } else {
       progress.value = 1.3;
     }
   }, [animate, play, progress]);
 
-  // 1. Hero Scale Pop Container (3.2x pop, anchored to transformOrigin)
-  const containerAnimatedStyle = useAnimatedStyle(() => {
+  // 1. Master Container Animation (Scales HD SVG canvas from 0 -> 1.0 Hero -> restingRatio)
+  const masterContainerStyle = useAnimatedStyle(() => {
     const t = progress.value;
-    const HERO_SCALE = 3.2;
-    let currentScale = 1;
+    let currentRelativeScale = restingRatio;
 
     if (t < 0.15) {
-      currentScale = Math.max(0.001, easeOutBack(sub(t, 0, 0.15)) * HERO_SCALE);
+      // Phase 1: Pop zoom out to Hero Scale (3.8x)
+      const popProg = sub(t, 0, 0.15);
+      currentRelativeScale = Math.max(0.001, easeOutBack(popProg));
     } else if (t < 0.80) {
-      currentScale = HERO_SCALE;
+      // Phase 2: Hold Hero Scale during Roman Temple construction
+      currentRelativeScale = 1.0;
     } else if (t < 1.05) {
+      // Phase 3: Smoothly shrink back to standard resting badge size
       const shrinkProg = sub(t, 0.80, 1.05);
-      currentScale = HERO_SCALE - (HERO_SCALE - 1) * easeInOutCubic(shrinkProg);
+      currentRelativeScale = 1.0 - (1.0 - restingRatio) * easeInOutCubic(shrinkProg);
     } else {
-      currentScale = 1;
+      // Phase 4: Resting size
+      currentRelativeScale = restingRatio;
     }
 
     const isHeroActive = t > 0.01 && t < 1.05;
 
-    // Anchor calculation for transform origin
+    // Anchor positioning so it scales cleanly from top-left, top-right, or center
     let translateX = 0;
     let translateY = 0;
     if (transformOrigin === 'top-left') {
-      translateX = (finalSize * (currentScale - 1)) / 2;
-      translateY = (finalSize * (currentScale - 1)) / 2;
+      translateX = -(heroPx * (1 - currentRelativeScale)) / 2;
+      translateY = -(heroPx * (1 - currentRelativeScale)) / 2;
     } else if (transformOrigin === 'top-right') {
-      translateX = -(finalSize * (currentScale - 1)) / 2;
-      translateY = (finalSize * (currentScale - 1)) / 2;
+      translateX = (heroPx * (1 - currentRelativeScale)) / 2;
+      translateY = -(heroPx * (1 - currentRelativeScale)) / 2;
     }
 
     return {
-      zIndex: isHeroActive ? 999 : 50,
-      elevation: isHeroActive ? 25 : 4,
+      zIndex: isHeroActive ? 999 : 20,
+      elevation: isHeroActive ? 30 : 3,
       transform: [
         { translateX },
         { translateY },
-        { scale: currentScale },
+        { scale: currentRelativeScale },
       ],
       shadowColor: '#000',
-      shadowOffset: { width: 0, height: isHeroActive ? 8 : 2 },
-      shadowOpacity: isHeroActive ? 0.35 : 0.15,
-      shadowRadius: isHeroActive ? 12 : 3,
+      shadowOffset: { width: 0, height: isHeroActive ? 12 : 2 },
+      shadowOpacity: isHeroActive ? 0.4 : 0.15,
+      shadowRadius: isHeroActive ? 16 : 3,
     };
   });
 
-  // 2. Foundation Base Animation (scaleY from bottom)
+  // 2. Foundation Base Animation (rises & expands upward from bottom)
   const baseAnimatedStyle = useAnimatedStyle(() => {
     const t = progress.value;
     const buildBase = easeOutExpo(sub(t, 0.15, 0.35));
     return {
       opacity: sub(t, 0.12, 0.20),
       transform: [
-        { translateY: (1 - buildBase) * 4 },
+        { translateY: (1 - buildBase) * (heroPx * 0.08) },
         { scaleY: Math.max(0.001, buildBase) },
       ],
     };
   });
 
-  // 3. Base Dust Impact Animation
+  // 3. Base Marble Dust Impact Burst
   const dustBaseAnimatedStyle = useAnimatedStyle(() => {
     const t = progress.value;
     const baseHit = sub(t, 0.32, 0.42);
-    const opacity = baseHit > 0 && baseHit < 1 ? (1 - baseHit) * 0.9 : 0;
-    const scale = baseHit > 0 && baseHit < 1 ? easeOutExpo(baseHit) * 1.4 : 0.001;
+    const opacity = baseHit > 0 && baseHit < 1 ? (1 - baseHit) * 0.95 : 0;
+    const scale = baseHit > 0 && baseHit < 1 ? easeOutExpo(baseHit) * 1.5 : 0.001;
     return {
       opacity,
       transform: [{ scale }],
     };
   });
 
-  // 4. Columns Sequential Rising Animation
+  // 4. Columns Sequential Rising Animation (Left -> Center -> Right)
   const col1AnimatedStyle = useAnimatedStyle(() => {
     const t = progress.value;
     const buildCol1 = easeOutExpo(sub(t, 0.25, 0.45));
     return {
       opacity: sub(t, 0.22, 0.30),
       transform: [
-        { translateY: (1 - buildCol1) * 6 },
+        { translateY: (1 - buildCol1) * (heroPx * 0.12) },
         { scaleY: Math.max(0.001, buildCol1) },
       ],
     };
@@ -195,7 +204,7 @@ export const VerifiedBadge = memo(function VerifiedBadge({
     return {
       opacity: sub(t, 0.27, 0.35),
       transform: [
-        { translateY: (1 - buildCol2) * 6 },
+        { translateY: (1 - buildCol2) * (heroPx * 0.12) },
         { scaleY: Math.max(0.001, buildCol2) },
       ],
     };
@@ -207,18 +216,18 @@ export const VerifiedBadge = memo(function VerifiedBadge({
     return {
       opacity: sub(t, 0.32, 0.40),
       transform: [
-        { translateY: (1 - buildCol3) * 6 },
+        { translateY: (1 - buildCol3) * (heroPx * 0.12) },
         { scaleY: Math.max(0.001, buildCol3) },
       ],
     };
   });
 
-  // 5. Column Dust Impact Animation
+  // 5. Column Dust Burst
   const dustColAnimatedStyle = useAnimatedStyle(() => {
     const t = progress.value;
     const colHit = sub(t, 0.52, 0.62);
-    const opacity = colHit > 0 && colHit < 1 ? (1 - colHit) * 0.9 : 0;
-    const scale = colHit > 0 && colHit < 1 ? easeOutExpo(colHit) * 1.4 : 0.001;
+    const opacity = colHit > 0 && colHit < 1 ? (1 - colHit) * 0.95 : 0;
+    const scale = colHit > 0 && colHit < 1 ? easeOutExpo(colHit) * 1.5 : 0.001;
     return {
       opacity,
       transform: [{ scale }],
@@ -232,18 +241,18 @@ export const VerifiedBadge = memo(function VerifiedBadge({
     return {
       opacity: sub(t, 0.42, 0.50),
       transform: [
-        { translateY: (1 - buildRoof) * -8 },
+        { translateY: (1 - buildRoof) * -(heroPx * 0.15) },
         { scale: Math.max(0.001, buildRoof) },
       ],
     };
   });
 
-  // 7. Roof Dust Impact Animation
+  // 7. Roof Dust Burst
   const dustRoofAnimatedStyle = useAnimatedStyle(() => {
     const t = progress.value;
     const roofHit = sub(t, 0.65, 0.75);
-    const opacity = roofHit > 0 && roofHit < 1 ? (1 - roofHit) * 0.9 : 0;
-    const scale = roofHit > 0 && roofHit < 1 ? easeOutExpo(roofHit) * 1.4 : 0.001;
+    const opacity = roofHit > 0 && roofHit < 1 ? (1 - roofHit) * 0.95 : 0;
+    const scale = roofHit > 0 && roofHit < 1 ? easeOutExpo(roofHit) * 1.5 : 0.001;
     return {
       opacity,
       transform: [{ scale }],
@@ -267,7 +276,7 @@ export const VerifiedBadge = memo(function VerifiedBadge({
     const t = progress.value;
     const shineProg = sub(t, 1.05, 1.25);
     const opacity = shineProg > 0 && shineProg < 1 ? 0.95 : 0;
-    const translateX = -100 + shineProg * 200;
+    const translateX = -(heroPx * 1.2) + shineProg * (heroPx * 2.4);
     return {
       opacity,
       transform: [
@@ -277,62 +286,65 @@ export const VerifiedBadge = memo(function VerifiedBadge({
     };
   });
 
-  const strokeW = finalSize <= 20 ? 4 : finalSize <= 28 ? 3.5 : finalSize <= 44 ? 3 : 2.5;
-
   return (
     <Pressable
       onPress={play}
       hitSlop={8}
       style={[
-        styles.wrapper,
+        styles.anchorWrapper,
         { width: finalSize, height: finalSize },
         style,
       ]}
     >
       <Animated.View
         style={[
-          styles.badgeContainer,
-          { width: finalSize, height: finalSize },
-          containerAnimatedStyle,
+          styles.masterHeroCanvas,
+          {
+            width: heroPx,
+            height: heroPx,
+            top: (finalSize - heroPx) / 2,
+            left: (finalSize - heroPx) / 2,
+          },
+          masterContainerStyle,
         ]}
       >
-        {/* Layer 0: Coin Background, Outer Beaded Rim & Milled Edges */}
-        <Svg width={finalSize} height={finalSize} viewBox="0 0 100 100" style={StyleSheet.absoluteFill}>
+        {/* Layer 0: Coin Background, Outer Beaded Rim & Milled Edges (Rendered at Full HD Vector Resolution) */}
+        <Svg width={heroPx} height={heroPx} viewBox="0 0 100 100" style={StyleSheet.absoluteFill}>
           <Defs>
-            <RadialGradient id="badge-bg" cx="50%" cy="50%" r="50%">
+            <RadialGradient id={`badge-bg-${uid}`} cx="50%" cy="50%" r="50%">
               <Stop offset="0%" stopColor="#FFFFFF" />
               <Stop offset="60%" stopColor="#F9F6F0" />
               <Stop offset="100%" stopColor="#EAE5D9" />
             </RadialGradient>
-            <LinearGradient id="gold-grad" x1="0" y1="0" x2="1" y2="1">
+            <LinearGradient id={`gold-grad-${uid}`} x1="0" y1="0" x2="1" y2="1">
               <Stop offset="0%" stopColor="#FFECA8" />
               <Stop offset="25%" stopColor="#D4AF37" />
               <Stop offset="50%" stopColor="#AA7C11" />
               <Stop offset="75%" stopColor="#D4AF37" />
               <Stop offset="100%" stopColor="#8A6308" />
             </LinearGradient>
-            <LinearGradient id="gold-dark" x1="0" y1="0" x2="0" y2="1">
+            <LinearGradient id={`gold-dark-${uid}`} x1="0" y1="0" x2="0" y2="1">
               <Stop offset="0%" stopColor="#B38B22" />
               <Stop offset="100%" stopColor="#755811" />
             </LinearGradient>
-            <LinearGradient id="gold-col" x1="0" y1="0" x2="1" y2="0">
+            <LinearGradient id={`gold-col-${uid}`} x1="0" y1="0" x2="1" y2="0">
               <Stop offset="0%" stopColor="#AA7C11" />
               <Stop offset="30%" stopColor="#FCE79A" />
               <Stop offset="70%" stopColor="#D4AF37" />
               <Stop offset="100%" stopColor="#755811" />
             </LinearGradient>
-            <LinearGradient id="shine-grad" x1="0" y1="0" x2="1" y2="0">
+            <LinearGradient id={`shine-grad-${uid}`} x1="0" y1="0" x2="1" y2="0">
               <Stop offset="0%" stopColor="#FFFFFF" stopOpacity={0} />
               <Stop offset="50%" stopColor="#FFFFFF" stopOpacity={0.9} />
               <Stop offset="100%" stopColor="#FFFFFF" stopOpacity={0} />
             </LinearGradient>
-            <Path id="text-arc" d="M 6,50 A 44,44 0 0,0 94,50" />
+            <Path id={`text-arc-${uid}`} d="M 6,50 A 44,44 0 0,0 94,50" />
           </Defs>
 
           {/* Marble Disc & Gold Borders */}
-          <Circle cx="50" cy="50" r="49" fill="url(#badge-bg)" />
-          <Circle cx="50" cy="50" r="46.5" fill="none" stroke="url(#gold-grad)" strokeWidth={strokeW} />
-          <Circle cx="50" cy="50" r="44" fill="none" stroke="url(#gold-grad)" strokeWidth={0.5} opacity={0.6} />
+          <Circle cx="50" cy="50" r="49" fill={`url(#badge-bg-${uid})`} />
+          <Circle cx="50" cy="50" r="46.5" fill="none" stroke={`url(#gold-grad-${uid})`} strokeWidth={3.5} />
+          <Circle cx="50" cy="50" r="44" fill="none" stroke={`url(#gold-grad-${uid})`} strokeWidth={0.6} opacity={0.6} />
 
           {/* Milled Gold Edge Ticks */}
           <G>
@@ -349,22 +361,22 @@ export const VerifiedBadge = memo(function VerifiedBadge({
                   y1={y1}
                   x2={x2}
                   y2={y2}
-                  stroke="url(#gold-grad)"
-                  strokeWidth={finalSize < 40 ? 1 : 0.75}
+                  stroke={`url(#gold-grad-${uid})`}
+                  strokeWidth={0.8}
                 />
               );
             })}
           </G>
 
-          <Circle cx="50" cy="50" r="35" fill="none" stroke="url(#gold-dark)" strokeWidth={0.75} />
-          <Circle cx="50" cy="50" r="34.5" fill="url(#badge-bg)" />
+          <Circle cx="50" cy="50" r="35" fill="none" stroke={`url(#gold-dark-${uid})`} strokeWidth={0.75} />
+          <Circle cx="50" cy="50" r="34.5" fill={`url(#badge-bg-${uid})`} />
         </Svg>
 
         {/* Layer 1: Chiseled Arc Text */}
         <Animated.View style={[StyleSheet.absoluteFill, textAnimatedStyle]}>
-          <Svg width={finalSize} height={finalSize} viewBox="0 0 100 100">
+          <Svg width={heroPx} height={heroPx} viewBox="0 0 100 100">
             <Defs>
-              <Path id="text-arc-layer" d="M 6,50 A 44,44 0 0,0 94,50" />
+              <Path id={`text-arc-layer-${uid}`} d="M 6,50 A 44,44 0 0,0 94,50" />
             </Defs>
             <SvgText
               fontSize={6.4}
@@ -374,7 +386,7 @@ export const VerifiedBadge = memo(function VerifiedBadge({
               fontFamily="Georgia"
               textAnchor="middle"
             >
-              <TextPath href="#text-arc-layer" startOffset="50%">
+              <TextPath href={`#text-arc-layer-${uid}`} startOffset="50%">
                 ✦ RATEDEED · VERIFIED ✦
               </TextPath>
             </SvgText>
@@ -383,113 +395,113 @@ export const VerifiedBadge = memo(function VerifiedBadge({
 
         {/* Layer 2: Foundation Base */}
         <Animated.View style={[StyleSheet.absoluteFill, baseAnimatedStyle]}>
-          <Svg width={finalSize} height={finalSize} viewBox="0 0 100 100">
+          <Svg width={heroPx} height={heroPx} viewBox="0 0 100 100">
             <Defs>
-              <LinearGradient id="gold-grad-base" x1="0" y1="0" x2="1" y2="1">
+              <LinearGradient id={`gold-grad-base-${uid}`} x1="0" y1="0" x2="1" y2="1">
                 <Stop offset="0%" stopColor="#FFECA8" />
                 <Stop offset="50%" stopColor="#D4AF37" />
                 <Stop offset="100%" stopColor="#8A6308" />
               </LinearGradient>
-              <LinearGradient id="gold-dark-base" x1="0" y1="0" x2="0" y2="1">
+              <LinearGradient id={`gold-dark-base-${uid}`} x1="0" y1="0" x2="0" y2="1">
                 <Stop offset="0%" stopColor="#B38B22" />
                 <Stop offset="100%" stopColor="#755811" />
               </LinearGradient>
             </Defs>
-            <Rect x={32} y={62} width={36} height={2.5} rx={0.5} fill="url(#gold-grad-base)" />
-            <Rect x={29} y={64.5} width={42} height={3} rx={0.5} fill="url(#gold-dark-base)" />
+            <Rect x={32} y={62} width={36} height={2.5} rx={0.5} fill={`url(#gold-grad-base-${uid})`} />
+            <Rect x={29} y={64.5} width={42} height={3} rx={0.5} fill={`url(#gold-dark-base-${uid})`} />
           </Svg>
         </Animated.View>
 
         {/* Layer 3: Column 1 (Left Pillar) */}
         <Animated.View style={[StyleSheet.absoluteFill, col1AnimatedStyle]}>
-          <Svg width={finalSize} height={finalSize} viewBox="0 0 100 100">
+          <Svg width={heroPx} height={heroPx} viewBox="0 0 100 100">
             <Defs>
-              <LinearGradient id="gold-col-1" x1="0" y1="0" x2="1" y2="0">
+              <LinearGradient id={`gold-col-1-${uid}`} x1="0" y1="0" x2="1" y2="0">
                 <Stop offset="0%" stopColor="#AA7C11" />
                 <Stop offset="30%" stopColor="#FCE79A" />
                 <Stop offset="70%" stopColor="#D4AF37" />
                 <Stop offset="100%" stopColor="#755811" />
               </LinearGradient>
-              <LinearGradient id="gold-grad-col1" x1="0" y1="0" x2="1" y2="1">
+              <LinearGradient id={`gold-grad-col1-${uid}`} x1="0" y1="0" x2="1" y2="1">
                 <Stop offset="0%" stopColor="#FFECA8" />
                 <Stop offset="100%" stopColor="#8A6308" />
               </LinearGradient>
             </Defs>
-            <Rect x={35} y={49.5} width={4.5} height={11.5} fill="url(#gold-col-1)" />
-            <Polygon points="34,48.5 40.5,48.5 39.5,49.5 35,49.5" fill="url(#gold-grad-col1)" />
-            <Polygon points="35,61 39.5,61 40.5,62 34,62" fill="url(#gold-grad-col1)" />
+            <Rect x={35} y={49.5} width={4.5} height={11.5} fill={`url(#gold-col-1-${uid})`} />
+            <Polygon points="34,48.5 40.5,48.5 39.5,49.5 35,49.5" fill={`url(#gold-grad-col1-${uid})`} />
+            <Polygon points="35,61 39.5,61 40.5,62 34,62" fill={`url(#gold-grad-col1-${uid})`} />
           </Svg>
         </Animated.View>
 
         {/* Layer 4: Column 2 (Center Pillar) */}
         <Animated.View style={[StyleSheet.absoluteFill, col2AnimatedStyle]}>
-          <Svg width={finalSize} height={finalSize} viewBox="0 0 100 100">
+          <Svg width={heroPx} height={heroPx} viewBox="0 0 100 100">
             <Defs>
-              <LinearGradient id="gold-col-2" x1="0" y1="0" x2="1" y2="0">
+              <LinearGradient id={`gold-col-2-${uid}`} x1="0" y1="0" x2="1" y2="0">
                 <Stop offset="0%" stopColor="#AA7C11" />
                 <Stop offset="30%" stopColor="#FCE79A" />
                 <Stop offset="70%" stopColor="#D4AF37" />
                 <Stop offset="100%" stopColor="#755811" />
               </LinearGradient>
-              <LinearGradient id="gold-grad-col2" x1="0" y1="0" x2="1" y2="1">
+              <LinearGradient id={`gold-grad-col2-${uid}`} x1="0" y1="0" x2="1" y2="1">
                 <Stop offset="0%" stopColor="#FFECA8" />
                 <Stop offset="100%" stopColor="#8A6308" />
               </LinearGradient>
             </Defs>
-            <Rect x={47.75} y={49.5} width={4.5} height={11.5} fill="url(#gold-col-2)" />
-            <Polygon points="46.75,48.5 53.25,48.5 52.25,49.5 47.75,49.5" fill="url(#gold-grad-col2)" />
-            <Polygon points="47.75,61 52.25,61 53.25,62 46.75,62" fill="url(#gold-grad-col2)" />
+            <Rect x={47.75} y={49.5} width={4.5} height={11.5} fill={`url(#gold-col-2-${uid})`} />
+            <Polygon points="46.75,48.5 53.25,48.5 52.25,49.5 47.75,49.5" fill={`url(#gold-grad-col2-${uid})`} />
+            <Polygon points="47.75,61 52.25,61 53.25,62 46.75,62" fill={`url(#gold-grad-col2-${uid})`} />
           </Svg>
         </Animated.View>
 
         {/* Layer 5: Column 3 (Right Pillar) */}
         <Animated.View style={[StyleSheet.absoluteFill, col3AnimatedStyle]}>
-          <Svg width={finalSize} height={finalSize} viewBox="0 0 100 100">
+          <Svg width={heroPx} height={heroPx} viewBox="0 0 100 100">
             <Defs>
-              <LinearGradient id="gold-col-3" x1="0" y1="0" x2="1" y2="0">
+              <LinearGradient id={`gold-col-3-${uid}`} x1="0" y1="0" x2="1" y2="0">
                 <Stop offset="0%" stopColor="#AA7C11" />
                 <Stop offset="30%" stopColor="#FCE79A" />
                 <Stop offset="70%" stopColor="#D4AF37" />
                 <Stop offset="100%" stopColor="#755811" />
               </LinearGradient>
-              <LinearGradient id="gold-grad-col3" x1="0" y1="0" x2="1" y2="1">
+              <LinearGradient id={`gold-grad-col3-${uid}`} x1="0" y1="0" x2="1" y2="1">
                 <Stop offset="0%" stopColor="#FFECA8" />
                 <Stop offset="100%" stopColor="#8A6308" />
               </LinearGradient>
             </Defs>
-            <Rect x={60.5} y={49.5} width={4.5} height={11.5} fill="url(#gold-col-3)" />
-            <Polygon points="59.5,48.5 66,48.5 65,49.5 60.5,49.5" fill="url(#gold-grad-col3)" />
-            <Polygon points="60.5,61 65,61 66,62 59.5,62" fill="url(#gold-grad-col3)" />
+            <Rect x={60.5} y={49.5} width={4.5} height={11.5} fill={`url(#gold-col-3-${uid})`} />
+            <Polygon points="59.5,48.5 66,48.5 65,49.5 60.5,49.5" fill={`url(#gold-grad-col3-${uid})`} />
+            <Polygon points="60.5,61 65,61 66,62 59.5,62" fill={`url(#gold-grad-col3-${uid})`} />
           </Svg>
         </Animated.View>
 
         {/* Layer 6: Roof Pediment */}
         <Animated.View style={[StyleSheet.absoluteFill, roofAnimatedStyle]}>
-          <Svg width={finalSize} height={finalSize} viewBox="0 0 100 100">
+          <Svg width={heroPx} height={heroPx} viewBox="0 0 100 100">
             <Defs>
-              <LinearGradient id="gold-grad-roof" x1="0" y1="0" x2="1" y2="1">
+              <LinearGradient id={`gold-grad-roof-${uid}`} x1="0" y1="0" x2="1" y2="1">
                 <Stop offset="0%" stopColor="#FFECA8" />
                 <Stop offset="25%" stopColor="#D4AF37" />
                 <Stop offset="50%" stopColor="#AA7C11" />
                 <Stop offset="75%" stopColor="#D4AF37" />
                 <Stop offset="100%" stopColor="#8A6308" />
               </LinearGradient>
-              <LinearGradient id="gold-dark-roof" x1="0" y1="0" x2="0" y2="1">
+              <LinearGradient id={`gold-dark-roof-${uid}`} x1="0" y1="0" x2="0" y2="1">
                 <Stop offset="0%" stopColor="#B38B22" />
                 <Stop offset="100%" stopColor="#755811" />
               </LinearGradient>
             </Defs>
-            <Polygon points="50,26 72,44 28,44" fill="url(#gold-grad-roof)" />
-            <Polygon points="50,30 65,42 35,42" fill="url(#gold-dark-roof)" />
-            <Circle cx={50} cy={38} r={2.5} fill="url(#gold-grad-roof)" />
-            <Rect x={28} y={44} width={44} height={3} rx={0.5} fill="url(#gold-grad-roof)" />
-            <Rect x={31} y={47} width={38} height={1.5} fill="url(#gold-dark-roof)" />
+            <Polygon points="50,26 72,44 28,44" fill={`url(#gold-grad-roof-${uid})`} />
+            <Polygon points="50,30 65,42 35,42" fill={`url(#gold-dark-roof-${uid})`} />
+            <Circle cx={50} cy={38} r={2.5} fill={`url(#gold-grad-roof-${uid})`} />
+            <Rect x={28} y={44} width={44} height={3} rx={0.5} fill={`url(#gold-grad-roof-${uid})`} />
+            <Rect x={31} y={47} width={38} height={1.5} fill={`url(#gold-dark-roof-${uid})`} />
           </Svg>
         </Animated.View>
 
         {/* Layer 7: Marble Dust Burst Effects */}
         <Animated.View style={[StyleSheet.absoluteFill, dustBaseAnimatedStyle]}>
-          <Svg width={finalSize} height={finalSize} viewBox="0 0 100 100">
+          <Svg width={heroPx} height={heroPx} viewBox="0 0 100 100">
             <Ellipse cx="29" cy="67" rx="5" ry="2" fill="#FFFFFF" opacity={0.85} />
             <Ellipse cx="71" cy="67" rx="5" ry="2" fill="#FFFFFF" opacity={0.85} />
             <Ellipse cx="50" cy="67" rx="7" ry="2" fill="#FFFFFF" opacity={0.65} />
@@ -497,7 +509,7 @@ export const VerifiedBadge = memo(function VerifiedBadge({
         </Animated.View>
 
         <Animated.View style={[StyleSheet.absoluteFill, dustColAnimatedStyle]}>
-          <Svg width={finalSize} height={finalSize} viewBox="0 0 100 100">
+          <Svg width={heroPx} height={heroPx} viewBox="0 0 100 100">
             <Ellipse cx="37" cy="62" rx="4" ry="1.5" fill="#FFFFFF" opacity={0.85} />
             <Ellipse cx="50" cy="62" rx="4" ry="1.5" fill="#FFFFFF" opacity={0.85} />
             <Ellipse cx="63" cy="62" rx="4" ry="1.5" fill="#FFFFFF" opacity={0.85} />
@@ -505,7 +517,7 @@ export const VerifiedBadge = memo(function VerifiedBadge({
         </Animated.View>
 
         <Animated.View style={[StyleSheet.absoluteFill, dustRoofAnimatedStyle]}>
-          <Svg width={finalSize} height={finalSize} viewBox="0 0 100 100">
+          <Svg width={heroPx} height={heroPx} viewBox="0 0 100 100">
             <Ellipse cx="28" cy="44" rx="5" ry="2" fill="#FFFFFF" opacity={0.85} />
             <Ellipse cx="72" cy="44" rx="5" ry="2" fill="#FFFFFF" opacity={0.85} />
             <Ellipse cx="50" cy="44" rx="6" ry="2.5" fill="#FFFFFF" opacity={0.65} />
@@ -517,19 +529,19 @@ export const VerifiedBadge = memo(function VerifiedBadge({
           pointerEvents="none"
           style={[
             styles.shineContainer,
-            { width: finalSize * 1.6, height: finalSize * 1.6 },
+            { width: heroPx * 1.5, height: heroPx * 1.5 },
             shineAnimatedStyle,
           ]}
         >
           <Svg width="100%" height="100%" viewBox="0 0 100 100">
             <Defs>
-              <LinearGradient id="glint-grad" x1="0" y1="0" x2="1" y2="0">
+              <LinearGradient id={`glint-grad-${uid}`} x1="0" y1="0" x2="1" y2="0">
                 <Stop offset="0%" stopColor="#FFFFFF" stopOpacity={0} />
                 <Stop offset="50%" stopColor="#FFFFFF" stopOpacity={0.9} />
                 <Stop offset="100%" stopColor="#FFFFFF" stopOpacity={0} />
               </LinearGradient>
             </Defs>
-            <Rect x="40" y="0" width="20" height="100" fill="url(#glint-grad)" />
+            <Rect x="40" y="0" width="20" height="100" fill={`url(#glint-grad-${uid})`} />
             <Rect x="48" y="0" width="4" height="100" fill="#FFFFFF" opacity={0.95} />
           </Svg>
         </Animated.View>
@@ -539,19 +551,21 @@ export const VerifiedBadge = memo(function VerifiedBadge({
 });
 
 const styles = StyleSheet.create({
-  wrapper: {
+  anchorWrapper: {
     position: 'relative',
     overflow: 'visible',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  badgeContainer: {
-    position: 'relative',
+  masterHeroCanvas: {
+    position: 'absolute',
     overflow: 'visible',
     borderRadius: 9999,
   },
   shineContainer: {
     position: 'absolute',
-    top: '-30%',
-    left: '-30%',
+    top: '-25%',
+    left: '-25%',
     overflow: 'hidden',
     borderRadius: 9999,
   },
