@@ -94,17 +94,31 @@ export default function HelpCenterScreen() {
             <FontAwesome5 name="arrow-left" size={14} color={isDark ? '#e5e5e5' : '#171717'} />
           </Pressable>
 
-          <Pressable
-            onPress={() => {
-              HapticFeedback.light();
-              navigation.navigate('ContactSupport');
-            }}
-            className="px-3.5 py-1.5 rounded-full bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200/60 dark:border-indigo-800"
-          >
-            <Text className="text-[12px] font-bold text-indigo-600 dark:text-indigo-400">
-              Submit Ticket
-            </Text>
-          </Pressable>
+          <View className="flex-row items-center gap-2">
+            <Pressable
+              onPress={() => {
+                HapticFeedback.light();
+                navigation.navigate('MyTickets');
+              }}
+              className="px-3 py-1.5 rounded-full bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700"
+            >
+              <Text className="text-[11px] font-bold text-neutral-700 dark:text-neutral-300">
+                My Tickets
+              </Text>
+            </Pressable>
+
+            <Pressable
+              onPress={() => {
+                HapticFeedback.light();
+                navigation.navigate('ContactSupport');
+              }}
+              className="px-3.5 py-1.5 rounded-full bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200/60 dark:border-indigo-800"
+            >
+              <Text className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400">
+                + Submit
+              </Text>
+            </Pressable>
+          </View>
         </View>
 
         <Text className="text-2xl font-black text-neutral-900 dark:text-white tracking-tight">

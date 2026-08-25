@@ -51,6 +51,7 @@ import AffiliateScreen from '../screens/AffiliateScreen';
 import HelpCenterScreen from '../screens/HelpCenterScreen';
 import HelpArticleScreen from '../screens/HelpArticleScreen';
 import ContactSupportScreen from '../screens/ContactSupportScreen';
+import MyTicketsScreen from '../screens/MyTicketsScreen';
 
 import Typography from '../components/common/Typography';
 import { useAuth } from '../context/AuthContext';
@@ -431,6 +432,7 @@ export default function MainNavigator() {
       <Stack.Screen name="HelpCenter" component={HelpCenterScreen} options={{ headerShown: false }} />
       <Stack.Screen name="HelpArticle" component={HelpArticleScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ContactSupport" component={ContactSupportScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="MyTickets" component={MyTicketsScreen} options={{ headerShown: false }} />
 
       {/* Auth screens available within Main stack for guest browsing flow */}
       <Stack.Screen name="Login" component={LoginScreen} options={{ title: 'Sign In', headerShown: false }} />

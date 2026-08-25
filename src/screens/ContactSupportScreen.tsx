@@ -17,6 +17,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { submitHelpTicket } from '../api';
+import { HELP_ARTICLES } from '../data/helpData';
 import HapticFeedback from '../utils/haptics';
 import { BouncingDotsLoader } from '../components/common';
 
@@ -209,6 +210,40 @@ export default function ContactSupportScreen() {
                 ))}
               </ScrollView>
             </View>
+
+            {/* Guide Deflection Suggestions */}
+            {(() => {
+              const suggested = HELP_ARTICLES.filter((a) => a.category === topic || (topic === 'payments' && a.category === 'payments') || (topic === 'disputes' && a.category === 'disputes')).slice(0, 2);
+              if (suggested.length === 0) return null;
+
+              return (
+                <View className="p-3.5 rounded-2xl bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/60 space-y-2">
+                  <Text className="text-[11px] font-bold text-indigo-950 dark:text-indigo-200">
+                    💡 Suggested Solution Guides:
+                  </Text>
+                  {suggested.map((art) => (
+                    <Pressable
+                      key={art.slug}
+                      onPress={() => {
+                        HapticFeedback.light();
+                        navigation.navigate('HelpArticle', { slug: art.slug });
+                      }}
+                      className="p-2.5 rounded-xl bg-white dark:bg-neutral-900 border border-indigo-100 dark:border-indigo-900/80 flex-row items-center justify-between"
+                    >
+                      <View className="flex-1 pr-2">
+                        <Text className="text-xs font-bold text-neutral-900 dark:text-white" numberOfLines={1}>
+                          {art.title}
+                        </Text>
+                        <Text className="text-[10px] text-neutral-400" numberOfLines={1}>
+                          {art.description}
+                        </Text>
+                      </View>
+                      <FontAwesome5 name="arrow-right" size={10} color="#6366f1" />
+                    </Pressable>
+                  ))}
+                </View>
+              );
+            })()}
 
             {/* Urgency Switch */}
             <View className="p-3.5 rounded-2xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 flex-row items-center justify-between">

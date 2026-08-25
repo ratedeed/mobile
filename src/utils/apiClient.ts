@@ -1494,3 +1494,24 @@ export const submitHelpTicket = async (ticketData: {
   return post(`${API_BASE}/help/contact`, ticketData, authHeaders);
 };
 
+export const getMyHelpTickets = async (): Promise<{ success: boolean; tickets: any[] }> => {
+  const authHeaders = await getAuthHeaders();
+  return get(`${API_BASE}/help/my-tickets`, authHeaders);
+};
+
+export const userReplyHelpTicket = async (
+  ticketId: string,
+  message: string
+): Promise<{ success: boolean; message: string; ticket: any }> => {
+  const authHeaders = await getAuthHeaders();
+  return post(`${API_BASE}/help/tickets/${encodeURIComponent(ticketId)}/user-reply`, { message }, authHeaders);
+};
+
+export const userResolveHelpTicket = async (
+  ticketId: string
+): Promise<{ success: boolean; message: string; ticket: any }> => {
+  const authHeaders = await getAuthHeaders();
+  return post(`${API_BASE}/help/tickets/${encodeURIComponent(ticketId)}/resolve`, {}, authHeaders);
+};
+
+
