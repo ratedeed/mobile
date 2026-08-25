@@ -1476,3 +1476,21 @@ export const createAffiliateStripeConnect = async (): Promise<{ url: string; str
   return post(`${API_BASE}/affiliate/stripe-connect`, {}, authHeaders);
 };
 
+// ==========================================
+// Help Center & Support Tickets
+// ==========================================
+
+export const submitHelpTicket = async (ticketData: {
+  name: string;
+  email: string;
+  topic: string;
+  subject: string;
+  message: string;
+  isUrgent?: boolean;
+  jobId?: string;
+  articleSlug?: string;
+}): Promise<{ success: boolean; message: string; ticketId: string }> => {
+  const authHeaders = await getAuthHeaders();
+  return post(`${API_BASE}/help/contact`, ticketData, authHeaders);
+};
+

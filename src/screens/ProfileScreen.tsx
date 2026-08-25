@@ -560,7 +560,7 @@ const ProfileScreen: React.FC = () => {
       items: [
         { icon: 'shield-alt', label: 'Privacy & Security', sheet: 'privacy', iconColor: '#059669', iconBg: 'bg-emerald-50 dark:bg-emerald-950' },
         { icon: 'cog', label: 'App Settings', sheet: 'settings', iconColor: '#6B7280', iconBg: 'bg-neutral-100 dark:bg-neutral-800' },
-        { icon: 'question-circle', label: 'Help Center', sheet: 'help', iconColor: '#2563EB', iconBg: 'bg-blue-50 dark:bg-blue-950' },
+        { icon: 'question-circle', label: 'Help Center', route: 'HelpCenter', iconColor: '#2563EB', iconBg: 'bg-blue-50 dark:bg-blue-950' },
       ],
     },
   ];
