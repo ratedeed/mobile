@@ -7,7 +7,6 @@ import {
   ScrollView,
   StatusBar,
   Alert,
-  RefreshControl,
   KeyboardAvoidingView,
   Platform,
   Image,
@@ -20,7 +19,7 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import { getMyHelpTickets, userReplyHelpTicket, userResolveHelpTicket } from '../api';
 import { useAuth } from '../context/AuthContext';
 import HapticFeedback from '../utils/haptics';
-import { BouncingDotsLoader } from '../components/common';
+import { BouncingDotsLoader, BouncingRefreshScrollView } from '../components/common';
 
 function MobileAttachmentViewer({ attachments, attachmentUrl }: { attachments?: string[]; attachmentUrl?: string }) {
   const allUrls = [
@@ -271,11 +270,12 @@ export default function MyTicketsScreen() {
         keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
         className="flex-1"
       >
-        <ScrollView
+        <BouncingRefreshScrollView
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={{ padding: 20, paddingBottom: Math.max(insets.bottom, 24) + 40 }}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
           className="flex-1"
         >
         {loading ? (
@@ -534,7 +534,7 @@ export default function MyTicketsScreen() {
             })}
           </View>
         )}
-        </ScrollView>
+        </BouncingRefreshScrollView>
       </KeyboardAvoidingView>
     </View>
   );
