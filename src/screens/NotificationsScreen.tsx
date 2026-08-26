@@ -232,14 +232,22 @@ const NotificationsScreen: React.FC = () => {
       return;
     }
 
-    if (rawLink.startsWith('/messages') || rawLink.startsWith('/chat') || t === 'new_message' || t === 'message') {
-      navigation.navigate('MessagesTab');
+    const conversationMatch = rawLink.match(/[?&]conversationId=([^&]+)/) || rawLink.match(/\/messages\/([a-zA-Z0-9_-]+)/);
+    if (conversationMatch && conversationMatch[1]) {
+      navigation.navigate('ChatScreen', { conversationId: conversationMatch[1] });
+      return;
+    }
+
+    if (rawLink.startsWith('/messages') || rawLink.startsWith('/chat') || t === 'new_message' || t === 'message' || t === 'admin_message') {
+      navigation.navigate('Main', { screen: 'Messages' });
       return;
     }
 
     // 2. Direct Support Ticket Deep-linking (opens MyTickets screen with thread)
     if (
       t === 'ticket_reply' ||
+      t === 'ticket_closed' ||
+      t === 'ticket_resolved' ||
       rawLink.includes('/my-tickets') ||
       rawLink.includes('/help')
     ) {
@@ -262,11 +270,11 @@ const NotificationsScreen: React.FC = () => {
     if (!item.link) {
       // Fallback for notifications without explicit link string
       if (t === 'admin_message' || t === 'new_message' || t === 'message' || m.includes('message')) {
-        navigation.navigate('Messages');
+        navigation.navigate('Main', { screen: 'Messages' });
       } else if (t.includes('affiliate') || t.includes('commission') || t.includes('payout') || m.includes('commission') || m.includes('payout')) {
         navigation.navigate('AffiliateScreen');
       } else if (t.includes('job') || t.includes('milestone') || t.includes('payment') || m.includes('payment') || m.includes('milestone')) {
-        navigation.navigate('Jobs');
+        navigation.navigate('Main', { screen: 'Jobs' });
       }
       return;
     }
@@ -284,8 +292,15 @@ const NotificationsScreen: React.FC = () => {
     if (path.startsWith('/messages/')) {
       const conversationId = path.split('/')[2];
       navigation.navigate('ChatScreen', { conversationId });
+    } else if (path.startsWith('/chat')) {
+      const cid = path.match(/[?&]conversationId=([^&]+)/)?.[1];
+      if (cid) {
+        navigation.navigate('ChatScreen', { conversationId: cid });
+      } else {
+        navigation.navigate('Main', { screen: 'Messages' });
+      }
     } else if (path.startsWith('/messages')) {
-      navigation.navigate('Messages');
+      navigation.navigate('Main', { screen: 'Messages' });
     } else if (path.startsWith('/leads/')) {
       if (userRole === 'contractor' || userRole === 'admin') {
         navigation.navigate('ContractorDashboard');

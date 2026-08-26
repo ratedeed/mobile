@@ -696,14 +696,31 @@ const MessagesScreen = () => {
 
   // Auto-select conversation when conversationId is provided (e.g. from notification tap)
   useEffect(() => {
-    if (!conversationId || selectedConversation) return;
+    if (!conversationId) return;
+    if (selectedConversation && (selectedConversation.conversationId === conversationId || selectedConversation._id === conversationId)) return;
+
     const existing = Object.values(conversations).find(
       (c) => c.conversationId === conversationId || c._id === conversationId
     );
     if (existing) {
       setSelectedConversation(existing);
+      loadMessages(conversationId);
+    } else {
+      setSelectedConversation({
+        conversationId,
+        _id: conversationId,
+        otherParticipant: {
+          _id: recipientId || 'support',
+          firstName: recipientName || 'Ratedeed Support',
+          companyName: 'Ratedeed Support',
+          isSupport: true,
+        },
+        messages: [],
+        lastMessage: null,
+      });
+      loadMessages(conversationId);
     }
-  }, [conversationId, conversations, selectedConversation]);
+  }, [conversationId, conversations, selectedConversation, recipientId, recipientName, loadMessages]);
 
   // Auto-open Quote creation sheet if requested via route params
   useEffect(() => {
