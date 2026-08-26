@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, Image, Animated, Easing, StyleSheet, useColorScheme } from 'react-native';
+import { BouncingDotsLoader } from '../components/common';
 
 const LOGO_COLOR = '#4F46E5'; // Indigo-600 (Ratedeed brand)
 const LOGO_COLOR_RGB = '79, 70, 229';
@@ -25,9 +26,6 @@ const LoadingScreen = () => {
   const pulse2Opacity = useRef(new Animated.Value(0)).current;
 
   const dotsOpacity = useRef(new Animated.Value(0)).current;
-  const dot1 = useRef(new Animated.Value(0)).current;
-  const dot2 = useRef(new Animated.Value(0)).current;
-  const dot3 = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     // Custom cubic bezier roughly equivalent to Framer Motion's [0.22, 1, 0.36, 1]
@@ -144,36 +142,7 @@ const LoadingScreen = () => {
       })
     ]).start();
 
-    // Dots bouncing (staggered wave: translateY + scale + opacity)
-    const BOUNCE_DURATION = 1200;
-    const animateDot = (anim, preDelay, postDelay) => {
-      Animated.loop(
-        Animated.sequence([
-          ...(preDelay > 0 ? [Animated.delay(preDelay)] : []),
-          Animated.timing(anim, { toValue: 1, duration: BOUNCE_DURATION, useNativeDriver: true, easing: Easing.inOut(Easing.ease) }),
-          Animated.timing(anim, { toValue: 0, duration: BOUNCE_DURATION, useNativeDriver: true, easing: Easing.inOut(Easing.ease) }),
-          ...(postDelay > 0 ? [Animated.delay(postDelay)] : []),
-        ])
-      ).start();
-    };
-
-    animateDot(dot1, 0, 320);
-    animateDot(dot2, 160, 160);
-    animateDot(dot3, 320, 0);
-
   }, []);
-
-  const getDotStyle = (anim) => ({
-    transform: [
-      {
-        translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [0, -16] })
-      },
-      {
-        scale: anim.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1.25] })
-      }
-    ],
-    opacity: anim.interpolate({ inputRange: [0, 1], outputRange: [0.4, 1] })
-  });
 
   const logoRotate = logoRotation.interpolate({
     inputRange: [0, 1],
@@ -237,13 +206,9 @@ const LoadingScreen = () => {
         </Animated.View>
       </View>
 
-      {/* Bouncing dots — staggered wave */}
+      {/* Bouncing dots — synchronized staggered wave */}
       <Animated.View style={[styles.dotsContainer, { opacity: dotsOpacity }]}>
-        <View style={styles.dotsWrapper}>
-          <Animated.View style={[styles.dot, { backgroundColor: dotColor }, getDotStyle(dot1)]} />
-          <Animated.View style={[styles.dot, { backgroundColor: dotColor }, getDotStyle(dot2)]} />
-          <Animated.View style={[styles.dot, { backgroundColor: dotColor }, getDotStyle(dot3)]} />
-        </View>
+        <BouncingDotsLoader size="large" color={dotColor} />
       </Animated.View>
     </View>
   );

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import {
   Animated,
   Easing,
@@ -35,9 +35,52 @@ const SIZE_MAP: Record<
 };
 
 /**
+ * Generates smooth sine-arc wave interpolation ranges for a dot index.
+ */
+function createDotRanges(index: number, count: number) {
+  const staggerStep = 0.15;
+  const span = 0.42;
+  const start = index * staggerStep;
+  const p1 = start + span * 0.25;
+  const p2 = start + span * 0.50; // Peak
+  const p3 = start + span * 0.75;
+  const end = Math.min(start + span, 1.0);
+
+  const raw = [
+    { t: 0.0, y: 0, s: 0.85, o: 0.45 },
+    ...(start > 0.001 ? [{ t: start, y: 0, s: 0.85, o: 0.45 }] : []),
+    { t: p1, y: -BOUNCE * 0.71, s: 1.05, o: 0.85 },
+    { t: p2, y: -BOUNCE, s: 1.20, o: 1.00 },
+    { t: p3, y: -BOUNCE * 0.71, s: 1.05, o: 0.85 },
+    { t: end, y: 0, s: 0.85, o: 0.45 },
+    ...(end < 0.999 ? [{ t: 1.0, y: 0, s: 0.85, o: 0.45 }] : []),
+  ];
+
+  // Filter to guarantee strictly increasing t values
+  const points: typeof raw = [];
+  for (const pt of raw) {
+    if (points.length === 0 || pt.t > points[points.length - 1].t + 0.0001) {
+      points.push(pt);
+    }
+  }
+
+  // Ensure last point is exactly 1.0
+  if (points[points.length - 1].t < 1.0) {
+    points.push({ t: 1.0, y: 0, s: 0.85, o: 0.45 });
+  }
+
+  return {
+    inputRange: points.map((p) => p.t),
+    translateYRange: points.map((p) => p.y),
+    scaleRange: points.map((p) => p.s),
+    opacityRange: points.map((p) => p.o),
+  };
+}
+
+/**
  * BouncingDotsLoader
- * Three (or more) dots that bounce and scale in a synchronized, staggered native wave.
- * Uses 100% native Animated.delay with matched loop periods to guarantee dots NEVER desync.
+ * Three (or more) dots that bounce in a mathematical staggered wave derived from a SINGLE master clock.
+ * Guaranteed 100% synchronized, smooth 60fps native wave that cannot drift or clump together.
  */
 export const BouncingDotsLoader: React.FC<BouncingDotsLoaderProps> = ({
   size = 'medium',
@@ -51,57 +94,29 @@ export const BouncingDotsLoader: React.FC<BouncingDotsLoaderProps> = ({
   const preset = SIZE_MAP[(isNumeric ? 'medium' : size) as 'small' | 'medium' | 'large'];
   const dot = isNumeric ? (size as number) : preset.dot;
   const gapSize = gap ?? preset.gap;
-  
-  const half = speed / 2;
-  const stagger = speed / 7.5; // ~160ms for 1200ms duration
 
-  const animsRef = useRef<Animated.Value[]>([]);
-  if (animsRef.current.length !== dotCount) {
-    animsRef.current = Array.from(
-      { length: dotCount },
-      (_, i) => animsRef.current[i] || new Animated.Value(0)
-    );
-  }
-  const anims = animsRef.current;
+  const masterAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    const ease = Easing.bezier(0.25, 1, 0.5, 1);
-    
-    // Reset all anim values
-    anims.forEach((anim) => anim.setValue(0));
-
-    const totalStagger = (dotCount - 1) * stagger;
-
-    const loops = anims.map((anim, i) => {
-      const preDelay = i * stagger;
-      const postDelay = totalStagger - preDelay;
-
-      const sequence: Animated.CompositeAnimation[] = [
-        ...(preDelay > 0 ? [Animated.delay(preDelay)] : []),
-        Animated.timing(anim, {
-          toValue: 1,
-          duration: half,
-          easing: ease,
-          useNativeDriver: true,
-        }),
-        Animated.timing(anim, {
-          toValue: 0,
-          duration: half,
-          easing: ease,
-          useNativeDriver: true,
-        }),
-        ...(postDelay > 0 ? [Animated.delay(postDelay)] : []),
-      ];
-
-      const loop = Animated.loop(Animated.sequence(sequence));
-      loop.start();
-      return loop;
-    });
+    masterAnim.setValue(0);
+    const loop = Animated.loop(
+      Animated.timing(masterAnim, {
+        toValue: 1,
+        duration: speed,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      })
+    );
+    loop.start();
 
     return () => {
-      loops.forEach((loop) => loop.stop());
+      loop.stop();
     };
-  }, [anims, half, stagger, dotCount]);
+  }, [masterAnim, speed]);
+
+  const dotConfigs = useMemo(() => {
+    return Array.from({ length: dotCount }, (_, i) => createDotRanges(i, dotCount));
+  }, [dotCount]);
 
   return (
     <View
@@ -109,20 +124,20 @@ export const BouncingDotsLoader: React.FC<BouncingDotsLoaderProps> = ({
       accessibilityLabel="Loading"
       style={[styles.container, { gap: gapSize }, style]}
     >
-      {anims.map((anim, i) => {
-        const translateY = anim.interpolate({
-          inputRange: [0, 1],
-          outputRange: [0, -BOUNCE],
+      {dotConfigs.map((config, i) => {
+        const translateY = masterAnim.interpolate({
+          inputRange: config.inputRange,
+          outputRange: config.translateYRange,
         });
-        const scaleAnim = anim.interpolate({
-          inputRange: [0, 1],
-          outputRange: [0.85, 1.15],
+        const scale = masterAnim.interpolate({
+          inputRange: config.inputRange,
+          outputRange: config.scaleRange,
         });
-        const opacity = anim.interpolate({
-          inputRange: [0, 1],
-          outputRange: [0.45, 1],
+        const opacity = masterAnim.interpolate({
+          inputRange: config.inputRange,
+          outputRange: config.opacityRange,
         });
-        
+
         return (
           <Animated.View
             key={i}
@@ -131,7 +146,7 @@ export const BouncingDotsLoader: React.FC<BouncingDotsLoaderProps> = ({
               height: dot,
               borderRadius: dot / 2,
               backgroundColor: color,
-              transform: [{ translateY }, { scale: scaleAnim }],
+              transform: [{ translateY }, { scale }],
               opacity,
             }}
           />
