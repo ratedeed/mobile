@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, Image, Pressable } from 'react-native';
+import { FontAwesome5 } from '@expo/vector-icons';
 import { VerifiedBadge } from '../common/VerifiedBadge';
 import { SvgImage } from '../common/SvgImage';
 import { getProfileImageUrl, isSvgUrl } from '../../utils/avatarUtils';
@@ -24,6 +25,7 @@ const defaultFormatRelativeTime = (dateStr: string) => {
 
 const defaultGetDisplayName = (entity: any) => {
   if (!entity) return 'Unknown';
+  if (entity.role === 'admin' || entity.isSupport || entity.isAdmin) return 'Ratedeed Support';
   if (entity.companyName || entity.businessName) return entity.companyName || entity.businessName;
   const firstLast = `${entity.firstName || ''} ${entity.lastName || ''}`.trim();
   if (firstLast) return firstLast;
@@ -51,6 +53,7 @@ export const ConversationItem = React.memo(function ConversationItem({
 }: ConversationItemProps) {
   const other = conv.otherParticipant;
   const displayName = getParticipantDisplayName(other) || 'Unknown';
+  const isSupport = other?.role === 'admin' || other?.isSupport || displayName.toLowerCase().includes('support');
   const avatarUrl = getProfileImageUrl(displayName, other?.profilePicture || '', other?.category);
   const isOnline = onlineUsers[other?._id] || false;
   const hasAttachment = conv.lastMessage?.attachmentUrl;
@@ -66,14 +69,18 @@ export const ConversationItem = React.memo(function ConversationItem({
       style={{ gap: 14 }}
     >
       <View className="relative shrink-0">
-        {isSvgUrl(avatarUrl) ? (
+        {isSupport ? (
+          <View className="w-[54px] h-[54px] rounded-full bg-indigo-600 items-center justify-center">
+            <FontAwesome5 name="headset" size={22} color="#ffffff" />
+          </View>
+        ) : isSvgUrl(avatarUrl) ? (
           <View className="w-[54px] h-[54px] rounded-full overflow-hidden">
             <SvgImage uri={avatarUrl} width="100%" height="100%" />
           </View>
         ) : (
           <Image source={{ uri: avatarUrl }} className="w-[54px] h-[54px] rounded-full bg-neutral-100 dark:bg-neutral-700" />
         )}
-        {isOnline && (
+        {isOnline && !isSupport && (
           <View className="absolute bottom-0.5 right-0.5 w-4 h-4 bg-emerald-500 rounded-full border-[2.5px] border-white dark:border-neutral-900" />
         )}
       </View>
@@ -88,9 +95,13 @@ export const ConversationItem = React.memo(function ConversationItem({
             >
               {displayName}
             </Text>
-            {other?.role === 'contractor' && (other?.isVerified || other?.isTopRated) && (
+            {isSupport ? (
+              <View className="px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800">
+                <Text className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400">Support</Text>
+              </View>
+            ) : other?.role === 'contractor' && (other?.isVerified || other?.isTopRated) ? (
               <VerifiedBadge size={13} animate={false} />
-            )}
+            ) : null}
           </View>
           <Text
             className={`text-[11px] shrink-0 ml-3 ${

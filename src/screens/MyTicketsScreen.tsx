@@ -420,7 +420,7 @@ export default function MyTicketsScreen() {
                                       : 'text-neutral-700 dark:text-neutral-300'
                                   }`}
                                 >
-                                  {isAgent ? `🛡️ ${reply.authorName || 'Ratedeed Support Specialist'}` : `${reply.authorName || ticket.name} (You)`}
+                                  {isAgent ? '🛡️ Ratedeed Support' : `${reply.authorName && !reply.authorName.includes('@') ? reply.authorName : ticket.name} (You)`}
                                 </Text>
                                 <Text className="text-[9px] text-neutral-400">
                                   {new Date(reply.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', month: 'short', day: 'numeric' })}
