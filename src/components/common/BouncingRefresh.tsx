@@ -1,8 +1,9 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import {
   Animated,
   Easing,
   FlatList,
+  Platform,
   RefreshControl,
   ScrollView,
   SectionList,
@@ -12,9 +13,15 @@ import {
   ViewStyle,
   FlatListProps,
   SectionListProps,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
   useColorScheme,
 } from 'react-native';
 import { BouncingDotsLoader } from './BouncingDotsLoader';
+import HapticFeedback from '../../utils/haptics';
+
+const isIOS = Platform.OS === 'ios';
+const PULL_THRESHOLD = 60;
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
@@ -38,12 +45,12 @@ interface CommonProps {
   style?: StyleProp<ViewStyle>;
 }
 
-function makeRefreshControl(refreshing: boolean, onRefresh: () => void) {
+function makeAndroidRefreshControl(refreshing: boolean, onRefresh: () => void) {
+  if (isIOS) return undefined;
   return (
     <RefreshControl
       refreshing={refreshing}
       onRefresh={onRefresh}
-      tintColor="transparent"
       colors={['transparent']}
       progressBackgroundColor="transparent"
       style={{ backgroundColor: 'transparent' }}
@@ -97,17 +104,50 @@ function BouncingRefreshFlatListInner<ItemT = any>(
   props: BouncingRefreshFlatListProps<ItemT>,
   ref: React.Ref<FlatList<ItemT>>,
 ) {
-  const { refreshing, onRefresh, loaderColor, style, ...rest } = props;
+  const { refreshing, onRefresh, loaderColor, style, onScroll, onScrollEndDrag, ...rest } = props;
   const isDark = useColorScheme() === 'dark';
   const effectiveColor = loaderColor || (isDark ? '#818CF8' : '#4F46E5');
+  const hasTriggeredHapticRef = useRef(false);
+
+  const handleScroll = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      if (isIOS) {
+        const y = e.nativeEvent.contentOffset.y;
+        if (y < -PULL_THRESHOLD && !hasTriggeredHapticRef.current && !refreshing) {
+          hasTriggeredHapticRef.current = true;
+          try { HapticFeedback.light(); } catch {}
+        } else if (y >= -15) {
+          hasTriggeredHapticRef.current = false;
+        }
+      }
+      onScroll?.(e);
+    },
+    [onScroll, refreshing]
+  );
+
+  const handleScrollEndDrag = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      if (isIOS && e.nativeEvent.contentOffset.y < -PULL_THRESHOLD && !refreshing) {
+        try { HapticFeedback.medium(); } catch {}
+        onRefresh();
+      }
+      hasTriggeredHapticRef.current = false;
+      onScrollEndDrag?.(e);
+    },
+    [onRefresh, onScrollEndDrag, refreshing]
+  );
 
   return (
     <View style={[styles.container, style]}>
       <BouncingRefreshIndicator refreshing={refreshing} loaderColor={effectiveColor} />
       <FlatList<ItemT>
         ref={ref}
+        bounces={true}
+        onScroll={handleScroll}
+        onScrollEndDrag={handleScrollEndDrag}
+        scrollEventThrottle={16}
         {...(rest as FlatListProps<ItemT>)}
-        refreshControl={makeRefreshControl(refreshing, onRefresh)}
+        refreshControl={makeAndroidRefreshControl(refreshing, onRefresh)}
       />
     </View>
   );
@@ -125,17 +165,50 @@ function BouncingRefreshScrollViewInner(
   props: BouncingRefreshScrollViewProps,
   ref: React.Ref<ScrollView>,
 ) {
-  const { refreshing, onRefresh, loaderColor, style, children, ...rest } = props;
+  const { refreshing, onRefresh, loaderColor, style, onScroll, onScrollEndDrag, children, ...rest } = props;
   const isDark = useColorScheme() === 'dark';
   const effectiveColor = loaderColor || (isDark ? '#818CF8' : '#4F46E5');
+  const hasTriggeredHapticRef = useRef(false);
+
+  const handleScroll = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      if (isIOS) {
+        const y = e.nativeEvent.contentOffset.y;
+        if (y < -PULL_THRESHOLD && !hasTriggeredHapticRef.current && !refreshing) {
+          hasTriggeredHapticRef.current = true;
+          try { HapticFeedback.light(); } catch {}
+        } else if (y >= -15) {
+          hasTriggeredHapticRef.current = false;
+        }
+      }
+      onScroll?.(e);
+    },
+    [onScroll, refreshing]
+  );
+
+  const handleScrollEndDrag = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      if (isIOS && e.nativeEvent.contentOffset.y < -PULL_THRESHOLD && !refreshing) {
+        try { HapticFeedback.medium(); } catch {}
+        onRefresh();
+      }
+      hasTriggeredHapticRef.current = false;
+      onScrollEndDrag?.(e);
+    },
+    [onRefresh, onScrollEndDrag, refreshing]
+  );
 
   return (
     <View style={[styles.container, style]}>
       <BouncingRefreshIndicator refreshing={refreshing} loaderColor={effectiveColor} />
       <ScrollView
         ref={ref}
+        bounces={true}
+        onScroll={handleScroll}
+        onScrollEndDrag={handleScrollEndDrag}
+        scrollEventThrottle={16}
         {...(rest as React.ComponentProps<typeof ScrollView>)}
-        refreshControl={makeRefreshControl(refreshing, onRefresh)}
+        refreshControl={makeAndroidRefreshControl(refreshing, onRefresh)}
       >
         {children}
       </ScrollView>
@@ -155,17 +228,50 @@ function BouncingRefreshSectionListInner<ItemT = any, SectionT = any>(
   props: BouncingRefreshSectionListProps<ItemT, SectionT>,
   ref: React.Ref<SectionList<ItemT, SectionT>>,
 ) {
-  const { refreshing, onRefresh, loaderColor, style, ...rest } = props;
+  const { refreshing, onRefresh, loaderColor, style, onScroll, onScrollEndDrag, ...rest } = props;
   const isDark = useColorScheme() === 'dark';
   const effectiveColor = loaderColor || (isDark ? '#818CF8' : '#4F46E5');
+  const hasTriggeredHapticRef = useRef(false);
+
+  const handleScroll = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      if (isIOS) {
+        const y = e.nativeEvent.contentOffset.y;
+        if (y < -PULL_THRESHOLD && !hasTriggeredHapticRef.current && !refreshing) {
+          hasTriggeredHapticRef.current = true;
+          try { HapticFeedback.light(); } catch {}
+        } else if (y >= -15) {
+          hasTriggeredHapticRef.current = false;
+        }
+      }
+      onScroll?.(e);
+    },
+    [onScroll, refreshing]
+  );
+
+  const handleScrollEndDrag = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      if (isIOS && e.nativeEvent.contentOffset.y < -PULL_THRESHOLD && !refreshing) {
+        try { HapticFeedback.medium(); } catch {}
+        onRefresh();
+      }
+      hasTriggeredHapticRef.current = false;
+      onScrollEndDrag?.(e);
+    },
+    [onRefresh, onScrollEndDrag, refreshing]
+  );
 
   return (
     <View style={[styles.container, style]}>
       <BouncingRefreshIndicator refreshing={refreshing} loaderColor={effectiveColor} />
       <SectionList<ItemT, SectionT>
         ref={ref}
+        bounces={true}
+        onScroll={handleScroll}
+        onScrollEndDrag={handleScrollEndDrag}
+        scrollEventThrottle={16}
         {...(rest as SectionListProps<ItemT, SectionT>)}
-        refreshControl={makeRefreshControl(refreshing, onRefresh)}
+        refreshControl={makeAndroidRefreshControl(refreshing, onRefresh)}
       />
     </View>
   );
