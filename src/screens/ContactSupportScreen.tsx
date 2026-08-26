@@ -5,7 +5,6 @@ import {
   TextInput,
   Pressable,
   ScrollView,
-  SafeAreaView,
   StatusBar,
   KeyboardAvoidingView,
   Platform,
@@ -14,6 +13,7 @@ import {
 } from 'react-native';
 import { useColorScheme } from 'nativewind';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { submitHelpTicket } from '../api';
@@ -34,6 +34,7 @@ export default function ContactSupportScreen() {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
   const navigation = useNavigation<any>();
+  const insets = useSafeAreaInsets();
   const route = useRoute<any>();
   const { jobId, subject: initialSubject, isUrgent: initialUrgent, articleSlug } = (route.params || {}) as {
     jobId?: string;
@@ -102,7 +103,13 @@ export default function ContactSupportScreen() {
   // Post-submission success screen
   if (submittedTicketId) {
     return (
-      <SafeAreaView className="flex-1 bg-white dark:bg-neutral-950">
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: isDark ? '#0a0a0a' : '#ffffff',
+          paddingTop: Math.max(insets.top, 12),
+        }}
+      >
         <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
         <View className="flex-1 px-6 justify-center items-center text-center">
           <View className="w-16 h-16 rounded-full bg-emerald-50 dark:bg-emerald-950/60 items-center justify-center mb-4">
@@ -132,12 +139,18 @@ export default function ContactSupportScreen() {
             </Text>
           </Pressable>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-white dark:bg-neutral-950">
+    <View
+      style={{
+        flex: 1,
+        backgroundColor: isDark ? '#0a0a0a' : '#ffffff',
+        paddingTop: Math.max(insets.top, 12),
+      }}
+    >
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
 
       {/* Header */}
@@ -346,6 +359,6 @@ export default function ContactSupportScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }

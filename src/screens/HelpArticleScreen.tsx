@@ -4,12 +4,12 @@ import {
   Text,
   Pressable,
   ScrollView,
-  SafeAreaView,
   StatusBar,
   Alert,
 } from 'react-native';
 import { useColorScheme } from 'nativewind';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { HELP_ARTICLES, HELP_CATEGORIES } from '../data/helpData';
 import { submitHelpArticleFeedback } from '../utils/apiClient';
@@ -19,6 +19,7 @@ export default function HelpArticleScreen() {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
   const navigation = useNavigation<any>();
+  const insets = useSafeAreaInsets();
   const route = useRoute<any>();
   const { slug } = (route.params || {}) as { slug?: string };
 
@@ -29,7 +30,13 @@ export default function HelpArticleScreen() {
   const category = HELP_CATEGORIES.find((c) => c.slug === article.category);
 
   return (
-    <SafeAreaView className="flex-1 bg-white dark:bg-neutral-950">
+    <View
+      style={{
+        flex: 1,
+        backgroundColor: isDark ? '#0a0a0a' : '#ffffff',
+        paddingTop: Math.max(insets.top, 12),
+      }}
+    >
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
 
       {/* Navigation Header */}
@@ -250,6 +257,6 @@ export default function HelpArticleScreen() {
           </Pressable>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }

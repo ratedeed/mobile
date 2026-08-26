@@ -5,11 +5,11 @@ import {
   TextInput,
   Pressable,
   ScrollView,
-  SafeAreaView,
   StatusBar,
 } from 'react-native';
 import { useColorScheme } from 'nativewind';
 import { useNavigation } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { HELP_CATEGORIES, HELP_ARTICLES, MobileHelpCategory, MobileHelpArticle } from '../data/helpData';
 import { useAuth } from '../context/AuthContext';
@@ -20,19 +20,18 @@ export default function HelpCenterScreen() {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
   const navigation = useNavigation<any>();
+  const insets = useSafeAreaInsets();
   const { isAuthenticated, userRole } = useAuth();
 
   const [viewMode, setViewMode] = useState<'home' | 'all-topics'>('home');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeJob, setActiveJob] = useState<any>(null);
-  const [loadingActiveJob, setLoadingActiveJob] = useState(false);
 
   // Check for active in-progress job (Contextual Smart Rescue)
   useEffect(() => {
     let isMounted = true;
     const fetchActiveJob = async () => {
       try {
-        setLoadingActiveJob(true);
         const fetcher = userRole === 'contractor' ? getContractorJobs : getUserJobs;
         const jobs = await fetcher();
         const active = jobs?.find(
@@ -47,8 +46,6 @@ export default function HelpCenterScreen() {
         }
       } catch (err) {
         // Non-blocking contextual rescue
-      } finally {
-        if (isMounted) setLoadingActiveJob(false);
       }
     };
 
@@ -85,12 +82,20 @@ export default function HelpCenterScreen() {
     .map((slug) => HELP_ARTICLES.find((a) => a.slug === slug))
     .filter(Boolean) as MobileHelpArticle[];
 
+  const displayArticles = popularArticles.length > 0 ? popularArticles : HELP_ARTICLES.slice(0, 6);
+
   return (
-    <SafeAreaView className="flex-1 bg-neutral-50 dark:bg-neutral-950">
+    <View
+      style={{
+        flex: 1,
+        backgroundColor: isDark ? '#0a0a0a' : '#fafafa',
+        paddingTop: Math.max(insets.top, 12),
+      }}
+    >
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
 
       {/* ══ HEADER ══ */}
-      <View className="px-5 pt-3 pb-3 bg-white dark:bg-neutral-900 border-b border-neutral-200/70 dark:border-neutral-800 flex-row items-center justify-between">
+      <View className="px-5 pt-2 pb-3 bg-white dark:bg-neutral-900 border-b border-neutral-200/70 dark:border-neutral-800 flex-row items-center justify-between">
         <Pressable
           onPress={() => {
             HapticFeedback.light();
@@ -120,7 +125,7 @@ export default function HelpCenterScreen() {
             navigation.navigate('MyTickets');
           }}
           hitSlop={10}
-          className="px-3 py-1.5 rounded-full bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200/60 dark:border-indigo-800"
+          className="px-3.5 py-1.5 rounded-full bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200/60 dark:border-indigo-800"
         >
           <Text className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400">
             My Tickets
@@ -130,8 +135,8 @@ export default function HelpCenterScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 40 }}
-        className="flex-1"
+        contentContainerStyle={{ paddingBottom: 60 }}
+        style={{ flex: 1 }}
       >
         {/* ═══════════════════════════════════════════ */}
         {/* VIEW 1: ALL TOPICS BROWSER                  */}
@@ -142,7 +147,7 @@ export default function HelpCenterScreen() {
               {HELP_CATEGORIES.length} categories &middot; {HELP_ARTICLES.length} guides
             </Text>
 
-            <View className="divide-y divide-neutral-200/70 dark:divide-neutral-800 bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-200/80 dark:border-neutral-800 overflow-hidden">
+            <View className="divide-y divide-neutral-200/70 dark:divide-neutral-800 bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-200/80 dark:border-neutral-800 overflow-hidden shadow-xs">
               {HELP_CATEGORIES.map((cat) => {
                 const count = HELP_ARTICLES.filter((a) => a.category === cat.slug).length;
                 return (
@@ -269,8 +274,8 @@ export default function HelpCenterScreen() {
                   Popular right now
                 </Text>
 
-                <View className="divide-y divide-neutral-100 dark:divide-neutral-800 bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200/80 dark:border-neutral-800 overflow-hidden">
-                  {popularArticles.map((art) => (
+                <View className="divide-y divide-neutral-100 dark:divide-neutral-800 bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200/80 dark:border-neutral-800 overflow-hidden shadow-xs">
+                  {displayArticles.map((art) => (
                     <Pressable
                       key={art.slug}
                       onPress={() => {
@@ -352,6 +357,6 @@ export default function HelpCenterScreen() {
           </View>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }

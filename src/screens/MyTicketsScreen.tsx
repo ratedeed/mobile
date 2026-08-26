@@ -5,13 +5,13 @@ import {
   TextInput,
   Pressable,
   ScrollView,
-  SafeAreaView,
   StatusBar,
   Alert,
   RefreshControl,
 } from 'react-native';
 import { useColorScheme } from 'nativewind';
 import { useNavigation } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { getMyHelpTickets, userReplyHelpTicket, userResolveHelpTicket } from '../api';
 import { useAuth } from '../context/AuthContext';
@@ -22,6 +22,7 @@ export default function MyTicketsScreen() {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
   const navigation = useNavigation<any>();
+  const insets = useSafeAreaInsets();
   const { isAuthenticated } = useAuth();
 
   const [tickets, setTickets] = useState<any[]>([]);
@@ -99,7 +100,13 @@ export default function MyTicketsScreen() {
   });
 
   return (
-    <SafeAreaView className="flex-1 bg-neutral-50 dark:bg-neutral-950">
+    <View
+      style={{
+        flex: 1,
+        backgroundColor: isDark ? '#0a0a0a' : '#fafafa',
+        paddingTop: Math.max(insets.top, 12),
+      }}
+    >
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
 
       {/* Header */}
@@ -444,6 +451,6 @@ export default function MyTicketsScreen() {
           </View>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
