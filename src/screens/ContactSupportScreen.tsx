@@ -208,11 +208,13 @@ export default function ContactSupportScreen() {
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
         className="flex-1"
       >
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: 50 }}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: 24 }}
           className="flex-1"
         >
           <Text className="text-xl font-black text-neutral-900 dark:text-white mb-1">
@@ -369,28 +371,35 @@ export default function ContactSupportScreen() {
                 textAlignVertical="top"
                 placeholder="Please describe what happened and how we can assist you..."
                 placeholderTextColor="#9ca3af"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200/80 dark:border-neutral-700 text-xs text-neutral-900 dark:text-white min-h-[100px]"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200/80 dark:border-neutral-700 text-xs text-neutral-900 dark:text-white min-h-[90px]"
               />
             </View>
-
-            {/* Submit Button */}
-            <Pressable
-              onPress={handleSubmit}
-              disabled={loading}
-              className={`w-full py-3.5 rounded-2xl items-center justify-center mt-4 ${
-                isUrgent ? 'bg-rose-600 active:bg-rose-700' : 'bg-indigo-600 active:bg-indigo-700'
-              }`}
-            >
-              {loading ? (
-                <BouncingDotsLoader size="small" color="#ffffff" />
-              ) : (
-                <Text className="text-xs font-bold text-white">
-                  {isUrgent ? 'Submit Urgent Ticket' : 'Submit Support Ticket'}
-                </Text>
-              )}
-            </Pressable>
           </View>
         </ScrollView>
+
+        {/* Pinned Submit Button Footer (Always visible & moves above keyboard) */}
+        <View
+          style={{
+            paddingBottom: Math.max(insets.bottom, 14),
+          }}
+          className="px-5 pt-3 border-t border-neutral-100 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm"
+        >
+          <Pressable
+            onPress={handleSubmit}
+            disabled={loading}
+            className={`w-full py-3.5 rounded-2xl items-center justify-center ${
+              isUrgent ? 'bg-rose-600 active:bg-rose-700' : 'bg-indigo-600 active:bg-indigo-700'
+            }`}
+          >
+            {loading ? (
+              <BouncingDotsLoader size="small" color="#ffffff" />
+            ) : (
+              <Text className="text-xs font-bold text-white">
+                {isUrgent ? 'Submit Urgent Ticket' : 'Submit Support Ticket'}
+              </Text>
+            )}
+          </Pressable>
+        </View>
       </KeyboardAvoidingView>
     </View>
   );
