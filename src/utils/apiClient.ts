@@ -1514,4 +1514,15 @@ export const userResolveHelpTicket = async (
   return post(`${API_BASE}/help/tickets/${encodeURIComponent(ticketId)}/resolve`, {}, authHeaders);
 };
 
+export const submitHelpArticleFeedback = async (feedbackData: {
+  articleSlug: string;
+  helpful: boolean;
+  category?: string;
+  feedback?: string;
+}): Promise<{ success: boolean; message: string; id: string }> => {
+  const authHeaders = await getAuthHeaders();
+  return post(`${API_BASE}/help/feedback`, feedbackData, authHeaders);
+};
+
+
 

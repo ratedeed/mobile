@@ -22,12 +22,12 @@ export default function HelpCenterScreen() {
   const navigation = useNavigation<any>();
   const { isAuthenticated, userRole } = useAuth();
 
-  const [roleFilter, setRoleFilter] = useState<'both' | 'homeowners' | 'contractors'>('both');
+  const [viewMode, setViewMode] = useState<'home' | 'all-topics'>('home');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeJob, setActiveJob] = useState<any>(null);
   const [loadingActiveJob, setLoadingActiveJob] = useState(false);
 
-  // Check for active in-progress job (Signature Airbnb Contextual Help)
+  // Check for active in-progress job (Contextual Smart Rescue)
   useEffect(() => {
     let isMounted = true;
     const fetchActiveJob = async () => {
@@ -35,12 +35,18 @@ export default function HelpCenterScreen() {
         setLoadingActiveJob(true);
         const fetcher = userRole === 'contractor' ? getContractorJobs : getUserJobs;
         const jobs = await fetcher();
-        const active = jobs?.find((j: any) => j.status === 'in_progress' || j.status === 'funded' || j.status === 'disputed');
+        const active = jobs?.find(
+          (j: any) =>
+            j.status === 'in_progress' ||
+            j.status === 'funded_in_progress' ||
+            j.status === 'partially_funded' ||
+            j.status === 'disputed'
+        );
         if (isMounted && active) {
           setActiveJob(active);
         }
       } catch (err) {
-        // Silent fail for non-blocking contextual banner
+        // Non-blocking contextual rescue
       } finally {
         if (isMounted) setLoadingActiveJob(false);
       }
@@ -54,118 +60,72 @@ export default function HelpCenterScreen() {
     };
   }, [isAuthenticated, userRole]);
 
-  // Filter categories by selected audience role
-  const filteredCategories = HELP_CATEGORIES.filter((cat) => {
-    if (roleFilter === 'both') return true;
-    return cat.audience === 'both' || cat.audience === roleFilter;
+  // Filter articles based on search query
+  const searchResults = HELP_ARTICLES.filter((art) => {
+    if (!searchQuery.trim()) return false;
+    const q = searchQuery.toLowerCase();
+    return (
+      art.title.toLowerCase().includes(q) ||
+      art.description.toLowerCase().includes(q) ||
+      art.summary.toLowerCase().includes(q)
+    );
   });
 
-  // Filter articles based on search query or role
-  const filteredArticles = HELP_ARTICLES.filter((art) => {
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      return (
-        art.title.toLowerCase().includes(q) ||
-        art.description.toLowerCase().includes(q) ||
-        art.summary.toLowerCase().includes(q)
-      );
-    }
-    if (roleFilter === 'both') return true;
-    return art.audience === 'both' || art.audience === roleFilter;
-  });
+  // Top 6 primary curated articles for Option A
+  const popularArticleSlugs = [
+    'how-ratedeed-escrow-works',
+    'what-happens-during-a-dispute',
+    'stripe-connect-bank-payouts',
+    'project-milestones-and-change-orders',
+    'how-verified-reviews-work',
+    'managing-your-profile-and-notifications',
+  ];
 
-  const popularArticles = HELP_ARTICLES.slice(0, 4);
+  const popularArticles = popularArticleSlugs
+    .map((slug) => HELP_ARTICLES.find((a) => a.slug === slug))
+    .filter(Boolean) as MobileHelpArticle[];
 
   return (
     <SafeAreaView className="flex-1 bg-neutral-50 dark:bg-neutral-950">
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
 
-      {/* Header */}
-      <View className="px-5 pt-3 pb-4 bg-white dark:bg-neutral-900 border-b border-neutral-200/80 dark:border-neutral-800">
-        <View className="flex-row items-center justify-between mb-3">
-          <Pressable
-            onPress={() => {
-              HapticFeedback.light();
+      {/* ══ HEADER ══ */}
+      <View className="px-5 pt-3 pb-3 bg-white dark:bg-neutral-900 border-b border-neutral-200/70 dark:border-neutral-800 flex-row items-center justify-between">
+        <Pressable
+          onPress={() => {
+            HapticFeedback.light();
+            if (viewMode === 'all-topics') {
+              setViewMode('home');
+            } else {
               navigation.goBack();
-            }}
-            hitSlop={12}
-            className="w-10 h-10 rounded-full bg-neutral-100 dark:bg-neutral-800 items-center justify-center"
-          >
-            <FontAwesome5 name="arrow-left" size={14} color={isDark ? '#e5e5e5' : '#171717'} />
-          </Pressable>
+            }
+          }}
+          hitSlop={12}
+          className="w-9 h-9 rounded-full bg-neutral-100 dark:bg-neutral-800 items-center justify-center"
+        >
+          <FontAwesome5 name="arrow-left" size={13} color={isDark ? '#e5e5e5' : '#171717'} />
+        </Pressable>
 
-          <View className="flex-row items-center gap-2">
-            <Pressable
-              onPress={() => {
-                HapticFeedback.light();
-                navigation.navigate('MyTickets');
-              }}
-              className="px-3 py-1.5 rounded-full bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700"
-            >
-              <Text className="text-[11px] font-bold text-neutral-700 dark:text-neutral-300">
-                My Tickets
-              </Text>
-            </Pressable>
-
-            <Pressable
-              onPress={() => {
-                HapticFeedback.light();
-                navigation.navigate('ContactSupport');
-              }}
-              className="px-3.5 py-1.5 rounded-full bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200/60 dark:border-indigo-800"
-            >
-              <Text className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400">
-                + Submit
-              </Text>
-            </Pressable>
-          </View>
-        </View>
-
-        <Text className="text-2xl font-black text-neutral-900 dark:text-white tracking-tight">
-          How can we help?
-        </Text>
-        <Text className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
-          Search escrow policies, dispute rules, and platform guides.
-        </Text>
-
-        {/* Search Bar */}
-        <View className="mt-4 flex-row items-center px-3.5 py-2.5 bg-neutral-100 dark:bg-neutral-800 rounded-2xl border border-neutral-200/60 dark:border-neutral-700/50">
-          <FontAwesome5 name="search" size={13} color="#9ca3af" />
-          <TextInput
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholder="Search escrow, payouts, change orders..."
-            placeholderTextColor="#9ca3af"
-            className="flex-1 ml-2.5 text-xs text-neutral-900 dark:text-white font-medium p-0"
-          />
-          {searchQuery.length > 0 && (
-            <Pressable onPress={() => setSearchQuery('')} hitSlop={8}>
-              <FontAwesome5 name="times-circle" size={13} color="#9ca3af" />
-            </Pressable>
-          )}
-        </View>
-
-        {/* Suggestion Chips */}
-        {!searchQuery && (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            className="mt-3 -mx-5 px-5"
-            contentContainerStyle={{ gap: 8 }}
-          >
-            {['Escrow Release', 'Diagnostic Fee', 'File Dispute', 'Stripe Payouts'].map((chip, idx) => (
-              <Pressable
-                key={idx}
-                onPress={() => setSearchQuery(chip)}
-                className="px-3 py-1.5 rounded-full bg-neutral-100 dark:bg-neutral-800/80 border border-neutral-200/60 dark:border-neutral-700/60"
-              >
-                <Text className="text-[11px] font-medium text-neutral-600 dark:text-neutral-300">
-                  {chip}
-                </Text>
-              </Pressable>
-            ))}
-          </ScrollView>
+        {viewMode === 'all-topics' ? (
+          <Text className="text-sm font-bold text-neutral-900 dark:text-white">
+            All Topics
+          </Text>
+        ) : (
+          <View />
         )}
+
+        <Pressable
+          onPress={() => {
+            HapticFeedback.light();
+            navigation.navigate('MyTickets');
+          }}
+          hitSlop={10}
+          className="px-3 py-1.5 rounded-full bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200/60 dark:border-indigo-800"
+        >
+          <Text className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400">
+            My Tickets
+          </Text>
+        </Pressable>
       </View>
 
       <ScrollView
@@ -173,271 +133,223 @@ export default function HelpCenterScreen() {
         contentContainerStyle={{ paddingBottom: 40 }}
         className="flex-1"
       >
-        {/* Contextual Active Job Smart Card (Signature Airbnb Feature) */}
-        {activeJob && !searchQuery && (
-          <View className="mx-5 mt-5 p-4 rounded-3xl bg-indigo-600 text-white shadow-lg shadow-indigo-500/20">
-            <View className="flex-row items-center gap-2 mb-1.5">
-              <View className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <Text className="text-[11px] font-black uppercase tracking-wider text-indigo-100">
-                Active Project Support
-              </Text>
-            </View>
-
-            <Text className="text-base font-bold text-white leading-tight">
-              {activeJob.title || 'In-Progress Project'}
-            </Text>
-            <Text className="text-xs text-indigo-100 mt-1">
-              Need help with milestone release, scope adjustments, or communication?
+        {/* ═══════════════════════════════════════════ */}
+        {/* VIEW 1: ALL TOPICS BROWSER                  */}
+        {/* ═══════════════════════════════════════════ */}
+        {viewMode === 'all-topics' ? (
+          <View className="px-5 pt-4">
+            <Text className="text-xs text-neutral-500 dark:text-neutral-400 mb-3">
+              {HELP_CATEGORIES.length} categories &middot; {HELP_ARTICLES.length} guides
             </Text>
 
-            <View className="flex-row items-center gap-2 mt-3 flex-wrap">
-              <Pressable
-                onPress={() => {
-                  HapticFeedback.light();
-                  navigation.navigate('HelpArticle', { slug: 'how-ratedeed-escrow-works' });
-                }}
-                className="px-3 py-1.5 rounded-xl bg-white/20 active:bg-white/30"
-              >
-                <Text className="text-[11px] font-bold text-white">Escrow Rules</Text>
-              </Pressable>
-
-              <Pressable
-                onPress={() => {
-                  HapticFeedback.light();
-                  navigation.navigate('HelpArticle', { slug: 'project-milestones-and-change-orders' });
-                }}
-                className="px-3 py-1.5 rounded-xl bg-white/20 active:bg-white/30"
-              >
-                <Text className="text-[11px] font-bold text-white">Change Orders</Text>
-              </Pressable>
-
-              <Pressable
-                onPress={() => {
-                  HapticFeedback.light();
-                  navigation.navigate('ContactSupport', { jobId: activeJob._id, isUrgent: true });
-                }}
-                className="px-3 py-1.5 rounded-xl bg-rose-500 active:bg-rose-600"
-              >
-                <Text className="text-[11px] font-bold text-white">Urgent Assistance</Text>
-              </Pressable>
-            </View>
-          </View>
-        )}
-
-        {/* Audience Segmented Toggle */}
-        {!searchQuery && (
-          <View className="mx-5 mt-5">
-            <View className="flex-row p-1 bg-neutral-200/60 dark:bg-neutral-800 rounded-2xl">
-              <Pressable
-                onPress={() => {
-                  HapticFeedback.selection();
-                  setRoleFilter('both');
-                }}
-                className={`flex-1 py-2 rounded-xl items-center justify-center ${
-                  roleFilter === 'both' ? 'bg-white dark:bg-neutral-700 shadow-xs' : ''
-                }`}
-              >
-                <Text
-                  className={`text-xs font-bold ${
-                    roleFilter === 'both'
-                      ? 'text-neutral-900 dark:text-white'
-                      : 'text-neutral-500 dark:text-neutral-400'
-                  }`}
-                >
-                  All Topics
-                </Text>
-              </Pressable>
-
-              <Pressable
-                onPress={() => {
-                  HapticFeedback.selection();
-                  setRoleFilter('homeowners');
-                }}
-                className={`flex-1 py-2 rounded-xl items-center justify-center ${
-                  roleFilter === 'homeowners' ? 'bg-white dark:bg-neutral-700 shadow-xs' : ''
-                }`}
-              >
-                <Text
-                  className={`text-xs font-bold ${
-                    roleFilter === 'homeowners'
-                      ? 'text-neutral-900 dark:text-white'
-                      : 'text-neutral-500 dark:text-neutral-400'
-                  }`}
-                >
-                  Homeowners
-                </Text>
-              </Pressable>
-
-              <Pressable
-                onPress={() => {
-                  HapticFeedback.selection();
-                  setRoleFilter('contractors');
-                }}
-                className={`flex-1 py-2 rounded-xl items-center justify-center ${
-                  roleFilter === 'contractors' ? 'bg-white dark:bg-neutral-700 shadow-xs' : ''
-                }`}
-              >
-                <Text
-                  className={`text-xs font-bold ${
-                    roleFilter === 'contractors'
-                      ? 'text-neutral-900 dark:text-white'
-                      : 'text-neutral-500 dark:text-neutral-400'
-                  }`}
-                >
-                  Contractors
-                </Text>
-              </Pressable>
-            </View>
-          </View>
-        )}
-
-        {/* Search Results Mode */}
-        {searchQuery.trim().length > 0 ? (
-          <View className="mx-5 mt-5 space-y-3">
-            <Text className="text-xs font-bold text-neutral-400 uppercase tracking-wider">
-              Search Results ({filteredArticles.length})
-            </Text>
-
-            {filteredArticles.length > 0 ? (
-              filteredArticles.map((art) => (
-                <Pressable
-                  key={art.slug}
-                  onPress={() => {
-                    HapticFeedback.light();
-                    navigation.navigate('HelpArticle', { slug: art.slug });
-                  }}
-                  className="p-4 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-xs"
-                >
-                  <View className="flex-row items-center justify-between mb-1">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
-                      {art.category}
-                    </span>
-                    <Text className="text-[10px] text-neutral-400 font-medium">
-                      {art.readTime}
-                    </Text>
-                  </View>
-                  <Text className="text-sm font-bold text-neutral-900 dark:text-white mb-1">
-                    {art.title}
-                  </Text>
-                  <Text className="text-xs text-neutral-500 dark:text-neutral-400 line-clamp-2">
-                    {art.description}
-                  </Text>
-                </Pressable>
-              ))
-            ) : (
-              <View className="p-8 text-center bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-200 dark:border-neutral-800 items-center">
-                <FontAwesome5 name="search" size={24} color="#9ca3af" style={{ marginBottom: 12 }} />
-                <Text className="text-sm font-bold text-neutral-900 dark:text-white">
-                  No matching guides found
-                </Text>
-                <Text className="text-xs text-neutral-500 text-center mt-1 mb-4">
-                  Need an answer to a specific situation? Our support team is here to help.
-                </Text>
-                <Pressable
-                  onPress={() => navigation.navigate('ContactSupport', { subject: searchQuery })}
-                  className="px-5 py-2.5 rounded-xl bg-indigo-600"
-                >
-                  <Text className="text-xs font-bold text-white">Ask Support Specialist</Text>
-                </Pressable>
-              </View>
-            )}
-          </View>
-        ) : (
-          <>
-            {/* Category 2-Column Grid */}
-            <View className="mx-5 mt-6">
-              <Text className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-3">
-                Browse by Topic
-              </Text>
-
-              <View className="flex-row flex-wrap" style={{ marginHorizontal: -4 }}>
-                {filteredCategories.map((cat) => (
-                  <View key={cat.slug} className="w-1/2 p-1">
-                    <Pressable
-                      onPress={() => {
-                        HapticFeedback.light();
-                        // Find first article in this category
-                        const art = HELP_ARTICLES.find((a) => a.category === cat.slug);
-                        if (art) {
-                          navigation.navigate('HelpArticle', { slug: art.slug });
-                        }
-                      }}
-                      className="p-4 rounded-3xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-xs h-[135px] justify-between"
-                    >
+            <View className="divide-y divide-neutral-200/70 dark:divide-neutral-800 bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-200/80 dark:border-neutral-800 overflow-hidden">
+              {HELP_CATEGORIES.map((cat) => {
+                const count = HELP_ARTICLES.filter((a) => a.category === cat.slug).length;
+                return (
+                  <Pressable
+                    key={cat.slug}
+                    onPress={() => {
+                      HapticFeedback.light();
+                      const firstArt = HELP_ARTICLES.find((a) => a.category === cat.slug);
+                      if (firstArt) {
+                        navigation.navigate('HelpArticle', { slug: firstArt.slug });
+                      }
+                    }}
+                    className="p-4 flex-row items-center justify-between active:bg-neutral-50 dark:active:bg-neutral-800/60"
+                  >
+                    <View className="flex-row items-center gap-3.5 flex-1 pr-3">
                       <View className={`w-9 h-9 rounded-2xl ${cat.iconBg} items-center justify-center`}>
-                        <FontAwesome5 name={cat.icon} size={15} color={cat.iconColor} />
+                        <FontAwesome5 name={cat.icon} size={14} color={cat.iconColor} />
                       </View>
-
-                      <View>
-                        <Text className="text-xs font-bold text-neutral-900 dark:text-white leading-tight">
+                      <View className="flex-1">
+                        <Text className="text-[13px] font-bold text-neutral-900 dark:text-white">
                           {cat.title}
                         </Text>
-                        <Text className="text-[10px] text-neutral-400 mt-1 line-clamp-1">
+                        <Text className="text-[11px] text-neutral-400 mt-0.5 line-clamp-1">
                           {cat.description}
                         </Text>
                       </View>
-                    </Pressable>
-                  </View>
-                ))}
-              </View>
+                    </View>
+                    <View className="flex-row items-center gap-2">
+                      <Text className="text-[10px] font-bold text-neutral-400 bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded-full">
+                        {count} {count === 1 ? 'guide' : 'guides'}
+                      </Text>
+                      <FontAwesome5 name="chevron-right" size={11} color="#9ca3af" />
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+        ) : (
+          /* ═══════════════════════════════════════════ */
+          /* VIEW 2: OPTION A "QUIET ANSWERS" HOME       */
+          /* ═══════════════════════════════════════════ */
+          <View className="px-5 pt-4">
+            {/* Title & Subtitle */}
+            <Text className="text-[26px] font-black text-neutral-900 dark:text-white tracking-tight">
+              How can we help?
+            </Text>
+            <Text className="text-[12px] text-neutral-500 dark:text-neutral-400 mt-1 leading-relaxed">
+              Answers about escrow, payouts, disputes, and accounts — in plain language.
+            </Text>
+
+            {/* Pill Search Input */}
+            <View className="mt-5 flex-row items-center px-4 py-3 bg-neutral-100 dark:bg-neutral-800 rounded-full border border-neutral-200/70 dark:border-neutral-700/50">
+              <FontAwesome5 name="search" size={13} color="#9ca3af" />
+              <TextInput
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder="Ask a question…"
+                placeholderTextColor="#9ca3af"
+                className="flex-1 ml-2.5 text-[12px] font-medium text-neutral-900 dark:text-white p-0"
+              />
+              {searchQuery.length > 0 && (
+                <Pressable onPress={() => setSearchQuery('')} hitSlop={8}>
+                  <FontAwesome5 name="times-circle" size={13} color="#9ca3af" />
+                </Pressable>
+              )}
             </View>
 
-            {/* Popular Guides */}
-            <View className="mx-5 mt-6">
-              <Text className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-3">
-                Popular Guides
-              </Text>
+            {/* ══ SEARCH RESULTS ══ */}
+            {searchQuery.trim().length > 0 ? (
+              <View className="mt-6 space-y-3">
+                <Text className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">
+                  Search Results ({searchResults.length})
+                </Text>
 
-              <View className="bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-200/80 dark:border-neutral-800 overflow-hidden divide-y divide-neutral-100 dark:divide-neutral-800 shadow-xs">
-                {popularArticles.map((art) => (
-                  <Pressable
-                    key={art.slug}
-                    onPress={() => {
-                      HapticFeedback.light();
-                      navigation.navigate('HelpArticle', { slug: art.slug });
-                    }}
-                    className="p-4 flex-row items-center justify-between active:bg-neutral-50 dark:active:bg-neutral-800"
-                  >
-                    <View className="flex-1 pr-3">
-                      <Text className="text-xs font-bold text-neutral-900 dark:text-white mb-0.5">
+                {searchResults.length > 0 ? (
+                  searchResults.map((art) => (
+                    <Pressable
+                      key={art.slug}
+                      onPress={() => {
+                        HapticFeedback.light();
+                        navigation.navigate('HelpArticle', { slug: art.slug });
+                      }}
+                      className="p-4 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-xs"
+                    >
+                      <View className="flex-row items-center justify-between mb-1">
+                        <Text className="text-[10px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+                          {art.category}
+                        </Text>
+                        <Text className="text-[10px] text-neutral-400 font-medium">
+                          {art.readTime}
+                        </Text>
+                      </View>
+                      <Text className="text-sm font-bold text-neutral-900 dark:text-white mb-1">
                         {art.title}
                       </Text>
-                      <Text className="text-[11px] text-neutral-400 line-clamp-1">
+                      <Text className="text-xs text-neutral-500 dark:text-neutral-400 line-clamp-2">
                         {art.description}
                       </Text>
-                    </View>
-                    <FontAwesome5 name="chevron-right" size={11} color="#9ca3af" />
-                  </Pressable>
-                ))}
+                    </Pressable>
+                  ))
+                ) : (
+                  <View className="p-8 text-center bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-200 dark:border-neutral-800 items-center">
+                    <FontAwesome5 name="search" size={22} color="#9ca3af" style={{ marginBottom: 10 }} />
+                    <Text className="text-sm font-bold text-neutral-900 dark:text-white">
+                      No matching guides
+                    </Text>
+                    <Text className="text-xs text-neutral-500 text-center mt-1 mb-4">
+                      Try different keywords, or ask a support specialist directly.
+                    </Text>
+                    <Pressable
+                      onPress={() => navigation.navigate('ContactSupport', { subject: searchQuery })}
+                      className="px-5 py-2.5 rounded-xl bg-indigo-600"
+                    >
+                      <Text className="text-xs font-bold text-white">Ask a Specialist</Text>
+                    </Pressable>
+                  </View>
+                )}
               </View>
-            </View>
-
-            {/* Still Need Help Escalation Card */}
-            <View className="mx-5 mt-6 p-6 rounded-3xl bg-neutral-900 dark:bg-neutral-900 border border-neutral-800 shadow-xl">
-              <View className="w-10 h-10 rounded-2xl bg-indigo-500/20 text-indigo-400 items-center justify-center mb-3">
-                <FontAwesome5 name="headset" size={16} color="#818CF8" />
-              </View>
-
-              <Text className="text-base font-bold text-white">
-                Can't find what you're looking for?
-              </Text>
-              <Text className="text-xs text-neutral-400 mt-1 leading-relaxed">
-                Our support team prioritizes payment protection and project disputes. Submit a ticket for direct follow-up.
-              </Text>
-
-              <Pressable
-                onPress={() => {
-                  HapticFeedback.light();
-                  navigation.navigate('ContactSupport');
-                }}
-                className="mt-4 w-full py-3 rounded-2xl bg-indigo-600 active:bg-indigo-700 items-center justify-center"
-              >
-                <Text className="text-xs font-bold text-white">
-                  Contact Support Specialists
+            ) : (
+              /* ══ POPULAR RIGHT NOW LIST ══ */
+              <>
+                <Text className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 mt-7 mb-2.5">
+                  Popular right now
                 </Text>
-              </Pressable>
-            </View>
-          </>
+
+                <View className="divide-y divide-neutral-100 dark:divide-neutral-800 bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200/80 dark:border-neutral-800 overflow-hidden">
+                  {popularArticles.map((art) => (
+                    <Pressable
+                      key={art.slug}
+                      onPress={() => {
+                        HapticFeedback.light();
+                        navigation.navigate('HelpArticle', { slug: art.slug });
+                      }}
+                      className="flex-row items-center justify-between py-3.5 px-4 active:bg-neutral-50 dark:active:bg-neutral-800/60"
+                    >
+                      <Text className="text-[13px] font-bold text-neutral-900 dark:text-white flex-1 pr-3">
+                        {art.title}
+                      </Text>
+                      <FontAwesome5 name="chevron-right" size={12} color="#d1d5db" />
+                    </Pressable>
+                  ))}
+                </View>
+
+                {/* Browse all topics link */}
+                <Pressable
+                  onPress={() => {
+                    HapticFeedback.selection();
+                    setViewMode('all-topics');
+                  }}
+                  className="mt-3 py-2 w-full items-center justify-center"
+                >
+                  <Text className="text-[12px] font-bold text-indigo-600 dark:text-indigo-400">
+                    Browse all topics &rarr;
+                  </Text>
+                </Pressable>
+
+                {/* ══ CONTEXTUAL ACTIVE PROJECT CARD ══ */}
+                {activeJob && (
+                  <View className="mt-5 flex-row items-start gap-3 p-4 rounded-2xl border border-indigo-200/60 dark:border-indigo-900/50 bg-indigo-50/60 dark:bg-indigo-950/30">
+                    <View className="w-8 h-8 rounded-xl bg-indigo-600/10 dark:bg-indigo-500/20 items-center justify-center flex-none">
+                      <FontAwesome5 name="hammer" size={13} color={isDark ? '#818CF8' : '#4338CA'} />
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-[11px] font-bold text-neutral-900 dark:text-white leading-tight">
+                        {activeJob.title || 'Project'} &middot; Milestone in escrow
+                      </Text>
+                      <Pressable
+                        onPress={() => {
+                          HapticFeedback.light();
+                          navigation.navigate('HelpArticle', { slug: 'project-milestones-and-change-orders' });
+                        }}
+                        className="mt-1"
+                      >
+                        <Text className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400">
+                          Get help with this project &rarr;
+                        </Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                )}
+
+                {/* ══ STILL STUCK BOTTOM CARD ══ */}
+                <View className="mt-6 flex-row items-center justify-between bg-neutral-900 dark:bg-neutral-800 rounded-2xl px-4 py-3.5 shadow-sm">
+                  <View className="flex-1 pr-3">
+                    <Text className="text-[12px] font-bold text-white">
+                      Still stuck?
+                    </Text>
+                    <Text className="text-[10px] text-neutral-400 mt-0.5">
+                      Specialists review and follow up promptly.
+                    </Text>
+                  </View>
+                  <Pressable
+                    onPress={() => {
+                      HapticFeedback.light();
+                      navigation.navigate('ContactSupport');
+                    }}
+                    className="px-3.5 py-2 rounded-xl bg-white active:bg-neutral-100"
+                  >
+                    <Text className="text-[11px] font-bold text-neutral-900">
+                      Contact us
+                    </Text>
+                  </Pressable>
+                </View>
+              </>
+            )}
+          </View>
         )}
       </ScrollView>
     </SafeAreaView>

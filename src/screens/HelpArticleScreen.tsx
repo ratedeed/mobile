@@ -12,6 +12,7 @@ import { useColorScheme } from 'nativewind';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { HELP_ARTICLES, HELP_CATEGORIES } from '../data/helpData';
+import { submitHelpArticleFeedback } from '../utils/apiClient';
 import HapticFeedback from '../utils/haptics';
 
 export default function HelpArticleScreen() {
@@ -70,9 +71,9 @@ export default function HelpArticleScreen() {
       >
         {/* Article Metadata */}
         <View className="flex-row items-center gap-3 mb-3">
-          <span className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400">
+          <Text className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400">
             {article.readTime}
-          </span>
+          </Text>
           <Text className="text-[11px] text-neutral-400">&middot;</Text>
           <Text className="text-[11px] text-neutral-400">
             Updated August 2026
@@ -185,9 +186,16 @@ export default function HelpArticleScreen() {
           ) : (
             <View className="flex-row items-center gap-3">
               <Pressable
-                onPress={() => {
+                onPress={async () => {
                   HapticFeedback.success();
                   setFeedbackGiven('yes');
+                  try {
+                    await submitHelpArticleFeedback({
+                      articleSlug: article.slug,
+                      category: article.category,
+                      helpful: true,
+                    });
+                  } catch (e) {}
                 }}
                 className="px-4 py-2 rounded-xl bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 flex-row items-center gap-1.5"
               >
@@ -198,9 +206,16 @@ export default function HelpArticleScreen() {
               </Pressable>
 
               <Pressable
-                onPress={() => {
+                onPress={async () => {
                   HapticFeedback.light();
                   setFeedbackGiven('no');
+                  try {
+                    await submitHelpArticleFeedback({
+                      articleSlug: article.slug,
+                      category: article.category,
+                      helpful: false,
+                    });
+                  } catch (e) {}
                 }}
                 className="px-4 py-2 rounded-xl bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 flex-row items-center gap-1.5"
               >
