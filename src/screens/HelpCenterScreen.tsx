@@ -101,8 +101,10 @@ export default function HelpCenterScreen() {
             HapticFeedback.light();
             if (viewMode === 'all-topics') {
               setViewMode('home');
-            } else {
+            } else if (navigation.canGoBack()) {
               navigation.goBack();
+            } else {
+              navigation.navigate('Main', { screen: 'Explore' });
             }
           }}
           hitSlop={12}

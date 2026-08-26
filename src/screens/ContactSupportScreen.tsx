@@ -130,14 +130,43 @@ export default function ContactSupportScreen() {
             Your inquiry has been routed to our support specialists. An email confirmation was sent to <Text className="font-bold text-neutral-700 dark:text-neutral-300">{email}</Text>.
           </Text>
 
-          <Pressable
-            onPress={() => navigation.navigate('HelpCenter')}
-            className="w-full py-3.5 rounded-2xl bg-neutral-900 dark:bg-white items-center justify-center"
-          >
-            <Text className="text-xs font-bold text-white dark:text-neutral-900">
-              Back to Help Center
-            </Text>
-          </Pressable>
+          <View className="w-full space-y-2.5">
+            <Pressable
+              onPress={() => {
+                HapticFeedback.light();
+                navigation.navigate('MyTickets');
+              }}
+              className="w-full py-3.5 rounded-2xl bg-indigo-600 active:bg-indigo-700 items-center justify-center"
+            >
+              <Text className="text-xs font-bold text-white">
+                Track Ticket in My Tickets
+              </Text>
+            </Pressable>
+
+            <Pressable
+              onPress={() => {
+                HapticFeedback.light();
+                navigation.navigate('Main', { screen: 'Explore' });
+              }}
+              className="w-full py-3.5 rounded-2xl bg-neutral-900 dark:bg-white active:opacity-90 items-center justify-center"
+            >
+              <Text className="text-xs font-bold text-white dark:text-neutral-900">
+                Return to Home
+              </Text>
+            </Pressable>
+
+            <Pressable
+              onPress={() => {
+                HapticFeedback.light();
+                navigation.navigate('HelpCenter');
+              }}
+              className="w-full py-2.5 items-center justify-center"
+            >
+              <Text className="text-xs font-bold text-neutral-500 dark:text-neutral-400">
+                Back to Help Center
+              </Text>
+            </Pressable>
+          </View>
         </View>
       </View>
     );
@@ -158,7 +187,11 @@ export default function ContactSupportScreen() {
         <Pressable
           onPress={() => {
             HapticFeedback.light();
-            navigation.goBack();
+            if (navigation.canGoBack()) {
+              navigation.goBack();
+            } else {
+              navigation.navigate('HelpCenter');
+            }
           }}
           hitSlop={12}
           className="w-10 h-10 rounded-full bg-neutral-100 dark:bg-neutral-800 items-center justify-center"

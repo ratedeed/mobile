@@ -44,7 +44,11 @@ export default function HelpArticleScreen() {
         <Pressable
           onPress={() => {
             HapticFeedback.light();
-            navigation.goBack();
+            if (navigation.canGoBack()) {
+              navigation.goBack();
+            } else {
+              navigation.navigate('HelpCenter');
+            }
           }}
           hitSlop={12}
           className="w-10 h-10 rounded-full bg-neutral-100 dark:bg-neutral-800 items-center justify-center"

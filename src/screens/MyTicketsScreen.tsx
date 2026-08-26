@@ -10,7 +10,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useColorScheme } from 'nativewind';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { getMyHelpTickets, userReplyHelpTicket, userResolveHelpTicket } from '../api';
@@ -22,8 +22,11 @@ export default function MyTicketsScreen() {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
   const navigation = useNavigation<any>();
+  const route = useRoute<any>();
   const insets = useSafeAreaInsets();
   const { isAuthenticated } = useAuth();
+
+  const targetTicketId = (route.params || {})?.ticketId;
 
   const [tickets, setTickets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,7 +41,16 @@ export default function MyTicketsScreen() {
       const res = await getMyHelpTickets();
       if (res?.tickets) {
         setTickets(res.tickets);
-        if (res.tickets.length > 0 && !expandedTicketId) {
+        if (targetTicketId) {
+          const match = res.tickets.find(
+            (t: any) => t.ticketId === targetTicketId || t._id === targetTicketId
+          );
+          if (match) {
+            setExpandedTicketId(match._id);
+          } else if (res.tickets.length > 0 && !expandedTicketId) {
+            setExpandedTicketId(res.tickets[0]._id);
+          }
+        } else if (res.tickets.length > 0 && !expandedTicketId) {
           setExpandedTicketId(res.tickets[0]._id);
         }
       }
@@ -48,7 +60,7 @@ export default function MyTicketsScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [expandedTicketId]);
+  }, [expandedTicketId, targetTicketId]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -114,7 +126,11 @@ export default function MyTicketsScreen() {
         <Pressable
           onPress={() => {
             HapticFeedback.light();
-            navigation.goBack();
+            if (navigation.canGoBack()) {
+              navigation.goBack();
+            } else {
+              navigation.navigate('Main', { screen: 'Explore' });
+            }
           }}
           hitSlop={12}
           className="w-10 h-10 rounded-full bg-neutral-100 dark:bg-neutral-800 items-center justify-center"
@@ -362,47 +378,61 @@ export default function MyTicketsScreen() {
                         </View>
                       </View>
 
-                      {/* Conversation History */}
-                      {ticket.replies && ticket.replies.length > 0 && (
-                        <View className="space-y-2">
-                          <Text className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
-                            Correspondence History
+                      {/* Conversation History & Airbnb Style Thread */}
+                      <View className="space-y-2.5">
+                        <Text className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
+                          Conversation History ({1 + (ticket.replies?.length || 0)} messages)
+                        </Text>
+
+                        {/* Message 1: Initial Customer Submission */}
+                        <View className="p-3.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800">
+                          <View className="flex-row justify-between items-center mb-1.5">
+                            <Text className="text-[10px] font-bold text-neutral-600 dark:text-neutral-300">
+                              {ticket.name} (Your Inquiry)
+                            </Text>
+                            <Text className="text-[9px] text-neutral-400">
+                              {new Date(ticket.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', month: 'short', day: 'numeric' })}
+                            </Text>
+                          </View>
+                          <Text className="text-xs text-neutral-800 dark:text-neutral-200 leading-relaxed">
+                            {ticket.message}
                           </Text>
+                        </View>
 
-                          {ticket.replies.map((reply: any, i: number) => {
-                            const isAgent = reply.authorType === 'agent';
+                        {/* Messages 2+: Back-and-forth Replies */}
+                        {ticket.replies && ticket.replies.map((reply: any, i: number) => {
+                          const isAgent = reply.authorType === 'agent';
 
-                            return (
-                              <View
-                                key={i}
-                                className={`p-3 rounded-2xl border ${
-                                  isAgent
-                                    ? 'bg-indigo-50/80 dark:bg-indigo-950/40 border-indigo-200/80 dark:border-indigo-900/60'
-                                    : 'bg-white dark:bg-neutral-900 border-neutral-200/60 dark:border-neutral-800'
-                                }`}
-                              >
-                                <View className="flex-row justify-between items-center mb-1">
-                                  <Text
-                                    className={`text-[10px] font-bold ${
-                                      isAgent
-                                        ? 'text-indigo-600 dark:text-indigo-400'
-                                        : 'text-neutral-600 dark:text-neutral-400'
-                                    }`}
-                                  >
-                                    {reply.authorName || (isAgent ? 'Ratedeed Support Specialist' : 'Customer')}
-                                  </Text>
-                                  <Text className="text-[9px] text-neutral-400">
-                                    {new Date(reply.createdAt).toLocaleDateString()}
-                                  </Text>
-                                </View>
-                                <Text className="text-xs text-neutral-800 dark:text-neutral-200 leading-relaxed">
-                                  {reply.body}
+                          return (
+                            <View
+                              key={i}
+                              className={`p-3.5 rounded-2xl border ${
+                                isAgent
+                                  ? 'bg-indigo-50/90 dark:bg-indigo-950/40 border-indigo-200/80 dark:border-indigo-900/60'
+                                  : 'bg-white dark:bg-neutral-900 border-neutral-200/80 dark:border-neutral-800'
+                              }`}
+                            >
+                              <View className="flex-row justify-between items-center mb-1.5">
+                                <Text
+                                  className={`text-[10px] font-bold ${
+                                    isAgent
+                                      ? 'text-indigo-600 dark:text-indigo-400'
+                                      : 'text-neutral-700 dark:text-neutral-300'
+                                  }`}
+                                >
+                                  {isAgent ? `🛡️ ${reply.authorName || 'Ratedeed Support Specialist'}` : `${reply.authorName || ticket.name} (You)`}
+                                </Text>
+                                <Text className="text-[9px] text-neutral-400">
+                                  {new Date(reply.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', month: 'short', day: 'numeric' })}
                                 </Text>
                               </View>
-                            );
-                          })}
-                        </View>
-                      )}
+                              <Text className="text-xs text-neutral-800 dark:text-neutral-200 leading-relaxed">
+                                {reply.body}
+                              </Text>
+                            </View>
+                          );
+                        })}
+                      </View>
 
                       {/* Reply Composer */}
                       {!isResolved && (

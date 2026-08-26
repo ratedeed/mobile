@@ -218,6 +218,26 @@ const NotificationsScreen: React.FC = () => {
       await toggleRead(item._id);
     }
 
+    const t = (item.type || '').toLowerCase();
+    const m = (item.message || '').toLowerCase();
+    const rawLink = item.link || '';
+
+    // 1. Direct Support Ticket Deep-linking (opens MyTickets screen with thread)
+    if (
+      t === 'ticket_reply' ||
+      t.includes('ticket') ||
+      m.includes('ticket') ||
+      m.includes('ratedeed support') ||
+      rawLink.includes('/help') ||
+      rawLink.includes('/my-tickets')
+    ) {
+      const ticketIdMatch = m.match(/#?(TIK-[A-Z0-9]+)/i);
+      navigation.navigate('MyTickets', {
+        ticketId: ticketIdMatch ? ticketIdMatch[1] : undefined,
+      });
+      return;
+    }
+
     // Direct Parameter Deep-linking
     const convId = item.conversationId || item.conversation || item.chatId || (item.data && (item.data.conversationId || item.data.conversation));
     const jobIdParam = item.jobId || item.job || (item.data && (item.data.jobId || item.data.job));
@@ -238,8 +258,6 @@ const NotificationsScreen: React.FC = () => {
 
     if (!item.link) {
       // Fallback for notifications without explicit link string
-      const t = (item.type || '').toLowerCase();
-      const m = (item.message || '').toLowerCase();
       if (t === 'admin_message' || t === 'new_message' || t === 'message' || m.includes('message')) {
         navigation.navigate('Messages');
       } else if (t.includes('affiliate') || t.includes('commission') || t.includes('payout') || m.includes('commission') || m.includes('payout')) {
@@ -409,6 +427,7 @@ const NotificationsScreen: React.FC = () => {
 
   const getNotificationIcon = (type?: string, message?: string) => {
     const m = (message || '').toLowerCase();
+    if (type === 'ticket_reply' || m.includes('ticket') || m.includes('ratedeed support')) return { name: 'headset', color: '#6366f1', bg: isDark ? '#1e1b4b' : '#eef2ff' };
     if (type === 'new_review' || m.includes('review')) return { name: 'star', color: '#f59e0b', bg: isDark ? '#451a03' : '#fef3c7' };
     if (type === 'new_message' || m.includes('message')) return { name: 'comment', color: '#3b82f6', bg: isDark ? '#1e3a8a' : '#dbeafe' };
     if (m.includes('quote') || m.includes('payment') || type === 'job_funded') return { name: 'dollar-sign', color: '#10b981', bg: isDark ? '#064e3b' : '#d1fae5' };
