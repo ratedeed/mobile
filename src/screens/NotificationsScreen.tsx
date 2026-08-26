@@ -222,23 +222,7 @@ const NotificationsScreen: React.FC = () => {
     const m = (item.message || '').toLowerCase();
     const rawLink = item.link || '';
 
-    // 1. Direct Support Ticket Deep-linking (opens MyTickets screen with thread)
-    if (
-      t === 'ticket_reply' ||
-      t.includes('ticket') ||
-      m.includes('ticket') ||
-      m.includes('ratedeed support') ||
-      rawLink.includes('/help') ||
-      rawLink.includes('/my-tickets')
-    ) {
-      const ticketIdMatch = m.match(/#?(TIK-[A-Z0-9]+)/i);
-      navigation.navigate('MyTickets', {
-        ticketId: ticketIdMatch ? ticketIdMatch[1] : undefined,
-      });
-      return;
-    }
-
-    // Direct Parameter Deep-linking
+    // 1. Direct Conversation / Chat Deep-linking (Opens actual Chat thread)
     const convId = item.conversationId || item.conversation || item.chatId || (item.data && (item.data.conversationId || item.data.conversation));
     const jobIdParam = item.jobId || item.job || (item.data && (item.data.jobId || item.data.job));
     const quoteIdParam = item.quoteId || item.quote || (item.data && (item.data.quoteId || item.data.quote));
@@ -247,6 +231,25 @@ const NotificationsScreen: React.FC = () => {
       navigation.navigate('ChatScreen', { conversationId: convId.toString() });
       return;
     }
+
+    if (rawLink.startsWith('/messages') || rawLink.startsWith('/chat') || t === 'new_message' || t === 'message') {
+      navigation.navigate('MessagesTab');
+      return;
+    }
+
+    // 2. Direct Support Ticket Deep-linking (opens MyTickets screen with thread)
+    if (
+      t === 'ticket_reply' ||
+      rawLink.includes('/my-tickets') ||
+      rawLink.includes('/help')
+    ) {
+      const ticketIdMatch = m.match(/#?(TIK-[A-Z0-9]+)/i);
+      navigation.navigate('MyTickets', {
+        ticketId: ticketIdMatch ? ticketIdMatch[1] : undefined,
+      });
+      return;
+    }
+
     if (jobIdParam) {
       navigation.navigate('JobDetail', { jobId: jobIdParam.toString() });
       return;

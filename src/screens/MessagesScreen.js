@@ -486,6 +486,9 @@ const MessagesScreen = () => {
 
           return [...prev, msg].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
         });
+        setTimeout(() => {
+          messagesRef.current?.scrollToEnd({ animated: true });
+        }, 80);
         if (!isMessageFromMe(msg)) {
           emitMessageRead(msg._id, currentUserId, selectedConvRef.current?.conversationId);
           refreshUnreadMessagesCount();

@@ -10,6 +10,8 @@ import {
   RefreshControl,
   KeyboardAvoidingView,
   Platform,
+  Image,
+  Linking,
 } from 'react-native';
 import { useColorScheme } from 'nativewind';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -19,6 +21,48 @@ import { getMyHelpTickets, userReplyHelpTicket, userResolveHelpTicket } from '..
 import { useAuth } from '../context/AuthContext';
 import HapticFeedback from '../utils/haptics';
 import { BouncingDotsLoader } from '../components/common';
+
+function MobileAttachmentViewer({ attachments, attachmentUrl }: { attachments?: string[]; attachmentUrl?: string }) {
+  const allUrls = [
+    ...(Array.isArray(attachments) ? attachments : []),
+    ...(attachmentUrl ? [attachmentUrl] : []),
+  ].filter(Boolean);
+
+  if (allUrls.length === 0) return null;
+
+  return (
+    <View className="flex-row flex-wrap gap-2 mt-2">
+      {allUrls.map((url, idx) => {
+        const isImage = /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(url) || url.includes('/image/upload/') || url.includes('cloudinary');
+        if (isImage) {
+          return (
+            <Pressable
+              key={idx}
+              onPress={() => Linking.openURL(url).catch(() => {})}
+              className="rounded-xl overflow-hidden border border-neutral-200 dark:border-neutral-700"
+            >
+              <Image source={{ uri: url }} style={{ width: 140, height: 100, borderRadius: 12 }} resizeMode="cover" />
+            </Pressable>
+          );
+        }
+
+        const fileName = url.split('/').pop()?.split('?')[0] || 'View Document';
+        return (
+          <Pressable
+            key={idx}
+            onPress={() => Linking.openURL(url).catch(() => {})}
+            className="flex-row items-center px-3 py-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700"
+          >
+            <FontAwesome5 name="paperclip" size={12} color="#6366f1" />
+            <Text className="text-[11px] font-semibold text-neutral-800 dark:text-neutral-200 ml-1.5 max-w-[140px]" numberOfLines={1}>
+              {fileName}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
 
 export default function MyTicketsScreen() {
   const { colorScheme } = useColorScheme();
@@ -405,6 +449,7 @@ export default function MyTicketsScreen() {
                           <Text className="text-xs text-neutral-800 dark:text-neutral-200 leading-relaxed">
                             {ticket.message}
                           </Text>
+                          <MobileAttachmentViewer attachments={ticket.attachments} attachmentUrl={ticket.attachmentUrl} />
                         </View>
 
                         {/* Messages 2+: Back-and-forth Replies */}
@@ -437,6 +482,7 @@ export default function MyTicketsScreen() {
                               <Text className="text-xs text-neutral-800 dark:text-neutral-200 leading-relaxed">
                                 {reply.body}
                               </Text>
+                              <MobileAttachmentViewer attachments={reply.attachments} attachmentUrl={reply.attachmentUrl} />
                             </View>
                           );
                         })}
