@@ -2,10 +2,8 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  ScrollView,
   TouchableOpacity,
   TextInput,
-  ActivityIndicator,
   Alert,
   Share,
   Modal,
@@ -16,12 +14,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { getAffiliateStats, requestAffiliatePayout, createAffiliateStripeConnect } from '../utils/apiClient';
+import { BouncingDotsLoader, BouncingRefreshScrollView } from '../components/common';
 
 export default function AffiliateScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
 
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [connectingStripe, setConnectingStripe] = useState(false);
   const [copied, setCopied] = useState(false);
   const [referralLink, setReferralLink] = useState('');
@@ -45,9 +45,13 @@ export default function AffiliateScreen() {
     fetchStats();
   }, []);
 
-  const fetchStats = async () => {
+  const fetchStats = async (isPullToRefresh = false) => {
     try {
-      setLoading(true);
+      if (isPullToRefresh) {
+        setRefreshing(true);
+      } else if (!referralCode) {
+        setLoading(true);
+      }
       const res = await getAffiliateStats();
       if (res) {
         setReferralCode(res.referralCode || '');
@@ -63,6 +67,7 @@ export default function AffiliateScreen() {
       console.error('Error fetching affiliate stats:', err);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -136,18 +141,20 @@ export default function AffiliateScreen() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, paddingTop: insets.top }} className="bg-slate-50 justify-center items-center">
-        <ActivityIndicator size="large" color="#4F46E5" />
-        <Text className="text-slate-500 text-sm mt-3 font-medium">Loading Affiliate Partner Portal...</Text>
+      <View style={{ flex: 1, paddingTop: insets.top }} className="bg-slate-50 dark:bg-neutral-950 justify-center items-center">
+        <BouncingDotsLoader size="large" color="#4F46E5" />
+        <Text className="text-slate-500 dark:text-neutral-400 text-sm mt-4 font-medium">Loading Partner Program...</Text>
       </View>
     );
   }
 
   return (
-    <ScrollView
+    <BouncingRefreshScrollView
       style={{ flex: 1 }}
-      className="bg-slate-50"
+      className="bg-slate-50 dark:bg-neutral-950"
       contentContainerStyle={{ paddingBottom: 40, paddingHorizontal: 16, paddingTop: 16 }}
+      refreshing={refreshing}
+      onRefresh={() => fetchStats(true)}
     >
       {/* Top Banner */}
       <View className="bg-slate-900 rounded-3xl p-6 mb-5 border border-slate-800">
@@ -174,20 +181,22 @@ export default function AffiliateScreen() {
           <TouchableOpacity
             onPress={handleConnectStripe}
             disabled={connectingStripe}
-            className="bg-amber-600 px-3 py-2 rounded-xl"
+            className="bg-amber-600 px-3 py-2 rounded-xl min-w-[110px] items-center justify-center"
           >
-            <Text className="text-white font-bold text-xs">
-              {connectingStripe ? 'Loading...' : 'Connect Stripe'}
-            </Text>
+            {connectingStripe ? (
+              <BouncingDotsLoader size="small" color="#fff" />
+            ) : (
+              <Text className="text-white font-bold text-xs">Connect Stripe</Text>
+            )}
           </TouchableOpacity>
         </View>
       )}
 
       {/* Balance Card */}
-      <View className="bg-white rounded-2xl p-5 mb-5 border border-slate-200 shadow-sm flex-row items-center justify-between">
+      <View className="bg-white dark:bg-neutral-900 rounded-2xl p-5 mb-5 border border-slate-200 dark:border-neutral-800 shadow-sm flex-row items-center justify-between">
         <View>
-          <Text className="text-slate-400 text-xs uppercase font-bold mb-1">Available Balance</Text>
-          <Text className="text-slate-900 text-3xl font-black">${(affiliateBalance / 100).toFixed(2)}</Text>
+          <Text className="text-slate-400 dark:text-neutral-500 text-xs uppercase font-bold mb-1">Available Balance</Text>
+          <Text className="text-slate-900 dark:text-white text-3xl font-black">${(affiliateBalance / 100).toFixed(2)}</Text>
           <Text className="text-emerald-600 text-xs font-semibold mt-1">
             Total Earned: ${(totalEarned / 100).toFixed(2)}
           </Text>
@@ -195,21 +204,21 @@ export default function AffiliateScreen() {
         <TouchableOpacity
           onPress={() => setShowModal(true)}
           disabled={!hasStripeConnected || affiliateBalance < 1000}
-          className={`px-4 py-3 rounded-xl ${!hasStripeConnected || affiliateBalance < 1000 ? 'bg-slate-200' : 'bg-indigo-600'}`}
+          className={`px-4 py-3 rounded-xl ${!hasStripeConnected || affiliateBalance < 1000 ? 'bg-slate-200 dark:bg-neutral-800' : 'bg-indigo-600'}`}
         >
-          <Text className={`font-bold text-xs ${!hasStripeConnected || affiliateBalance < 1000 ? 'text-slate-500' : 'text-white'}`}>
+          <Text className={`font-bold text-xs ${!hasStripeConnected || affiliateBalance < 1000 ? 'text-slate-500 dark:text-neutral-500' : 'text-white'}`}>
             {!hasStripeConnected ? 'Connect Stripe' : affiliateBalance < 1000 ? 'Min $10' : 'Withdraw'}
           </Text>
         </TouchableOpacity>
       </View>
 
       {/* Referral Link Box */}
-      <View className="bg-white rounded-2xl p-5 mb-5 border border-slate-200 shadow-sm">
-        <Text className="text-slate-900 font-bold text-base mb-1">Your Referral Link</Text>
-        <Text className="text-slate-500 text-xs mb-3">Share this link to automatically credit signups to your account.</Text>
+      <View className="bg-white dark:bg-neutral-900 rounded-2xl p-5 mb-5 border border-slate-200 dark:border-neutral-800 shadow-sm">
+        <Text className="text-slate-900 dark:text-white font-bold text-base mb-1">Your Referral Link</Text>
+        <Text className="text-slate-500 dark:text-neutral-400 text-xs mb-3">Share this link to automatically credit signups to your account.</Text>
 
-        <View className="bg-slate-50 border border-slate-200 rounded-xl p-3 mb-3">
-          <Text className="text-slate-800 font-mono text-xs select-all" numberOfLines={1}>
+        <View className="bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 rounded-xl p-3 mb-3">
+          <Text className="text-slate-800 dark:text-neutral-200 font-mono text-xs select-all" numberOfLines={1}>
             {referralLink}
           </Text>
         </View>
@@ -224,7 +233,7 @@ export default function AffiliateScreen() {
 
           <TouchableOpacity
             onPress={handleShare}
-            className="flex-1 bg-slate-900 rounded-xl py-3 items-center justify-center"
+            className="flex-1 bg-slate-900 dark:bg-neutral-800 rounded-xl py-3 items-center justify-center"
           >
             <Text className="text-white font-bold text-xs">Share Link</Text>
           </TouchableOpacity>
@@ -232,143 +241,158 @@ export default function AffiliateScreen() {
       </View>
 
       {/* Tab Switcher */}
-      <View className="bg-slate-200/80 p-1 rounded-xl flex-row mb-4">
+      <View className="bg-slate-200/80 dark:bg-neutral-800 p-1 rounded-xl flex-row mb-4">
         <TouchableOpacity
           onPress={() => setActiveTab('contractors')}
-          className={`flex-1 py-2 rounded-lg items-center ${activeTab === 'contractors' ? 'bg-white shadow-sm' : ''}`}
+          className={`flex-1 py-2 rounded-lg items-center ${activeTab === 'contractors' ? 'bg-white dark:bg-neutral-700 shadow-sm' : ''}`}
         >
-          <Text className={`text-xs font-bold ${activeTab === 'contractors' ? 'text-slate-900' : 'text-slate-500'}`}>
-            Contractors ({contractors.length})
+          <Text className={`text-xs font-bold ${activeTab === 'contractors' ? 'text-slate-900 dark:text-white' : 'text-slate-500 dark:text-neutral-400'}`}>
+            Referred ({contractors.length})
           </Text>
         </TouchableOpacity>
-
         <TouchableOpacity
           onPress={() => setActiveTab('earnings')}
-          className={`flex-1 py-2 rounded-lg items-center ${activeTab === 'earnings' ? 'bg-white shadow-sm' : ''}`}
+          className={`flex-1 py-2 rounded-lg items-center ${activeTab === 'earnings' ? 'bg-white dark:bg-neutral-700 shadow-sm' : ''}`}
         >
-          <Text className={`text-xs font-bold ${activeTab === 'earnings' ? 'text-slate-900' : 'text-slate-500'}`}>
+          <Text className={`text-xs font-bold ${activeTab === 'earnings' ? 'text-slate-900 dark:text-white' : 'text-slate-500 dark:text-neutral-400'}`}>
             Earnings ({earnings.length})
           </Text>
         </TouchableOpacity>
-
         <TouchableOpacity
           onPress={() => setActiveTab('payouts')}
-          className={`flex-1 py-2 rounded-lg items-center ${activeTab === 'payouts' ? 'bg-white shadow-sm' : ''}`}
+          className={`flex-1 py-2 rounded-lg items-center ${activeTab === 'payouts' ? 'bg-white dark:bg-neutral-700 shadow-sm' : ''}`}
         >
-          <Text className={`text-xs font-bold ${activeTab === 'payouts' ? 'text-slate-900' : 'text-slate-500'}`}>
+          <Text className={`text-xs font-bold ${activeTab === 'payouts' ? 'text-slate-900 dark:text-white' : 'text-slate-500 dark:text-neutral-400'}`}>
             Payouts ({payouts.length})
           </Text>
         </TouchableOpacity>
       </View>
 
       {/* Tab Content */}
-      <View className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
-        {activeTab === 'contractors' && (
-          <View>
-            {contractors.length === 0 ? (
-              <View className="py-8 items-center">
-                <Text className="text-slate-400 text-xs font-medium">No referred contractors yet.</Text>
-              </View>
-            ) : (
-              contractors.map((c, i) => (
-                <View key={c.id || i} className="py-3 border-b border-slate-100 flex-row justify-between items-center">
-                  <View>
-                    <Text className="text-slate-900 font-bold text-sm">{c.companyName}</Text>
-                    <Text className="text-slate-500 text-xs">{c.category} · Joined {new Date(c.signupDate).toLocaleDateString()}</Text>
-                  </View>
-                  <View className={`px-2.5 py-1 rounded-full ${c.isActiveWindow ? 'bg-emerald-50 border border-emerald-200' : 'bg-slate-100'}`}>
-                    <Text className={`text-[10px] font-bold ${c.isActiveWindow ? 'text-emerald-700' : 'text-slate-500'}`}>
-                      {c.isActiveWindow ? `${c.daysRemaining}d left` : 'Completed'}
+      {activeTab === 'contractors' && (
+        <View className="gap-3">
+          {contractors.length === 0 ? (
+            <View className="bg-white dark:bg-neutral-900 rounded-2xl p-8 items-center border border-slate-200 dark:border-neutral-800">
+              <FontAwesome5 name="users" size={32} color="#94a3b8" />
+              <Text className="text-slate-700 dark:text-neutral-300 font-bold text-sm mt-3">No Referrals Yet</Text>
+              <Text className="text-slate-400 dark:text-neutral-500 text-xs text-center mt-1">
+                Share your referral link with contractors to start earning 1% commission on their completed projects.
+              </Text>
+            </View>
+          ) : (
+            contractors.map((c, idx) => (
+              <View key={idx} className="bg-white dark:bg-neutral-900 rounded-2xl p-4 border border-slate-200 dark:border-neutral-800 flex-row items-center justify-between">
+                <View>
+                  <Text className="text-slate-900 dark:text-white font-bold text-sm">{c.name || 'Contractor'}</Text>
+                  <Text className="text-slate-400 text-xs">Joined {new Date(c.joinedAt).toLocaleDateString()}</Text>
+                </View>
+                <View className="items-end">
+                  <View className={`px-2.5 py-0.5 rounded-full ${c.daysRemaining > 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-500'}`}>
+                    <Text className={`text-[10px] font-bold ${c.daysRemaining > 0 ? 'text-emerald-700' : 'text-slate-500'}`}>
+                      {c.daysRemaining > 0 ? `${c.daysRemaining} days left` : 'Window expired'}
                     </Text>
                   </View>
                 </View>
-              ))
-            )}
-          </View>
-        )}
-
-        {activeTab === 'earnings' && (
-          <View>
-            {earnings.length === 0 ? (
-              <View className="py-8 items-center">
-                <Text className="text-slate-400 text-xs font-medium">No earnings logged yet.</Text>
               </View>
-            ) : (
-              earnings.map((e, i) => (
-                <View key={e._id || i} className="py-3 border-b border-slate-100 flex-row justify-between items-center">
-                  <View>
-                    <Text className="text-slate-900 font-bold text-xs">{e.referredContractor?.companyName || 'Contractor Job'}</Text>
-                    <Text className="text-slate-400 text-[10px]">{new Date(e.createdAt).toLocaleDateString()}</Text>
-                  </View>
-                  <Text className="text-emerald-600 font-bold text-sm">
-                    +${(e.commissionAmount / 100).toFixed(2)}
-                  </Text>
-                </View>
-              ))
-            )}
-          </View>
-        )}
+            ))
+          )}
+        </View>
+      )}
 
-        {activeTab === 'payouts' && (
-          <View>
-            {payouts.length === 0 ? (
-              <View className="py-8 items-center">
-                <Text className="text-slate-400 text-xs font-medium">No payout requests yet.</Text>
+      {activeTab === 'earnings' && (
+        <View className="gap-3">
+          {earnings.length === 0 ? (
+            <View className="bg-white dark:bg-neutral-900 rounded-2xl p-8 items-center border border-slate-200 dark:border-neutral-800">
+              <FontAwesome5 name="dollar-sign" size={32} color="#94a3b8" />
+              <Text className="text-slate-700 dark:text-neutral-300 font-bold text-sm mt-3">No Earnings Yet</Text>
+              <Text className="text-slate-400 dark:text-neutral-500 text-xs text-center mt-1">
+                Commissions will appear here when your referred contractors complete funded milestones.
+              </Text>
+            </View>
+          ) : (
+            earnings.map((e, idx) => (
+              <View key={idx} className="bg-white dark:bg-neutral-900 rounded-2xl p-4 border border-slate-200 dark:border-neutral-800 flex-row items-center justify-between">
+                <View>
+                  <Text className="text-slate-900 dark:text-white font-bold text-sm">{e.contractorName || 'Commission'}</Text>
+                  <Text className="text-slate-400 text-xs">{new Date(e.createdAt).toLocaleDateString()} • Job #{e.jobId?.slice(-6) || ''}</Text>
+                </View>
+                <View className="items-end">
+                  <Text className="text-emerald-600 font-bold text-sm">+${(e.amount / 100).toFixed(2)}</Text>
+                  <Text className="text-slate-400 text-[10px] uppercase font-semibold">{e.status || 'available'}</Text>
+                </View>
               </View>
-            ) : (
-              payouts.map((p, i) => (
-                <View key={p._id || i} className="py-3 border-b border-slate-100 flex-row justify-between items-center">
-                  <View>
-                    <Text className="text-slate-900 font-bold text-xs">${(p.amount / 100).toFixed(2)}</Text>
-                    <Text className="text-slate-400 text-[10px] uppercase">{p.payoutMethod} · {new Date(p.createdAt).toLocaleDateString()}</Text>
-                  </View>
-                  <Text className={`text-xs font-bold capitalize ${p.status === 'completed' ? 'text-emerald-600' : 'text-amber-600'}`}>
-                    {p.status}
-                  </Text>
-                </View>
-              ))
-            )}
-          </View>
-        )}
-      </View>
+            ))
+          )}
+        </View>
+      )}
 
-      {/* Withdrawal Modal */}
-      <Modal visible={showModal} animationType="slide" transparent>
-        <View className="flex-1 bg-slate-900/60 justify-end">
-          <View className="bg-white rounded-t-3xl p-6 space-y-4">
-            <View className="flex-row justify-between items-center mb-2">
-              <Text className="text-slate-900 font-extrabold text-lg">Request Affiliate Payout</Text>
+      {activeTab === 'payouts' && (
+        <View className="gap-3">
+          {payouts.length === 0 ? (
+            <View className="bg-white dark:bg-neutral-900 rounded-2xl p-8 items-center border border-slate-200 dark:border-neutral-800">
+              <FontAwesome5 name="wallet" size={32} color="#94a3b8" />
+              <Text className="text-slate-700 dark:text-neutral-300 font-bold text-sm mt-3">No Payout Requests</Text>
+              <Text className="text-slate-400 dark:text-neutral-500 text-xs text-center mt-1">
+                You haven't requested any payouts yet. Minimum payout is $10.00.
+              </Text>
+            </View>
+          ) : (
+            payouts.map((p, idx) => (
+              <View key={idx} className="bg-white dark:bg-neutral-900 rounded-2xl p-4 border border-slate-200 dark:border-neutral-800 flex-row items-center justify-between">
+                <View>
+                  <Text className="text-slate-900 dark:text-white font-bold text-sm">${(p.amount / 100).toFixed(2)}</Text>
+                  <Text className="text-slate-400 text-xs">{new Date(p.createdAt).toLocaleDateString()} • via {p.payoutMethod || 'Stripe'}</Text>
+                </View>
+                <View className="items-end">
+                  <View className={`px-2.5 py-0.5 rounded-full ${p.status === 'completed' ? 'bg-emerald-50 text-emerald-700' : p.status === 'pending' ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700'}`}>
+                    <Text className={`text-[10px] font-bold capitalize ${p.status === 'completed' ? 'text-emerald-700' : p.status === 'pending' ? 'text-amber-700' : 'text-red-700'}`}>
+                      {p.status || 'Pending'}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            ))
+          )}
+        </View>
+      )}
+
+      {/* Payout Request Modal */}
+      <Modal visible={showModal} transparent animationType="fade">
+        <View className="flex-1 bg-black/50 justify-center p-4">
+          <View className="bg-white dark:bg-neutral-900 rounded-3xl p-6 border border-slate-200 dark:border-neutral-800 gap-4">
+            <View className="flex-row justify-between items-center">
+              <Text className="text-slate-900 dark:text-white font-extrabold text-lg">Request Affiliate Payout</Text>
               <TouchableOpacity onPress={() => setShowModal(false)}>
                 <Text className="text-slate-400 text-lg font-bold">✕</Text>
               </TouchableOpacity>
             </View>
 
             <View>
-              <Text className="text-slate-600 text-xs font-bold mb-1">Payout Destination</Text>
-              <View className="bg-slate-50 border border-slate-200 rounded-xl p-3">
-                <Text className="text-slate-900 font-bold text-xs">Stripe Express Direct Deposit</Text>
-                <Text className="text-slate-500 text-[11px] mt-0.5">Automated payout directly to your connected bank account.</Text>
+              <Text className="text-slate-600 dark:text-neutral-400 text-xs font-bold mb-1">Payout Destination</Text>
+              <View className="bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 rounded-xl p-3">
+                <Text className="text-slate-900 dark:text-white font-bold text-xs">Stripe Express Direct Deposit</Text>
+                <Text className="text-slate-500 dark:text-neutral-400 text-[11px] mt-0.5">Automated payout directly to your connected bank account.</Text>
               </View>
             </View>
 
             <View>
-              <Text className="text-slate-600 text-xs font-bold mb-1">Amount ($)</Text>
+              <Text className="text-slate-600 dark:text-neutral-400 text-xs font-bold mb-1">Amount ($)</Text>
               <TextInput
                 value={payoutAmount}
                 onChangeText={setPayoutAmount}
                 keyboardType="decimal-pad"
                 placeholder="e.g. 25.00"
-                className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 text-sm font-semibold"
+                className="bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 rounded-xl px-4 py-3 text-slate-900 dark:text-white text-sm font-semibold"
               />
             </View>
 
             <View>
-              <Text className="text-slate-600 text-xs font-bold mb-1">Payout Account (Email/Phone)</Text>
+              <Text className="text-slate-600 dark:text-neutral-400 text-xs font-bold mb-1">Payout Account (Email/Phone)</Text>
               <TextInput
                 value={payoutDetails}
                 onChangeText={setPayoutDetails}
                 placeholder="PayPal email, Zelle phone, or bank details"
-                className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 text-sm font-semibold"
+                className="bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 rounded-xl px-4 py-3 text-slate-900 dark:text-white text-sm font-semibold"
               />
             </View>
 
@@ -378,7 +402,7 @@ export default function AffiliateScreen() {
               className="bg-indigo-600 rounded-xl py-3.5 items-center justify-center mt-2"
             >
               {submittingPayout ? (
-                <ActivityIndicator color="#FFF" />
+                <BouncingDotsLoader size="small" color="#FFF" />
               ) : (
                 <Text className="text-white font-bold text-sm">Submit Withdrawal Request</Text>
               )}
@@ -387,6 +411,6 @@ export default function AffiliateScreen() {
         </View>
       </Modal>
 
-    </ScrollView>
+    </BouncingRefreshScrollView>
   );
 }
