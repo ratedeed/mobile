@@ -220,7 +220,15 @@ const NotificationsScreen: React.FC = () => {
 
     const t = (item.type || '').toLowerCase();
     const m = (item.message || '').toLowerCase();
-    const rawLink = item.link || '';
+    let path = item.link || '';
+    if (path.startsWith('http')) {
+      try {
+        const urlObj = new URL(path);
+        path = urlObj.pathname + urlObj.search;
+      } catch (e) {
+        path = path.replace(/^https?:\/\/[^\/]+/, '');
+      }
+    }
 
     // 1. Direct Conversation / Chat Deep-linking (Opens actual Chat thread)
     const convId = item.conversationId || item.conversation || item.chatId || (item.data && (item.data.conversationId || item.data.conversation));
@@ -232,24 +240,23 @@ const NotificationsScreen: React.FC = () => {
       return;
     }
 
-    const conversationMatch = rawLink.match(/[?&]conversationId=([^&]+)/) || rawLink.match(/\/messages\/([a-zA-Z0-9_-]+)/);
+    const conversationMatch = path.match(/[?&]conversationId=([^&]+)/) || path.match(/\/messages\/([a-zA-Z0-9_-]+)/);
     if (conversationMatch && conversationMatch[1]) {
       navigation.navigate('ChatScreen', { conversationId: conversationMatch[1] });
       return;
     }
 
-    if (rawLink.startsWith('/messages') || rawLink.startsWith('/chat') || t === 'new_message' || t === 'message' || t === 'admin_message') {
+    if (path.startsWith('/messages') || path.startsWith('/chat') || t === 'new_message' || t === 'message' || t === 'admin_message' || t === 'ticket_reply') {
       navigation.navigate('Main', { screen: 'Messages' });
       return;
     }
 
-    // 2. Direct Support Ticket Deep-linking (opens MyTickets screen with thread)
+    // 2. Direct Support Ticket Deep-linking (ticket closed/resolved opens MyTickets screen)
     if (
-      t === 'ticket_reply' ||
       t === 'ticket_closed' ||
       t === 'ticket_resolved' ||
-      rawLink.includes('/my-tickets') ||
-      rawLink.includes('/help')
+      path.includes('/my-tickets') ||
+      path.includes('/help')
     ) {
       const ticketIdMatch = m.match(/#?(TIK-[A-Z0-9]+)/i);
       navigation.navigate('MyTickets', {
@@ -279,16 +286,6 @@ const NotificationsScreen: React.FC = () => {
       return;
     }
 
-    let path = item.link;
-    if (path.startsWith('http')) {
-      try {
-        const urlObj = new URL(path);
-        path = urlObj.pathname + urlObj.search;
-      } catch (e) {
-        path = path.replace(/^https?:\/\/[^\/]+/, '');
-      }
-    }
-
     if (path.startsWith('/messages/')) {
       const conversationId = path.split('/')[2];
       navigation.navigate('ChatScreen', { conversationId });
@@ -305,19 +302,19 @@ const NotificationsScreen: React.FC = () => {
       if (userRole === 'contractor' || userRole === 'admin') {
         navigation.navigate('ContractorDashboard');
       } else {
-        navigation.navigate('Profile');
+        navigation.navigate('Main', { screen: 'Profile' });
       }
     } else if (path.startsWith('/quotes/')) {
-      navigation.navigate('Jobs');
+      navigation.navigate('Main', { screen: 'Jobs' });
     } else if (path.startsWith('/jobs/')) {
       const jobId = path.split('/')[2];
       if (jobId) {
         navigation.navigate('JobDetail', { jobId });
       } else {
-        navigation.navigate('Jobs');
+        navigation.navigate('Main', { screen: 'Jobs' });
       }
     } else if (path.startsWith('/jobs')) {
-      navigation.navigate('Jobs');
+      navigation.navigate('Main', { screen: 'Jobs' });
     } else if (path.startsWith('/quote-review')) {
       const quoteId = path.match(/[?&]quoteId=([^&]+)/)?.[1];
       if (quoteId) {
@@ -328,7 +325,7 @@ const NotificationsScreen: React.FC = () => {
         const isPaymentsTab = path.includes('tab=payments');
         navigation.navigate('ContractorDashboard', isPaymentsTab ? { initialTab: 'payments' } : undefined);
       } else {
-        navigation.navigate('Profile');
+        navigation.navigate('Main', { screen: 'Profile' });
       }
     } else if (path.startsWith('/detail/')) {
       const slug = path.split('/')[2];
@@ -339,7 +336,7 @@ const NotificationsScreen: React.FC = () => {
       if (userRole === 'contractor' || userRole === 'admin') {
         navigation.navigate('ContractorDashboard', { initialTab: 'profile' });
       } else {
-        navigation.navigate('Home');
+        navigation.navigate('Main', { screen: 'Explore' });
       }
     } else if (path.startsWith('/payment/')) {
       const quoteId = path.split('/')[2];
@@ -447,7 +444,7 @@ const NotificationsScreen: React.FC = () => {
 
   const getNotificationIcon = (type?: string, message?: string) => {
     const m = (message || '').toLowerCase();
-    if (type === 'ticket_reply' || m.includes('ticket') || m.includes('ratedeed support')) return { name: 'headset', color: '#6366f1', bg: isDark ? '#1e1b4b' : '#eef2ff' };
+    if (type === 'ticket_reply' || type === 'ticket_closed' || type === 'ticket_resolved' || m.includes('ticket') || m.includes('ratedeed support')) return { name: 'headset', color: '#6366f1', bg: isDark ? '#1e1b4b' : '#eef2ff' };
     if (type === 'new_review' || m.includes('review')) return { name: 'star', color: '#f59e0b', bg: isDark ? '#451a03' : '#fef3c7' };
     if (type === 'new_message' || m.includes('message')) return { name: 'comment', color: '#3b82f6', bg: isDark ? '#1e3a8a' : '#dbeafe' };
     if (m.includes('quote') || m.includes('payment') || type === 'job_funded') return { name: 'dollar-sign', color: '#10b981', bg: isDark ? '#064e3b' : '#d1fae5' };

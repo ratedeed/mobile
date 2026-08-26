@@ -25,6 +25,8 @@ export default function HelpCenterScreen() {
 
   const [viewMode, setViewMode] = useState<'home' | 'all-topics'>('home');
   const [searchQuery, setSearchQuery] = useState('');
+  const [allTopicsSearch, setAllTopicsSearch] = useState('');
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   const [activeJob, setActiveJob] = useState<any>(null);
 
   // Check for active in-progress job (Contextual Smart Rescue)
@@ -145,45 +147,114 @@ export default function HelpCenterScreen() {
         {/* ═══════════════════════════════════════════ */}
         {viewMode === 'all-topics' ? (
           <View className="px-5 pt-4">
-            <Text className="text-xs text-neutral-500 dark:text-neutral-400 mb-3">
-              {HELP_CATEGORIES.length} categories &middot; {HELP_ARTICLES.length} guides
-            </Text>
+            {/* Quick Search for Topics */}
+            <View className="mb-3.5 flex-row items-center px-3.5 py-2.5 bg-neutral-100 dark:bg-neutral-800 rounded-2xl border border-neutral-200/70 dark:border-neutral-700/50">
+              <FontAwesome5 name="search" size={12} color="#9ca3af" />
+              <TextInput
+                value={allTopicsSearch}
+                onChangeText={setAllTopicsSearch}
+                placeholder="Filter topics & guides…"
+                placeholderTextColor="#9ca3af"
+                className="flex-1 ml-2.5 text-xs font-medium text-neutral-900 dark:text-white p-0"
+              />
+              {allTopicsSearch.length > 0 && (
+                <Pressable onPress={() => setAllTopicsSearch('')} hitSlop={8}>
+                  <FontAwesome5 name="times-circle" size={12} color="#9ca3af" />
+                </Pressable>
+              )}
+            </View>
+
+            <View className="flex-row items-center justify-between mb-3 px-1">
+              <Text className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                {HELP_CATEGORIES.length} categories &middot; {HELP_ARTICLES.length} guides
+              </Text>
+              <Text className="text-[10px] font-semibold text-neutral-400">
+                Tap to explore guides
+              </Text>
+            </View>
 
             <View className="divide-y divide-neutral-200/70 dark:divide-neutral-800 bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-200/80 dark:border-neutral-800 overflow-hidden shadow-xs">
-              {HELP_CATEGORIES.map((cat) => {
-                const count = HELP_ARTICLES.filter((a) => a.category === cat.slug).length;
+              {HELP_CATEGORIES.filter((cat) => {
+                if (!allTopicsSearch.trim()) return true;
+                const q = allTopicsSearch.toLowerCase();
+                const catMatches = cat.title.toLowerCase().includes(q) || cat.description.toLowerCase().includes(q);
+                const articleMatches = HELP_ARTICLES.some(
+                  (a) => a.category === cat.slug && (a.title.toLowerCase().includes(q) || a.description.toLowerCase().includes(q))
+                );
+                return catMatches || articleMatches;
+              }).map((cat) => {
+                const categoryArticles = HELP_ARTICLES.filter((a) => a.category === cat.slug);
+                const count = categoryArticles.length;
+                const isExpanded = expandedCategory === cat.slug || allTopicsSearch.trim().length > 0;
+
                 return (
-                  <Pressable
-                    key={cat.slug}
-                    onPress={() => {
-                      HapticFeedback.light();
-                      const firstArt = HELP_ARTICLES.find((a) => a.category === cat.slug);
-                      if (firstArt) {
-                        navigation.navigate('HelpArticle', { slug: firstArt.slug });
-                      }
-                    }}
-                    className="p-4 flex-row items-center justify-between active:bg-neutral-50 dark:active:bg-neutral-800/60"
-                  >
-                    <View className="flex-row items-center gap-3.5 flex-1 pr-3">
-                      <View className={`w-9 h-9 rounded-2xl ${cat.iconBg} items-center justify-center`}>
-                        <FontAwesome5 name={cat.icon} size={14} color={cat.iconColor} />
+                  <View key={cat.slug} className="overflow-hidden">
+                    <Pressable
+                      onPress={() => {
+                        HapticFeedback.selection();
+                        if (count === 1) {
+                          navigation.navigate('HelpArticle', { slug: categoryArticles[0].slug });
+                        } else {
+                          setExpandedCategory(expandedCategory === cat.slug ? null : cat.slug);
+                        }
+                      }}
+                      className="p-4 flex-row items-center justify-between active:bg-neutral-50 dark:active:bg-neutral-800/60"
+                    >
+                      <View className="flex-row items-center gap-3.5 flex-1 pr-3">
+                        <View className={`w-10 h-10 rounded-2xl ${cat.iconBg} items-center justify-center`}>
+                          <FontAwesome5 name={cat.icon} size={14} color={cat.iconColor} />
+                        </View>
+                        <View className="flex-1">
+                          <Text className="text-[13px] font-bold text-neutral-900 dark:text-white">
+                            {cat.title}
+                          </Text>
+                          <Text className="text-[11px] text-neutral-400 mt-0.5" numberOfLines={2}>
+                            {cat.description}
+                          </Text>
+                        </View>
                       </View>
-                      <View className="flex-1">
-                        <Text className="text-[13px] font-bold text-neutral-900 dark:text-white">
-                          {cat.title}
-                        </Text>
-                        <Text className="text-[11px] text-neutral-400 mt-0.5 line-clamp-1">
-                          {cat.description}
-                        </Text>
+                      <View className="flex-row items-center gap-2">
+                        <View className={`px-2.5 py-0.5 rounded-full ${count > 1 ? 'bg-indigo-50 dark:bg-indigo-950/60' : 'bg-neutral-100 dark:bg-neutral-800'}`}>
+                          <Text className={`text-[10px] font-bold ${count > 1 ? 'text-indigo-600 dark:text-indigo-400' : 'text-neutral-500 dark:text-neutral-400'}`}>
+                            {count} {count === 1 ? 'guide' : 'guides'}
+                          </Text>
+                        </View>
+                        <FontAwesome5
+                          name={count > 1 && isExpanded ? "chevron-down" : "chevron-right"}
+                          size={11}
+                          color={count > 1 && isExpanded ? "#6366f1" : "#9ca3af"}
+                        />
                       </View>
-                    </View>
-                    <View className="flex-row items-center gap-2">
-                      <Text className="text-[10px] font-bold text-neutral-400 bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded-full">
-                        {count} {count === 1 ? 'guide' : 'guides'}
-                      </Text>
-                      <FontAwesome5 name="chevron-right" size={11} color="#9ca3af" />
-                    </View>
-                  </Pressable>
+                    </Pressable>
+
+                    {/* Accordion Sub-Guides for Categories with Multiple Articles */}
+                    {isExpanded && count > 1 && (
+                      <View className="bg-neutral-50/80 dark:bg-neutral-800/40 px-4 py-2 border-t border-neutral-100 dark:border-neutral-800/80">
+                        {categoryArticles.map((art, idx) => (
+                          <Pressable
+                            key={art.slug}
+                            onPress={() => {
+                              HapticFeedback.light();
+                              navigation.navigate('HelpArticle', { slug: art.slug });
+                            }}
+                            className={`py-3 flex-row items-center justify-between ${
+                              idx < categoryArticles.length - 1 ? 'border-b border-neutral-200/60 dark:border-neutral-700/50' : ''
+                            }`}
+                          >
+                            <View className="flex-1 pr-3 pl-2">
+                              <Text className="text-xs font-bold text-neutral-800 dark:text-neutral-200">
+                                {art.title}
+                              </Text>
+                              <Text className="text-[10px] text-neutral-400 mt-0.5">
+                                {art.readTime}
+                              </Text>
+                            </View>
+                            <FontAwesome5 name="arrow-right" size={10} color="#6366f1" />
+                          </Pressable>
+                        ))}
+                      </View>
+                    )}
+                  </View>
                 );
               })}
             </View>

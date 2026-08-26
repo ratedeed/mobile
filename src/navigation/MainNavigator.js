@@ -334,10 +334,11 @@ function MainTabNavigator() {
 export default function MainNavigator() {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   const navigation = useNavigation();
 
   useEffect(() => {
+    if (isLoading) return;
     if (!isAuthenticated) {
       const currentRoute = navigation.getCurrentRoute();
       const protectedScreens = [
@@ -369,7 +370,7 @@ export default function MainNavigator() {
         );
       }
     }
-  }, [isAuthenticated, navigation]);
+  }, [isAuthenticated, isLoading, navigation]);
 
   const dynamicScreenOptions = {
     headerStyle: {

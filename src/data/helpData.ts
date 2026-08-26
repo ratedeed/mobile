@@ -319,4 +319,144 @@ export const HELP_ARTICLES: MobileHelpArticle[] = [
       },
     ],
   },
+  {
+    slug: 'how-ratedeed-works-for-homeowners',
+    category: 'getting-started',
+    title: 'How Ratedeed Works for Homeowners',
+    description: 'A complete beginner guide to finding licensed contractors, comparing upfront estimates, and paying safely with escrow.',
+    audience: 'homeowners',
+    readTime: '3 min read',
+    icon: 'home',
+    summary: 'Search verified trade professionals by ZIP code, compare transparent estimate policies, and never pay upfront cash with milestone escrow.',
+    sections: [
+      {
+        heading: 'The Modern, Safe Way to Hire',
+        body: 'Traditional hiring methods often involve unverified contractors and risky cash deposits. Ratedeed transforms home improvement with license-verified pros and 100% milestone escrow protection.',
+        callout: {
+          type: 'success',
+          text: 'Every project is protected: contractors only get paid after you inspect and approve each milestone stage.',
+        },
+      },
+      {
+        heading: '4 Simple Steps to Complete Any Project',
+        body: '1. Search verified pros in your ZIP code.\n2. Compare Roman estimate policy badges (Free Estimates vs Credited Diagnostic Fees).\n3. Chat and receive itemized digital milestone quotes.\n4. Fund escrow and release payments upon inspection.',
+      },
+      {
+        heading: 'Types of Projects You Can Hire',
+        body: 'From emergency plumbing and electrical repairs to kitchen remodels, roofing replacements, painting, and general handyman tasks.',
+      },
+    ],
+    faqs: [
+      {
+        q: 'Does it cost money to post a request?',
+        a: 'No. Searching contractors, chatting, and receiving project quotes is 100% free for homeowners.',
+      },
+      {
+        q: 'What if the contractor does not show up?',
+        a: 'Diagnostic and service fees booked through the platform are backed by our 100% automatic refund guarantee.',
+      },
+    ],
+  },
+  {
+    slug: 'how-to-get-more-jobs-and-boost-visibility',
+    category: 'contractor-services',
+    title: 'How to Boost Ranking & Win More Jobs',
+    description: 'Proven strategies for contractors to increase impressions, earn top local search placement, and close quotes.',
+    audience: 'contractors',
+    readTime: '3 min read',
+    icon: 'chart-line',
+    summary: 'Verify your trade license, respond fast, showcase before-and-after photo galleries, and collect verified escrow reviews to dominate local search.',
+    sections: [
+      {
+        heading: 'How the Local Matching Algorithm Works',
+        body: 'Ratedeed ranks contractor profiles based on five key signals:\n1. State Trade License Verification (Highest Weight)\n2. Fast Response Times (< 1 hour)\n3. Rich Project Photo Portfolios (6+ photos)\n4. Upfront Roman Estimate Badges\n5. 4.8+ Star Verified Escrow Reviews.',
+        callout: {
+          type: 'info',
+          text: 'Pros with verified trade license badges convert 4x more homeowner inquiries than unverified profiles.',
+        },
+      },
+      {
+        heading: 'Actionable Optimization Steps',
+        body: '• Verify your state license in Contractor Dashboard -> Edit Profile.\n• Add surrounding ZIP codes in your travel radius (25–40 miles).\n• Send itemized milestone quotes breaking down labor and materials.\n• Request 5-star verified reviews immediately upon final milestone release.',
+      },
+      {
+        heading: 'No Pay-Per-Lead Fees',
+        body: 'Unlike competitors that charge $50–$150 per shared lead phone number, Ratedeed charges zero upfront lead fees. You keep your hard-earned margins.',
+      },
+    ],
+    faqs: [
+      {
+        q: 'How fast do profile updates reflect in search?',
+        a: 'Updating your license, adding photos, or receiving new reviews updates your search ranking immediately in real time.',
+      },
+    ],
+  },
+  {
+    slug: 'contractor-dispute-defense-guide',
+    category: 'disputes',
+    title: 'Contractor Guide: Responding to a Client Dispute',
+    description: 'How contractors can submit milestone proof, protect earned escrow funds, and resolve claims fairly.',
+    audience: 'contractors',
+    readTime: '3 min read',
+    icon: 'balance-scale',
+    summary: 'Disputed funds stay locked in escrow while both parties communicate in the 48-hour negotiation window with platform mediation support.',
+    sections: [
+      {
+        heading: 'What Happens During a Dispute',
+        body: '1. Earned funds are NOT automatically refunded—they remain secured in escrow.\n2. You receive an instant alert with the client\'s claim details.\n3. You have a 72-hour window to review and submit job site proof.',
+      },
+      {
+        heading: '3 Decisive Defense Best Practices',
+        body: '• Upload timestamped before/after and rough-in photos.\n• Use in-app Digital Change Orders for any verbal scope additions.\n• Keep correspondence in Ratedeed Job Chat for verifiable audit logs.',
+        callout: {
+          type: 'warning',
+          text: 'Verbal agreements outside the app cannot be authenticated during mediation. Always log scope changes via Digital Change Orders.',
+        },
+      },
+    ],
+  },
+  {
+    slug: 'how-ratedeed-works-for-pros',
+    category: 'getting-started',
+    title: 'Getting Started as a Verified Pro',
+    description: 'How licensed contractors join, set up upfront estimate policies, and receive guaranteed escrow payouts.',
+    audience: 'contractors',
+    readTime: '3 min read',
+    icon: 'user-tie',
+    summary: 'Join as a verified trade contractor, configure your service area ZIP codes, and win high-ticket jobs with guaranteed escrow payments.',
+    sections: [
+      {
+        heading: 'The Contractor Advantage',
+        body: 'Ratedeed eliminates non-paying clients and expensive lead fees. Every job is funded into escrow before you lift a tool, guaranteeing that your money is secured.',
+        callout: {
+          type: 'success',
+          text: 'Zero pay-per-lead charges. You only pay standard transaction processing fees when you successfully complete paid jobs.',
+        },
+      },
+      {
+        heading: '3 Steps to Start Winning Projects',
+        body: '1. Complete your Pro Profile and upload your state trade license.\n2. Choose your estimate badge: Free Estimates or Credited Diagnostic Fee.\n3. Receive direct homeowner inquiries and send phased milestone quotes.',
+      },
+    ],
+  },
+  {
+    slug: 'instant-payouts-and-1099-taxes',
+    category: 'payouts',
+    title: 'Instant Bank Transfers & 1099 Tax Documents',
+    description: 'Understand instant debit card payouts, processing fees, and annual 1099-K tax reports.',
+    audience: 'contractors',
+    readTime: '2 min read',
+    icon: 'file-invoice-dollar',
+    summary: 'Transfer earned milestone funds to your debit card in 30 minutes, or receive standard ACH deposits with automated annual 1099 tax filing.',
+    sections: [
+      {
+        heading: 'Instant vs Standard Payouts',
+        body: '• Standard ACH: Transferred automatically to your linked checking account in 1–3 business days with $0 fee.\n• Instant Payout: Available 24/7/365 to eligible debit cards, arriving within 30 minutes for an industry-standard 1.5% fee.',
+      },
+      {
+        heading: 'Year-End 1099-K Tax Forms',
+        body: 'Stripe automatically generates and delivers your 1099-K tax document directly to your Contractor Dashboard every January for seamless tax filing.',
+      },
+    ],
+  },
 ];

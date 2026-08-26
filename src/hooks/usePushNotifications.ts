@@ -140,8 +140,22 @@ export const usePushNotifications = () => {
           navigation.navigate('ChatScreen', { conversationId });
           return true;
         }
+      } else if (path.startsWith('/chat')) {
+        const cid = path.match(/[?&]conversationId=([^&]+)/)?.[1];
+        if (cid) {
+          navigation.navigate('ChatScreen', { conversationId: cid });
+        } else {
+          navigation.navigate('Main', { screen: 'Messages' });
+        }
+        return true;
       } else if (path.startsWith('/messages')) {
-        navigation.navigate('Messages');
+        navigation.navigate('Main', { screen: 'Messages' });
+        return true;
+      }
+
+      if (path.startsWith('/help') || path.startsWith('/my-tickets')) {
+        const ticketIdMatch = path.match(/#?(TIK-[A-Z0-9]+)/i);
+        navigation.navigate('MyTickets', { ticketId: ticketIdMatch ? ticketIdMatch[1] : undefined });
         return true;
       }
       
@@ -149,13 +163,13 @@ export const usePushNotifications = () => {
         if (userRole === 'contractor' || userRole === 'admin') {
           navigation.navigate('ContractorDashboard');
         } else {
-          navigation.navigate('Profile');
+          navigation.navigate('Main', { screen: 'Profile' });
         }
         return true;
       }
       
       if (path.startsWith('/quotes/')) {
-        navigation.navigate('Jobs');
+        navigation.navigate('Main', { screen: 'Jobs' });
         return true;
       }
       
@@ -164,13 +178,13 @@ export const usePushNotifications = () => {
         if (jobId) {
           navigation.navigate('JobDetail', { jobId });
         } else {
-          navigation.navigate('Jobs');
+          navigation.navigate('Main', { screen: 'Jobs' });
         }
         return true;
       }
       
       if (path.startsWith('/jobs')) {
-        navigation.navigate('Jobs');
+        navigation.navigate('Main', { screen: 'Jobs' });
         return true;
       }
       
@@ -186,7 +200,7 @@ export const usePushNotifications = () => {
         if (userRole === 'contractor' || userRole === 'admin') {
           navigation.navigate('ContractorDashboard');
         } else {
-          navigation.navigate('Profile');
+          navigation.navigate('Main', { screen: 'Profile' });
         }
         return true;
       }
@@ -234,7 +248,7 @@ export const usePushNotifications = () => {
       if (path.startsWith('/post/')) {
         const postId = path.split('/')[2];
         if (postId) {
-          navigation.navigate('Explore', { postId });
+          navigation.navigate('Main', { screen: 'Explore', params: { postId } });
           return true;
         }
       }
@@ -251,35 +265,37 @@ export const usePushNotifications = () => {
         return;
       }
 
-      if ((data?.type === 'new_message' || data?.type === 'quote_request') && data?.conversationId) {
+      if ((data?.type === 'new_message' || data?.type === 'quote_request' || data?.type === 'ticket_reply') && data?.conversationId) {
         navigation.navigate('ChatScreen', {
           conversationId: String(data.conversationId),
           recipientId: data.senderId != null ? String(data.senderId) : undefined,
           recipientName: data.senderName != null ? String(data.senderName) : undefined,
         });
+      } else if (data?.type === 'ticket_closed' || data?.type === 'ticket_resolved') {
+        navigation.navigate('MyTickets');
       } else if (data?.type === 'new_review') {
-        navigation.navigate('Profile');
+        navigation.navigate('Main', { screen: 'Profile' });
       } else if (data?.type === 'new_lead') {
         if (userRole === 'contractor' || userRole === 'admin') {
           navigation.navigate('ContractorDashboard');
         } else {
-          navigation.navigate('Profile');
+          navigation.navigate('Main', { screen: 'Profile' });
         }
       } else if (data?.type === 'quote_request' && data?.quoteId) {
         navigation.navigate('QuoteReview', { quoteId: String(data.quoteId) });
       } else if (data?.type === 'review_reminder' || data?.type === 'funds_release_reminder') {
-        navigation.navigate('Jobs');
+        navigation.navigate('Main', { screen: 'Jobs' });
       } else if (data?.type === 'job_update' || data?.type === 'job_cancelled' || data?.type === 'refund_processed' || data?.type === 'dispute') {
         if (userRole === 'contractor' || userRole === 'admin') {
           navigation.navigate('ContractorDashboard');
         } else {
-          navigation.navigate('Jobs');
+          navigation.navigate('Main', { screen: 'Jobs' });
         }
       } else if (data?.type === 'stripe_approved' || data?.type === 'stripe_action_required') {
         if (userRole === 'contractor' || userRole === 'admin') {
           navigation.navigate('ContractorDashboard');
         } else {
-          navigation.navigate('Profile');
+          navigation.navigate('Main', { screen: 'Profile' });
         }
       } else if (
         data?.type === 'affiliate_commission' ||

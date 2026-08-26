@@ -619,6 +619,74 @@ const MessagesScreen = () => {
     };
   }, []);
 
+  // ─── Load messages ─────────────────────────────────────────────────────────
+  const loadMessages = useCallback(async (convId, page = 1) => {
+    const targetCId = convId || conversationId;
+    if (!targetCId) return;
+    if (page === 1) {
+      setLoading(true);
+      shouldScrollToEndRef.current = true;
+    } else {
+      setLoadingMoreMessages(true);
+    }
+    try {
+      if (page === 1) {
+        // Mark conversation as read on backend, THEN refresh the bell
+        // badge and message count. Awaiting is important so the synthetic
+        // "new_message" notifications get cleared from the bell.
+        const { markConversationAsRead } = await import("../api");
+        try { await markConversationAsRead(targetCId); } catch {}
+        refreshUnreadMessagesCount();
+        refreshNotifications();
+      }
+
+      const data = await fetchMessages(targetCId, page, 50);
+
+      // Verify active conversation before applying state update to avoid overwriting list on tab switch
+      const activeCId = selectedConvRef.current?.conversationId || selectedConvRef.current?._id;
+      if (activeCId && activeCId !== targetCId && !targetCId.startsWith("temp-")) {
+        return;
+      }
+      const msgs = Array.isArray(data) ? data : data?.messages || [];
+      const pagination = Array.isArray(data) ? null : data?.pagination;
+      const hasMore = pagination ? pagination.hasMore : false;
+
+      setHasMoreMessages(hasMore);
+      setMessagesPage(page);
+
+      if (page === 1) {
+        setMessages(prev => {
+          const optimistic = prev.filter(m => m._isOptimistic && (m.conversationId === targetCId || m.conversationId?.startsWith("temp-")));
+          const serverMsgs = [...msgs];
+          const combined = [...serverMsgs];
+          for (const opt of optimistic) {
+            if (!combined.some(c => c._id === opt._id)) {
+              combined.push(opt);
+            }
+          }
+          return combined.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+        });
+        
+        // Immediately clear the unread dot locally to avoid UI lag
+        setConversations(prev => ({
+          ...prev,
+          [targetCId]: {
+            ...prev[targetCId],
+            unreadCount: 0
+          }
+        }));
+      } else {
+        const sortedNew = [...msgs].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+        setMessages(prev => [...sortedNew, ...prev]);
+      }
+    } catch (err) {
+      console.error("[Messages] Load error:", err);
+    } finally { 
+      setLoading(false); 
+      setLoadingMoreMessages(false);
+    }
+  }, [conversationId, currentUserId, refreshUnreadMessagesCount, refreshNotifications]);
+
   // ─── Load conversations ────────────────────────────────────────────────────
   const loadConversations = useCallback(async (pullRefresh = false) => {
     if (!currentUserId) return;
@@ -682,17 +750,15 @@ const MessagesScreen = () => {
           if (existing) setSelectedConversation(existing);
           else setSelectedConversation({ conversationId: `temp-${Date.now()}`, otherParticipant: { _id: recipientId, firstName: recipientName || "User", role: route.params?.recipientRole || "User", profilePicture: route.params?.recipientImage || "" }, messages: [], lastMessage: null });
         }
-        if (conversationId && !selectedConversation) {
+        if (conversationId) {
           const existing = Object.values(map).find((c) => c.conversationId === conversationId || c._id === conversationId);
           if (existing) setSelectedConversation(existing);
         }
       }
     } catch {} finally { setLoading(false); setRefreshing(false); }
-  }, [currentUserId, recipientId, recipientName, myContractorId, conversationId]);
+  }, [currentUserId, recipientId, recipientName, myContractorId, conversationId, selectedConversation, route.params]);
 
-  useEffect(() => { if (currentUserId) loadConversations(); }, [currentUserId]);
-
-
+  useEffect(() => { if (currentUserId) loadConversations(); }, [currentUserId, loadConversations]);
 
   // Auto-select conversation when conversationId is provided (e.g. from notification tap)
   useEffect(() => {
@@ -737,73 +803,6 @@ const MessagesScreen = () => {
       navigation.setParams({ initialMessage: undefined });
     }
   }, [route.params?.initialMessage, navigation]);
-
-  // ─── Load messages ─────────────────────────────────────────────────────────
-  const loadMessages = useCallback(async (conversationId, page = 1) => {
-    if (!conversationId) return;
-    if (page === 1) {
-      setLoading(true);
-      shouldScrollToEndRef.current = true;
-    } else {
-      setLoadingMoreMessages(true);
-    }
-    try {
-      if (page === 1) {
-        // Mark conversation as read on backend, THEN refresh the bell
-        // badge and message count. Awaiting is important so the synthetic
-        // "new_message" notifications get cleared from the bell.
-        const { markConversationAsRead } = await import("../api");
-        try { await markConversationAsRead(conversationId); } catch {}
-        refreshUnreadMessagesCount();
-        refreshNotifications();
-      }
-
-      const data = await fetchMessages(conversationId, page, 50);
-
-      // Verify active conversation before applying state update to avoid overwriting list on tab switch
-      const activeCId = selectedConvRef.current?.conversationId || selectedConvRef.current?._id;
-      if (activeCId && activeCId !== conversationId && !conversationId.startsWith("temp-")) {
-        return;
-      }
-      const msgs = Array.isArray(data) ? data : data?.messages || [];
-      const pagination = Array.isArray(data) ? null : data?.pagination;
-      const hasMore = pagination ? pagination.hasMore : false;
-
-      setHasMoreMessages(hasMore);
-      setMessagesPage(page);
-
-      if (page === 1) {
-        setMessages(prev => {
-          const optimistic = prev.filter(m => m._isOptimistic && (m.conversationId === conversationId || m.conversationId?.startsWith("temp-")));
-          const serverMsgs = [...msgs];
-          const combined = [...serverMsgs];
-          for (const opt of optimistic) {
-            if (!combined.some(c => c._id === opt._id)) {
-              combined.push(opt);
-            }
-          }
-          return combined.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-        });
-        
-        // Immediately clear the unread dot locally to avoid UI lag
-        setConversations(prev => ({
-          ...prev,
-          [conversationId]: {
-            ...prev[conversationId],
-            unreadCount: 0
-          }
-        }));
-      } else {
-        const sortedNew = [...msgs].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-        setMessages(prev => [...sortedNew, ...prev]);
-      }
-    } catch (err) {
-      console.error("[Messages] Load error:", err);
-    } finally { 
-      setLoading(false); 
-      setLoadingMoreMessages(false);
-    }
-  }, [currentUserId, refreshUnreadMessagesCount, refreshNotifications]);
 
   // ─── Re-fetch conversations/messages on app foreground ───────────────────────
   useEffect(() => {

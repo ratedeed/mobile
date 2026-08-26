@@ -190,7 +190,9 @@ export interface Notification {
   message: string;
   link?: string;
   read: boolean;
-  type?: 'new_message' | 'new_review' | 'admin_alert' | 'system_update' | 'new_quote' | 'quote_accepted' | 'quote_rejected' | 'new_lead' | 'job_update' | 'job_funded' | 'like' | 'comment' | 'quote_request' | 'tag' | 'admin_message' | 'REVIEW_ADDED' | 'system' | 'claim_approved' | 'claim_rejected' | 'license_approved' | 'license_rejected';
+  type?: 'ticket_reply' | 'ticket_closed' | 'ticket_resolved' | 'new_message' | 'new_review' | 'admin_alert' | 'system_update' | 'new_quote' | 'quote_accepted' | 'quote_rejected' | 'new_lead' | 'job_update' | 'job_funded' | 'like' | 'comment' | 'quote_request' | 'tag' | 'admin_message' | 'REVIEW_ADDED' | 'system' | 'claim_approved' | 'claim_rejected' | 'license_approved' | 'license_rejected';
+  conversationId?: string;
+  data?: any;
   createdAt?: string;
   sender?: any;
 }
