@@ -381,6 +381,8 @@ const NotificationsScreen: React.FC = () => {
       }
     } else if (path.startsWith('/affiliate')) {
       navigation.navigate('AffiliateScreen');
+    } else if (path.startsWith('/help') || path.startsWith('/my-tickets')) {
+      navigation.navigate('MyTickets');
     }
   };
 
