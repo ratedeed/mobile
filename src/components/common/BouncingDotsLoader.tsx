@@ -8,7 +8,6 @@ import {
   ViewStyle,
 } from 'react-native';
 
-// Using a fallback design token if your external Colors module isn't loaded
 const DEFAULT_COLOR = '#4F46E5'; 
 
 interface BouncingDotsLoaderProps {
@@ -37,9 +36,8 @@ const SIZE_MAP: Record<
 
 /**
  * BouncingDotsLoader
- * Three (or more) dots that bounce and scale in a staggered wave.
- * 1.2s loop, -8px translateY, 0.85→1.15 scale, 0.45→1 opacity,
- * cubic-bezier(0.25, 1, 0.5, 1) easing, 160ms stagger.
+ * Three (or more) dots that bounce and scale in a synchronized, staggered native wave.
+ * Uses 100% native Animated.delay with matched loop periods to guarantee dots NEVER desync.
  */
 export const BouncingDotsLoader: React.FC<BouncingDotsLoaderProps> = ({
   size = 'medium',
@@ -55,10 +53,8 @@ export const BouncingDotsLoader: React.FC<BouncingDotsLoaderProps> = ({
   const gapSize = gap ?? preset.gap;
   
   const half = speed / 2;
-  // Adjusted to 7.5 to make stagger exactly 160ms when speed is 1200ms
-  const stagger = speed / 7.5; 
+  const stagger = speed / 7.5; // ~160ms for 1200ms duration
 
-  // Safely regenerate/preserve animation values if dotCount changes dynamically
   const animsRef = useRef<Animated.Value[]>([]);
   if (animsRef.current.length !== dotCount) {
     animsRef.current = Array.from(
@@ -71,39 +67,41 @@ export const BouncingDotsLoader: React.FC<BouncingDotsLoaderProps> = ({
   useEffect(() => {
     const ease = Easing.bezier(0.25, 1, 0.5, 1);
     
-    const loops = anims.map((anim, i) => {
-      const loop = Animated.loop(
-        Animated.sequence([
-          Animated.timing(anim, {
-            toValue: 1,
-            duration: half,
-            easing: ease,
-            useNativeDriver: true,
-          }),
-          Animated.timing(anim, {
-            toValue: 0,
-            duration: half,
-            easing: ease,
-            useNativeDriver: true,
-          }),
-        ]),
-      );
-      
-      // Delay starting the loop to create the stagger wave effect
-      const startDelay = setTimeout(() => {
-        loop.start();
-      }, i * stagger);
+    // Reset all anim values
+    anims.forEach((anim) => anim.setValue(0));
 
-      return { loop, startDelay };
+    const totalStagger = (dotCount - 1) * stagger;
+
+    const loops = anims.map((anim, i) => {
+      const preDelay = i * stagger;
+      const postDelay = totalStagger - preDelay;
+
+      const sequence: Animated.CompositeAnimation[] = [
+        ...(preDelay > 0 ? [Animated.delay(preDelay)] : []),
+        Animated.timing(anim, {
+          toValue: 1,
+          duration: half,
+          easing: ease,
+          useNativeDriver: true,
+        }),
+        Animated.timing(anim, {
+          toValue: 0,
+          duration: half,
+          easing: ease,
+          useNativeDriver: true,
+        }),
+        ...(postDelay > 0 ? [Animated.delay(postDelay)] : []),
+      ];
+
+      const loop = Animated.loop(Animated.sequence(sequence));
+      loop.start();
+      return loop;
     });
 
     return () => {
-      loops.forEach(({ loop, startDelay }) => {
-        clearTimeout(startDelay);
-        loop.stop();
-      });
+      loops.forEach((loop) => loop.stop());
     };
-  }, [anims, half, stagger]);
+  }, [anims, half, stagger, dotCount]);
 
   return (
     <View

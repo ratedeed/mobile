@@ -146,21 +146,20 @@ const LoadingScreen = () => {
 
     // Dots bouncing (staggered wave: translateY + scale + opacity)
     const BOUNCE_DURATION = 1200;
-    const animateDot = (anim, delay) => {
-      Animated.sequence([
-        Animated.delay(delay),
-        Animated.loop(
-          Animated.sequence([
-            Animated.timing(anim, { toValue: 1, duration: BOUNCE_DURATION, useNativeDriver: true, easing: Easing.inOut(Easing.ease) }),
-            Animated.timing(anim, { toValue: 0, duration: BOUNCE_DURATION, useNativeDriver: true, easing: Easing.inOut(Easing.ease) })
-          ])
-        )
-      ]).start();
+    const animateDot = (anim, preDelay, postDelay) => {
+      Animated.loop(
+        Animated.sequence([
+          ...(preDelay > 0 ? [Animated.delay(preDelay)] : []),
+          Animated.timing(anim, { toValue: 1, duration: BOUNCE_DURATION, useNativeDriver: true, easing: Easing.inOut(Easing.ease) }),
+          Animated.timing(anim, { toValue: 0, duration: BOUNCE_DURATION, useNativeDriver: true, easing: Easing.inOut(Easing.ease) }),
+          ...(postDelay > 0 ? [Animated.delay(postDelay)] : []),
+        ])
+      ).start();
     };
 
-    animateDot(dot1, 0);
-    animateDot(dot2, 160);
-    animateDot(dot3, 320);
+    animateDot(dot1, 0, 320);
+    animateDot(dot2, 160, 160);
+    animateDot(dot3, 320, 0);
 
   }, []);
 
