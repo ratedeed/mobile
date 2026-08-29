@@ -36,15 +36,31 @@ export default function QuoteReviewScreen() {
   const [isExpired, setIsExpired] = useState(false);
   const [isUrgent, setIsUrgent] = useState(false);
 
-  const isContractorOwner = userRole === 'contractor' && Boolean(
-    quote && (
-      quote?.contractorId?.userId === userId ||
-      quote?.contractorId?._id === userId ||
-      quote?.contractor?.userId === userId ||
-      quote?.contractor?._id === userId ||
-      quote?.contractor === userId
-    )
-  );
+  const extractId = (val: any) => {
+    if (!val) return '';
+    if (typeof val === 'string') return val;
+    return (val._id || val.id || val.userId || '').toString();
+  };
+
+  const homeownerId = extractId(quote?.user) || extractId(quote?.userId);
+  const contractorUserId = 
+    extractId(quote?.contractor?.user) || 
+    extractId(quote?.contractorId?.user) || 
+    extractId(quote?.contractor?.userId) || 
+    extractId(quote?.contractorId?.userId);
+  const contractorDocId = 
+    extractId(quote?.contractor) || 
+    extractId(quote?.contractorId);
+
+  const isContractorOwner = 
+    userRole === 'contractor' || 
+    Boolean(
+      userId && (
+        (contractorUserId && contractorUserId === String(userId)) ||
+        (contractorDocId && contractorDocId === String(userId)) ||
+        (homeownerId && homeownerId !== String(userId))
+      )
+    );
 
   useEffect(() => {
     if (!quote || !quote.expiresAt) {
@@ -229,14 +245,14 @@ export default function QuoteReviewScreen() {
   const contractorImage = quote.contractor?.profilePicture || quote.contractor?.imageUrl || '';
   const contractorCategory = quote.contractor?.category || '';
   const lineItems = quote.lineItems || [];
-  const total = quote.totalAmount || quote.total || 0;
-  const totalInDollars = (total / 100).toFixed(2);
+  const total = Number(quote.totalAmount || quote.total || 0);
+  const totalInDollars = total.toFixed(2);
 
   const firstMilestone = quote?.isMilestone && quote?.milestones?.length
     ? quote.milestones.find((m: any) => m.status === 'pending' || !m.status) || quote.milestones[0]
     : null;
-  const amountToPay = firstMilestone ? firstMilestone.amount : total;
-  const amountToPayInDollars = (amountToPay / 100).toFixed(2);
+  const amountToPay = firstMilestone ? Number(firstMilestone.amount || 0) : total;
+  const amountToPayInDollars = amountToPay.toFixed(2);
 
   const isPending = (quote.status === 'pending' || quote.status === 'pending_user_approval');
 
@@ -397,7 +413,7 @@ export default function QuoteReviewScreen() {
                   ) : null}
                 </View>
                 <Text className="text-sm font-semibold text-neutral-900 dark:text-white">
-                  ${(Number(item.amount || 0) / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ${Number(item.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </Text>
               </View>
             ))}
@@ -451,7 +467,7 @@ export default function QuoteReviewScreen() {
                 </View>
                 <View className="items-end">
                   <Text className="text-sm font-bold text-neutral-900 dark:text-white">
-                    ${(milestone.amount / 100).toFixed(2)}
+                    ${Number(milestone.amount || 0).toFixed(2)}
                   </Text>
                   <Text className="text-[10px] text-neutral-400 font-medium capitalize mt-0.5">
                     {milestone.status || 'Pending'}
@@ -582,29 +598,40 @@ export default function QuoteReviewScreen() {
       {(isPending || quote.status === 'accepted') && (
         <View className="absolute bottom-0 left-0 right-0 bg-white dark:bg-neutral-900 border-t border-neutral-200 dark:border-neutral-700 px-4 py-3">
           {isContractorOwner ? (
-            <Pressable
-              onPress={async () => {
-                if (actionLoading) return;
-                setActionLoading('withdraw');
-                try {
-                  await updateQuoteStatus(quoteId!, 'withdrawn');
-                  Alert.alert('Success', 'Quote withdrawn successfully.');
-                  navigation.goBack();
-                } catch (err: any) {
-                  Alert.alert('Error', err?.message || 'Failed to withdraw quote.');
-                } finally {
-                  setActionLoading(null);
-                }
-              }}
-              disabled={actionLoading !== null}
-              className="py-3.5 rounded-xl items-center flex-row justify-center bg-neutral-900 dark:bg-neutral-800"
-            >
-              {actionLoading === 'withdraw' ? (
-                <BouncingDotsLoader size="small" color="#fff" />
-              ) : (
-                <Text className="font-bold text-sm text-white">Withdraw Quote</Text>
-              )}
-            </Pressable>
+            isPending ? (
+              <Pressable
+                onPress={async () => {
+                  if (actionLoading) return;
+                  setActionLoading('withdraw');
+                  try {
+                    await updateQuoteStatus(quoteId!, 'withdrawn');
+                    Alert.alert('Success', 'Quote withdrawn successfully.');
+                    navigation.goBack();
+                  } catch (err: any) {
+                    Alert.alert('Error', err?.message || 'Failed to withdraw quote.');
+                  } finally {
+                    setActionLoading(null);
+                  }
+                }}
+                disabled={actionLoading !== null}
+                className="py-3.5 rounded-xl items-center flex-row justify-center bg-neutral-900 dark:bg-neutral-800"
+              >
+                {actionLoading === 'withdraw' ? (
+                  <BouncingDotsLoader size="small" color="#fff" />
+                ) : (
+                  <Text className="font-bold text-sm text-white">Withdraw Quote</Text>
+                )}
+              </Pressable>
+            ) : quote.jobId ? (
+              <Pressable
+                onPress={() => (navigation as any).navigate('JobDetail', { jobId: quote.jobId })}
+                className="py-3.5 rounded-xl items-center flex-row justify-center bg-emerald-600"
+                style={{ gap: 8 }}
+              >
+                <Text className="font-bold text-sm text-white">View Active Job</Text>
+                <FontAwesome5 name="arrow-right" size={12} color="#fff" />
+              </Pressable>
+            ) : null
           ) : (
             <>
               <Pressable
