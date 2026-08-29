@@ -348,16 +348,12 @@ export default function ActiveJobsScreen() {
                       </View>
                     )}
 
-                    {['awaiting_payment', 'funded_in_progress', 'partially_funded'].includes(displayStatus) && quote.jobId && (
+                    {displayStatus === 'awaiting_payment' && quote.jobId && (
                       <Pressable
                         onPress={() => {
-                          const isFunded = ['funded_in_progress', 'partially_funded'].includes(displayStatus);
-                          const msg = isFunded
-                            ? 'This will cancel the job and refund your payment from escrow. Continue?'
-                            : 'This will cancel the job. Continue?';
                           Alert.alert(
                             'Cancel Job',
-                            msg,
+                            'This will cancel the unpaid job. Continue?',
                             [
                               { text: 'Keep Job', style: 'cancel' },
                               { text: 'Cancel Job', style: 'destructive', onPress: () => handleCancel(quote.jobId) }

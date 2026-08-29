@@ -96,6 +96,26 @@ const linking = {
       subscription.remove();
     };
   },
+  getStateFromPath(path, options) {
+    let cleanPath = path.startsWith('/') ? path : `/${path}`;
+    if (cleanPath.startsWith('http://') || cleanPath.startsWith('https://')) {
+      try {
+        const urlObj = new URL(cleanPath);
+        cleanPath = urlObj.pathname + urlObj.search;
+      } catch (e) {}
+    }
+    // Canonical web & backend alias normalizations
+    if (cleanPath.startsWith('/c/')) {
+      cleanPath = cleanPath.replace('/c/', '/contractor/');
+    } else if (cleanPath.startsWith('/contractors/')) {
+      cleanPath = cleanPath.replace('/contractors/', '/contractor/');
+    } else if (cleanPath.startsWith('/messages/') && cleanPath.split('/').filter(Boolean).length >= 2) {
+      cleanPath = cleanPath.replace('/messages/', '/chat/');
+    } else if (cleanPath.startsWith('/quote/')) {
+      cleanPath = cleanPath.replace('/quote/', '/quote-review/');
+    }
+    return require('@react-navigation/native').getStateFromPath(cleanPath, options);
+  },
   config: {
     screens: {
       Main: {

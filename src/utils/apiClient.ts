@@ -191,9 +191,9 @@ const hasAuthHeader = (headers: Record<string, string>): boolean => {
 };
 
 export const get = async (url: string, headers: Record<string, string> = {}, signal?: AbortSignal): Promise<any> => {
-  const makeRequest = async (timeoutSignal?: AbortSignal) => {
+  const makeRequest = async (timeoutSignal?: AbortSignal, isRetry = false) => {
     const currentHeaders = { ...headers };
-    if (!hasAuthHeader(headers)) {
+    if (!hasAuthHeader(headers) || isRetry) {
       const authH = await getAuthHeaders();
       Object.keys(currentHeaders).forEach(k => {
         if (k.toLowerCase() === 'authorization') delete currentHeaders[k];
@@ -203,13 +203,13 @@ export const get = async (url: string, headers: Record<string, string> = {}, sig
     return fetch(url, { method: 'GET', headers: currentHeaders, signal: timeoutSignal || signal });
   };
   const response = await executeRequest(makeRequest, 30000, signal);
-  return handleResponse(response, () => makeRequest());
+  return handleResponse(response, () => makeRequest(undefined, true));
 };
 
 export const post = async (url: string, data: any, headers: Record<string, string> = {}, signal?: AbortSignal): Promise<any> => {
-  const makeRequest = async (timeoutSignal?: AbortSignal) => {
+  const makeRequest = async (timeoutSignal?: AbortSignal, isRetry = false) => {
     const currentHeaders: Record<string, string> = { 'Content-Type': 'application/json', ...headers };
-    if (!hasAuthHeader(headers)) {
+    if (!hasAuthHeader(headers) || isRetry) {
       const authH = await getAuthHeaders();
       Object.keys(currentHeaders).forEach(k => {
         if (k.toLowerCase() === 'authorization') delete currentHeaders[k];
@@ -224,13 +224,13 @@ export const post = async (url: string, data: any, headers: Record<string, strin
     });
   };
   const response = await executeRequest(makeRequest, 30000, signal);
-  return handleResponse(response, () => makeRequest());
+  return handleResponse(response, () => makeRequest(undefined, true));
 };
 
 export const put = async (url: string, data: any, headers: Record<string, string> = {}, signal?: AbortSignal): Promise<any> => {
-  const makeRequest = async (timeoutSignal?: AbortSignal) => {
+  const makeRequest = async (timeoutSignal?: AbortSignal, isRetry = false) => {
     const currentHeaders: Record<string, string> = { 'Content-Type': 'application/json', ...headers };
-    if (!hasAuthHeader(headers)) {
+    if (!hasAuthHeader(headers) || isRetry) {
       const authH = await getAuthHeaders();
       Object.keys(currentHeaders).forEach(k => {
         if (k.toLowerCase() === 'authorization') delete currentHeaders[k];
@@ -240,13 +240,13 @@ export const put = async (url: string, data: any, headers: Record<string, string
     return fetch(url, { method: 'PUT', headers: currentHeaders, body: JSON.stringify(data), signal: timeoutSignal || signal });
   };
   const response = await executeRequest(makeRequest, 30000, signal);
-  return handleResponse(response, () => makeRequest());
+  return handleResponse(response, () => makeRequest(undefined, true));
 };
 
 export const del = async (url: string, headers: Record<string, string> = {}, signal?: AbortSignal): Promise<any> => {
-  const makeRequest = async (timeoutSignal?: AbortSignal) => {
+  const makeRequest = async (timeoutSignal?: AbortSignal, isRetry = false) => {
     const currentHeaders = { ...headers };
-    if (!hasAuthHeader(headers)) {
+    if (!hasAuthHeader(headers) || isRetry) {
       const authH = await getAuthHeaders();
       Object.keys(currentHeaders).forEach(k => {
         if (k.toLowerCase() === 'authorization') delete currentHeaders[k];
@@ -256,7 +256,7 @@ export const del = async (url: string, headers: Record<string, string> = {}, sig
     return fetch(url, { method: 'DELETE', headers: currentHeaders, signal: timeoutSignal || signal });
   };
   const response = await executeRequest(makeRequest, 30000, signal);
-  return handleResponse(response, () => makeRequest());
+  return handleResponse(response, () => makeRequest(undefined, true));
 };
 
 // ---- Normalization Helpers (Ported from web version) ----
@@ -388,6 +388,56 @@ const normalizeContractors = (list: any[]): Contractor[] => {
   return list.map(normalizeApiContractor);
 };
 
+export const normalizeQuote = (q: any): Quote => {
+  if (!q) return q;
+  if (q._normalized) return q;
+  return {
+    ...q,
+    id: q._id || q.id,
+    subtotal: (q.subtotal || 0) / 100,
+    serviceFee: (q.platformFee || q.serviceFee || 0) / 100,
+    total: (q.totalAmount || q.total || 0) / 100,
+    totalAmount: (q.totalAmount || q.total || 0) / 100,
+    quoteType: q.quoteType || 'standard',
+    diagnosticFeeCredit: (q.diagnosticFeeCredit || 0) / 100,
+    originalTotal: (q.originalTotal || 0) / 100,
+    lineItems: (q.lineItems || []).map((li: any) => ({
+      ...li,
+      amount: (li.amount || 0) / 100
+    })),
+    milestones: (q.milestones || []).map((m: any) => ({
+      ...m,
+      amount: (m.amount || 0) / 100
+    })),
+    _normalized: true
+  };
+};
+
+export const normalizeJob = (j: any): Job => {
+  if (!j) return j;
+  if (j._normalized) return j;
+  const quote = normalizeQuote(j.quote);
+  return {
+    ...j,
+    id: j._id || j.id,
+    amountFunded: (j.amountFunded || 0) / 100,
+    amount: (j.amount || 0) / 100,
+    totalAmount: j.totalAmount != null 
+      ? j.totalAmount / 100 
+      : (quote?.totalAmount ?? (j.amountFunded ? j.amountFunded / 100 : (j.amount ? j.amount / 100 : 0))),
+    quote,
+    milestones: (j.milestones || []).map((m: any) => ({
+      ...m,
+      amount: (m.amount || 0) / 100
+    })),
+    changeOrders: (j.changeOrders || []).map((co: any) => ({
+      ...co,
+      amount: (co.amount || 0) / 100
+    })),
+    _normalized: true
+  };
+};
+
 // ==========================================
 // Auth API
 // ==========================================
@@ -398,9 +448,7 @@ export const login = async (email: string, password: string): Promise<any> => {
   if (data && data.token) {
     await setSecureItem('auth_token', data.token);
     if (data.refreshToken) await setSecureItem('refresh_token', data.refreshToken);
-    const userData = { ...data.user };
-    delete userData.token;
-    delete userData.refreshToken;
+    const { token, refreshToken, socketToken, ...userData } = data;
     await AsyncStorage.setItem(USER_DATA_KEY, JSON.stringify(userData));
   }
   return data;
@@ -1153,7 +1201,8 @@ export const getStripeAccountStatus = async (): Promise<StripeConnectStatus> => 
 export const createQuote = async (quoteData: any): Promise<Quote> => {
   if (isDemoMode()) return demo.demoCreateQuote(quoteData);
   const authHeaders = await getAuthHeaders();
-  return post(`${API_BASE}/quotes`, quoteData, authHeaders);
+  const res = await post(`${API_BASE}/quotes`, quoteData, authHeaders);
+  return normalizeQuote(res);
 };
 
 export const getContractorLeads = async (): Promise<Lead[]> => {
@@ -1171,13 +1220,15 @@ export const updateLeadStatus = async (leadId: string, status: 'new' | 'contacte
 export const getContractorQuotes = async (): Promise<Quote[]> => {
   if (isDemoMode()) return demo.demoGetContractorQuotes();
   const authHeaders = await getAuthHeaders();
-  return get(`${API_BASE}/quotes`, authHeaders);
+  const res = await get(`${API_BASE}/quotes`, authHeaders);
+  return Array.isArray(res) ? res.map(normalizeQuote) : res;
 };
 
 export const getUserQuotes = async (): Promise<Quote[]> => {
   if (isDemoMode()) return demo.demoGetUserQuotes();
   const authHeaders = await getAuthHeaders();
-  return get(`${API_BASE}/quotes`, authHeaders);
+  const res = await get(`${API_BASE}/quotes`, authHeaders);
+  return Array.isArray(res) ? res.map(normalizeQuote) : res;
 };
 
 export const createCheckoutSession = async (quoteId: string, milestoneId?: string): Promise<{ url: string }> => { 
@@ -1189,7 +1240,8 @@ export const createCheckoutSession = async (quoteId: string, milestoneId?: strin
 export const getContractorJobs = async (): Promise<Job[]> => {
   if (isDemoMode()) return demo.demoGetContractorJobs();
   const authHeaders = await getAuthHeaders();
-  return get(`${API_BASE}/jobs`, authHeaders);
+  const res = await get(`${API_BASE}/jobs`, authHeaders);
+  return Array.isArray(res) ? res.map(normalizeJob) : res;
 };
 
 export const releaseFunds = async (jobId: string, milestoneId?: string): Promise<any> => {
@@ -1219,7 +1271,7 @@ export const cancelJob = async (jobId: string, reason?: string): Promise<any> =>
 export const refundJob = async (jobId: string, amount?: number, reason?: string): Promise<any> => {
   if (isDemoMode()) return demo.demoRefundJob(jobId, amount, reason);
   const authHeaders = await getAuthHeaders();
-  return post(`${API_BASE}/jobs/${jobId}/refund`, { amount, reason }, authHeaders);
+  return post(`${API_BASE}/jobs/${jobId}/refund`, { amount: amount != null ? Math.round(amount * 100) : undefined, reason }, authHeaders);
 };
 
 export const createChangeOrder = async (jobId: string, data: { title: string; description: string; amount: number; coType?: 'addition' | 'deduction' }): Promise<any> => {
@@ -1243,7 +1295,8 @@ export const declineChangeOrder = async (jobId: string, changeOrderId: string): 
 export const getUserJobs = async (): Promise<Job[]> => {
   if (isDemoMode()) return demo.demoGetUserJobs();
   const authHeaders = await getAuthHeaders();
-  return get(`${API_BASE}/jobs`, authHeaders);
+  const res = await get(`${API_BASE}/jobs`, authHeaders);
+  return Array.isArray(res) ? res.map(normalizeJob) : res;
 };
 
 
@@ -1327,7 +1380,14 @@ export const deleteAccount = async (): Promise<any> => {
 
 export const resetPassword = async (token: string, newPassword: string): Promise<any> => {
   if (isDemoMode()) return demo.demoResetPassword();
-  return post(`${API_BASE}/users/reset-password`, { token, newPassword });
+  const data = await post(`${API_BASE}/users/reset-password`, { token, newPassword });
+  if (data && data.token) {
+    await setSecureItem('auth_token', data.token);
+    if (data.refreshToken) await setSecureItem('refresh_token', data.refreshToken);
+    const { token: _t, refreshToken: _r, socketToken: _s, ...userData } = data;
+    await AsyncStorage.setItem(USER_DATA_KEY, JSON.stringify(userData));
+  }
+  return data;
 };
 
 // ==========================================
@@ -1390,7 +1450,8 @@ export const appleSignIn = async (data: { identityToken: string; appleUserIdenti
 export const getQuote = async (quoteId: string): Promise<any> => {
   if (isDemoMode()) return demo.demoGetQuote(quoteId);
   const authHeaders = await getAuthHeaders();
-  return get(`${API_BASE}/quotes/${quoteId}`, authHeaders);
+  const res = await get(`${API_BASE}/quotes/${quoteId}`, authHeaders);
+  return normalizeQuote(res);
 };
 
 export const updateQuoteStatus = async (quoteId: string, status: 'accepted' | 'rejected' | 'cancelled' | 'withdrawn'): Promise<any> => {
@@ -1428,7 +1489,8 @@ export const cancelDispute = async (jobId: string): Promise<any> => {
 export const getJobById = async (jobId: string): Promise<any> => {
   if (isDemoMode()) return demo.demoGetJobById(jobId);
   const authHeaders = await getAuthHeaders();
-  return get(`${API_BASE}/jobs/${jobId}`, authHeaders);
+  const res = await get(`${API_BASE}/jobs/${jobId}`, authHeaders);
+  return normalizeJob(res);
 };
 
 export const uploadProgressPhoto = async (jobId: string, url: string): Promise<any> => {

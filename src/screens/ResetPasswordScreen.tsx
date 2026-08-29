@@ -71,10 +71,10 @@ export default function ResetPasswordScreen() {
     try {
       await resetPassword(token, newPassword);
       setStatus('success');
-      setMessage('Password reset successfully!');
+      setMessage('Password reset successfully! Redirecting...');
       setTimeout(() => {
-        navigation.navigate('Login' as never);
-      }, 2000);
+        navigation.navigate('Main' as never);
+      }, 1500);
     } catch (error: any) {
       setStatus('error');
       setMessage(error?.message || 'Error resetting password. Please try again.');

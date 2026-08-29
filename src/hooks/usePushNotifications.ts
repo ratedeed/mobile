@@ -297,6 +297,14 @@ export const usePushNotifications = () => {
         } else {
           navigation.navigate('Main', { screen: 'Profile' });
         }
+      } else if (data?.type === 'appointment_reminder' || data?.type === 'scheduled_visit') {
+        if (data?.conversationId) {
+          navigation.navigate('ChatScreen', { conversationId: String(data.conversationId) });
+        } else if (userRole === 'contractor' || userRole === 'admin') {
+          navigation.navigate('ContractorDashboard');
+        } else {
+          navigation.navigate('Main', { screen: 'Jobs' });
+        }
       } else if (
         data?.type === 'affiliate_commission' ||
         data?.type === 'affiliate_payout_approved' ||
@@ -317,6 +325,36 @@ export const usePushNotifications = () => {
         handleRouteData(data);
       }
     });
+
+    // Native Firebase Messaging background notification tap listener
+    let unsubscribeMessagingOpenedApp: (() => void) | undefined;
+    try {
+      unsubscribeMessagingOpenedApp = messaging().onNotificationOpenedApp(remoteMessage => {
+        const data = remoteMessage?.data;
+        if (data) {
+          if (!isAuthenticated || !userRole) {
+            pendingNotificationRef.current = data;
+          } else {
+            handleRouteData(data);
+          }
+        }
+      });
+    } catch (e) {}
+
+    // Native Firebase Messaging cold-start notification check
+    const checkFirebaseInitialNotification = async () => {
+      try {
+        const remoteMessage = await messaging().getInitialNotification();
+        if (remoteMessage?.data) {
+          if (!isAuthenticated || !userRole) {
+            pendingNotificationRef.current = remoteMessage.data;
+          } else {
+            handleRouteData(remoteMessage.data);
+          }
+        }
+      } catch (e) {}
+    };
+    checkFirebaseInitialNotification();
 
     const checkInitialNotification = async () => {
       if (hasHandledInitialNotificationRef.current) return;
@@ -339,7 +377,10 @@ export const usePushNotifications = () => {
 
     checkInitialNotification();
 
-    return () => { responseListener.remove(); };
+    return () => {
+      responseListener.remove();
+      if (unsubscribeMessagingOpenedApp) unsubscribeMessagingOpenedApp();
+    };
   }, [navigation, isAuthenticated, userRole]);
 
   return { expoPushToken, notification };

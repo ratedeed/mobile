@@ -503,6 +503,10 @@ const MessagesScreen = () => {
     const handleRead = ({ messageId }) => setMessages((prev) => prev.map((m) => (m._id === messageId ? { ...m, read: true } : m)));
 
     const handleMessagesRead = ({ conversationId, readerId }) => {
+      const activeConvId = selectedConvRef.current?.conversationId || selectedConvRef.current?._id;
+      if (conversationId && activeConvId && conversationId.toString() !== activeConvId.toString()) {
+        return;
+      }
       setMessages((prev) => prev.map((m) => {
         const sId = resolveId(m.senderId);
         if (sId !== readerId) {

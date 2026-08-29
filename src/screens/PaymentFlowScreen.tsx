@@ -23,6 +23,7 @@ export default function PaymentFlowScreen() {
 
   const quoteId = route.params?.quoteId || '';
   const milestoneId = route.params?.milestoneId || '';
+  const isMilestone = route.params?.isMilestone || false;
   const contractorName = route.params?.contractorName || 'Contractor';
   const quoteDescription = route.params?.description || '';
 
@@ -31,7 +32,7 @@ export default function PaymentFlowScreen() {
   const [applePayAvailable, setApplePayAvailable] = useState(false);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const rawTotal = route.params?.totalAmount || 0;
-  const initialCents = rawTotal > 0 && rawTotal < 100 ? rawTotal * 100 : rawTotal;
+  const initialCents = Math.round(Number(rawTotal || 0) * 100);
   const [paymentAmount, setPaymentAmount] = useState<number>(initialCents);
   const [loadingPaymentIntent, setLoadingPaymentIntent] = useState(true);
   const [verifying, setVerifying] = useState(false);
@@ -111,7 +112,17 @@ export default function PaymentFlowScreen() {
           setIsPolling(false);
           return;
         }
-        if (quote && (quote.status === 'accepted' || quote.status === 'paid' || (quote.jobId && quote.jobStatus && quote.jobStatus !== 'awaiting_payment'))) {
+        let isPaymentConfirmed = false;
+        if (quote) {
+          if (isMilestone && milestoneId) {
+            const m = quote.milestones?.find((item: any) => (item._id || item.id)?.toString() === milestoneId.toString());
+            isPaymentConfirmed = m?.status === 'funded';
+          } else {
+            isPaymentConfirmed = quote.status === 'accepted' || quote.status === 'paid' || (quote.jobId && quote.jobStatus && quote.jobStatus !== 'awaiting_payment');
+          }
+        }
+
+        if (isPaymentConfirmed) {
           if (quote.conversationId) {
             try {
               const { sendMessage } = await import('../api');
@@ -399,7 +410,7 @@ export default function PaymentFlowScreen() {
         {/* Step 0: Review */}
         {currentStep === 0 && (() => {
           const rawTotalParam = route.params?.totalAmount || 0;
-          const baseAmount = rawTotalParam > 0 && rawTotalParam < 100 ? rawTotalParam * 100 : rawTotalParam;
+          const baseAmount = Math.round(Number(rawTotalParam || 0) * 100);
           const processingFee = paymentAmount > baseAmount ? (paymentAmount - baseAmount) : Math.round(baseAmount * 0.029 + 30);
 
           return (

@@ -344,7 +344,9 @@ export default function JobDetailScreen() {
       if (isContractor) {
         warning = 'The homeowner will be fully refunded. This will count against your cancellation record on your public profile.';
       } else {
-        warning = 'This will cancel the job and refund your payment from escrow.';
+        warning = 'Cannot cancel an active funded job directly. Please raise a dispute to resolve issues or request a refund.';
+        Alert.alert('Active Funded Job', warning, [{ text: 'OK' }]);
+        return;
       }
     }
     return handleAction('cancel this job', () => cancelJob(jobId), 'Job cancelled successfully.', warning);

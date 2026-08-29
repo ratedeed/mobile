@@ -14,8 +14,8 @@ export function parsePriceRange(priceStr: string) {
     return { min: '', max: '', contactForQuote: true };
   }
 
-  // Look for two numbers
-  const numbers = clean.replace(/,/g, '').match(/\d+/g);
+  // Look for two numbers (handles integers and decimals like 75.50 - 150.00)
+  const numbers = clean.replace(/,/g, '').match(/\d+(?:\.\d+)?/g);
   if (numbers && numbers.length >= 2) {
     return { min: numbers[0], max: numbers[1], contactForQuote: false };
   } else if (numbers && numbers.length === 1) {
@@ -35,14 +35,14 @@ export function formatPriceRange(minPrice: string, maxPrice: string, contactForQ
   if (contactForQuote) {
     return 'Contact for Quote';
   }
-  const min = (minPrice || '').replace(/[^0-9]/g, '').trim();
-  const max = (maxPrice || '').replace(/[^0-9]/g, '').trim();
+  const min = (minPrice || '').replace(/[^0-9.]/g, '').trim();
+  const max = (maxPrice || '').replace(/[^0-9.]/g, '').trim();
   if (min && max) {
-    return `$${Number(min).toLocaleString()} – $${Number(max).toLocaleString()}`;
+    return `$${Number(min).toLocaleString(undefined, { minimumFractionDigits: min.includes('.') ? 2 : 0, maximumFractionDigits: 2 })} – $${Number(max).toLocaleString(undefined, { minimumFractionDigits: max.includes('.') ? 2 : 0, maximumFractionDigits: 2 })}`;
   } else if (min) {
-    return `$${Number(min).toLocaleString()}+`;
+    return `$${Number(min).toLocaleString(undefined, { minimumFractionDigits: min.includes('.') ? 2 : 0, maximumFractionDigits: 2 })}+`;
   } else if (max) {
-    return `Up to $${Number(max).toLocaleString()}`;
+    return `Up to $${Number(max).toLocaleString(undefined, { minimumFractionDigits: max.includes('.') ? 2 : 0, maximumFractionDigits: 2 })}`;
   }
   return 'Contact for Quote';
 }

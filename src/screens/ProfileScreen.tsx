@@ -445,26 +445,15 @@ const ProfileScreen: React.FC = () => {
     if (!emailNew || !emailPassword) { setEmailMessage({ type: 'error', text: 'New email and current password required.' }); return; }
     setEmailSaving(true);
     try {
-      if (!auth.currentUser) throw new Error('You must be logged in.');
-      await reauthenticateWithCredential(auth.currentUser, EmailAuthProvider.credential(user?.email || '', emailPassword));
-      // Trigger Firebase email change verification directly on mobile
-      await verifyBeforeUpdateEmail(auth.currentUser, emailNew.trim());
-      
-      // Log out immediately from both backend and frontend store/state
-      await logout();
-
-      // Close sheet and reset states
-      setActiveSheet(null);
-      setEmailNew('');
-      setEmailPassword('');
-
-      // Redirect to Login Screen with param
-      (navigation as any).navigate('Login', { verified: true });
+      await requestEmailChange(emailNew.trim(), emailPassword);
+      setEmailMessage({ type: 'success', text: 'Verification link sent to your new email. Please check your inbox to confirm the change.' });
+      setTimeout(() => {
+        setActiveSheet(null);
+        setEmailNew('');
+        setEmailPassword('');
+      }, 3000);
     } catch (err: any) {
-      if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') setEmailMessage({ type: 'error', text: 'Current password is incorrect.' });
-      else if (err.code === 'auth/email-already-in-use') setEmailMessage({ type: 'error', text: 'This email is already in use.' });
-      else if (err.code === 'auth/too-many-requests') setEmailMessage({ type: 'error', text: 'Too many attempts. Try again later.' });
-      else setEmailMessage({ type: 'error', text: err?.message || 'Failed.' });
+      setEmailMessage({ type: 'error', text: err?.message || 'Failed to request email change.' });
     } finally { setEmailSaving(false); }
   };
 

@@ -207,13 +207,18 @@ export default function EarningsScreen() {
                 </View>
               )}
             </View>
-            {item.type === 'payment' && (
-              <View className="mt-1 flex-row flex-wrap" style={{ gap: 8 }}>
-                <Text className="text-[10px] text-neutral-400 dark:text-neutral-500">Gross: {formatCurrency(amount)}</Text>
-                <Text className="text-[10px] text-neutral-400 dark:text-neutral-500">Fee ({feePercent}%): {formatCurrency(amount * (feePercent / 100))}</Text>
-                <Text className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">Net ({100 - feePercent}%): {formatCurrency(amount * (1 - feePercent / 100))}</Text>
-              </View>
-            )}
+            {item.type === 'payment' && (() => {
+              const netPayout = amount;
+              const grossAmount = feePercent > 0 && feePercent < 100 ? netPayout / (1 - feePercent / 100) : netPayout;
+              const feeAmount = Math.max(0, grossAmount - netPayout);
+              return (
+                <View className="mt-1 flex-row flex-wrap" style={{ gap: 8 }}>
+                  <Text className="text-[10px] text-neutral-400 dark:text-neutral-500">Gross: {formatCurrency(grossAmount)}</Text>
+                  <Text className="text-[10px] text-neutral-400 dark:text-neutral-500">Fee ({feePercent}%): {formatCurrency(feeAmount)}</Text>
+                  <Text className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">Net: {formatCurrency(netPayout)}</Text>
+                </View>
+              );
+            })()}
           </View>
 
           {/* Amount */}

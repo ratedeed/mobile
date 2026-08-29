@@ -413,7 +413,7 @@ export default function QuoteReviewScreen() {
                   </View>
                 </View>
                 <Text className="text-sm font-bold text-emerald-700 dark:text-emerald-300">
-                  -${(Number(quote.diagnosticFeeCredit) / (quote.diagnosticFeeCredit > 1000 ? 100 : 1)).toFixed(2)}
+                  -${Number(quote.diagnosticFeeCredit || 0).toFixed(2)}
                 </Text>
               </View>
             )}
@@ -587,7 +587,7 @@ export default function QuoteReviewScreen() {
                 if (actionLoading) return;
                 setActionLoading('withdraw');
                 try {
-                  await updateQuoteStatus(quoteId!, 'cancelled');
+                  await updateQuoteStatus(quoteId!, 'withdrawn');
                   Alert.alert('Success', 'Quote withdrawn successfully.');
                   navigation.goBack();
                 } catch (err: any) {
