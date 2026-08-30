@@ -32,7 +32,7 @@ export default function PaymentFlowScreen() {
   const [applePayAvailable, setApplePayAvailable] = useState(false);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const rawTotal = route.params?.totalAmount || 0;
-  const initialCents = Math.round(Number(rawTotal || 0) * 100);
+  const initialCents = Math.round(Number(rawTotal || 0));
   const [paymentAmount, setPaymentAmount] = useState<number>(initialCents);
   const [loadingPaymentIntent, setLoadingPaymentIntent] = useState(true);
   const [verifying, setVerifying] = useState(false);
@@ -410,7 +410,7 @@ export default function PaymentFlowScreen() {
         {/* Step 0: Review */}
         {currentStep === 0 && (() => {
           const rawTotalParam = route.params?.totalAmount || 0;
-          const baseAmount = Math.round(Number(rawTotalParam || 0) * 100);
+          const baseAmount = Math.round(Number(rawTotalParam || 0));
           const processingFee = paymentAmount > baseAmount ? (paymentAmount - baseAmount) : Math.round(baseAmount * 0.029 + 30);
 
           return (

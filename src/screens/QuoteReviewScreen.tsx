@@ -246,13 +246,13 @@ export default function QuoteReviewScreen() {
   const contractorCategory = quote.contractor?.category || '';
   const lineItems = quote.lineItems || [];
   const total = Number(quote.totalAmount || quote.total || 0);
-  const totalInDollars = total.toFixed(2);
+  const totalInDollars = (total / 100).toFixed(2);
 
   const firstMilestone = quote?.isMilestone && quote?.milestones?.length
     ? quote.milestones.find((m: any) => m.status === 'pending' || !m.status) || quote.milestones[0]
     : null;
   const amountToPay = firstMilestone ? Number(firstMilestone.amount || 0) : total;
-  const amountToPayInDollars = amountToPay.toFixed(2);
+  const amountToPayInDollars = (amountToPay / 100).toFixed(2);
 
   const isPending = (quote.status === 'pending' || quote.status === 'pending_user_approval');
 
@@ -413,7 +413,7 @@ export default function QuoteReviewScreen() {
                   ) : null}
                 </View>
                 <Text className="text-sm font-semibold text-neutral-900 dark:text-white">
-                  ${Number(item.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ${(Number(item.amount || 0) / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </Text>
               </View>
             ))}
@@ -429,7 +429,7 @@ export default function QuoteReviewScreen() {
                   </View>
                 </View>
                 <Text className="text-sm font-bold text-emerald-700 dark:text-emerald-300">
-                  -${Number(quote.diagnosticFeeCredit || 0).toFixed(2)}
+                  -${(Number(quote.diagnosticFeeCredit || 0) / 100).toFixed(2)}
                 </Text>
               </View>
             )}
@@ -467,7 +467,7 @@ export default function QuoteReviewScreen() {
                 </View>
                 <View className="items-end">
                   <Text className="text-sm font-bold text-neutral-900 dark:text-white">
-                    ${Number(milestone.amount || 0).toFixed(2)}
+                    ${(Number(milestone.amount || 0) / 100).toFixed(2)}
                   </Text>
                   <Text className="text-[10px] text-neutral-400 font-medium capitalize mt-0.5">
                     {milestone.status || 'Pending'}

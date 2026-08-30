@@ -617,13 +617,12 @@ export default function JobDetailScreen() {
               ))}
               <View className="h-px bg-neutral-200 dark:bg-neutral-700 my-2" />
               {(() => {
-                const totalCents = quote.totalAmount || quote.total || 0;
-                const totalVal = totalCents > 0 && totalCents < 100 ? totalCents * 100 : totalCents;
+                const totalVal = quote.totalAmount || quote.total || 0;
                 const serviceFeeVal = (quote.serviceFee && quote.serviceFee > 0)
-                  ? (quote.serviceFee < 100 && totalVal >= 100 ? quote.serviceFee * 100 : quote.serviceFee)
+                  ? quote.serviceFee
                   : Math.round(totalVal * (feePercent / 100));
                 const subtotalVal = (quote.subtotal && quote.subtotal > 0)
-                  ? (quote.subtotal < 100 && totalVal >= 100 ? quote.subtotal * 100 : quote.subtotal)
+                  ? quote.subtotal
                   : Math.max(0, totalVal - serviceFeeVal);
                 const displayFeePercent = totalVal > 0 ? Math.round((serviceFeeVal / totalVal) * 100) || feePercent : feePercent;
 

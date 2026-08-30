@@ -265,19 +265,16 @@ export default function AnalyticsTab({ jobs, quotes, reviews, profile, loading, 
       const date = j.completedAt ? new Date(j.completedAt).toISOString().split('T')[0] : (j.updatedAt ? new Date(j.updatedAt).toISOString().split('T')[0] : '');
       const clientName = (j.client?.firstName ? `${j.client.firstName} ${j.client.lastName || ''}` : (j.user?.firstName ? `${j.user.firstName} ${j.user.lastName || ''}` : 'Client')).replace(/,/g, '');
       const category = (j.category || j.serviceType || 'General Service').replace(/,/g, '');
-      let rawGrossCents = getJobAmount(j);
-      if (j._normalized && rawGrossCents < 100) {
-        rawGrossCents = rawGrossCents * 100;
-      }
+      const rawGrossCents = getJobAmount(j);
       const grossVal = rawGrossCents / 100;
       const gross = grossVal.toFixed(2);
       
       let feeVal = 0;
       if (j.quote && (typeof j.quote.serviceFee === 'number' || typeof j.quote.platformFee === 'number')) {
         const qFee = j.quote.serviceFee ?? j.quote.platformFee;
-        feeVal = qFee > grossVal ? qFee / 100 : qFee;
+        feeVal = qFee / 100;
       } else if (typeof j.platformFee === 'number' && j.platformFee > 0) {
-        feeVal = j.platformFee > grossVal ? j.platformFee / 100 : j.platformFee;
+        feeVal = j.platformFee / 100;
       } else {
         feeVal = grossVal * 0.05;
       }

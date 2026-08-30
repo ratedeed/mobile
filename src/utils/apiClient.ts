@@ -391,23 +391,28 @@ const normalizeContractors = (list: any[]): Contractor[] => {
 export const normalizeQuote = (q: any): Quote => {
   if (!q) return q;
   if (q._normalized) return q;
+  const rawTotal = q.totalAmount != null ? Number(q.totalAmount) : (q.total != null ? Number(q.total) : 0);
+  const rawFee = q.platformFee != null ? Number(q.platformFee) : (q.serviceFee != null ? Number(q.serviceFee) : 0);
+  const rawSubtotal = q.subtotal != null ? Number(q.subtotal) : (rawTotal > 0 && rawFee > 0 ? rawTotal - rawFee : rawTotal);
+
   return {
     ...q,
     id: q._id || q.id,
-    subtotal: (q.subtotal || 0) / 100,
-    serviceFee: (q.platformFee || q.serviceFee || 0) / 100,
-    total: (q.totalAmount || q.total || 0) / 100,
-    totalAmount: (q.totalAmount || q.total || 0) / 100,
+    subtotal: rawSubtotal,
+    platformFee: rawFee,
+    serviceFee: rawFee,
+    total: rawTotal,
+    totalAmount: rawTotal,
     quoteType: q.quoteType || 'standard',
-    diagnosticFeeCredit: (q.diagnosticFeeCredit || 0) / 100,
-    originalTotal: (q.originalTotal || 0) / 100,
+    diagnosticFeeCredit: q.diagnosticFeeCredit != null ? Number(q.diagnosticFeeCredit) : 0,
+    originalTotal: q.originalTotal != null ? Number(q.originalTotal) : rawTotal,
     lineItems: (q.lineItems || []).map((li: any) => ({
       ...li,
-      amount: (li.amount || 0) / 100
+      amount: li.amount != null ? Number(li.amount) : 0
     })),
     milestones: (q.milestones || []).map((m: any) => ({
       ...m,
-      amount: (m.amount || 0) / 100
+      amount: m.amount != null ? Number(m.amount) : 0
     })),
     _normalized: true
   };
@@ -417,22 +422,25 @@ export const normalizeJob = (j: any): Job => {
   if (!j) return j;
   if (j._normalized) return j;
   const quote = normalizeQuote(j.quote);
+  const rawAmountFunded = j.amountFunded != null ? Number(j.amountFunded) : (j.amount != null ? Number(j.amount) : 0);
+  const rawTotal = j.totalAmount != null 
+    ? Number(j.totalAmount) 
+    : (quote?.totalAmount ?? (rawAmountFunded || 0));
+
   return {
     ...j,
     id: j._id || j.id,
-    amountFunded: (j.amountFunded || 0) / 100,
-    amount: (j.amount || 0) / 100,
-    totalAmount: j.totalAmount != null 
-      ? j.totalAmount / 100 
-      : (quote?.totalAmount ?? (j.amountFunded ? j.amountFunded / 100 : (j.amount ? j.amount / 100 : 0))),
+    amountFunded: rawAmountFunded,
+    amount: j.amount != null ? Number(j.amount) : rawAmountFunded,
+    totalAmount: rawTotal,
     quote,
     milestones: (j.milestones || []).map((m: any) => ({
       ...m,
-      amount: (m.amount || 0) / 100
+      amount: m.amount != null ? Number(m.amount) : 0
     })),
     changeOrders: (j.changeOrders || []).map((co: any) => ({
       ...co,
-      amount: (co.amount || 0) / 100
+      amount: co.amount != null ? Number(co.amount) : 0
     })),
     _normalized: true
   };
