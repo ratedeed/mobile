@@ -10,14 +10,14 @@ import {
   Linking,
   useColorScheme,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { register, appleSignIn } from '../api';
 import { auth } from '../firebaseConfig';
 import { createUserWithEmailAndPassword, sendEmailVerification, deleteUser } from 'firebase/auth';
 import Toast from 'react-native-toast-message';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import { useAuth } from '../context/AuthContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BouncingDotsLoader } from '../components/common';
