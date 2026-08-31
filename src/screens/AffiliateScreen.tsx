@@ -27,6 +27,7 @@ export default function AffiliateScreen() {
   const [referralLink, setReferralLink] = useState('');
   const [referralCode, setReferralCode] = useState('');
   const [affiliateBalance, setAffiliateBalance] = useState(0);
+  const [pendingBalance, setPendingBalance] = useState(0);
   const [totalEarned, setTotalEarned] = useState(0);
   const [hasStripeConnected, setHasStripeConnected] = useState(false);
   const [contractors, setContractors] = useState<any[]>([]);
@@ -58,6 +59,7 @@ export default function AffiliateScreen() {
         setReferralLink(res.referralLink || '');
         setHasStripeConnected(!!res.hasStripeConnected);
         setAffiliateBalance(res.affiliateBalance || 0);
+        setPendingBalance(res.pendingBalance || 0);
         setTotalEarned(res.totalAffiliateEarned || 0);
         setContractors(res.referredContractors || []);
         setEarnings(res.earnings || []);
@@ -173,10 +175,10 @@ export default function AffiliateScreen() {
 
       {/* Stripe Connection Alert Banner */}
       {!hasStripeConnected && (
-        <View className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-5 flex-row items-center justify-between">
+        <View className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-2xl p-4 mb-5 flex-row items-center justify-between">
           <View className="flex-1 mr-3">
-            <Text className="text-amber-900 font-bold text-xs">Stripe Account Required</Text>
-            <Text className="text-amber-700 text-[11px] mt-0.5">Connect your Stripe account to earn & receive automated payouts.</Text>
+            <Text className="text-amber-900 dark:text-amber-200 font-bold text-xs">Stripe Account Required</Text>
+            <Text className="text-amber-700 dark:text-amber-300 text-[11px] mt-0.5">Connect your Stripe account to earn & receive automated payouts.</Text>
           </View>
           <TouchableOpacity
             onPress={handleConnectStripe}
@@ -192,6 +194,28 @@ export default function AffiliateScreen() {
         </View>
       )}
 
+      {/* Pending Balance Banner if applicable */}
+      {pendingBalance > 0 && (
+        <View className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 rounded-2xl p-4 mb-5 flex-row items-center justify-between">
+          <View className="flex-1 mr-3">
+            <Text className="text-amber-900 dark:text-amber-200 font-bold text-xs uppercase">Pending Earnings</Text>
+            <Text className="text-amber-950 dark:text-amber-100 text-2xl font-black mt-0.5">${(pendingBalance / 100).toFixed(2)}</Text>
+            <Text className="text-amber-700 dark:text-amber-300 text-[11px] mt-0.5">
+              {!hasStripeConnected ? 'Connect your bank account to unlock and credit these earnings.' : 'Earnings being processed.'}
+            </Text>
+          </View>
+          {!hasStripeConnected && (
+            <TouchableOpacity
+              onPress={handleConnectStripe}
+              disabled={connectingStripe}
+              className="bg-amber-600 px-3 py-2 rounded-xl items-center justify-center"
+            >
+              <Text className="text-white font-bold text-xs">Unlock</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
       {/* Balance Card */}
       <View className="bg-white dark:bg-neutral-900 rounded-2xl p-5 mb-5 border border-slate-200 dark:border-neutral-800 shadow-sm flex-row items-center justify-between">
         <View>
@@ -202,11 +226,11 @@ export default function AffiliateScreen() {
           </Text>
         </View>
         <TouchableOpacity
-          onPress={() => setShowModal(true)}
-          disabled={!hasStripeConnected || affiliateBalance < 1000}
-          className={`px-4 py-3 rounded-xl ${!hasStripeConnected || affiliateBalance < 1000 ? 'bg-slate-200 dark:bg-neutral-800' : 'bg-indigo-600'}`}
+          onPress={!hasStripeConnected ? handleConnectStripe : () => setShowModal(true)}
+          disabled={hasStripeConnected && affiliateBalance < 1000}
+          className={`px-4 py-3 rounded-xl ${hasStripeConnected && affiliateBalance < 1000 ? 'bg-slate-200 dark:bg-neutral-800' : 'bg-indigo-600'}`}
         >
-          <Text className={`font-bold text-xs ${!hasStripeConnected || affiliateBalance < 1000 ? 'text-slate-500 dark:text-neutral-500' : 'text-white'}`}>
+          <Text className={`font-bold text-xs ${hasStripeConnected && affiliateBalance < 1000 ? 'text-slate-500 dark:text-neutral-500' : 'text-white'}`}>
             {!hasStripeConnected ? 'Connect Stripe' : affiliateBalance < 1000 ? 'Min $10' : 'Withdraw'}
           </Text>
         </TouchableOpacity>
@@ -276,25 +300,30 @@ export default function AffiliateScreen() {
               <FontAwesome5 name="users" size={32} color="#94a3b8" />
               <Text className="text-slate-700 dark:text-neutral-300 font-bold text-sm mt-3">No Referrals Yet</Text>
               <Text className="text-slate-400 dark:text-neutral-500 text-xs text-center mt-1">
-                Share your referral link with contractors to start earning 1% commission on their completed projects.
+                Share your referral link with contractors to start earning 1% of the 5% platform fee on their completed projects.
               </Text>
             </View>
           ) : (
-            contractors.map((c, idx) => (
-              <View key={idx} className="bg-white dark:bg-neutral-900 rounded-2xl p-4 border border-slate-200 dark:border-neutral-800 flex-row items-center justify-between">
-                <View>
-                  <Text className="text-slate-900 dark:text-white font-bold text-sm">{c.name || 'Contractor'}</Text>
-                  <Text className="text-slate-400 text-xs">Joined {new Date(c.joinedAt).toLocaleDateString()}</Text>
-                </View>
-                <View className="items-end">
-                  <View className={`px-2.5 py-0.5 rounded-full ${c.daysRemaining > 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-500'}`}>
-                    <Text className={`text-[10px] font-bold ${c.daysRemaining > 0 ? 'text-emerald-700' : 'text-slate-500'}`}>
-                      {c.daysRemaining > 0 ? `${c.daysRemaining} days left` : 'Window expired'}
-                    </Text>
+            contractors.map((c, idx) => {
+              const name = c.companyName || c.name || 'Contractor';
+              const dateVal = c.signupDate || c.joinedAt || c.createdAt;
+              const dateStr = dateVal ? new Date(dateVal).toLocaleDateString() : 'Recently';
+              return (
+                <View key={c.id || c._id || idx} className="bg-white dark:bg-neutral-900 rounded-2xl p-4 border border-slate-200 dark:border-neutral-800 flex-row items-center justify-between">
+                  <View className="flex-1 mr-3">
+                    <Text className="text-slate-900 dark:text-white font-bold text-sm">{name}</Text>
+                    <Text className="text-slate-400 dark:text-neutral-500 text-xs mt-0.5">Joined {dateStr} {c.category ? `• ${c.category}` : ''}</Text>
+                  </View>
+                  <View className="items-end">
+                    <View className={`px-2.5 py-0.5 rounded-full ${c.daysRemaining > 0 ? 'bg-emerald-50 dark:bg-emerald-950/40' : 'bg-slate-100 dark:bg-neutral-800'}`}>
+                      <Text className={`text-[10px] font-bold ${c.daysRemaining > 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-slate-500 dark:text-neutral-400'}`}>
+                        {c.daysRemaining > 0 ? `${c.daysRemaining} days left` : 'Window expired'}
+                      </Text>
+                    </View>
                   </View>
                 </View>
-              </View>
-            ))
+              );
+            })
           )}
         </View>
       )}
@@ -310,18 +339,28 @@ export default function AffiliateScreen() {
               </Text>
             </View>
           ) : (
-            earnings.map((e, idx) => (
-              <View key={idx} className="bg-white dark:bg-neutral-900 rounded-2xl p-4 border border-slate-200 dark:border-neutral-800 flex-row items-center justify-between">
-                <View>
-                  <Text className="text-slate-900 dark:text-white font-bold text-sm">{e.contractorName || 'Commission'}</Text>
-                  <Text className="text-slate-400 text-xs">{new Date(e.createdAt).toLocaleDateString()} • Job #{e.jobId?.slice(-6) || ''}</Text>
+            earnings.map((e, idx) => {
+              const name = e.referredContractor?.companyName || e.contractorName || 'Commission';
+              const dateVal = e.createdAt;
+              const dateStr = dateVal ? new Date(dateVal).toLocaleDateString() : '';
+              const jobId = (e.job?._id || e.job || e.jobId || e._id || '').toString().slice(-6);
+              const commAmount = e.commissionAmount != null ? e.commissionAmount : (e.amount || 0);
+              const isPending = e.status === 'pending';
+              return (
+                <View key={e._id || idx} className="bg-white dark:bg-neutral-900 rounded-2xl p-4 border border-slate-200 dark:border-neutral-800 flex-row items-center justify-between">
+                  <View className="flex-1 mr-3">
+                    <Text className="text-slate-900 dark:text-white font-bold text-sm">{name}</Text>
+                    <Text className="text-slate-400 dark:text-neutral-500 text-xs mt-0.5">{dateStr} {jobId ? `• Job #${jobId}` : ''}</Text>
+                  </View>
+                  <View className="items-end">
+                    <Text className={`font-bold text-sm ${isPending ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                      +${(commAmount / 100).toFixed(2)}
+                    </Text>
+                    <Text className="text-slate-400 dark:text-neutral-500 text-[10px] uppercase font-semibold mt-0.5">{e.status || 'available'}</Text>
+                  </View>
                 </View>
-                <View className="items-end">
-                  <Text className="text-emerald-600 font-bold text-sm">+${(e.amount / 100).toFixed(2)}</Text>
-                  <Text className="text-slate-400 text-[10px] uppercase font-semibold">{e.status || 'available'}</Text>
-                </View>
-              </View>
-            ))
+              );
+            })
           )}
         </View>
       )}
@@ -338,14 +377,14 @@ export default function AffiliateScreen() {
             </View>
           ) : (
             payouts.map((p, idx) => (
-              <View key={idx} className="bg-white dark:bg-neutral-900 rounded-2xl p-4 border border-slate-200 dark:border-neutral-800 flex-row items-center justify-between">
+              <View key={p._id || idx} className="bg-white dark:bg-neutral-900 rounded-2xl p-4 border border-slate-200 dark:border-neutral-800 flex-row items-center justify-between">
                 <View>
                   <Text className="text-slate-900 dark:text-white font-bold text-sm">${(p.amount / 100).toFixed(2)}</Text>
-                  <Text className="text-slate-400 text-xs">{new Date(p.createdAt).toLocaleDateString()} • via {p.payoutMethod || 'Stripe'}</Text>
+                  <Text className="text-slate-400 dark:text-neutral-500 text-xs mt-0.5">{new Date(p.createdAt).toLocaleDateString()} • via {p.payoutMethod || 'Stripe'}</Text>
                 </View>
                 <View className="items-end">
-                  <View className={`px-2.5 py-0.5 rounded-full ${p.status === 'completed' ? 'bg-emerald-50 text-emerald-700' : p.status === 'pending' ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700'}`}>
-                    <Text className={`text-[10px] font-bold capitalize ${p.status === 'completed' ? 'text-emerald-700' : p.status === 'pending' ? 'text-amber-700' : 'text-red-700'}`}>
+                  <View className={`px-2.5 py-0.5 rounded-full ${p.status === 'completed' ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300' : p.status === 'pending' || p.status === 'requested' ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300' : 'bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300'}`}>
+                    <Text className={`text-[10px] font-bold capitalize ${p.status === 'completed' ? 'text-emerald-700 dark:text-emerald-300' : p.status === 'pending' || p.status === 'requested' ? 'text-amber-700 dark:text-amber-300' : 'text-red-700 dark:text-red-300'}`}>
                       {p.status || 'Pending'}
                     </Text>
                   </View>

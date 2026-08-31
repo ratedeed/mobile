@@ -443,6 +443,18 @@ const ContractorSignupScreen = () => {
               />
             </View>
 
+            <View>
+              <Text className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1.5 ml-1">Referral Code (Optional)</Text>
+              <TextInput
+                placeholder="e.g. PARTNER123"
+                value={referralCode}
+                onChangeText={setReferralCode}
+                autoCapitalize="characters"
+                className="border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-neutral-50"
+                placeholderTextColor={isDark ? "#9ca3af" : "#a3a3a3"}
+              />
+            </View>
+
             <Pressable
               onPress={() => { if (validateStep1()) setStep(2); }}
               className="mt-4 bg-indigo-600 py-4 rounded-xl items-center shadow-lg shadow-indigo-500/20 active:opacity-90 flex-row justify-center"

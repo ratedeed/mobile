@@ -17,7 +17,7 @@ import { register, appleSignIn } from '../api';
 import { auth } from '../firebaseConfig';
 import { createUserWithEmailAndPassword, sendEmailVerification, deleteUser } from 'firebase/auth';
 import Toast from 'react-native-toast-message';
-import * as AppleAuthentication from 'expo-apple-authentication';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BouncingDotsLoader } from '../components/common';
@@ -25,11 +25,14 @@ import { BouncingDotsLoader } from '../components/common';
 const RegisterScreen = () => {
   const isDark = useColorScheme() === 'dark';
   const insets = useSafeAreaInsets();
+  const route = useRoute();
+  const routeRef = route.params?.ref || route.params?.referralCode;
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [zipCode, setZipCode] = useState('');
+  const [referralCode, setReferralCode] = useState(routeRef || '');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [apiError, setApiError] = useState(null);
@@ -130,6 +133,7 @@ const RegisterScreen = () => {
         password: password,
         firebaseUid: userCreated.uid,
         ...(trimmedZip ? { zipCode: trimmedZip } : {}),
+        ...(referralCode.trim() ? { referralCode: referralCode.trim() } : {}),
       });
       await auth.signOut();
 
