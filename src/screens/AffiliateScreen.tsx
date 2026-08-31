@@ -169,7 +169,7 @@ export default function AffiliateScreen() {
           Earn Lifetime Partner Commissions
         </Text>
         <Text className="text-slate-300 text-xs leading-5">
-          Refer contractors and earn <Text className="text-amber-400 font-bold">4% of the 5% platform fee</Text> collected on their jobs for their first <Text className="text-white font-bold">90 days</Text>.
+          Refer contractors and earn <Text className="text-amber-400 font-bold">4% of the total project value</Text> (from our 5% platform fee) on all jobs completed in their first <Text className="text-white font-bold">90 days</Text>.
         </Text>
       </View>
 
@@ -300,7 +300,7 @@ export default function AffiliateScreen() {
               <FontAwesome5 name="users" size={32} color="#94a3b8" />
               <Text className="text-slate-700 dark:text-neutral-300 font-bold text-sm mt-3">No Referrals Yet</Text>
               <Text className="text-slate-400 dark:text-neutral-500 text-xs text-center mt-1">
-                Share your referral link with contractors to start earning 4% of the 5% platform fee on their completed projects.
+                Share your referral link with contractors to start earning 4% on their completed projects (out of our 5% fee).
               </Text>
             </View>
           ) : (
