@@ -540,7 +540,7 @@ const ProfileScreen: React.FC = () => {
       heading: 'Account',
       items: [
         { icon: 'user-edit', label: 'Edit Profile', sheet: 'edit-profile', iconColor: '#4F46E5', iconBg: 'bg-indigo-50 dark:bg-indigo-950' },
-        { icon: 'gift', label: 'Partner Program (Earn 1%)', route: 'AffiliateScreen', iconColor: '#9333EA', iconBg: 'bg-purple-50 dark:bg-purple-950' },
+        { icon: 'gift', label: 'Partner Program (Earn 4%)', route: 'AffiliateScreen', iconColor: '#9333EA', iconBg: 'bg-purple-50 dark:bg-purple-950' },
         { icon: 'bell', label: 'Notifications', sheet: 'notifications', iconColor: '#D97706', iconBg: 'bg-amber-50 dark:bg-amber-950' },
       ],
     },

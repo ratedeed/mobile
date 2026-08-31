@@ -83,7 +83,7 @@ if (!process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
 }
 
 const linking = {
-  prefixes: ['ratedeed://', 'https://ratedeed.com'],
+  prefixes: ['ratedeed://', 'https://ratedeed.com', 'https://www.ratedeed.com'],
   async getInitialURL() {
     const url = await Linking.getInitialURL();
     return url;
@@ -113,6 +113,8 @@ const linking = {
       cleanPath = cleanPath.replace('/messages/', '/chat/');
     } else if (cleanPath.startsWith('/quote/')) {
       cleanPath = cleanPath.replace('/quote/', '/quote-review/');
+    } else if (cleanPath.startsWith('/signup') || cleanPath.startsWith('/join')) {
+      cleanPath = cleanPath.replace(/^\/(?:signup|join)/, '/register');
     }
     return require('@react-navigation/native').getStateFromPath(cleanPath, options);
   },
