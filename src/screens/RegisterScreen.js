@@ -284,6 +284,18 @@ const RegisterScreen = () => {
             placeholderTextColor={isDark ? "#9ca3af" : "#a3a3a3"}
           />
 
+          {/* Referral / Promo Code */}
+          <TextInput
+            placeholder="Referral or promo code (optional)"
+            value={referralCode}
+            onChangeText={setReferralCode}
+            autoCapitalize="characters"
+            autoCorrect={false}
+            editable={!loading}
+            className="w-full border border-neutral-300 dark:border-neutral-700 rounded-xl px-4 py-3 text-sm bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-50"
+            placeholderTextColor={isDark ? "#9ca3af" : "#a3a3a3"}
+          />
+
           {/* API Error */}
           {apiError && (
             <View className="bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-2.5">

@@ -1546,6 +1546,11 @@ export const createAffiliateStripeConnect = async (): Promise<{ url: string; str
   return post(`${API_BASE}/affiliate/stripe-connect`, { platform: 'mobile' }, authHeaders);
 };
 
+export const applyReferralCode = async (referralCode: string): Promise<{ success: boolean; message: string; referredBy?: string }> => {
+  const authHeaders = await getAuthHeaders();
+  return post(`${API_BASE}/users/apply-referral`, { referralCode }, authHeaders);
+};
+
 // ==========================================
 // Help Center & Support Tickets
 // ==========================================

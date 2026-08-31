@@ -13,7 +13,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
-import { getAffiliateStats, requestAffiliatePayout, createAffiliateStripeConnect } from '../utils/apiClient';
+import { getAffiliateStats, requestAffiliatePayout, createAffiliateStripeConnect, applyReferralCode } from '../utils/apiClient';
 import { BouncingDotsLoader, BouncingRefreshScrollView } from '../components/common';
 
 export default function AffiliateScreen() {
@@ -35,12 +35,34 @@ export default function AffiliateScreen() {
   const [payouts, setPayouts] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<'contractors' | 'earnings' | 'payouts'>('contractors');
 
+  // Promo / Referral Code Redemption State
+  const [inputCode, setInputCode] = useState('');
+  const [applyingCode, setApplyingCode] = useState(false);
+
   // Payout Modal State
   const [showModal, setShowModal] = useState(false);
   const [payoutAmount, setPayoutAmount] = useState('');
   const [payoutMethod, setPayoutMethod] = useState('stripe');
   const [payoutDetails, setPayoutDetails] = useState('');
   const [submittingPayout, setSubmittingPayout] = useState(false);
+
+  const handleApplyCode = async () => {
+    if (!inputCode.trim()) {
+      Alert.alert('Empty Code', 'Please enter a referral or promo code.');
+      return;
+    }
+    try {
+      setApplyingCode(true);
+      const res = await applyReferralCode(inputCode.trim());
+      Alert.alert('Success', res.message || 'Referral code applied successfully!');
+      setInputCode('');
+      fetchStats(true);
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to apply referral code');
+    } finally {
+      setApplyingCode(false);
+    }
+  };
 
   useEffect(() => {
     fetchStats();
@@ -237,6 +259,7 @@ export default function AffiliateScreen() {
       </View>
 
       {/* Referral Link Box */}
+      {/* Referral Link Card */}
       <View className="bg-white dark:bg-neutral-900 rounded-2xl p-5 mb-5 border border-slate-200 dark:border-neutral-800 shadow-sm">
         <Text className="text-slate-900 dark:text-white font-bold text-base mb-1">Your Referral Link</Text>
         <Text className="text-slate-500 dark:text-neutral-400 text-xs mb-3">Share this link to automatically credit signups to your account.</Text>
@@ -260,6 +283,33 @@ export default function AffiliateScreen() {
             className="flex-1 bg-slate-900 dark:bg-neutral-800 rounded-xl py-3 items-center justify-center"
           >
             <Text className="text-white font-bold text-xs">Share Link</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Redeem Promo / Referral Code Card */}
+      <View className="bg-white dark:bg-neutral-900 rounded-2xl p-5 mb-5 border border-slate-200 dark:border-neutral-800 shadow-sm">
+        <Text className="text-slate-900 dark:text-white font-bold text-base mb-1">Have a Referral or Promo Code?</Text>
+        <Text className="text-slate-500 dark:text-neutral-400 text-xs mb-3">Enter a partner or friend's invite code to link your account.</Text>
+
+        <View className="flex-row gap-2">
+          <TextInput
+            placeholder="e.g. PARTNER123"
+            value={inputCode}
+            onChangeText={setInputCode}
+            autoCapitalize="characters"
+            autoCorrect={false}
+            editable={!applyingCode}
+            className="flex-1 border border-slate-300 dark:border-neutral-700 rounded-xl px-4 py-3 text-sm bg-slate-50 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-50"
+            placeholderTextColor="#9ca3af"
+          />
+          <TouchableOpacity
+            onPress={handleApplyCode}
+            disabled={applyingCode || !inputCode.trim()}
+            className="bg-indigo-600 rounded-xl px-5 py-3 items-center justify-center"
+            style={{ opacity: applyingCode || !inputCode.trim() ? 0.6 : 1 }}
+          >
+            <Text className="text-white font-bold text-xs">{applyingCode ? 'Applying...' : 'Apply'}</Text>
           </TouchableOpacity>
         </View>
       </View>
