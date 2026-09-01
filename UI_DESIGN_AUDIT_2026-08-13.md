@@ -1,4 +1,4 @@
-# RateDeed — UI/Design-Quality Audit (Airbnb-Jealous Lens)
+# RateDeed — UI/Design-Quality Audit (enterprise marketplace-Jealous Lens)
 
 **Date:** 2026-08-13
 **Scope:** Both web (ratedeed) and mobile (ratedeedmobile) — contractor dashboard and homeowner flows. Assessed from code: hierarchy, consistency, state design, typography, motion, dark mode, accessibility, density, platform conventions, empty states.

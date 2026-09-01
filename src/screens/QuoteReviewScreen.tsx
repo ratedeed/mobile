@@ -17,6 +17,7 @@ import HapticFeedback from '../utils/haptics';
 import { BouncingDotsLoader } from '../components/common';
 import { useAuth } from '../context/AuthContext';
 import { scheduleOneHourReminder, exportToCalendar } from '../utils/reminderScheduler';
+import { calculateStripeProcessingFeeCents, calculateGrossChargeAmountCents } from '../utils/money';
 
 export default function QuoteReviewScreen() {
   const colorScheme = useColorScheme();
@@ -254,6 +255,15 @@ export default function QuoteReviewScreen() {
   const amountToPay = firstMilestone ? Number(firstMilestone.amount || 0) : total;
   const amountToPayInDollars = (amountToPay / 100).toFixed(2);
 
+  const processingFeeInCents = !isContractorOwner && amountToPay > 0 
+    ? calculateStripeProcessingFeeCents(amountToPay)
+    : 0;
+  const totalAmountToPayInCents = !isContractorOwner && amountToPay > 0
+    ? calculateGrossChargeAmountCents(amountToPay)
+    : amountToPay;
+  const totalAmountToPayInDollars = (totalAmountToPayInCents / 100).toFixed(2);
+  const processingFeeInDollars = (processingFeeInCents / 100).toFixed(2);
+
   const isPending = (quote.status === 'pending' || quote.status === 'pending_user_approval');
 
   if (quote.status === 'rejected') {
@@ -434,17 +444,37 @@ export default function QuoteReviewScreen() {
               </View>
             )}
 
+            {/* Stripe Processing Fee for Homeowners */}
+            {!isContractorOwner && processingFeeInCents > 0 && (
+              <>
+                <View className="border-t border-neutral-200 dark:border-neutral-700 my-3" />
+                <View className="flex-row justify-between items-center">
+                  <View>
+                    <Text className="text-sm text-neutral-600 dark:text-neutral-300">Payment Processing Fee</Text>
+                    <Text className="text-[10px] text-neutral-400">Charged by Stripe (2.9% + $0.30)</Text>
+                  </View>
+                  <Text className="text-sm font-semibold text-neutral-900 dark:text-white">
+                    ${Number(processingFeeInDollars).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </Text>
+                </View>
+              </>
+            )}
+
             {total > 0 && (
               <>
                 <View className="border-t border-neutral-200 dark:border-neutral-700 my-3" />
                 <View className="flex-row justify-between items-center">
                   <View>
-                    <Text className="text-base font-bold text-neutral-900 dark:text-white">Total Amount Due</Text>
+                    <Text className="text-base font-bold text-neutral-900 dark:text-white">
+                      {!isContractorOwner ? 'Total to Charge' : 'Total Project Value'}
+                    </Text>
                     {quote.diagnosticFeeCredit > 0 && (
                       <Text className="text-[10px] text-neutral-400">Credit applied</Text>
                     )}
                   </View>
-                  <Text className="text-xl font-bold text-neutral-900 dark:text-white">${Number(totalInDollars).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
+                  <Text className="text-xl font-bold text-neutral-900 dark:text-white">
+                    ${Number(!isContractorOwner ? totalAmountToPayInDollars : totalInDollars).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </Text>
                 </View>
               </>
             )}
@@ -656,18 +686,36 @@ export default function QuoteReviewScreen() {
                       ? 'Quote Expired' 
                       : actionLoading === 'accept' 
                         ? 'Accepting...' 
-                        : `${firstMilestone ? 'Accept & Pay Deposit' : 'Accept & Pay'} $${Number(amountToPayInDollars).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                        : `${firstMilestone ? 'Accept & Pay Deposit' : 'Accept & Pay'} $${Number(!isContractorOwner ? totalAmountToPayInDollars : amountToPayInDollars).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                 </Text>
                 {actionLoading !== 'accept' && !isExpired && <FontAwesome5 name="arrow-right" size={12} color="#fff" />}
               </Pressable>
               {isPending && !isExpired && (
-                <Pressable 
-                  onPress={() => setShowDeclineConfirm(true)} 
-                  disabled={actionLoading !== null} 
-                  className="py-2 items-center"
-                >
-                  <Text className="text-sm text-neutral-500 dark:text-neutral-400">Decline this quote</Text>
-                </Pressable>
+                <View className="flex-row justify-center items-center py-2" style={{ gap: 12 }}>
+                  <Pressable 
+                    onPress={() => {
+                      const recipientUserId = contractorUserId || contractorDocId;
+                      if (recipientUserId) {
+                        (navigation as any).navigate('ChatScreen', {
+                          recipientId: recipientUserId,
+                          recipientName: contractorName,
+                          initialMessage: `Hi ${contractorName}, I reviewed your quote for "${quote.projectName || 'this project'}" and have a few questions/adjustments.`
+                        });
+                      }
+                    }}
+                    className="py-1"
+                  >
+                    <Text className="text-xs font-bold text-indigo-600 dark:text-indigo-400">Ask to Modify</Text>
+                  </Pressable>
+                  <Text className="text-neutral-300 dark:text-neutral-600">·</Text>
+                  <Pressable 
+                    onPress={() => setShowDeclineConfirm(true)} 
+                    disabled={actionLoading !== null} 
+                    className="py-1"
+                  >
+                    <Text className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">Decline quote</Text>
+                  </Pressable>
+                </View>
               )}
             </>
           )}

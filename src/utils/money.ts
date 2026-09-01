@@ -89,3 +89,24 @@ export function formatPriceString(raw: string | null | undefined): string {
 
   return 'Contact for Quote';
 }
+
+/**
+ * Calculate Stripe Processing Fee (2.9% + $0.30) in exact integer cents
+ * Uses the authoritative Stripe gross-up formula:
+ * Gross = Math.round((baseInCents + 30) / (1 - 0.029))
+ */
+export function calculateStripeProcessingFeeCents(baseInCents: number | null | undefined): number {
+  if (baseInCents == null || isNaN(Number(baseInCents)) || Number(baseInCents) <= 0) return 0;
+  const base = Math.round(Number(baseInCents));
+  const grossInCents = Math.round((base + 30) / (1 - 0.029));
+  return grossInCents - base;
+}
+
+/**
+ * Calculate Gross Amount to Charge in exact integer cents
+ */
+export function calculateGrossChargeAmountCents(baseInCents: number | null | undefined): number {
+  if (baseInCents == null || isNaN(Number(baseInCents)) || Number(baseInCents) <= 0) return 0;
+  const base = Math.round(Number(baseInCents));
+  return Math.round((base + 30) / (1 - 0.029));
+}

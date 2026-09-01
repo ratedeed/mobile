@@ -109,20 +109,6 @@ export default function ReviewScreen() {
         jobId: jobId || quoteId,
       } as any);
 
-      if (jobId || quoteId) {
-        try {
-          const { sendMessage, getJobById } = await import('../api');
-          const j = await getJobById(jobId || quoteId || '');
-          if (j?.conversationId) {
-            await sendMessage(
-              j.conversationId,
-              '',
-              `⭐ Review Submitted: ${rating}/5 Stars — "${comment.trim()}". Thank you for working together!`
-            );
-          }
-        } catch {}
-      }
-
       HapticFeedback.success();
       Alert.alert('Thank you!', 'Your review has been submitted.', [
         { text: 'Done', onPress: () => navigation.goBack() },

@@ -25,17 +25,20 @@ interface EstimateBadgeProps {
 
 export const EstimateBadge = memo(function EstimateBadge({
   type = 'free',
-  feeAmount = 75,
+  feeAmount,
   size = 'md',
   animate = true,
   onPress,
 }: EstimateBadgeProps) {
-  const isFree = type === 'free' || type === 'virtual_only';
-  const label = isFree 
-    ? 'Free Estimates' 
-    : feeAmount 
-      ? `$${feeAmount} · Applied to Repair` 
-      : 'Applied to Repair';
+  const isVirtual = type === 'virtual_only';
+  const isFree = type === 'free';
+  const label = isVirtual 
+    ? 'Free Virtual Estimate'
+    : isFree 
+      ? 'Free Estimates' 
+      : feeAmount 
+        ? `$${feeAmount} · Applied to Repair` 
+        : 'Applied to Repair';
 
   const scale = useSharedValue(animate ? 0.88 : 1);
   const opacity = useSharedValue(animate ? 0 : 1);

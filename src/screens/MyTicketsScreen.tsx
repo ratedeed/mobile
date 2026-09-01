@@ -430,7 +430,7 @@ export default function MyTicketsScreen() {
                         </View>
                       </View>
 
-                      {/* Conversation History & Airbnb Style Thread */}
+                      {/* Conversation History & Activity Thread */}
                       <View className="space-y-2.5">
                         <Text className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
                           Conversation History ({1 + (ticket.replies?.length || 0)} messages)
