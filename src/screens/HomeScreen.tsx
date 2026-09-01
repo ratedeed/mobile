@@ -28,6 +28,7 @@ import { getCoverImageUrl, isSvgUrl } from '../utils/avatarUtils';
 import { getFavorites, addFavorite, removeFavorite } from '../utils/favoritesStore';
 import { useAuth } from '../context/AuthContext';
 import GuestPrompt from '../components/GuestPrompt';
+import AffiliatePromoModal from '../components/AffiliatePromoModal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { isDemoMode } from '../utils/demoMode';
 import { DEMO_ZIP } from '../utils/demoData';
@@ -423,10 +424,53 @@ const HomeScreen = () => {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [showGuestPrompt, setShowGuestPrompt] = useState(false);
+  const [showAffiliatePromo, setShowAffiliatePromo] = useState(false);
   
   const mountedRef = useRef(true);
   const isFetchingRef = useRef(false);
   const isUserEditedRef = useRef(false);
+
+  // Check and trigger first-launch affiliate announcement modal
+  useEffect(() => {
+    let timer: NodeJS.Timeout | null = null;
+    const checkAffiliateModal = async () => {
+      try {
+        const hasSeen = await AsyncStorage.getItem('@ratedeed_seen_affiliate_modal_v1');
+        if (!hasSeen && mountedRef.current) {
+          timer = setTimeout(() => {
+            if (mountedRef.current) {
+              setShowAffiliatePromo(true);
+            }
+          }, 1200);
+        }
+      } catch (err) {
+        console.warn('Error reading affiliate modal seen state:', err);
+      }
+    };
+    checkAffiliateModal();
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, []);
+
+  const handleDismissAffiliatePromo = async () => {
+    setShowAffiliatePromo(false);
+    try {
+      await AsyncStorage.setItem('@ratedeed_seen_affiliate_modal_v1', 'true');
+    } catch {}
+  };
+
+  const handleExploreAffiliatePromo = async () => {
+    setShowAffiliatePromo(false);
+    try {
+      await AsyncStorage.setItem('@ratedeed_seen_affiliate_modal_v1', 'true');
+    } catch {}
+    if (isAuthenticated) {
+      navigation.navigate('AffiliateScreen' as never);
+    } else {
+      navigation.navigate('Login' as never);
+    }
+  };
 
   // Load cached ZIP code instantly on mount to populate the search bar immediately
   useEffect(() => {
@@ -1109,6 +1153,12 @@ const HomeScreen = () => {
           navigation.navigate('Login');
         }}
         action="save contractors"
+      />
+
+      <AffiliatePromoModal
+        visible={showAffiliatePromo}
+        onClose={handleDismissAffiliatePromo}
+        onExplore={handleExploreAffiliatePromo}
       />
     </KeyboardAvoidingView>
   );
