@@ -47,6 +47,14 @@ export const Colors = {
   neutral800: '#1F2937',
   neutral900: '#111827',
 
+  // Airbnb Brand Neutrals
+  airbnbBlack: '#222222',
+  airbnbGray: '#717171',
+  airbnbLightGray: '#B0B0B0',
+  airbnbSurface: '#F7F7F7',
+  airbnbBorder: '#EBEBEB',
+  airbnbInput: '#DDDDDD',
+
   // Success Palette (Green)
   success50: '#ECFDF5',
   success100: '#D1FAE5',

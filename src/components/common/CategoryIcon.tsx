@@ -345,7 +345,7 @@ export const CategoryIcon = memo(function CategoryIcon({
       
       {label && (
         <Text className={`text-[10px] font-semibold tracking-tight ${
-          active ? 'text-neutral-900 dark:text-neutral-50' : 'text-neutral-500 dark:text-neutral-400'
+          active ? 'text-[#222222] dark:text-white' : 'text-[#717171] dark:text-neutral-400'
         }`}>
           {label}
         </Text>

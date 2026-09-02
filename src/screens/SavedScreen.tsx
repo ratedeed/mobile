@@ -167,7 +167,7 @@ const SavedScreen = () => {
 
       return (
         <Pressable className="w-[48%] mb-6" onPress={() => navigation.navigate('BusinessDetail', { id: contractorId })}>
-          <View className="relative aspect-square rounded-xl overflow-hidden bg-neutral-100 dark:bg-neutral-900">
+          <View className="relative aspect-square rounded-xl overflow-hidden bg-[#F7F7F7] dark:bg-neutral-800">
             {isSvgUrl(coverImage) ? (
               <View className="absolute inset-0 w-full h-full">
                 <SvgImage uri={coverImage} width="100%" height="100%" />
@@ -182,13 +182,13 @@ const SavedScreen = () => {
 
             {((item as any).isVerified || (item as any).licenseVerified) && (
               <View className="absolute top-2 left-2" style={{ zIndex: 60, overflow: 'visible' }}>
-                <VerifiedBadge size={28} animate={true} transformOrigin="top-left" />
+                <VerifiedBadge size={28} animate={false} transformOrigin="top-left" />
               </View>
             )}
           </View>
           <View className="mt-2">
             <Text
-              className="text-[14px] font-bold text-neutral-900 dark:text-neutral-50 leading-tight"
+              className="text-[13px] font-semibold text-[#222222] dark:text-white leading-tight"
               numberOfLines={1}
             >
               {item.companyName || item.businessName || 'Company'}
@@ -196,17 +196,17 @@ const SavedScreen = () => {
             {(item.reviewCount || 0) > 0 ? (
               <View className="flex-row items-center mt-0.5" style={{ gap: 4 }}>
                 <Star size={10} color="#eab308" weight="fill" />
-                <Text className="text-xs font-bold text-slate-600 dark:text-neutral-300">
+                <Text className="text-xs font-bold text-[#222222] dark:text-neutral-200">
                   {(item.averageRating || 0).toFixed(2)}
                 </Text>
               </View>
             ) : (
               <Text className="text-xs font-bold text-neutral-400 dark:text-neutral-500 mt-0.5">New</Text>
             )}
-            <Text className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5" numberOfLines={1}>
+            <Text className="text-xs text-[#717171] dark:text-neutral-400 mt-0.5" numberOfLines={1}>
               {item.contactInfo?.city || 'Local'}, {item.contactInfo?.state || 'Area'}
             </Text>
-            <Text className="text-xs font-bold text-neutral-900 dark:text-neutral-50 mt-1">
+            <Text className="text-[13px] font-semibold text-neutral-800 dark:text-neutral-200 mt-1">
               {formatPriceString(price)}
             </Text>
           </View>

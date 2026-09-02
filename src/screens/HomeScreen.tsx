@@ -214,7 +214,7 @@ const ListingCard = memo(({ listing, isFavorite, onToggleFavorite, detectedZip, 
       accessibilityRole="button"
       style={({ pressed }) => ({ overflow: 'visible', transform: [{ scale: pressed ? 0.98 : 1 }] })}
     >
-      <View className="relative rounded-xl overflow-hidden bg-neutral-100 dark:bg-neutral-900 aspect-square">
+      <View className="relative rounded-xl overflow-hidden bg-[#F7F7F7] dark:bg-neutral-800 aspect-square">
         {isSvgUrl(coverImage) ? (
           <View className="absolute inset-0 w-full h-full">
             <SvgImage uri={coverImage} width="100%" height="100%" />
@@ -222,7 +222,7 @@ const ListingCard = memo(({ listing, isFavorite, onToggleFavorite, detectedZip, 
         ) : coverImage ? (
           <Image source={{ uri: coverImage }} className="absolute inset-0 w-full h-full" resizeMode="cover" />
         ) : null}
-        
+
         {/* Favorite Heart - Restored Original Look */}
         <Pressable
           onPress={() => onToggleFavorite(listing._id)}
@@ -242,14 +242,14 @@ const ListingCard = memo(({ listing, isFavorite, onToggleFavorite, detectedZip, 
 
       {(listing.isVerified || (listing as any).licenseVerified) && (
         <View className="absolute top-2 left-2" style={{ zIndex: 60, overflow: 'visible' }}>
-          <VerifiedBadge size={28} animate={true} transformOrigin="top-left" />
+          <VerifiedBadge size={28} animate={false} transformOrigin="top-left" />
         </View>
       )}
 
       <View className="mt-2">
         <View className="flex-row items-start justify-between" style={{ gap: 4 }}>
           <Text
-            className="text-[14px] font-bold text-neutral-900 dark:text-neutral-50 leading-tight flex-1"
+            className="text-[13px] font-semibold text-[#222222] dark:text-white leading-tight flex-1"
             numberOfLines={1}
           >
             {listing.companyName || listing.businessName || 'Company'}
@@ -257,7 +257,7 @@ const ListingCard = memo(({ listing, isFavorite, onToggleFavorite, detectedZip, 
           {(listing.reviewCount || 0) > 0 ? (
             <View className="flex-row items-center shrink-0" style={{ gap: 2 }}>
               <FontAwesome5 name="star" solid size={12} color="#eab308" />
-              <Text className="text-xs font-bold text-slate-600 dark:text-neutral-300">
+              <Text className="text-xs font-bold text-[#222222] dark:text-neutral-200">
                 {(listing.averageRating || 0).toFixed(2)}
               </Text>
             </View>
@@ -265,33 +265,33 @@ const ListingCard = memo(({ listing, isFavorite, onToggleFavorite, detectedZip, 
             <Text className="text-xs font-bold text-neutral-400 dark:text-neutral-500 shrink-0">New</Text>
           )}
         </View>
-        
+
         {location ? (
-          <Text className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5" numberOfLines={1}>
+          <Text className="text-xs text-[#717171] dark:text-neutral-400 mt-0.5" numberOfLines={1}>
             {location}
           </Text>
         ) : null}
-        
+
         {distance ? (
-          <Text className="text-[11px] text-neutral-400 dark:text-neutral-500 mt-0.5">{distance}</Text>
+          <Text className="text-[11px] text-[#717171] dark:text-neutral-400 mt-0.5">{distance}</Text>
         ) : null}
-        
+
         {detectedZip && serviceZips.includes(detectedZip) && (
           <View className="flex-row items-center mt-0.5" style={{ gap: 2 }}>
             <FontAwesome5 name="map-marker-alt" size={10} color="#059669" />
-            <Text className="text-[10px] font-semibold text-emerald-700">Serves your area</Text>
+            <Text className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-400">Serves your area</Text>
           </View>
         )}
-        
+
         {listing.avgResponseHours !== undefined && listing.avgResponseHours !== null && (
           <View className="flex-row items-center mt-0.5">
             {getResponseTimeBadge(listing.avgResponseHours)}
           </View>
         )}
-        
+
         <View className="flex-row items-center mt-1" style={{ gap: 4 }}>
-          <FontAwesome5 name="lock" size={10} color="#16a34a" />
-          <Text className="text-[12px] font-semibold text-neutral-700 dark:text-neutral-300">Escrow Protected</Text>
+          <FontAwesome5 name="lock" size={10} color="#059669" />
+          <Text className="text-[11px] font-semibold text-neutral-800 dark:text-neutral-200">Escrow Protected</Text>
         </View>
       </View>
     </Pressable>
@@ -998,7 +998,7 @@ const HomeScreen = () => {
           </ScrollView>
         </View>
 
-        <View className="h-[1px] bg-neutral-200 dark:bg-neutral-800 -mx-4 mt-2 mb-4" />
+        <View className="h-[1px] bg-[#EBEBEB] dark:bg-neutral-800 -mx-4 mt-2 mb-4" />
       </View>
     ),
     [searchZip, searchName, nearbyLabel, activeCategory, loadContractors]

@@ -1364,7 +1364,7 @@ const BusinessDetailScreen: React.FC = () => {
                       className="w-[165px] bg-transparent active:scale-[0.98]"
                     >
                       {/* Photo: aspect-ratio 1.04 / 1, radius 12px, margin-bottom 8px */}
-                      <View style={{ aspectRatio: 1.04 }} className="relative rounded-xl overflow-hidden bg-neutral-100 dark:bg-neutral-850 mb-2">
+                      <View style={{ aspectRatio: 1.04 }} className="relative rounded-xl overflow-hidden bg-[#F7F7F7] dark:bg-neutral-800 mb-2">
                         {isSvgUrl(scCover) ? (
                           <View className="w-full h-full">
                             <SvgImage uri={scCover} width="100%" height="100%" />
@@ -1383,8 +1383,8 @@ const BusinessDetailScreen: React.FC = () => {
                       {/* Text below photo */}
                       <View>
                         {/* Title: 13.5px, weight 600, 2 lines */}
-                        <Text 
-                          className="text-[13.5px] font-semibold text-neutral-900 dark:text-neutral-50 leading-[17px]" 
+                        <Text
+                          className="text-[13.5px] font-semibold text-[#222222] dark:text-white leading-[17px]"
                           numberOfLines={2}
                           style={{ minHeight: 34 }}
                         >
@@ -1393,12 +1393,12 @@ const BusinessDetailScreen: React.FC = () => {
 
                         {/* Location / Rating row: tight inline */}
                         <View className="flex-row items-center mt-0.5 flex-wrap" style={{ gap: 3 }}>
-                          <Text className="text-[12px] text-neutral-600 dark:text-neutral-400" numberOfLines={1} style={{ maxWidth: 95 }}>
+                          <Text className="text-[12px] text-[#717171] dark:text-neutral-400" numberOfLines={1} style={{ maxWidth: 95 }}>
                             {scLocation || sc.category || 'Local Pro'}
                           </Text>
                           <Text className="text-[12px] text-neutral-400">·</Text>
-                          <Text className="text-[11px] font-medium text-neutral-900 dark:text-neutral-100">★</Text>
-                          <Text className="text-[12px] font-medium text-neutral-900 dark:text-neutral-100">
+                          <Text className="text-[11px] font-medium text-[#222222] dark:text-neutral-200">★</Text>
+                          <Text className="text-[12px] font-medium text-[#222222] dark:text-neutral-200">
                             {scReviews > 0 ? scRating.toFixed(1) : 'New'}
                           </Text>
                         </View>

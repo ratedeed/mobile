@@ -42,6 +42,14 @@ module.exports = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        airbnb: {
+          black: "#222222",
+          gray: "#717171",
+          lightGray: "#B0B0B0",
+          surface: "#F7F7F7",
+          border: "#EBEBEB",
+          input: "#DDDDDD",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",

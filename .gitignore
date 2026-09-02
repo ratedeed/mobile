@@ -42,3 +42,4 @@ sentry.properties
 
 # typescript
 *.tsbuildinfo
+.scratch/design-canvas.html

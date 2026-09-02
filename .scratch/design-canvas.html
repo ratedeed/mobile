@@ -2,44 +2,64 @@
 <html lang="en" class="light">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>RateDeed Pro — Complete Airbnb Contractor Dashboard with Job Photos</title>
-  
-  <!-- Fonts & CDN Dependencies -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RateDeed — Private Dashboard (iOS Command Center vs. Airbnb Host Edition)</title>
+
+  <!-- Required CDN Dependencies -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
-  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
-  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600;1,700&display=swap" rel="stylesheet">
+
   <script>
     tailwind.config = {
       darkMode: 'class',
       theme: {
         extend: {
           fontFamily: {
-            sans: ['"Plus Jakarta Sans"', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'sans-serif'],
+            sans: ['"Plus Jakarta Sans"', '-apple-system', 'BlinkMacSystemFont', '"SF Pro Display"', '"SF Pro Text"', 'system-ui', 'sans-serif'],
           },
           colors: {
             airbnb: {
               rausch: '#FF385C',
-              charcoal: '#222222',
-              gray: '#717171',
-              lightGray: '#B0B0B0',
-              bgLight: '#FFFFFF',
-              bgWarm: '#F7F7F7',
-              border: '#EBEBEB',
-              borderDark: '#DDDDDD',
-              green: '#008A05',
+              'rausch-dark': '#E00B41',
+              kazan: '#008489',
+              foggy: '#717171',
+              light: '#F7F7F7',
+              border: '#DDDDDD',
+              dark: '#222222',
+            },
+            ios: {
+              bg: '#F2F2F7',
+              'bg-dark': '#000000',
+              card: '#FFFFFF',
+              'card-dark': '#1C1C1E',
+              'card-elevated-dark': '#2C2C2E',
+              secondary: '#6E6E73',
+              'secondary-dark': '#8E8E93',
+              border: '#E5E5EA',
+              'border-dark': '#2C2C2E',
+              blue: '#007AFF',
+              indigo: '#5856D6',
+              green: '#34C759',
+              amber: '#FF9500',
+              red: '#FF3B30',
             }
           },
+          borderRadius: {
+            'ios-xs': '8px',
+            'ios-sm': '12px',
+            'ios': '18px',
+            'ios-lg': '24px',
+            'ios-xl': '30px',
+          },
           boxShadow: {
-            'airbnb-card': '0 8px 24px rgba(0, 0, 0, 0.06)',
-            'airbnb-subtle': '0 2px 10px rgba(0, 0, 0, 0.03)',
-            'airbnb-floating': '0 16px 36px rgba(0, 0, 0, 0.12)',
-            'phone-frame': '0 25px 70px rgba(0, 0, 0, 0.45), 0 0 0 12px #262626',
+            'ios-sm': '0 2px 8px rgba(0, 0, 0, 0.04)',
+            'ios': '0 4px 20px rgba(0, 0, 0, 0.05)',
+            'ios-lg': '0 14px 36px rgba(0, 0, 0, 0.09)',
+            'ios-dock': '0 16px 36px -4px rgba(0, 0, 0, 0.22), 0 0 0 1px rgba(255, 255, 255, 0.1)',
+            'airbnb-bar': '0 -4px 20px rgba(0, 0, 0, 0.08)',
           }
         }
       }
@@ -48,1065 +68,610 @@
 
   <style>
     :root {
-      --spring-easing: cubic-bezier(0.16, 1, 0.3, 1);
-      --bounce-easing: cubic-bezier(0.34, 1.56, 0.64, 1);
+      --primary-h: 243;
+      --primary-s: 75%;
+      --radius: 20px;
+      --font-base: 15px;
     }
 
     body {
-      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+      font-size: var(--font-base);
       -webkit-font-smoothing: antialiased;
-      color: #222222;
-      overflow-x: hidden;
-    }
-    .dark body {
-      color: #F7F7F7;
+      -moz-osx-font-smoothing: grayscale;
     }
 
-    /* iPhone Frame */
-    .iphone-device {
-      width: 393px;
-      height: 844px;
-      border-radius: 50px;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      position: relative;
-      background: #FFFFFF;
-      box-shadow: 0 25px 70px rgba(0,0,0,0.45), 0 0 0 12px #222222;
-      transition: all 0.4s var(--spring-easing);
+    [contenteditable="true"] {
+      outline: none;
+      transition: background-color 0.15s ease, box-shadow 0.15s ease;
+      border-radius: 4px;
+      padding: 1px 2px;
     }
-    .dark .iphone-device {
-      background: #121212;
-      box-shadow: 0 25px 70px rgba(0,0,0,0.85), 0 0 0 12px #2A2A2A;
+    [contenteditable="true"]:hover {
+      background-color: rgba(88, 86, 214, 0.08);
+      box-shadow: 0 0 0 1px rgba(88, 86, 214, 0.3);
+      cursor: text;
+    }
+    [contenteditable="true"]:focus {
+      background-color: rgba(88, 86, 214, 0.12);
+      box-shadow: 0 0 0 2px rgba(88, 86, 214, 0.6);
     }
 
-    /* Dynamic Island */
-    .dynamic-island {
-      width: 120px;
-      height: 30px;
-      background: #000000;
-      border-radius: 20px;
-      position: absolute;
-      top: 10px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 60;
-      transition: all 0.3s var(--bounce-easing);
+    .ios-nav-glass {
+      background-color: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
     }
-    .dynamic-island.expanded {
-      width: 220px;
-      height: 38px;
-      border-radius: 24px;
+    .dark .ios-nav-glass {
+      background-color: rgba(20, 20, 22, 0.85);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
     }
 
-    /* Airbnb Signature Spring Press Motion */
-    .airbnb-press {
-      transition: transform 0.18s var(--spring-easing), opacity 0.18s ease, box-shadow 0.18s ease;
-      will-change: transform;
+    .ios-glass-dock {
+      background-color: rgba(255, 255, 255, 0.88);
+      backdrop-filter: blur(30px) saturate(190%);
+      -webkit-backdrop-filter: blur(30px) saturate(190%);
     }
-    .airbnb-press:active {
-      transform: scale(0.94);
-      opacity: 0.88;
-    }
-
-    /* Tab Bounce */
-    @keyframes iconBounce {
-      0% { transform: scale(1); }
-      35% { transform: scale(1.32) translateY(-2px); }
-      65% { transform: scale(0.92) translateY(1px); }
-      100% { transform: scale(1) translateY(0); }
-    }
-    .animate-tab-bounce {
-      animation: iconBounce 0.45s var(--bounce-easing);
+    .dark .ios-glass-dock {
+      background-color: rgba(28, 28, 30, 0.88);
+      backdrop-filter: blur(30px) saturate(190%);
+      -webkit-backdrop-filter: blur(30px) saturate(190%);
     }
 
-    /* Screen Slide Animations */
-    @keyframes screenSlideInRight {
-      0% { opacity: 0; transform: translateX(20px) scale(0.98); }
-      100% { opacity: 1; transform: translateX(0) scale(1); }
-    }
-    .screen-in-right {
-      animation: screenSlideInRight 0.3s var(--spring-easing) forwards;
+    .airbnb-btn {
+      background: linear-gradient(to right, #E61E4D 0%, #E31C5F 50%, #D70466 100%);
     }
 
-    /* Bottom Sheet Slide Up & Down */
-    @keyframes sheetSlideUp {
-      0% { transform: translateY(100%); opacity: 0.4; }
-      100% { transform: translateY(0); opacity: 1; }
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
     }
-    .sheet-enter {
-      animation: sheetSlideUp 0.35s var(--spring-easing) forwards;
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
     }
-
-    /* Pulse Glow */
-    @keyframes pulseGlow {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.6; }
-    }
-    .animate-pulse-glow {
-      animation: pulseGlow 2s ease-in-out infinite;
-    }
-
-    /* Hide scrollbar */
-    .no-scrollbar::-webkit-scrollbar { display: none; }
-    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   </style>
 </head>
-<body class="bg-neutral-950 text-neutral-100 min-h-screen flex flex-col items-center justify-start p-4 md:p-8">
 
-  <!-- ========================================================================= -->
-  <!-- TOP STUDIO CONTROLLER -->
-  <!-- ========================================================================= -->
-  <header class="w-full max-w-5xl mb-6 flex flex-wrap items-center justify-between gap-3 bg-neutral-900/90 backdrop-blur-md p-4 rounded-3xl border border-neutral-800 shadow-xl">
-    <div class="flex items-center gap-3">
-      <div class="w-10 h-10 rounded-2xl bg-[#FF385C] flex items-center justify-center text-white shadow-md">
-        <i data-lucide="camera" class="w-5 h-5"></i>
-      </div>
-      <div>
-        <div class="flex items-center gap-2">
-          <h1 class="text-sm font-extrabold text-white">RateDeed Pro &middot; Full Dashboard + Job Photo Updates</h1>
-          <span class="px-2 py-0.5 text-[9px] font-black bg-[#008A05]/20 text-emerald-400 border border-emerald-500/30 rounded-full">Photo Proof &bull; Milestones &bull; Escrow</span>
+<body class="bg-slate-100 dark:bg-black text-slate-900 dark:text-slate-100 min-h-screen">
+
+  <!-- ========================================== -->
+  <!-- 1. TOP TOOLBAR (CANVAS CHROME)             -->
+  <!-- ========================================== -->
+  <header class="sticky top-0 z-50 bg-white/90 dark:bg-neutral-900/90 backdrop-blur-md border-b border-slate-200 dark:border-neutral-800 shadow-xs px-4 py-2.5">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+
+      <!-- Brand -->
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-600 via-indigo-700 to-rose-600 flex items-center justify-center text-white font-black text-sm shadow-md">
+          <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
         </div>
-        <p class="text-xs text-neutral-400">Live Progress Photos &bull; Milestone Verification &bull; All 6 Tabs + Nested Subtabs</p>
-      </div>
-    </div>
-
-    <!-- Controls -->
-    <div class="flex items-center gap-3">
-      <!-- Quick Tab Direct Switcher -->
-      <div class="flex bg-neutral-800 p-1 rounded-2xl border border-neutral-700 overflow-x-auto no-scrollbar max-w-md">
-        <button onclick="openMainTab('today')" id="top-btn-today" class="top-nav-btn active px-2.5 py-1 text-xs font-black rounded-xl bg-white text-[#222222] shrink-0">Today</button>
-        <button onclick="openMainTab('calendar')" id="top-btn-calendar" class="top-nav-btn px-2.5 py-1 text-xs font-bold rounded-xl text-neutral-400 hover:text-white shrink-0">Calendar</button>
-        <button onclick="openMainTab('profile')" id="top-btn-profile" class="top-nav-btn px-2.5 py-1 text-xs font-bold rounded-xl text-neutral-400 hover:text-white shrink-0">Profile</button>
-        <button onclick="openMainTab('payments')" id="top-btn-payments" class="top-nav-btn px-2.5 py-1 text-xs font-bold rounded-xl text-neutral-400 hover:text-white shrink-0">Earnings &amp; Jobs</button>
-        <button onclick="openMainTab('analytics')" id="top-btn-analytics" class="top-nav-btn px-2.5 py-1 text-xs font-bold rounded-xl text-neutral-400 hover:text-white shrink-0">Analytics</button>
-        <button onclick="openMainTab('promote')" id="top-btn-promote" class="top-nav-btn px-2.5 py-1 text-xs font-bold rounded-xl text-neutral-400 hover:text-white shrink-0">Promote</button>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="font-bold text-sm sm:text-base leading-none text-slate-900 dark:text-white">Private Contractor Dashboard: iOS vs. Airbnb Host</h1>
+            <span class="px-2 py-0.5 text-[10px] font-bold bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 rounded-full">Side-by-Side</span>
+          </div>
+          <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Left: iOS 18 Command Center • Right: Airbnb Pro Host Management</p>
+        </div>
       </div>
 
-      <!-- Theme Toggle -->
-      <button onclick="toggleTheme()" class="airbnb-press p-2 rounded-2xl bg-neutral-800 border border-neutral-700 text-white hover:bg-neutral-700">
-        <i data-lucide="sun" class="w-4 h-4 hidden dark:block"></i>
-        <i data-lucide="moon" class="w-4 h-4 block dark:hidden"></i>
-      </button>
+      <!-- View Switcher -->
+      <div class="flex items-center bg-slate-100 dark:bg-neutral-800 p-1 rounded-xl border border-slate-200 dark:border-neutral-700 text-xs font-medium">
+        <button onclick="setArtboardView('side-by-side')" id="tab-sbs" class="px-3 py-1.5 rounded-lg bg-white dark:bg-neutral-700 text-slate-900 dark:text-white shadow-xs font-bold text-indigo-600 dark:text-indigo-400 transition-all">Side-by-Side (Both)</button>
+        <button onclick="setArtboardView('ios-only')" id="tab-ios-only" class="px-3 py-1.5 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all">iOS Command Center</button>
+        <button onclick="setArtboardView('airbnb-only')" id="tab-airbnb-only" class="px-3 py-1.5 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all">Airbnb Host Edition</button>
+      </div>
+
+      <!-- Controls -->
+      <div class="flex items-center gap-2">
+        <button onclick="toggleTheme()" class="p-2 rounded-xl bg-slate-100 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-slate-700 dark:text-slate-300 hover:text-indigo-600 transition-colors">
+          <i data-lucide="sun" class="w-4 h-4 hidden dark:block"></i>
+          <i data-lucide="moon" class="w-4 h-4 block dark:hidden"></i>
+        </button>
+
+        <button onclick="toggleTokenPanel()" class="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium bg-slate-100 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 rounded-xl hover:bg-slate-200 transition-colors">
+          <i data-lucide="sliders" class="w-3.5 h-3.5 text-indigo-600"></i>
+          <span class="hidden md:inline">Tokens</span>
+        </button>
+
+        <button onclick="exportActiveDashboard()" class="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-xs transition-all">
+          <i data-lucide="code-2" class="w-3.5 h-3.5"></i>
+          <span>Scaffold</span>
+        </button>
+      </div>
     </div>
   </header>
 
-  <!-- ========================================================================= -->
-  <!-- AIRBNB MOBILE PHONE CONTAINER -->
-  <!-- ========================================================================= -->
-  <div class="iphone-device text-[#222222] dark:text-neutral-100">
-    
-    <!-- DYNAMIC ISLAND (Animated on Action) -->
-    <div id="island" class="dynamic-island flex items-center justify-between px-3 text-white">
-      <div id="islandLeft" class="flex items-center gap-1.5 opacity-0 transition-opacity duration-300">
-        <span class="w-2 h-2 rounded-full bg-[#008A05] animate-pulse"></span>
-        <span class="text-[9px] font-black tracking-wider">PHOTO UPLOADED</span>
-      </div>
-      <div id="islandRight" class="text-[9px] font-bold text-emerald-400 opacity-0 transition-opacity duration-300">+2 Photos</div>
-    </div>
-
-    <!-- STATUS BAR -->
-    <div class="pt-3 px-8 pb-1 flex items-center justify-between text-[13px] font-black text-[#222222] dark:text-white z-50 bg-white/95 dark:bg-[#121212]/95 backdrop-blur-md">
-      <span>9:41</span>
-      <div class="flex items-center gap-1.5 text-[#222222] dark:text-neutral-200">
-        <i data-lucide="signal" class="w-3.5 h-3.5"></i>
-        <i data-lucide="wifi" class="w-3.5 h-3.5"></i>
-        <i data-lucide="battery-medium" class="w-4 h-4"></i>
-      </div>
-    </div>
-
-    <!-- TOP PRO BAR -->
-    <div class="px-5 pt-2 pb-2.5 bg-white dark:bg-[#121212] border-b border-[#EBEBEB] dark:border-neutral-800 flex items-center justify-between z-40">
+  <!-- ========================================== -->
+  <!-- 2. TOKEN TWEAKER                           -->
+  <!-- ========================================== -->
+  <aside id="token-panel" class="fixed right-4 top-16 z-40 w-80 bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 rounded-2xl shadow-2xl p-4 hidden">
+    <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-neutral-800">
       <div class="flex items-center gap-2">
-        <div class="relative">
-          <img src="https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?w=100&auto=format&fit=crop&q=80" alt="Avatar" class="w-9 h-9 rounded-full object-cover border border-[#EBEBEB]">
-          <span class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-[#008A05] text-white rounded-full flex items-center justify-center text-[7px] font-black border border-white">
-            ✓
-          </span>
-        </div>
-        <div>
-          <div class="flex items-center gap-1">
-            <h2 class="text-xs font-black text-[#222222] dark:text-white">Apex Construction</h2>
-            <span class="text-[8px] font-black uppercase bg-[#FF385C]/10 text-[#FF385C] px-1.5 py-0.5 rounded-full">SuperPro</span>
-          </div>
-          <p class="text-[10px] text-[#717171]">CSLB #1094821 &middot; 4.96 ★</p>
-        </div>
+        <i data-lucide="palette" class="w-4 h-4 text-indigo-600"></i>
+        <h3 class="font-bold text-xs uppercase tracking-wider text-slate-900 dark:text-white">Token Tweaker</h3>
       </div>
-
-      <div class="flex items-center gap-2">
-        <button onclick="triggerToast('Switched to Homeowner browsing mode')" class="airbnb-press px-2.5 py-1 rounded-full border border-[#EBEBEB] dark:border-neutral-700 text-[10px] font-extrabold text-[#222222] dark:text-neutral-200 flex items-center gap-1 shadow-airbnb-subtle">
-          <i data-lucide="arrow-left-right" class="w-3 h-3 text-[#717171]"></i>
-          <span>Homeowner</span>
-        </button>
-
-        <button onclick="triggerToast('2 unread client messages')" class="airbnb-press w-8 h-8 rounded-full bg-[#F7F7F7] dark:bg-neutral-800 flex items-center justify-center text-[#222222] dark:text-white relative">
-          <i data-lucide="bell" class="w-3.5 h-3.5"></i>
-          <span class="absolute top-1 right-1 w-2 h-2 rounded-full bg-[#FF385C] animate-pulse"></span>
-        </button>
-      </div>
+      <button onclick="toggleTokenPanel()" class="text-slate-400 hover:text-slate-700">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
     </div>
 
-    <!-- ======================================================================= -->
-    <!-- 6-TAB AIRBNB SEGMENTED HORIZONTAL BAR -->
-    <!-- ======================================================================= -->
-    <div class="px-4 py-2 bg-white dark:bg-[#121212] border-b border-[#EBEBEB] dark:border-neutral-800 z-40">
-      <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-        <button onclick="openMainTab('today')" id="tab-pill-today" class="main-tab-pill active airbnb-press shrink-0 px-3 py-1.5 rounded-full text-xs font-black bg-[#222222] text-white dark:bg-white dark:text-[#222222] flex items-center gap-1 shadow-xs">
-          <i data-lucide="layout-grid" class="w-3.5 h-3.5"></i>
-          <span>Today</span>
-        </button>
-
-        <button onclick="openMainTab('calendar')" id="tab-pill-calendar" class="main-tab-pill airbnb-press shrink-0 px-3 py-1.5 rounded-full text-xs font-bold text-[#717171] hover:text-[#222222] dark:text-neutral-400 bg-[#F7F7F7] dark:bg-neutral-850 flex items-center gap-1">
-          <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
-          <span>Calendar</span>
-        </button>
-
-        <button onclick="openMainTab('profile')" id="tab-pill-profile" class="main-tab-pill airbnb-press shrink-0 px-3 py-1.5 rounded-full text-xs font-bold text-[#717171] hover:text-[#222222] dark:text-neutral-400 bg-[#F7F7F7] dark:bg-neutral-850 flex items-center gap-1">
-          <i data-lucide="user" class="w-3.5 h-3.5"></i>
-          <span>Public Profile</span>
-        </button>
-
-        <button onclick="openMainTab('payments')" id="tab-pill-payments" class="main-tab-pill airbnb-press shrink-0 px-3 py-1.5 rounded-full text-xs font-bold text-[#717171] hover:text-[#222222] dark:text-neutral-400 bg-[#F7F7F7] dark:bg-neutral-850 flex items-center gap-1">
-          <i data-lucide="wallet" class="w-3.5 h-3.5"></i>
-          <span>Earnings &amp; Jobs</span>
-        </button>
-
-        <button onclick="openMainTab('analytics')" id="tab-pill-analytics" class="main-tab-pill airbnb-press shrink-0 px-3 py-1.5 rounded-full text-xs font-bold text-[#717171] hover:text-[#222222] dark:text-neutral-400 bg-[#F7F7F7] dark:bg-neutral-850 flex items-center gap-1">
-          <i data-lucide="bar-chart-2" class="w-3.5 h-3.5"></i>
-          <span>Analytics</span>
-        </button>
-
-        <button onclick="openMainTab('promote')" id="tab-pill-promote" class="main-tab-pill airbnb-press shrink-0 px-3 py-1.5 rounded-full text-xs font-bold text-[#717171] hover:text-[#222222] dark:text-neutral-400 bg-[#F7F7F7] dark:bg-neutral-850 flex items-center gap-1">
-          <i data-lucide="bullhorn" class="w-3.5 h-3.5"></i>
-          <span>Promote</span>
-        </button>
+    <div class="mt-3 space-y-3.5 text-xs">
+      <div>
+        <div class="flex justify-between text-slate-600 dark:text-slate-400 mb-1">
+          <span>Card Corner Radius:</span>
+          <span id="radius-val" class="font-mono font-semibold">20px</span>
+        </div>
+        <input type="range" min="10" max="30" value="20" oninput="updateRadius(this.value)" class="w-full accent-indigo-600 cursor-pointer">
+      </div>
+      <div class="pt-2 border-t border-slate-100 dark:border-neutral-800 text-[11px] text-slate-500">
+        💡 All copy is live editable via <code>contenteditable="true"</code>.
       </div>
     </div>
+  </aside>
 
-    <!-- ======================================================================= -->
-    <!-- SCROLLABLE TAB CONTAINER -->
-    <!-- ======================================================================= -->
-    <div id="mainScrollBody" class="flex-1 overflow-y-auto no-scrollbar bg-white dark:bg-[#121212] pb-24">
-      
-      <!-- ===================================================================== -->
-      <!-- TAB 1: TODAY (OPERATIONAL COMMAND CENTER WITH JOB PROGRESS PHOTOS) -->
-      <!-- ===================================================================== -->
-      <div id="tab-view-today" class="main-tab-view screen-in-right px-5 pt-4 pb-6 flex flex-col gap-5">
-        
-        <div class="flex items-end justify-between">
-          <div>
-            <h2 class="text-2xl font-extrabold tracking-tight text-[#222222] dark:text-white">Today's Overview</h2>
-            <p class="text-xs text-[#717171] mt-0.5">Wednesday, Aug 26 &middot; 3 active escrow jobs</p>
-          </div>
-          <span class="text-[10px] font-black text-[#008A05] bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full border border-emerald-200">
-            Escrow Active
-          </span>
+  <!-- ========================================== -->
+  <!-- 3. SIDE-BY-SIDE CONTAINER                  -->
+  <!-- ========================================== -->
+  <main class="max-w-7xl mx-auto px-4 py-8">
+
+    <div id="artboards-container" class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start max-w-5xl mx-auto">
+
+      <!-- ========================================================================= -->
+      <!-- LEFT: iOS 18 "COMMAND CENTER" (OPERATIONS & ESCROW)                       -->
+      <!-- ========================================================================= -->
+      <article id="card-p-ios" class="artboard-card flex flex-col bg-ios-bg dark:bg-ios-bg-dark border-2 border-indigo-500 rounded-[30px] shadow-2xl overflow-hidden transition-all relative">
+
+        <div class="absolute top-0 left-6 z-30 bg-indigo-600 text-white text-[10px] font-extrabold uppercase tracking-wider px-3.5 py-1 rounded-b-xl shadow-md flex items-center gap-1">
+          <i data-lucide="apple" class="w-3 h-3"></i> iOS 18 Command Center
         </div>
 
-        <!-- 4 KPI Grid -->
-        <div class="grid grid-cols-2 gap-2.5">
-          <div class="p-3.5 bg-[#F7F7F7] dark:bg-neutral-850 rounded-2xl border border-[#EBEBEB] dark:border-neutral-800 flex flex-col justify-between">
-            <span class="text-[9px] font-bold text-[#717171] uppercase">Ready Payout</span>
-            <div id="todayBalanceAmount" class="text-xl font-black text-[#008A05] mt-1">$8,450.00</div>
-            <span class="text-[9px] text-[#717171] mt-0.5">Stripe Instant</span>
-          </div>
-
-          <div class="p-3.5 bg-[#F7F7F7] dark:bg-neutral-850 rounded-2xl border border-[#EBEBEB] dark:border-neutral-800 flex flex-col justify-between">
-            <span class="text-[9px] font-bold text-[#717171] uppercase">Protected Escrow</span>
-            <div class="text-xl font-black text-[#4F46E5] mt-1">$14,200.00</div>
-            <span class="text-[9px] text-[#717171] mt-0.5">3 Client Deposits</span>
-          </div>
-
-          <div class="p-3.5 bg-[#F7F7F7] dark:bg-neutral-850 rounded-2xl border border-[#EBEBEB] dark:border-neutral-800 flex flex-col justify-between">
-            <span class="text-[9px] font-bold text-[#717171] uppercase">Active Quotes</span>
-            <div class="text-xl font-black text-amber-500 mt-1">4 Quotes</div>
-            <span class="text-[9px] text-[#717171] mt-0.5">2 Signed / Pending</span>
-          </div>
-
-          <div class="p-3.5 bg-[#F7F7F7] dark:bg-neutral-850 rounded-2xl border border-[#EBEBEB] dark:border-neutral-800 flex flex-col justify-between">
-            <span class="text-[9px] font-bold text-[#717171] uppercase">Unread Messages</span>
-            <div class="text-xl font-black text-[#FF385C] mt-1">2 New</div>
-            <span class="text-[9px] text-[#717171] mt-0.5">&lt;14m Response</span>
-          </div>
-        </div>
-
-        <!-- PRIORITY MILESTONE CARD WITH LIVE JOB PROGRESS PHOTOS & UPLOAD TRIGGER -->
-        <div class="rounded-3xl border border-[#EBEBEB] dark:border-neutral-800 overflow-hidden shadow-airbnb-card bg-white dark:bg-[#1A1A1A]">
-          
-          <div class="relative h-40 w-full bg-neutral-100">
-            <img src="https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=600&auto=format&fit=crop&q=80" alt="Kitchen" class="w-full h-full object-cover">
-            <div class="absolute top-3 left-3 bg-black/75 text-white text-[10px] font-black px-2.5 py-1 rounded-full">
-              Milestone 2 Sign-off
-            </div>
-            <div class="absolute bottom-3 left-3 bg-white/95 text-[#008A05] text-xs font-black px-3 py-1 rounded-full shadow-md">
-              $6,200 Release Ready
-            </div>
-          </div>
-
-          <div class="p-4 flex flex-col gap-3.5">
+        <header class="p-4 bg-indigo-50/70 dark:bg-neutral-900 border-b border-indigo-100 dark:border-neutral-800 flex items-center justify-between">
+          <div class="flex items-center gap-2.5 ml-32 sm:ml-40">
             <div>
-              <div class="flex items-center justify-between">
-                <h4 class="text-sm font-extrabold text-[#222222] dark:text-white">Modern Farmhouse Kitchen Remodel</h4>
-                <span class="text-[10px] text-[#717171]">Walkthrough 2:00 PM</span>
+              <h3 class="font-bold text-xs text-slate-900 dark:text-white">Command Center (Operations)</h3>
+              <p class="text-[10px] text-indigo-700 dark:text-indigo-300">Action Required • Active Jobs • In-Escrow</p>
+            </div>
+          </div>
+          <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-200">iOS Native</span>
+        </header>
+
+        <div class="artboard-frame mx-auto w-full max-w-[390px] bg-ios-bg dark:bg-black min-h-[880px] relative pb-28">
+
+          <!-- Top Contractor Header Bar -->
+          <div class="sticky top-0 z-20 ios-nav-glass border-b border-slate-200/60 dark:border-neutral-800/60 px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+              <div class="w-9 h-9 rounded-xl overflow-hidden border border-slate-200 dark:border-neutral-700 shrink-0">
+                <img src="https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=120&q=80" alt="Avatar" class="w-full h-full object-cover">
               </div>
-              <p class="text-xs text-[#717171] mt-0.5">Eleanor Vance &middot; 442 Maple Heights Blvd, Pasadena</p>
+              <div>
+                <h4 class="font-bold text-xs text-slate-900 dark:text-white leading-tight">Apex Master Builders</h4>
+                <div class="flex items-center gap-1 mt-0.5">
+                  <span class="w-2 h-2 rounded-full bg-ios-green animate-pulse"></span>
+                  <span class="text-[10px] text-emerald-600 font-semibold">Leads Active</span>
+                </div>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <button class="w-8 h-8 rounded-full bg-slate-100 dark:bg-neutral-800 text-slate-800 dark:text-slate-200 flex items-center justify-center relative">
+                <i data-lucide="bell" class="w-4 h-4"></i>
+                <span class="absolute top-1 right-1 w-2 h-2 rounded-full bg-rose-500"></span>
+              </button>
+              <button class="w-8 h-8 rounded-full bg-slate-100 dark:bg-neutral-800 text-slate-800 dark:text-slate-200 flex items-center justify-center">
+                <i data-lucide="settings" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="p-4 space-y-4 text-xs">
+
+            <!-- 1. Urgent Action Card -->
+            <div class="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-[20px] p-3.5 shadow-sm flex items-start gap-3">
+              <div class="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 mt-0.5">
+                <i data-lucide="alert-circle" class="w-5 h-5"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between">
+                  <h5 class="font-bold text-xs text-amber-900 dark:text-amber-200">Payout Ready for Release</h5>
+                  <span class="text-[9px] font-bold text-amber-700 dark:text-amber-300">Action Needed</span>
+                </div>
+                <p class="text-[11px] text-amber-800 dark:text-amber-300/90 mt-0.5 leading-snug">
+                  Milestone 2 for <strong>Westlake Kitchen ($12,500)</strong> was approved by Jessica D.
+                </p>
+                <button class="mt-2 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-[10px] rounded-lg shadow-xs flex items-center gap-1">
+                  <i data-lucide="wallet" class="w-3 h-3"></i> Transfer to Stripe Account
+                </button>
+              </div>
             </div>
 
-            <!-- Milestone Progress Bar -->
-            <div class="grid grid-cols-3 gap-1.5 h-1.5">
-              <div class="bg-[#008A05] rounded-full" title="M1: Rough-in Done"></div>
-              <div class="bg-[#FF385C] rounded-full animate-pulse" title="M2: Cabinetry Ready"></div>
-              <div class="bg-[#EBEBEB] dark:bg-neutral-700 rounded-full" title="M3: Finish"></div>
+            <!-- 2. Revenue & Escrow Metric Quad -->
+            <div class="grid grid-cols-2 gap-2.5">
+              <div class="bg-white dark:bg-ios-card-dark p-3.5 rounded-[20px] shadow-ios-sm border border-slate-100 dark:border-neutral-800">
+                <div class="flex items-center justify-between text-slate-400 mb-1">
+                  <span class="text-[10px] uppercase font-bold tracking-wider">Available Balance</span>
+                  <i data-lucide="dollar-sign" class="w-4 h-4 text-emerald-500"></i>
+                </div>
+                <span contenteditable="true" class="text-lg font-black text-slate-900 dark:text-white block">$34,850</span>
+                <span class="text-[10px] text-emerald-600 font-bold flex items-center gap-0.5 mt-0.5">
+                  <i data-lucide="trending-up" class="w-3 h-3"></i> +18% vs last mo
+                </span>
+              </div>
+
+              <div class="bg-white dark:bg-ios-card-dark p-3.5 rounded-[20px] shadow-ios-sm border border-slate-100 dark:border-neutral-800">
+                <div class="flex items-center justify-between text-slate-400 mb-1">
+                  <span class="text-[10px] uppercase font-bold tracking-wider">Held in Escrow</span>
+                  <i data-lucide="lock" class="w-4 h-4 text-indigo-500"></i>
+                </div>
+                <span contenteditable="true" class="text-lg font-black text-indigo-600 dark:text-indigo-400 block">$48,200</span>
+                <span class="text-[10px] text-slate-500 font-medium block mt-0.5">Across 3 active jobs</span>
+              </div>
             </div>
 
-            <!-- ============================================================= -->
-            <!-- DEDICATED JOB PROGRESS PHOTOS SECTION (NEW & INTERACTIVE) -->
-            <!-- ============================================================= -->
-            <div class="p-3 bg-[#F7F7F7] dark:bg-neutral-800/80 rounded-2xl border border-[#EBEBEB] dark:border-neutral-700 flex flex-col gap-2">
+            <!-- 3. Active Job Queue with Milestone Progress -->
+            <div class="space-y-2">
+              <div class="flex items-center justify-between px-1">
+                <h5 class="font-bold text-xs text-slate-900 dark:text-white flex items-center gap-1.5">
+                  <i data-lucide="hammer" class="w-3.5 h-3.5 text-indigo-600"></i> Active Jobs (3 In Flight)
+                </h5>
+                <span class="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold cursor-pointer">View All</span>
+              </div>
+
+              <!-- Job 1 -->
+              <div class="bg-white dark:bg-ios-card-dark rounded-[20px] p-3.5 shadow-ios-sm border border-slate-100 dark:border-neutral-800 space-y-2.5">
+                <div class="flex items-start justify-between">
+                  <div>
+                    <h6 contenteditable="true" class="font-bold text-xs text-slate-900 dark:text-white">Westlake Hills Kitchen Remodel</h6>
+                    <span class="text-[10px] text-slate-400">Client: Jessica Davis • Contract: $34,500</span>
+                  </div>
+                  <span class="px-2 py-0.5 text-[9px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 rounded-full">
+                    Milestone 2 / 3
+                  </span>
+                </div>
+
+                <!-- Milestone Bar -->
+                <div class="space-y-1">
+                  <div class="flex justify-between text-[10px] text-slate-500">
+                    <span>Countertops & Island Slab</span>
+                    <span class="font-bold text-slate-800 dark:text-slate-200">66% Complete</span>
+                  </div>
+                  <div class="h-2 w-full bg-slate-100 dark:bg-neutral-800 rounded-full overflow-hidden">
+                    <div class="h-full bg-indigo-600 rounded-full" style="width: 66%;"></div>
+                  </div>
+                </div>
+
+                <div class="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-neutral-800 text-[11px]">
+                  <span class="text-slate-500 flex items-center gap-1">
+                    <i data-lucide="clock" class="w-3 h-3"></i> Inspection: Tomorrow 9am
+                  </span>
+                  <button class="text-indigo-600 dark:text-indigo-400 font-bold flex items-center gap-0.5">
+                    Job Hub <i data-lucide="chevron-right" class="w-3 h-3"></i>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Job 2 -->
+              <div class="bg-white dark:bg-ios-card-dark rounded-[20px] p-3.5 shadow-ios-sm border border-slate-100 dark:border-neutral-800 space-y-2.5">
+                <div class="flex items-start justify-between">
+                  <div>
+                    <h6 contenteditable="true" class="font-bold text-xs text-slate-900 dark:text-white">Barton Creek Master Bath</h6>
+                    <span class="text-[10px] text-slate-400">Client: Robert Miller • Contract: $19,200</span>
+                  </div>
+                  <span class="px-2 py-0.5 text-[9px] font-bold bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 rounded-full">
+                    Milestone 1 / 3
+                  </span>
+                </div>
+
+                <div class="space-y-1">
+                  <div class="flex justify-between text-[10px] text-slate-500">
+                    <span>Rough Plumbing & Shower Pan</span>
+                    <span class="font-bold text-slate-800 dark:text-slate-200">33% Complete</span>
+                  </div>
+                  <div class="h-2 w-full bg-slate-100 dark:bg-neutral-800 rounded-full overflow-hidden">
+                    <div class="h-full bg-indigo-600 rounded-full" style="width: 33%;"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 4. Lead Radar / Incoming Estimate Requests -->
+            <div class="space-y-2">
+              <div class="flex items-center justify-between px-1">
+                <h5 class="font-bold text-xs text-slate-900 dark:text-white flex items-center gap-1.5">
+                  <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-500"></i> New Inquiries (2 Awaiting Reply)
+                </h5>
+                <span class="text-[10px] text-emerald-600 font-bold">Avg ~15m Reply</span>
+              </div>
+
+              <div class="bg-white dark:bg-ios-card-dark rounded-[20px] p-3.5 shadow-ios-sm border border-slate-100 dark:border-neutral-800 space-y-2">
+                <div class="flex items-start justify-between">
+                  <div>
+                    <h6 class="font-bold text-xs text-slate-900 dark:text-white">Custom ADU & Deck Remodel</h6>
+                    <span class="text-[10px] text-slate-400">78704 (Bouldin Creek) • 12 mins ago</span>
+                  </div>
+                  <span class="text-[10px] font-bold text-indigo-600">$45k – $65k</span>
+                </div>
+                <p class="text-[11px] text-slate-600 dark:text-slate-300 leading-snug">
+                  "Looking to build a 450 sq ft detached home office and wraparound cedar deck. Ready to start next month."
+                </p>
+                <div class="flex gap-2 pt-1">
+                  <button class="flex-1 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[11px] rounded-xl shadow-xs">
+                    Send Instant Quote
+                  </button>
+                  <button class="px-3 py-2 bg-slate-100 dark:bg-neutral-800 text-slate-700 dark:text-slate-300 font-semibold text-[11px] rounded-xl">
+                    Message
+                  </button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Bottom Floating Dispatch Dock -->
+          <div class="absolute bottom-3 left-4 right-4 z-20">
+            <div class="ios-glass-dock p-2 rounded-full border border-white/50 dark:border-neutral-700/60 shadow-ios-dock flex items-center justify-between gap-2">
+              <button class="flex-1 py-3 px-4 bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white font-bold text-xs rounded-full shadow-md flex items-center justify-center gap-1.5">
+                <i data-lucide="plus-circle" class="w-4 h-4"></i> Create Quote
+              </button>
+              <button class="w-10 h-10 rounded-full bg-slate-100 dark:bg-neutral-800 text-slate-800 dark:text-slate-200 flex items-center justify-center shrink-0">
+                <i data-lucide="calendar" class="w-4 h-4"></i>
+              </button>
+              <button class="w-10 h-10 rounded-full bg-slate-100 dark:bg-neutral-800 text-slate-800 dark:text-slate-200 flex items-center justify-center shrink-0">
+                <i data-lucide="camera" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </article>
+
+      <!-- ========================================================================= -->
+      <!-- RIGHT: AIRBNB HOST EDITION (PRO HOSTING & EARNINGS MODE)                  -->
+      <!-- ========================================================================= -->
+      <article id="card-p-airbnb" class="artboard-card flex flex-col bg-white dark:bg-neutral-900 border-2 border-rose-500/80 rounded-[30px] shadow-2xl overflow-hidden transition-all relative">
+
+        <div class="absolute top-0 left-6 z-30 bg-rose-600 text-white text-[10px] font-extrabold uppercase tracking-wider px-3.5 py-1 rounded-b-xl shadow-md flex items-center gap-1">
+          <i data-lucide="home" class="w-3 h-3 fill-white"></i> Airbnb Host Edition
+        </div>
+
+        <header class="p-4 bg-rose-50/70 dark:bg-neutral-900 border-b border-rose-100 dark:border-neutral-800 flex items-center justify-between">
+          <div class="flex items-center gap-2.5 ml-32 sm:ml-40">
+            <div>
+              <h3 class="font-bold text-xs text-slate-900 dark:text-white">Airbnb Host Mode (Pro Dashboard)</h3>
+              <p class="text-[10px] text-rose-700 dark:text-rose-300">Reservations • Superpro Tracker • Payouts</p>
+            </div>
+          </div>
+          <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-200">Airbnb UI</span>
+        </header>
+
+        <div class="artboard-frame mx-auto w-full max-w-[390px] bg-white dark:bg-neutral-900 min-h-[880px] relative pb-24">
+
+          <!-- Airbnb Host Top Bar -->
+          <div class="sticky top-0 z-20 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-md px-4 py-3 flex items-center justify-between border-b border-slate-100 dark:border-neutral-800">
+            <div class="flex items-center gap-2">
+              <span class="font-extrabold text-xs text-slate-900 dark:text-white uppercase tracking-wider">HOSTING</span>
+              <span class="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-neutral-800 text-slate-600 font-bold">Switch to Booking</span>
+            </div>
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-full bg-slate-100 dark:bg-neutral-800 flex items-center justify-center relative">
+                <i data-lucide="bell" class="w-4 h-4 text-slate-700 dark:text-slate-300"></i>
+                <span class="absolute top-1 right-1 w-2 h-2 rounded-full bg-rose-500"></span>
+              </div>
+              <div class="w-8 h-8 rounded-full overflow-hidden border border-slate-200">
+                <img src="https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?auto=format&fit=crop&w=120&q=80" alt="Host Avatar" class="w-full h-full object-cover">
+              </div>
+            </div>
+          </div>
+
+          <div class="p-4 space-y-4 text-xs">
+
+            <!-- 1. Airbnb "Your Reservations / Jobs" Banner -->
+            <div class="space-y-2">
+              <div class="flex items-center justify-between">
+                <h3 class="font-bold text-base text-slate-900 dark:text-white">Your active jobs (3)</h3>
+                <span class="text-xs text-rose-600 font-bold underline cursor-pointer">All (186)</span>
+              </div>
+
+              <!-- Horizontal Reservation / Job Cards -->
+              <div class="flex gap-3 overflow-x-auto py-1 no-scrollbar">
+
+                <!-- Job Card 1 -->
+                <div class="w-64 shrink-0 p-3.5 rounded-2xl border border-slate-200 dark:border-neutral-700 bg-white dark:bg-neutral-850 shadow-sm space-y-2">
+                  <div class="flex items-center justify-between">
+                    <span class="text-[9px] font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                      Currently In Progress
+                    </span>
+                    <span class="font-bold text-slate-900 dark:text-white text-[11px]">$34,500</span>
+                  </div>
+                  <h5 class="font-bold text-xs text-slate-900 dark:text-white leading-tight">Westlake Hills Kitchen</h5>
+                  <p class="text-[10px] text-slate-500">Jessica Davis • Milestone 2 / 3 Approved</p>
+                  <button class="w-full py-1.5 bg-rose-600 text-white font-bold text-[10px] rounded-lg shadow-xs">
+                    View Milestone Details
+                  </button>
+                </div>
+
+                <!-- Job Card 2 -->
+                <div class="w-64 shrink-0 p-3.5 rounded-2xl border border-slate-200 dark:border-neutral-700 bg-white dark:bg-neutral-850 shadow-sm space-y-2">
+                  <div class="flex items-center justify-between">
+                    <span class="text-[9px] font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
+                      Starting Soon
+                    </span>
+                    <span class="font-bold text-slate-900 dark:text-white text-[11px]">$19,200</span>
+                  </div>
+                  <h5 class="font-bold text-xs text-slate-900 dark:text-white leading-tight">Barton Creek Master Bath</h5>
+                  <p class="text-[10px] text-slate-500">Robert Miller • Inspection Scheduled</p>
+                  <button class="w-full py-1.5 bg-slate-100 dark:bg-neutral-800 text-slate-800 dark:text-slate-200 font-bold text-[10px] rounded-lg">
+                    Message Client
+                  </button>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- 2. Airbnb Host Earnings Section -->
+            <div class="p-4 rounded-2xl border border-slate-200 dark:border-neutral-700 bg-white dark:bg-neutral-850 shadow-sm space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Payouts</span>
+                <span class="text-[10px] text-rose-600 font-bold">Stripe Connected</span>
+              </div>
+              <div class="flex items-baseline justify-between">
+                <div>
+                  <span class="text-xs text-slate-500 block">Available Now</span>
+                  <span class="text-xl font-black text-slate-900 dark:text-white">$34,850</span>
+                </div>
+                <div class="text-right">
+                  <span class="text-xs text-slate-500 block">In Escrow (Upcoming)</span>
+                  <span class="text-base font-bold text-emerald-600">$48,200</span>
+                </div>
+              </div>
+              <button class="w-full py-2.5 airbnb-btn text-white font-bold text-xs rounded-xl shadow-xs">
+                Withdraw to Bank Account
+              </button>
+            </div>
+
+            <!-- 3. Airbnb Superhost Progress Tracker -->
+            <div class="p-4 rounded-2xl border border-slate-200 dark:border-neutral-700 bg-slate-50/70 dark:bg-neutral-800/50 space-y-2.5">
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-1.5">
-                  <i data-lucide="camera" class="w-3.5 h-3.5 text-[#FF385C]"></i>
-                  <span class="text-[11px] font-extrabold text-[#222222] dark:text-white">Milestone Proof Photos</span>
-                  <span id="jobPhotoCountBadge" class="text-[9px] font-black bg-[#FF385C]/10 text-[#FF385C] px-1.5 py-0.2 rounded-full">3 Photos</span>
+                  <span class="text-sm">🏆</span>
+                  <h5 class="font-bold text-xs text-slate-900 dark:text-white">Superhost Status: Maintained</h5>
                 </div>
-                <button onclick="openUploadJobPhotoModal('Modern Farmhouse Kitchen')" class="airbnb-press px-2.5 py-1 bg-white dark:bg-neutral-900 border border-[#EBEBEB] text-[10px] font-black text-[#FF385C] rounded-full flex items-center gap-1 shadow-xs">
-                  <i data-lucide="plus" class="w-3 h-3"></i>
-                  <span>Upload Photos</span>
-                </button>
+                <span class="text-[10px] text-emerald-600 font-bold">Top Tier</span>
               </div>
-
-              <!-- Horizontal Progress Photo Thumbnails Ribbon -->
-              <div id="jobProgressPhotoRow" class="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
-                <div class="relative w-16 h-16 rounded-xl overflow-hidden shrink-0 border border-[#EBEBEB] shadow-xs group cursor-pointer" onclick="triggerToast('Viewing Photo: Island Box Framing')">
-                  <img src="https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=200&auto=format&fit=crop&q=80" alt="Framing" class="w-full h-full object-cover">
-                  <span class="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[7px] font-bold text-center py-0.5 truncate">Framing</span>
+              <div class="grid grid-cols-3 gap-2 text-center text-xs">
+                <div class="p-2 rounded-xl bg-white dark:bg-neutral-800 border border-slate-200/60 dark:border-neutral-700">
+                  <span class="text-[9px] text-slate-400 block">Rating</span>
+                  <span class="font-bold text-slate-900 dark:text-white">4.96 ★</span>
                 </div>
-
-                <div class="relative w-16 h-16 rounded-xl overflow-hidden shrink-0 border border-[#EBEBEB] shadow-xs group cursor-pointer" onclick="triggerToast('Viewing Photo: Quartz Counter Delivery')">
-                  <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=200&auto=format&fit=crop&q=80" alt="Counter" class="w-full h-full object-cover">
-                  <span class="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[7px] font-bold text-center py-0.5 truncate">Quartz Slab</span>
+                <div class="p-2 rounded-xl bg-white dark:bg-neutral-800 border border-slate-200/60 dark:border-neutral-700">
+                  <span class="text-[9px] text-slate-400 block">Response</span>
+                  <span class="font-bold text-emerald-600">100%</span>
                 </div>
-
-                <div class="relative w-16 h-16 rounded-xl overflow-hidden shrink-0 border border-[#EBEBEB] shadow-xs group cursor-pointer" onclick="triggerToast('Viewing Photo: Cabinet Hinges')">
-                  <img src="https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=200&auto=format&fit=crop&q=80" alt="Hinges" class="w-full h-full object-cover">
-                  <span class="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[7px] font-bold text-center py-0.5 truncate">Soft-Close</span>
+                <div class="p-2 rounded-xl bg-white dark:bg-neutral-800 border border-slate-200/60 dark:border-neutral-700">
+                  <span class="text-[9px] text-slate-400 block">Completed</span>
+                  <span class="font-bold text-slate-900 dark:text-white">186 Jobs</span>
                 </div>
-
-                <!-- Add More Photo Thumbnail Button -->
-                <button onclick="openUploadJobPhotoModal('Modern Farmhouse Kitchen')" class="w-16 h-16 rounded-xl border-2 border-dashed border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-900 flex flex-col items-center justify-center text-neutral-400 hover:text-[#FF385C] hover:border-[#FF385C] transition shrink-0">
-                  <i data-lucide="plus" class="w-4 h-4"></i>
-                  <span class="text-[8px] font-bold mt-0.5">Add</span>
-                </button>
               </div>
             </div>
 
-            <div class="flex items-center gap-2 pt-1">
-              <button onclick="openReleaseModal()" class="airbnb-press flex-1 py-2.5 bg-[#FF385C] text-white rounded-full text-xs font-black text-center shadow-md">
-                Request Payout Release ($6.2k)
-              </button>
-              <button onclick="openChatModal('Eleanor Vance', 'Kitchen Remodel')" class="airbnb-press px-3.5 py-2.5 bg-white dark:bg-neutral-800 border border-[#222222] dark:border-neutral-600 text-[#222222] dark:text-white rounded-full text-xs font-extrabold">
-                Chat
-              </button>
-            </div>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- ===================================================================== -->
-      <!-- TAB 2: CALENDAR -->
-      <!-- ===================================================================== -->
-      <div id="tab-view-calendar" class="main-tab-view hidden px-5 pt-4 pb-6 flex flex-col gap-5">
-        <div>
-          <h2 class="text-2xl font-extrabold tracking-tight text-[#222222] dark:text-white">Job Calendar</h2>
-          <p class="text-xs text-[#717171] mt-0.5">August 2026 &middot; Site visits &amp; milestone deadlines</p>
-        </div>
-
-        <div class="p-4 bg-white dark:bg-[#1A1A1A] rounded-3xl border border-[#EBEBEB] dark:border-neutral-800 shadow-airbnb-subtle">
-          <div class="flex items-center justify-between mb-3">
-            <span class="text-sm font-black text-[#222222] dark:text-white">August 2026</span>
-            <div class="flex gap-1">
-              <button class="p-1 rounded-full border text-[#717171]"><i data-lucide="chevron-left" class="w-3.5 h-3.5"></i></button>
-              <button class="p-1 rounded-full border text-[#717171]"><i data-lucide="chevron-right" class="w-3.5 h-3.5"></i></button>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-[#717171] mb-1">
-            <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
-          </div>
-
-          <div class="grid grid-cols-7 gap-1 text-center text-xs font-bold">
-            <span class="py-2 text-neutral-300">26</span><span class="py-2 text-neutral-300">27</span><span class="py-2 text-neutral-300">28</span><span class="py-2 text-neutral-300">29</span><span class="py-2 text-neutral-300">30</span><span class="py-2 text-neutral-300">31</span><span class="py-2">1</span>
-            <span class="py-2">2</span><span class="py-2">3</span><span class="py-2">4</span><span class="py-2">5</span><span class="py-2">6</span><span class="py-2">7</span><span class="py-2">8</span>
-            <span class="py-2">9</span><span class="py-2">10</span><span class="py-2">11</span><span class="py-2">12</span><span class="py-2">13</span><span class="py-2">14</span><span class="py-2">15</span>
-            <span class="py-2">16</span><span class="py-2">17</span><span class="py-2">18</span><span class="py-2">19</span><span class="py-2">20</span><span class="py-2">21</span><span class="py-2">22</span>
-            <span class="py-2">23</span><span class="py-2">24</span><span class="py-2">25</span>
-            <span class="py-2 bg-[#FF385C] text-white rounded-2xl font-black shadow-xs">26</span>
-            <span class="py-2 bg-indigo-50 dark:bg-neutral-800 text-indigo-700 rounded-2xl">27</span>
-            <span class="py-2 bg-indigo-50 dark:bg-neutral-800 text-indigo-700 rounded-2xl">28</span>
-            <span class="py-2">29</span>
-          </div>
-        </div>
-
-        <div class="p-4 bg-[#F7F7F7] dark:bg-neutral-800 rounded-3xl border border-[#EBEBEB] flex flex-col gap-2">
-          <span class="text-[10px] font-black uppercase text-[#717171]">Scheduled for Today (Aug 26)</span>
-          <div class="p-3 bg-white dark:bg-[#121212] rounded-2xl flex items-center justify-between">
-            <div>
-              <strong class="text-xs font-bold text-[#222222] dark:text-white">2:00 PM &middot; Kitchen Milestone Walkthrough</strong>
-              <p class="text-[10px] text-[#717171]">Eleanor Vance &middot; Pasadena</p>
-            </div>
-            <span class="text-xs font-black text-[#008A05]">$6,200 Sign-off</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- ===================================================================== -->
-      <!-- TAB 3: PUBLIC PROFILE (WITH ALL 5 SUBTABS) -->
-      <!-- ===================================================================== -->
-      <div id="tab-view-profile" class="main-tab-view hidden px-5 pt-4 pb-6 flex flex-col gap-5">
-        <div>
-          <h2 class="text-2xl font-extrabold tracking-tight text-[#222222] dark:text-white">Public Profile</h2>
-          <p class="text-xs text-[#717171] mt-0.5">Manage your public listing, portfolio, services &amp; reviews</p>
-        </div>
-
-        <!-- 5-Photo Cover Gallery Mosaic -->
-        <div class="rounded-3xl overflow-hidden border border-[#EBEBEB] dark:border-neutral-800 shadow-airbnb-card bg-neutral-100">
-          <div class="grid grid-cols-2 gap-1.5 h-48">
-            <div class="h-full"><img src="https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=600&auto=format&fit=crop&q=80" alt="Main" class="w-full h-full object-cover"></div>
-            <div class="grid grid-rows-2 gap-1.5 h-full">
-              <img src="https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=400&auto=format&fit=crop&q=80" alt="Bath" class="w-full h-full object-cover">
-              <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=400&auto=format&fit=crop&q=80" alt="Deck" class="w-full h-full object-cover">
-            </div>
-          </div>
-        </div>
-
-        <!-- PROFILE 5-SUBTAB SELECTOR -->
-        <div class="grid grid-cols-5 gap-1 p-1 bg-[#F7F7F7] dark:bg-neutral-850 rounded-2xl border border-[#EBEBEB] dark:border-neutral-800">
-          <button onclick="setProfileSubtab('posts')" id="subtab-btn-posts" class="psub-pill active py-1.5 text-[10px] font-black rounded-xl bg-[#222222] text-white text-center">Posts</button>
-          <button onclick="setProfileSubtab('about')" id="subtab-btn-about" class="psub-pill py-1.5 text-[10px] font-bold text-[#717171] text-center">About</button>
-          <button onclick="setProfileSubtab('services')" id="subtab-btn-services" class="psub-pill py-1.5 text-[10px] font-bold text-[#717171] text-center">Services</button>
-          <button onclick="setProfileSubtab('portfolio')" id="subtab-btn-portfolio" class="psub-pill py-1.5 text-[10px] font-bold text-[#717171] text-center">Portfolio</button>
-          <button onclick="setProfileSubtab('reviews')" id="subtab-btn-reviews" class="psub-pill py-1.5 text-[10px] font-bold text-[#717171] text-center">Reviews</button>
-        </div>
-
-        <!-- SUBTAB 1: POSTS -->
-        <div id="psub-pane-posts" class="psub-pane flex flex-col gap-3">
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-extrabold text-[#222222] dark:text-white">Recent Updates &amp; Posts</span>
-            <button onclick="openCreatePostModal()" class="airbnb-press px-3 py-1.5 bg-[#222222] dark:bg-white text-white dark:text-[#222222] rounded-full text-xs font-black flex items-center gap-1 shadow-sm">
-              <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-              <span>Create Post</span>
-            </button>
-          </div>
-
-          <div id="postsListContainer" class="flex flex-col gap-3">
-            <div class="p-4 bg-white dark:bg-neutral-850 rounded-3xl border border-[#EBEBEB] dark:border-neutral-800 shadow-airbnb-card flex flex-col gap-2.5">
+            <!-- 4. Manage Listings & Services -->
+            <div class="space-y-2 pt-1 border-t border-slate-100 dark:border-neutral-800">
               <div class="flex items-center justify-between">
-                <span class="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-full text-[9px] font-black uppercase">before &amp; after</span>
-                <span class="text-[10px] text-[#717171]">2 days ago &middot; Pasadena</span>
+                <h5 class="font-bold text-xs text-slate-900 dark:text-white">Your Services & Pricing</h5>
+                <span class="text-[10px] text-rose-600 font-bold">+ Add Service</span>
               </div>
-              <p class="text-xs text-[#222222] dark:text-neutral-200">Custom walnut island cabinetry install completed today with under-counter LED channels!</p>
-              <img src="https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=500&auto=format&fit=crop&q=80" alt="Post photo" class="w-full h-36 rounded-2xl object-cover">
-            </div>
-          </div>
-        </div>
-
-        <!-- SUBTAB 2: ABOUT -->
-        <div id="psub-pane-about" class="psub-pane hidden flex flex-col gap-3">
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-extrabold text-[#222222] dark:text-white">Business Info</span>
-            <button onclick="openEditProfileModal()" class="airbnb-press px-3 py-1.5 bg-white dark:bg-neutral-800 border border-[#222222] text-[#222222] dark:text-white rounded-full text-xs font-black">
-              Edit Profile
-            </button>
-          </div>
-
-          <div class="p-4 bg-white dark:bg-neutral-850 rounded-3xl border border-[#EBEBEB] dark:border-neutral-800 flex flex-col gap-2.5 text-xs">
-            <strong class="text-[#222222] dark:text-white text-sm">About Us</strong>
-            <p id="aboutBioText" class="text-[#717171] leading-relaxed">
-              Licensed residential builder in Los Angeles for 14+ years. Specializing in turnkey kitchen remodels, master bathroom additions, and precision millwork with 100% RateDeed escrow protection.
-            </p>
-            
-            <div class="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-[#EBEBEB]">
-              <div><span class="text-[#717171]">License:</span> <strong class="text-[#008A05]">CSLB #1094821</strong></div>
-              <div><span class="text-[#717171]">Coverage:</span> <strong>$2M General Liability</strong></div>
-              <div><span class="text-[#717171]">Phone:</span> <strong>(310) 555-0194</strong></div>
-              <div><span class="text-[#717171]">Email:</span> <strong>arthur@apexbuild.com</strong></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- SUBTAB 3: SERVICES -->
-        <div id="psub-pane-services" class="psub-pane hidden flex flex-col gap-3">
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-extrabold text-[#222222] dark:text-white">Offered Services</span>
-            <button onclick="triggerToast('Opening Add Service form...')" class="airbnb-press px-3 py-1.5 bg-[#222222] text-white rounded-full text-xs font-black flex items-center gap-1">
-              <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-              <span>Add Service</span>
-            </button>
-          </div>
-
-          <div class="flex flex-col gap-2.5">
-            <div class="p-3.5 bg-white dark:bg-neutral-850 rounded-2xl border border-[#EBEBEB] flex justify-between items-center text-xs">
-              <div><strong class="text-[#222222] dark:text-white">Turnkey Kitchen Remodel</strong><p class="text-[10px] text-[#717171]">Framing, quartz counters &amp; tile</p></div>
-              <span class="font-black text-[#008A05] bg-emerald-50 px-2 py-1 rounded-lg">$12k – $35k</span>
-            </div>
-            <div class="p-3.5 bg-white dark:bg-neutral-850 rounded-2xl border border-[#EBEBEB] flex justify-between items-center text-xs">
-              <div><strong class="text-[#222222] dark:text-white">Master Bath Renovation</strong><p class="text-[10px] text-[#717171]">Curbless showers &amp; soaking tubs</p></div>
-              <span class="font-black text-[#008A05] bg-emerald-50 px-2 py-1 rounded-lg">$8.5k – $22k</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- SUBTAB 4: PORTFOLIO -->
-        <div id="psub-pane-portfolio" class="psub-pane hidden flex flex-col gap-3">
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-extrabold text-[#222222] dark:text-white">Portfolio Projects</span>
-            <button onclick="openAddPortfolioModal()" class="airbnb-press px-3.5 py-1.5 bg-[#FF385C] text-white rounded-full text-xs font-black flex items-center gap-1 shadow-md">
-              <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-              <span>Add Project</span>
-            </button>
-          </div>
-
-          <div id="portfolioGrid" class="grid grid-cols-2 gap-3">
-            <div class="bg-white dark:bg-neutral-850 rounded-2xl overflow-hidden border border-[#EBEBEB] shadow-airbnb-subtle flex flex-col">
-              <img src="https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=400&auto=format&fit=crop&q=80" alt="Kitchen" class="w-full h-28 object-cover">
-              <div class="p-2.5 flex-1 flex flex-col justify-between">
-                <div><strong class="text-xs font-bold block truncate">Pasadena Farmhouse</strong><p class="text-[10px] text-[#717171] mt-0.5 line-clamp-2">Custom walnut island &amp; quartz countertops.</p></div>
-                <button onclick="removePortfolioItem(this)" class="mt-2 text-[10px] text-rose-500 font-bold self-end">Remove</button>
+              <div class="p-3 rounded-xl border border-slate-200 dark:border-neutral-700 flex items-center justify-between">
+                <div>
+                  <span class="font-bold text-xs text-slate-900 dark:text-white block">Full Kitchen Remodel</span>
+                  <span class="text-[10px] text-slate-500">Active • $24,000 – $55,000</span>
+                </div>
+                <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400"></i>
               </div>
             </div>
 
-            <div class="bg-white dark:bg-neutral-850 rounded-2xl overflow-hidden border border-[#EBEBEB] shadow-airbnb-subtle flex flex-col">
-              <img src="https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=400&auto=format&fit=crop&q=80" alt="Bath" class="w-full h-28 object-cover">
-              <div class="p-2.5 flex-1 flex flex-col justify-between">
-                <div><strong class="text-xs font-bold block truncate">Santa Monica Spa Bath</strong><p class="text-[10px] text-[#717171] mt-0.5 line-clamp-2">Curbless shower &amp; soaking tub.</p></div>
-                <button onclick="removePortfolioItem(this)" class="mt-2 text-[10px] text-rose-500 font-bold self-end">Remove</button>
-              </div>
+          </div>
+
+          <!-- Airbnb Host Bottom Nav Bar -->
+          <div class="absolute bottom-0 left-0 right-0 bg-white dark:bg-neutral-900 border-t border-slate-200 dark:border-neutral-800 px-6 py-2.5 shadow-airbnb-bar flex items-center justify-between z-20 text-[10px] text-slate-500">
+            <div class="flex flex-col items-center gap-0.5 text-rose-600 font-bold">
+              <i data-lucide="calendar" class="w-4 h-4"></i>
+              <span>Today</span>
+            </div>
+            <div class="flex flex-col items-center gap-0.5">
+              <i data-lucide="message-square" class="w-4 h-4"></i>
+              <span>Inbox</span>
+            </div>
+            <div class="flex flex-col items-center gap-0.5">
+              <i data-lucide="layers" class="w-4 h-4"></i>
+              <span>Services</span>
+            </div>
+            <div class="flex flex-col items-center gap-0.5">
+              <i data-lucide="dollar-sign" class="w-4 h-4"></i>
+              <span>Earnings</span>
             </div>
           </div>
+
         </div>
-
-        <!-- SUBTAB 5: REVIEWS -->
-        <div id="psub-pane-reviews" class="psub-pane hidden flex flex-col gap-3">
-          <div class="p-4 bg-white dark:bg-neutral-850 rounded-3xl border border-[#EBEBEB] flex items-center gap-4">
-            <div class="text-center">
-              <span class="text-3xl font-black text-[#222222] dark:text-white">4.96</span>
-              <div class="flex justify-center text-amber-400 text-[10px] mt-0.5"><i data-lucide="star" class="w-3 h-3 fill-current"></i><i data-lucide="star" class="w-3 h-3 fill-current"></i><i data-lucide="star" class="w-3 h-3 fill-current"></i><i data-lucide="star" class="w-3 h-3 fill-current"></i><i data-lucide="star" class="w-3 h-3 fill-current"></i></div>
-              <p class="text-[9px] text-[#717171]">48 Ratings</p>
-            </div>
-            <div class="flex-1 flex flex-col gap-1 text-[10px]">
-              <div class="flex items-center gap-1.5"><span class="w-2 text-[#717171]">5</span><div class="flex-1 h-1.5 bg-[#F7F7F7] rounded-full overflow-hidden"><div class="h-full bg-amber-400 w-[94%]"></div></div><span class="text-[#717171]">45</span></div>
-              <div class="flex items-center gap-1.5"><span class="w-2 text-[#717171]">4</span><div class="flex-1 h-1.5 bg-[#F7F7F7] rounded-full overflow-hidden"><div class="h-full bg-amber-400 w-[6%]"></div></div><span class="text-[#717171]">3</span></div>
-            </div>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- ===================================================================== -->
-      <!-- TAB 4: EARNINGS & JOBS (WITH PROGRESS PHOTOS IN ACTIVE JOBS) -->
-      <!-- ===================================================================== -->
-      <div id="tab-view-payments" class="main-tab-view hidden px-5 pt-4 pb-6 flex flex-col gap-5">
-        <div>
-          <h2 class="text-2xl font-extrabold tracking-tight text-[#222222] dark:text-white">Earnings &amp; Pipeline</h2>
-          <p class="text-xs text-[#717171] mt-0.5">Financial transparency &amp; active milestone contracts</p>
-        </div>
-
-        <div class="grid grid-cols-3 gap-1 p-1 bg-[#F7F7F7] dark:bg-neutral-850 rounded-2xl border border-[#EBEBEB]">
-          <button onclick="setPaymentSubtab('overview')" id="pay-subtab-overview" class="pay-sub-pill active py-1.5 text-xs font-black rounded-xl bg-[#222222] text-white text-center">Overview</button>
-          <button onclick="setPaymentSubtab('quotes')" id="pay-subtab-quotes" class="pay-sub-pill py-1.5 text-xs font-bold text-[#717171] text-center">Quotes (4)</button>
-          <button onclick="setPaymentSubtab('jobs')" id="pay-subtab-jobs" class="pay-sub-pill py-1.5 text-xs font-bold text-[#717171] text-center">Active Jobs (3)</button>
-        </div>
-
-        <!-- SUBTAB 1: OVERVIEW -->
-        <div id="pay-pane-overview" class="pay-pane flex flex-col gap-3">
-          <div class="p-5 bg-white dark:bg-neutral-850 rounded-3xl border border-[#EBEBEB] shadow-airbnb-card flex flex-col gap-3">
-            <span class="text-xs font-black uppercase text-[#717171]">Net Lifetime Earned</span>
-            <div class="text-3xl font-black text-[#222222] dark:text-white">$68,400.00</div>
-            
-            <div class="grid grid-cols-2 gap-2 pt-2 border-t border-[#EBEBEB]">
-              <div class="p-2.5 bg-[#F7F7F7] rounded-xl"><span class="text-[9px] uppercase font-bold text-[#717171]">Available Now</span><p class="text-base font-black text-[#008A05]">$8,450.00</p></div>
-              <div class="p-2.5 bg-[#F7F7F7] rounded-xl"><span class="text-[9px] uppercase font-bold text-[#717171]">In Escrow</span><p class="text-base font-black text-[#4F46E5]">$14,200.00</p></div>
-            </div>
-
-            <button onclick="triggerToast('Transfer of $8,450 sent via Stripe Instant!'); confetti({ particleCount: 50 });" class="airbnb-press w-full py-3 bg-[#008A05] text-white rounded-full text-xs font-black shadow-md">
-              Transfer $8,450 to Bank Now
-            </button>
-          </div>
-        </div>
-
-        <!-- SUBTAB 2: QUOTES -->
-        <div id="pay-pane-quotes" class="pay-pane hidden flex flex-col gap-3">
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-extrabold text-[#222222] dark:text-white">Sent Quotes</span>
-            <button onclick="triggerToast('Opening Quote Creator...')" class="airbnb-press px-3 py-1.5 bg-[#222222] text-white rounded-full text-xs font-black flex items-center gap-1 shadow-sm">
-              <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-              <span>New Quote</span>
-            </button>
-          </div>
-
-          <div class="flex flex-col divide-y divide-[#EBEBEB] text-xs">
-            <div class="py-3 flex justify-between items-center">
-              <div><strong class="font-extrabold text-[#222222] dark:text-white">Kitchen Remodel Phase 2</strong><p class="text-[10px] text-[#717171]">Eleanor Vance &middot; $12,450</p></div>
-              <span class="px-2 py-0.5 bg-emerald-50 text-[#008A05] font-black rounded-full text-[10px]">Funded in Escrow</span>
-            </div>
-            <div class="py-3 flex justify-between items-center">
-              <div><strong class="font-extrabold text-[#222222] dark:text-white">Custom Cedar Deck</strong><p class="text-[10px] text-[#717171]">David Kim &middot; $7,800</p></div>
-              <span class="px-2 py-0.5 bg-amber-50 text-amber-700 font-black rounded-full text-[10px]">Contract Signed</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- SUBTAB 3: JOBS WITH DIRECT PHOTO UPDATES -->
-        <div id="pay-pane-jobs" class="pay-pane hidden flex flex-col gap-3">
-          <span class="text-xs font-extrabold text-[#222222] dark:text-white">Active Jobs &amp; Progress Photo Updates</span>
-          
-          <div class="p-4 bg-white dark:bg-neutral-850 rounded-2xl border border-[#EBEBEB] flex flex-col gap-3 text-xs">
-            <div class="flex justify-between items-start">
-              <div><strong class="text-sm font-extrabold">Modern Farmhouse Kitchen</strong><p class="text-[10px] text-[#717171]">Eleanor Vance &middot; $12,450 Escrow</p></div>
-              <span class="text-xs font-black text-[#008A05]">$6.2k Active M2</span>
-            </div>
-
-            <!-- Photos summary row -->
-            <div class="flex items-center justify-between p-2.5 bg-[#F7F7F7] dark:bg-neutral-800 rounded-xl">
-              <span class="text-[11px] font-bold text-[#717171]">📸 3 Milestone Progress Photos</span>
-              <button onclick="openUploadJobPhotoModal('Modern Farmhouse Kitchen')" class="text-xs font-black text-[#FF385C]">
-                + Update Photos
-              </button>
-            </div>
-
-            <button onclick="openReleaseModal()" class="airbnb-press w-full py-2.5 bg-[#FF385C] text-white rounded-xl text-xs font-bold">
-              Request Milestone Sign-off
-            </button>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- ===================================================================== -->
-      <!-- TAB 5: ANALYTICS -->
-      <!-- ===================================================================== -->
-      <div id="tab-view-analytics" class="main-tab-view hidden px-5 pt-4 pb-6 flex flex-col gap-5">
-        <div>
-          <h2 class="text-2xl font-extrabold tracking-tight text-[#222222] dark:text-white">Analytics</h2>
-          <p class="text-xs text-[#717171] mt-0.5">Profile conversion and lead engagement metrics</p>
-        </div>
-
-        <div class="grid grid-cols-2 gap-3">
-          <div class="p-4 bg-white dark:bg-neutral-850 rounded-3xl border border-[#EBEBEB] text-center">
-            <span class="text-[9px] font-black text-[#717171] uppercase">Monthly Views</span>
-            <div class="text-2xl font-black text-[#222222] dark:text-white mt-1">1,420</div>
-            <span class="text-[10px] text-[#008A05] font-bold">&uarr; 38% vs last month</span>
-          </div>
-
-          <div class="p-4 bg-white dark:bg-neutral-850 rounded-3xl border border-[#EBEBEB] text-center">
-            <span class="text-[9px] font-black text-[#717171] uppercase">Quote Win Rate</span>
-            <div class="text-2xl font-black text-[#FF385C] mt-1">78.5%</div>
-            <span class="text-[10px] text-[#717171]">11 of 14 funded</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- ===================================================================== -->
-      <!-- TAB 6: PROMOTE -->
-      <!-- ===================================================================== -->
-      <div id="tab-view-promote" class="main-tab-view hidden px-5 pt-4 pb-6 flex flex-col gap-5">
-        <div>
-          <h2 class="text-2xl font-extrabold tracking-tight text-[#222222] dark:text-white">Promote Pro Link</h2>
-          <p class="text-xs text-[#717171] mt-0.5">Direct link and QR code for lawn signs and business cards</p>
-        </div>
-
-        <div class="p-5 bg-white dark:bg-neutral-850 rounded-3xl border border-[#EBEBEB] flex flex-col gap-3">
-          <span class="text-xs font-black uppercase text-[#717171]">Your Public URL</span>
-          <div class="p-3 bg-[#F7F7F7] dark:bg-neutral-800 rounded-2xl text-xs font-bold text-[#222222] dark:text-white truncate">
-            https://ratedeed.com/c/apex-construction
-          </div>
-          <button onclick="triggerToast('URL copied to clipboard!');" class="airbnb-press w-full py-2.5 bg-[#222222] text-white rounded-full text-xs font-bold">
-            Copy Public Link
-          </button>
-        </div>
-      </div>
+      </article>
 
     </div>
 
-    <!-- ======================================================================= -->
-    <!-- AIRBNB 5-ICON BOTTOM NAVIGATION DOCK -->
-    <!-- ======================================================================= -->
-    <nav class="absolute bottom-0 left-0 right-0 h-18 bg-white/95 dark:bg-[#121212]/95 backdrop-blur-md border-t border-[#EBEBEB] dark:border-neutral-800 px-3 pb-3 pt-2 flex items-center justify-around z-50">
-      <button onclick="openMainTab('today')" id="dock-btn-today" class="dock-tab-btn active airbnb-press flex flex-col items-center gap-1 text-[#FF385C]">
-        <i data-lucide="folder-check" class="w-5 h-5"></i>
-        <span class="text-[10px] font-extrabold">Today</span>
-      </button>
+  </main>
 
-      <button onclick="openMainTab('calendar')" id="dock-btn-calendar" class="dock-tab-btn airbnb-press flex flex-col items-center gap-1 text-[#717171]">
-        <i data-lucide="calendar" class="w-5 h-5"></i>
-        <span class="text-[10px] font-bold">Calendar</span>
-      </button>
-
-      <button onclick="openMainTab('profile')" id="dock-btn-profile" class="dock-tab-btn airbnb-press flex flex-col items-center gap-1 text-[#717171]">
-        <i data-lucide="user" class="w-5 h-5"></i>
-        <span class="text-[10px] font-bold">Profile</span>
-      </button>
-
-      <button onclick="openMainTab('payments')" id="dock-btn-payments" class="dock-tab-btn airbnb-press flex flex-col items-center gap-1 text-[#717171]">
-        <i data-lucide="wallet" class="w-5 h-5"></i>
-        <span class="text-[10px] font-bold">Earnings</span>
-      </button>
-
-      <button onclick="openMainTab('promote')" id="dock-btn-promote" class="dock-tab-btn airbnb-press flex flex-col items-center gap-1 text-[#717171]">
-        <i data-lucide="bullhorn" class="w-5 h-5"></i>
-        <span class="text-[10px] font-bold">Promote</span>
-      </button>
-    </nav>
-
-    <!-- ======================================================================= -->
-    <!-- INTERACTIVE MODALS & BOTTOM SHEETS -->
-    <!-- ======================================================================= -->
-
-    <!-- MODAL: UPLOAD JOB PROGRESS PHOTOS (BRAND NEW & INTERACTIVE) -->
-    <div id="uploadJobPhotoModal" class="absolute inset-0 bg-black/60 z-[80] hidden flex flex-col justify-end">
-      <div class="bg-white dark:bg-neutral-900 rounded-t-[36px] p-5 pb-8 flex flex-col gap-3 shadow-2xl sheet-enter">
-        <div class="w-10 h-1 bg-neutral-300 rounded-full mx-auto mb-1"></div>
-        
-        <div class="flex items-center justify-between">
-          <div>
-            <h3 class="text-base font-black text-[#222222] dark:text-white">Update Job with Photos</h3>
-            <p id="uploadJobModalTitle" class="text-[10px] text-[#008A05] font-bold">Modern Farmhouse Kitchen &middot; Milestone 2 Proof</p>
-          </div>
-          <button onclick="closeUploadJobPhotoModal()" class="p-1 rounded-full text-[#717171]"><i data-lucide="x" class="w-5 h-5"></i></button>
-        </div>
-
-        <p class="text-xs text-[#717171]">Upload inspection photos for homeowner sign-off and escrow fund release.</p>
-
-        <!-- Photo Selector / Camera Buttons -->
-        <div class="grid grid-cols-2 gap-2">
-          <button onclick="selectSampleProgressPhoto('https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=400&auto=format&fit=crop&q=80', 'Cabinet Box Leveling')" class="p-3 bg-[#F7F7F7] dark:bg-neutral-800 rounded-2xl border border-[#EBEBEB] dark:border-neutral-700 flex flex-col items-center gap-1 hover:border-[#FF385C] transition">
-            <i data-lucide="camera" class="w-5 h-5 text-[#FF385C]"></i>
-            <span class="text-xs font-extrabold text-[#222222] dark:text-white">Take Photo</span>
-            <span class="text-[9px] text-[#717171]">Camera Snapshot</span>
-          </button>
-
-          <button onclick="selectSampleProgressPhoto('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=400&auto=format&fit=crop&q=80', 'Under-Cabinet Wiring')" class="p-3 bg-[#F7F7F7] dark:bg-neutral-800 rounded-2xl border border-[#EBEBEB] dark:border-neutral-700 flex flex-col items-center gap-1 hover:border-[#FF385C] transition">
-            <i data-lucide="image" class="w-5 h-5 text-indigo-600"></i>
-            <span class="text-xs font-extrabold text-[#222222] dark:text-white">Photo Library</span>
-            <span class="text-[9px] text-[#717171]">Choose from Photos</span>
-          </button>
-        </div>
-
-        <!-- Photo Preview Area -->
-        <div class="flex items-center gap-2 p-2 bg-[#F7F7F7] dark:bg-neutral-800 rounded-2xl border border-[#EBEBEB]">
-          <img id="uploadPhotoPreviewImg" src="https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=200&auto=format&fit=crop&q=80" alt="Preview" class="w-14 h-14 rounded-xl object-cover border">
-          <div class="flex-1 min-w-0">
-            <input id="uploadPhotoCaptionInput" type="text" value="Island cabinet boxes installed &amp; leveled" class="w-full bg-transparent text-xs font-bold text-[#222222] dark:text-white focus:outline-none" placeholder="Add a note for the client...">
-            <span class="text-[9px] text-[#008A05] font-bold">Attached to Milestone 2 (Cabinetry)</span>
-          </div>
-        </div>
-
-        <button onclick="submitJobProgressPhoto()" class="airbnb-press w-full py-3 bg-[#FF385C] text-white text-xs font-black rounded-2xl shadow-md mt-1 flex items-center justify-center gap-2">
-          <i data-lucide="cloud-upload" class="w-4 h-4"></i>
-          <span>Save &amp; Notify Homeowner with Photos</span>
-        </button>
-      </div>
-    </div>
-
-    <!-- MODAL: ADD PORTFOLIO ITEM -->
-    <div id="addPortfolioModal" class="absolute inset-0 bg-black/60 z-[80] hidden flex flex-col justify-end">
-      <div class="bg-white dark:bg-neutral-900 rounded-t-[36px] p-5 pb-8 flex flex-col gap-3 shadow-2xl sheet-enter">
-        <div class="w-10 h-1 bg-neutral-300 rounded-full mx-auto mb-1"></div>
-        <div class="flex items-center justify-between">
-          <h3 class="text-base font-black text-[#222222] dark:text-white">Add Portfolio Project</h3>
-          <button onclick="closeAddPortfolioModal()" class="p-1 rounded-full text-[#717171]"><i data-lucide="x" class="w-5 h-5"></i></button>
-        </div>
-        
-        <input id="portfolioInputName" type="text" placeholder="Project Name (e.g. Modern Spa Bath)" class="w-full p-3 bg-[#F7F7F7] rounded-xl text-xs font-bold border border-[#EBEBEB]">
-        <textarea id="portfolioInputDesc" placeholder="Description of work performed..." class="w-full p-3 bg-[#F7F7F7] rounded-xl text-xs font-medium border border-[#EBEBEB] h-18 resize-none"></textarea>
-        
-        <button onclick="submitNewPortfolioItem()" class="airbnb-press w-full py-3 bg-[#FF385C] text-white text-xs font-black rounded-2xl shadow-md mt-1">
-          + Add Project to Profile
-        </button>
-      </div>
-    </div>
-
-    <!-- MODAL: CREATE POST -->
-    <div id="createPostModal" class="absolute inset-0 bg-black/60 z-[80] hidden flex flex-col justify-end">
-      <div class="bg-white dark:bg-neutral-900 rounded-t-[36px] p-5 pb-8 flex flex-col gap-3 shadow-2xl sheet-enter">
-        <div class="w-10 h-1 bg-neutral-300 rounded-full mx-auto mb-1"></div>
-        <div class="flex items-center justify-between">
-          <h3 class="text-base font-black text-[#222222] dark:text-white">Create Pro Post</h3>
-          <button onclick="closeCreatePostModal()" class="p-1 rounded-full text-[#717171]"><i data-lucide="x" class="w-5 h-5"></i></button>
-        </div>
-        <textarea id="postCaptionInput" placeholder="What progress did you make today?" class="w-full p-3 bg-[#F7F7F7] rounded-xl text-xs font-medium border border-[#EBEBEB] h-20 resize-none"></textarea>
-        <button onclick="submitNewPost()" class="airbnb-press w-full py-3 bg-[#222222] text-white text-xs font-black rounded-2xl shadow-md mt-1">
-          Publish Update
-        </button>
-      </div>
-    </div>
-
-    <!-- MODAL: EDIT PROFILE -->
-    <div id="editProfileModal" class="absolute inset-0 bg-black/60 z-[80] hidden flex flex-col justify-end">
-      <div class="bg-white dark:bg-neutral-900 rounded-t-[36px] p-5 pb-8 flex flex-col gap-3 shadow-2xl sheet-enter">
-        <div class="w-10 h-1 bg-neutral-300 rounded-full mx-auto mb-1"></div>
-        <div class="flex items-center justify-between">
-          <h3 class="text-base font-black text-[#222222] dark:text-white">Edit Contractor Profile</h3>
-          <button onclick="closeEditProfileModal()" class="p-1 rounded-full text-[#717171]"><i data-lucide="x" class="w-5 h-5"></i></button>
-        </div>
-        <textarea id="editBioInput" class="w-full p-2.5 bg-[#F7F7F7] rounded-xl text-xs font-medium border border-[#EBEBEB] h-20 resize-none">Licensed residential contractor serving Los Angeles for 14+ years. Specializing in high-end kitchen remodels and millwork.</textarea>
-        <button onclick="saveProfileChanges()" class="airbnb-press w-full py-3 bg-[#222222] text-white text-xs font-black rounded-2xl shadow-md mt-1">
-          Save Changes
-        </button>
-      </div>
-    </div>
-
-    <!-- MODAL: RELEASE SIGN-OFF -->
-    <div id="releaseModal" class="absolute inset-0 bg-black/60 z-[80] hidden flex flex-col justify-end">
-      <div class="bg-white dark:bg-neutral-900 rounded-t-[36px] p-6 pb-8 flex flex-col gap-4 shadow-2xl sheet-enter">
-        <div class="w-12 h-1 bg-neutral-300 rounded-full mx-auto mb-1"></div>
-        <div class="text-center">
-          <div class="w-12 h-12 rounded-full bg-[#008A05]/10 text-[#008A05] flex items-center justify-center mx-auto mb-2"><i data-lucide="shield-check" class="w-6 h-6"></i></div>
-          <h4 class="text-base font-black text-[#222222] dark:text-white">Request Milestone 2 Sign-off</h4>
-          <p class="text-xs text-[#717171]">Cabinetry Framing &middot; $6,200.00 release to available payout.</p>
-        </div>
-        <button onclick="confirmMilestoneSignoff()" class="airbnb-press w-full py-3 bg-[#FF385C] text-white text-xs font-black rounded-full shadow-lg">
-          Notify Homeowner for Release
-        </button>
-        <button onclick="closeReleaseModal()" class="airbnb-press text-xs font-bold text-[#717171]">Cancel</button>
-      </div>
-    </div>
-
-    <!-- MODAL: CHAT -->
-    <div id="chatModalSheet" class="absolute inset-0 bg-black/60 z-[80] hidden flex flex-col justify-end">
-      <div class="bg-white dark:bg-neutral-900 rounded-t-[36px] h-[80%] flex flex-col shadow-2xl sheet-enter">
-        <div class="px-5 py-4 border-b border-[#EBEBEB] flex items-center justify-between">
-          <h4 class="text-sm font-extrabold">Eleanor Vance &middot; Chat</h4>
-          <button onclick="closeChatModal()" class="p-1 rounded-full"><i data-lucide="x" class="w-5 h-5"></i></button>
-        </div>
-        <div class="flex-1 p-4 overflow-y-auto text-xs flex flex-col gap-3">
-          <div class="self-start max-w-[80%] p-3.5 bg-[#F7F7F7] rounded-2xl text-[#222222]">
-            "The quartz slab arrived! Does 2 PM today still work for our walkthrough?"
-          </div>
-          <div class="self-end max-w-[80%] p-3.5 bg-[#222222] text-white rounded-2xl">
-            "Yes! I just uploaded the latest cabinet framing photos. See you at 2 PM!"
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- TOAST NOTIFICATION -->
-    <div id="appToast" class="absolute top-16 left-6 right-6 bg-[#222222] text-white p-3.5 rounded-2xl shadow-airbnb-floating text-xs font-bold flex items-center justify-between z-[90] transform -translate-y-24 opacity-0 transition-all duration-400">
-      <div class="flex items-center gap-2.5">
-        <span class="w-6 h-6 rounded-full bg-[#008A05] flex items-center justify-center text-[10px]">✓</span>
-        <span id="toastMessage">Success!</span>
-      </div>
-      <button onclick="hideToast()" class="text-neutral-400 hover:text-white"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
-    </div>
-
+  <!-- Toast -->
+  <div id="toast" class="fixed bottom-6 right-6 z-50 transform translate-y-20 opacity-0 transition-all duration-300 bg-neutral-900 text-white px-4 py-2.5 rounded-full shadow-xl text-xs font-semibold flex items-center gap-2">
+    <i data-lucide="check-circle" class="w-4 h-4 text-emerald-400"></i>
+    <span id="toast-msg">Copied to clipboard!</span>
   </div>
 
-  <!-- ========================================================================= -->
-  <!-- JAVASCRIPT CONTROLLER -->
-  <!-- ========================================================================= -->
+  <!-- Scripts -->
   <script>
     lucide.createIcons();
 
-    let jobPhotoCount = 3;
+    // 1. View Switching
+    function setArtboardView(view) {
+      const container = document.getElementById('artboards-container');
+      const cardIos = document.getElementById('card-p-ios');
+      const cardAirbnb = document.getElementById('card-p-airbnb');
 
-    // Main 6-Tab Switcher
-    function openMainTab(tabKey) {
-      document.querySelectorAll('.main-tab-pill').forEach(btn => {
-        btn.classList.remove('active', 'bg-[#222222]', 'text-white', 'dark:bg-white', 'dark:text-[#222222]', 'shadow-xs');
-        btn.classList.add('text-[#717171]', 'dark:text-neutral-400', 'bg-[#F7F7F7]', 'dark:bg-neutral-850');
+      const tabs = ['tab-sbs', 'tab-ios-only', 'tab-airbnb-only'];
+      tabs.forEach(t => {
+        document.getElementById(t).className = 'px-3 py-1.5 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all';
       });
-      const activePill = document.getElementById('tab-pill-' + tabKey);
-      if (activePill) {
-        activePill.classList.add('active', 'bg-[#222222]', 'text-white', 'dark:bg-white', 'dark:text-[#222222]', 'shadow-xs');
-        activePill.classList.remove('text-[#717171]', 'dark:text-neutral-400', 'bg-[#F7F7F7]', 'dark:bg-neutral-850');
-      }
 
-      document.querySelectorAll('.top-nav-btn').forEach(btn => {
-        btn.classList.remove('active', 'bg-white', 'text-[#222222]');
-        btn.classList.add('text-neutral-400');
+      if (view === 'side-by-side') {
+        document.getElementById('tab-sbs').className = 'px-3 py-1.5 rounded-lg bg-white dark:bg-neutral-700 text-slate-900 dark:text-white shadow-xs font-bold text-indigo-600 dark:text-indigo-400 transition-all';
+        container.className = 'grid grid-cols-1 lg:grid-cols-2 gap-8 items-start max-w-5xl mx-auto';
+        cardIos.classList.remove('hidden');
+        cardAirbnb.classList.remove('hidden');
+      } else if (view === 'ios-only') {
+        document.getElementById('tab-ios-only').className = 'px-3 py-1.5 rounded-lg bg-white dark:bg-neutral-700 text-slate-900 dark:text-white shadow-xs font-bold text-indigo-600 dark:text-indigo-400 transition-all';
+        container.className = 'grid grid-cols-1 max-w-[420px] mx-auto items-start';
+        cardIos.classList.remove('hidden');
+        cardAirbnb.classList.add('hidden');
+      } else if (view === 'airbnb-only') {
+        document.getElementById('tab-airbnb-only').className = 'px-3 py-1.5 rounded-lg bg-white dark:bg-neutral-700 text-slate-900 dark:text-white shadow-xs font-bold text-rose-600 dark:text-rose-400 transition-all';
+        container.className = 'grid grid-cols-1 max-w-[420px] mx-auto items-start';
+        cardIos.classList.add('hidden');
+        cardAirbnb.classList.remove('hidden');
+      }
+    }
+
+    // 2. Theme Toggle
+    function toggleTheme() {
+      const html = document.documentElement;
+      if (html.classList.contains('dark')) {
+        html.classList.remove('dark');
+        html.classList.add('light');
+      } else {
+        html.classList.remove('light');
+        html.classList.add('dark');
+      }
+    }
+
+    // 3. Token Tweaker
+    function toggleTokenPanel() {
+      document.getElementById('token-panel').classList.toggle('hidden');
+    }
+
+    function updateRadius(val) {
+      document.documentElement.style.setProperty('--radius', val + 'px');
+      document.getElementById('radius-val').innerText = val + 'px';
+    }
+
+    // 4. Export
+    function exportActiveDashboard() {
+      const target = document.getElementById('card-p-ios');
+      navigator.clipboard.writeText(target ? target.outerHTML : document.body.innerHTML).then(() => {
+        showToast('Exported Dashboard Code to clipboard!');
       });
-      const topBtn = document.getElementById('top-btn-' + tabKey);
-      if (topBtn) {
-        topBtn.classList.add('active', 'bg-white', 'text-[#222222]');
-        topBtn.classList.remove('text-neutral-400');
-      }
-
-      document.querySelectorAll('.dock-tab-btn').forEach(btn => {
-        btn.classList.remove('text-[#FF385C]');
-        btn.classList.add('text-[#717171]');
-      });
-      const dockBtn = document.getElementById('dock-btn-' + tabKey);
-      if (dockBtn) {
-        dockBtn.classList.add('text-[#FF385C]');
-        dockBtn.classList.remove('text-[#717171]');
-      }
-
-      document.querySelectorAll('.main-tab-view').forEach(view => view.classList.add('hidden'));
-      const activeView = document.getElementById('tab-view-' + tabKey);
-      if (activeView) {
-        activeView.classList.remove('hidden');
-      }
-
-      document.getElementById('mainScrollBody').scrollTop = 0;
-      lucide.createIcons();
     }
 
-    // Profile Subtabs
-    function setProfileSubtab(subTabKey) {
-      document.querySelectorAll('.psub-pill').forEach(btn => {
-        btn.classList.remove('active', 'bg-[#222222]', 'text-white');
-        btn.classList.add('text-[#717171]');
-      });
-      const activeBtn = document.getElementById('subtab-btn-' + subTabKey);
-      if (activeBtn) {
-        activeBtn.classList.add('active', 'bg-[#222222]', 'text-white');
-        activeBtn.classList.remove('text-[#717171]');
-      }
-
-      document.querySelectorAll('.psub-pane').forEach(pane => pane.classList.add('hidden'));
-      const activePane = document.getElementById('psub-pane-' + subTabKey);
-      if (activePane) {
-        activePane.classList.remove('hidden');
-      }
-      lucide.createIcons();
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toast-msg').innerText = msg;
+      toast.classList.remove('translate-y-20', 'opacity-0');
+      setTimeout(() => toast.classList.add('translate-y-20', 'opacity-0'), 2500);
     }
-
-    // Payments Subtabs
-    function setPaymentSubtab(paySubKey) {
-      document.querySelectorAll('.pay-sub-pill').forEach(btn => {
-        btn.classList.remove('active', 'bg-[#222222]', 'text-white');
-        btn.classList.add('text-[#717171]');
-      });
-      const activeBtn = document.getElementById('pay-subtab-' + paySubKey);
-      if (activeBtn) {
-        activeBtn.classList.add('active', 'bg-[#222222]', 'text-white');
-        activeBtn.classList.remove('text-[#717171]');
-      }
-
-      document.querySelectorAll('.pay-pane').forEach(pane => pane.classList.add('hidden'));
-      const activePane = document.getElementById('pay-pane-' + paySubKey);
-      if (activePane) {
-        activePane.classList.remove('hidden');
-      }
-      lucide.createIcons();
-    }
-
-    // =========================================================================
-    // UPLOAD JOB PROGRESS PHOTOS WORKFLOW
-    // =========================================================================
-    function openUploadJobPhotoModal(jobTitle) {
-      document.getElementById('uploadJobModalTitle').textContent = jobTitle + ' · Milestone Proof';
-      document.getElementById('uploadJobPhotoModal').classList.remove('hidden');
-    }
-    function closeUploadJobPhotoModal() {
-      document.getElementById('uploadJobPhotoModal').classList.add('hidden');
-    }
-    function selectSampleProgressPhoto(imgUrl, caption) {
-      document.getElementById('uploadPhotoPreviewImg').src = imgUrl;
-      document.getElementById('uploadPhotoCaptionInput').value = caption;
-      triggerToast(`Selected "${caption}" for upload.`);
-    }
-    function submitJobProgressPhoto() {
-      const caption = document.getElementById('uploadPhotoCaptionInput').value.trim() || 'New Milestone Inspection Photo';
-      const img = document.getElementById('uploadPhotoPreviewImg').src;
-
-      const row = document.getElementById('jobProgressPhotoRow');
-      const newThumb = document.createElement('div');
-      newThumb.className = 'relative w-16 h-16 rounded-xl overflow-hidden shrink-0 border border-[#008A05] shadow-sm cursor-pointer screen-in-right';
-      newThumb.onclick = () => triggerToast(`Viewing: ${caption}`);
-      newThumb.innerHTML = `
-        <img src="${img}" alt="${caption}" class="w-full h-full object-cover">
-        <span class="absolute bottom-0 inset-x-0 bg-[#008A05] text-white text-[7px] font-black text-center py-0.5 truncate">NEW ✓</span>
-      `;
-      row.prepend(newThumb);
-
-      jobPhotoCount++;
-      document.getElementById('jobPhotoCountBadge').textContent = `${jobPhotoCount} Photos`;
-
-      // Trigger Dynamic Island
-      const island = document.getElementById('island');
-      island.classList.add('expanded');
-      document.getElementById('islandLeft').classList.remove('opacity-0');
-      document.getElementById('islandRight').classList.remove('opacity-0');
-      setTimeout(() => {
-        island.classList.remove('expanded');
-        document.getElementById('islandLeft').classList.add('opacity-0');
-        document.getElementById('islandRight').classList.add('opacity-0');
-      }, 3500);
-
-      closeUploadJobPhotoModal();
-      confetti({ particleCount: 45, spread: 50 });
-      triggerToast(`📸 Uploaded progress photo for Eleanor Vance's review!`);
-    }
-
-    // Add Portfolio
-    function openAddPortfolioModal() { document.getElementById('addPortfolioModal').classList.remove('hidden'); }
-    function closeAddPortfolioModal() { document.getElementById('addPortfolioModal').classList.add('hidden'); }
-    function submitNewPortfolioItem() {
-      const name = document.getElementById('portfolioInputName').value.trim() || 'Modern Remodel';
-      const desc = document.getElementById('portfolioInputDesc').value.trim() || 'Custom turnkey construction with escrow protection.';
-      const grid = document.getElementById('portfolioGrid');
-      const item = document.createElement('div');
-      item.className = 'bg-white dark:bg-neutral-850 rounded-2xl overflow-hidden border border-[#EBEBEB] shadow-airbnb-subtle flex flex-col screen-in-right';
-      item.innerHTML = `
-        <img src="https://images.unsplash.com/photo-1513694203232-719a280e022f?w=400&auto=format&fit=crop&q=80" alt="${name}" class="w-full h-28 object-cover">
-        <div class="p-2.5 flex-1 flex flex-col justify-between">
-          <div><strong class="text-xs font-bold block truncate">${name}</strong><p class="text-[10px] text-[#717171] mt-0.5 line-clamp-2">${desc}</p></div>
-          <button onclick="removePortfolioItem(this)" class="mt-2 text-[10px] text-rose-500 font-bold self-end">Remove</button>
-        </div>
-      `;
-      grid.prepend(item);
-      closeAddPortfolioModal();
-      confetti({ particleCount: 40 });
-      triggerToast(`Added "${name}" to portfolio!`);
-    }
-    function removePortfolioItem(btn) { btn.closest('.bg-white, .dark\\:bg-neutral-850').remove(); triggerToast('Removed project.'); }
-
-    // Modals
-    function openCreatePostModal() { document.getElementById('createPostModal').classList.remove('hidden'); }
-    function closeCreatePostModal() { document.getElementById('createPostModal').classList.add('hidden'); }
-    function submitNewPost() {
-      closeCreatePostModal();
-      triggerToast('Published post to public feed!');
-    }
-
-    function openEditProfileModal() { document.getElementById('editProfileModal').classList.remove('hidden'); }
-    function closeEditProfileModal() { document.getElementById('editProfileModal').classList.add('hidden'); }
-    function saveProfileChanges() {
-      document.getElementById('aboutBioText').textContent = document.getElementById('editBioInput').value;
-      closeEditProfileModal();
-      triggerToast('Saved company profile changes.');
-    }
-
-    function openReleaseModal() { document.getElementById('releaseModal').classList.remove('hidden'); }
-    function closeReleaseModal() { document.getElementById('releaseModal').classList.add('hidden'); }
-    function confirmMilestoneSignoff() {
-      closeReleaseModal();
-      document.getElementById('todayBalanceAmount').textContent = '$14,650.00';
-      confetti({ particleCount: 70 });
-      triggerToast('Milestone 2 sign-off requested! $6,200 pending release.');
-    }
-
-    function openChatModal(name, proj) { document.getElementById('chatModalSheet').classList.remove('hidden'); }
-    function closeChatModal() { document.getElementById('chatModalSheet').classList.add('hidden'); }
-
-    // Toast
-    function triggerToast(msg) {
-      const toast = document.getElementById('appToast');
-      document.getElementById('toastMessage').textContent = msg;
-      toast.classList.remove('-translate-y-24', 'opacity-0');
-      toast.classList.add('translate-y-0', 'opacity-100');
-      setTimeout(hideToast, 3500);
-    }
-    function hideToast() {
-      const toast = document.getElementById('appToast');
-      toast.classList.add('-translate-y-24', 'opacity-0');
-      toast.classList.remove('translate-y-0', 'opacity-100');
-    }
-
-    function toggleTheme() { document.documentElement.classList.toggle('dark'); }
   </script>
-
 </body>
 </html>
