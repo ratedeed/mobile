@@ -1104,6 +1104,25 @@ export default function JobDetailScreen() {
                   <Text className="text-[14px] font-bold text-white">Leave a Review</Text>
                 </Pressable>
               )}
+              {job.status === 'completed_paid' && (
+                <Pressable
+                  onPress={() => navigation.navigate('AffiliateScreen' as never)}
+                  className="p-4 rounded-xl bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 flex-row items-center justify-between mt-1"
+                >
+                  <View className="flex-1 pr-3">
+                    <View className="flex-row items-center gap-1.5 mb-1">
+                      <FontAwesome5 name="gift" size={12} color="#9333ea" />
+                      <Text className="text-xs font-bold text-purple-700 dark:text-purple-300">Earn 4% on Contractor Referrals</Text>
+                    </View>
+                    <Text className="text-[11px] text-purple-950 dark:text-purple-200 leading-4">
+                      Invite trusted pros to Ratedeed and earn 4% cash on all their completed jobs for 90 days.
+                    </Text>
+                  </View>
+                  <View className="w-8 h-8 rounded-full bg-purple-600 items-center justify-center">
+                    <FontAwesome5 name="arrow-right" size={11} color="#ffffff" />
+                  </View>
+                </Pressable>
+              )}
               {['awaiting_payment', 'funded_in_progress', 'partially_funded'].includes(job.status) && (
                 <Pressable
                   onPress={handleCancelJob}

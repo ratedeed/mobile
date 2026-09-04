@@ -29,6 +29,7 @@ import { getFavorites, addFavorite, removeFavorite } from '../utils/favoritesSto
 import { useAuth } from '../context/AuthContext';
 import GuestPrompt from '../components/GuestPrompt';
 import AffiliatePromoModal from '../components/AffiliatePromoModal';
+import HomePartnerBanner from '../components/HomePartnerBanner';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { isDemoMode } from '../utils/demoMode';
 import { DEMO_ZIP } from '../utils/demoData';
@@ -425,23 +426,35 @@ const HomeScreen = () => {
   const [hasMore, setHasMore] = useState(true);
   const [showGuestPrompt, setShowGuestPrompt] = useState(false);
   const [showAffiliatePromo, setShowAffiliatePromo] = useState(false);
+  const [showPartnerBanner, setShowPartnerBanner] = useState(true);
   
   const mountedRef = useRef(true);
   const isFetchingRef = useRef(false);
   const isUserEditedRef = useRef(false);
 
-  // Check and trigger first-launch affiliate announcement modal
+  // Check and trigger smart recurring affiliate announcement modal (every 4-5 days)
   useEffect(() => {
     let timer: NodeJS.Timeout | null = null;
     const checkAffiliateModal = async () => {
       try {
-        const hasSeen = await AsyncStorage.getItem('@ratedeed_seen_affiliate_modal_v1');
-        if (!hasSeen && mountedRef.current) {
+        const lastShown = await AsyncStorage.getItem('@ratedeed_affiliate_modal_last_shown');
+        const now = Date.now();
+        const FOUR_DAYS_MS = 4 * 24 * 60 * 60 * 1000;
+
+        const shouldShow = !lastShown || (now - Number(lastShown) >= FOUR_DAYS_MS);
+
+        if (shouldShow && mountedRef.current) {
           timer = setTimeout(() => {
             if (mountedRef.current) {
               setShowAffiliatePromo(true);
             }
           }, 1200);
+        }
+
+        // Check if in-feed banner was temporarily dismissed
+        const bannerHiddenUntil = await AsyncStorage.getItem('@ratedeed_partner_banner_hidden_until');
+        if (bannerHiddenUntil && now < Number(bannerHiddenUntil)) {
+          setShowPartnerBanner(false);
         }
       } catch (err) {
         console.warn('Error reading affiliate modal seen state:', err);
@@ -456,15 +469,34 @@ const HomeScreen = () => {
   const handleDismissAffiliatePromo = async () => {
     setShowAffiliatePromo(false);
     try {
-      await AsyncStorage.setItem('@ratedeed_seen_affiliate_modal_v1', 'true');
+      await AsyncStorage.setItem('@ratedeed_affiliate_modal_last_shown', Date.now().toString());
     } catch {}
   };
 
   const handleExploreAffiliatePromo = async () => {
     setShowAffiliatePromo(false);
     try {
-      await AsyncStorage.setItem('@ratedeed_seen_affiliate_modal_v1', 'true');
+      // Snooze modal for 14 days after user engages
+      const twoWeeksLater = Date.now() + 10 * 24 * 60 * 60 * 1000;
+      await AsyncStorage.setItem('@ratedeed_affiliate_modal_last_shown', twoWeeksLater.toString());
     } catch {}
+    if (isAuthenticated) {
+      navigation.navigate('AffiliateScreen' as never);
+    } else {
+      navigation.navigate('Login' as never);
+    }
+  };
+
+  const handleDismissPartnerBanner = async () => {
+    setShowPartnerBanner(false);
+    try {
+      // Hide banner for 3 days if dismissed
+      const threeDaysLater = Date.now() + 3 * 24 * 60 * 60 * 1000;
+      await AsyncStorage.setItem('@ratedeed_partner_banner_hidden_until', threeDaysLater.toString());
+    } catch {}
+  };
+
+  const handlePressPartnerBanner = () => {
     if (isAuthenticated) {
       navigation.navigate('AffiliateScreen' as never);
     } else {
@@ -998,10 +1030,17 @@ const HomeScreen = () => {
           </ScrollView>
         </View>
 
+        {showPartnerBanner && (
+          <HomePartnerBanner
+            onPress={handlePressPartnerBanner}
+            onDismiss={handleDismissPartnerBanner}
+          />
+        )}
+
         <View className="h-[1px] bg-[#EBEBEB] dark:bg-neutral-800 -mx-4 mt-2 mb-4" />
       </View>
     ),
-    [searchZip, searchName, nearbyLabel, activeCategory, loadContractors]
+    [searchZip, searchName, nearbyLabel, activeCategory, loadContractors, showPartnerBanner, isAuthenticated]
   );
 
   const renderFooter = useCallback(() => {

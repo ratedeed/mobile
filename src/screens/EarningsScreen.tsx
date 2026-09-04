@@ -353,12 +353,12 @@ export default function EarningsScreen() {
 
         {/* Platform Fee Note */}
         <View
-          className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 rounded-xl p-4 flex-row mb-6"
+          className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 rounded-xl p-4 flex-row mb-4"
           style={{ gap: 12 }}
         >
           <FontAwesome5 name="info-circle" size={16} color="#4F46E5" />
           <View className="flex-1">
-            <Text className="text-sm font-semibold text-indigo-900">Platform Fee</Text>
+            <Text className="text-sm font-semibold text-indigo-900 dark:text-indigo-200">Platform Fee</Text>
             <Text className="text-xs text-indigo-700 dark:text-indigo-300 mt-1 leading-4">
               A {feePercent}% platform fee is deducted from each payment to cover payment processing, escrow protection, and
               platform maintenance.
@@ -366,11 +366,36 @@ export default function EarningsScreen() {
           </View>
         </View>
 
+        {/* Partner Referral Banner */}
+        <Pressable
+          onPress={() => {
+            HapticFeedback.light();
+            navigation.navigate('AffiliateScreen' as never);
+          }}
+          className="bg-gradient-to-r from-amber-500/10 to-purple-500/10 dark:bg-neutral-800/80 border border-amber-500/30 rounded-xl p-4 flex-row items-center justify-between mb-6 shadow-sm active:opacity-90"
+        >
+          <View className="flex-1 pr-3">
+            <View className="flex-row items-center gap-1.5 mb-1">
+              <FontAwesome5 name="gift" size={12} color="#f59e0b" />
+              <Text className="text-xs font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider">
+                Earn 4% Referral Bonus
+              </Text>
+            </View>
+            <Text className="text-xs text-neutral-700 dark:text-neutral-300 leading-4">
+              Know other tradespros or subcontractors? Invite them and earn 4% on all their completed jobs for 90 days.
+            </Text>
+          </View>
+          <View className="bg-amber-500 px-3 py-2 rounded-lg flex-row items-center gap-1">
+            <Text className="text-slate-950 font-bold text-xs">Invite</Text>
+            <FontAwesome5 name="arrow-right" size={10} color="#020617" />
+          </View>
+        </Pressable>
+
         {/* Completed Jobs (Released Escrow) Header */}
         <Text className="text-base font-bold text-neutral-900 dark:text-white mb-3">Completed Jobs (Released Escrow)</Text>
       </View>
     ),
-    [availableBalance, pendingPayouts, pendingAvailableAt, totalEarned, feePercent, cashingOut, handleCashOut]
+    [availableBalance, pendingPayouts, pendingAvailableAt, totalEarned, feePercent, cashingOut, handleCashOut, navigation]
   );
 
   const renderEmpty = useCallback(
