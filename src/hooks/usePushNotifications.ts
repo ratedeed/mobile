@@ -308,7 +308,8 @@ export const usePushNotifications = () => {
       } else if (
         data?.type === 'affiliate_commission' ||
         data?.type === 'affiliate_payout_approved' ||
-        data?.type === 'affiliate_payout_rejected'
+        data?.type === 'affiliate_payout_rejected' ||
+        data?.type === 'affiliate_reminder'
       ) {
         navigation.navigate('AffiliateScreen');
       }

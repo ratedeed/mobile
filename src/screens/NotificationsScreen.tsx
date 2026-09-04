@@ -453,6 +453,7 @@ const NotificationsScreen: React.FC = () => {
     if (type === 'admin_alert' || type === 'system_update') return { name: 'info-circle', color: '#6366f1', bg: isDark ? '#1e1b4b' : '#eef2ff' };
     if (type === 'license_approved') return { name: 'shield-alt', color: '#10b981', bg: isDark ? '#064e3b' : '#d1fae5' };
     if (type === 'license_rejected') return { name: 'exclamation-triangle', color: '#DC2626', bg: isDark ? '#450a0a' : '#fee2e2' };
+    if (type?.includes('affiliate') || m.includes('referral') || m.includes('partner') || m.includes('commission')) return { name: 'gift', color: '#f59e0b', bg: isDark ? '#451a03' : '#fef3c7' };
     return { name: 'bell', color: '#4F46E5', bg: isDark ? '#1e1b4b' : '#eef2ff' };
   };
 
