@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useColorScheme } from 'nativewind';
-import HapticFeedback from '../utils/haptics';
+import HapticFeedback from '../utils/haptics'
 
 interface HomePartnerBannerProps {
   onPress: () => void;
