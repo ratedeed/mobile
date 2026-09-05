@@ -698,7 +698,7 @@ export default function JobDetailScreen() {
                               <View className="px-2 py-1 bg-emerald-100 dark:bg-emerald-900/40 rounded-full">
                                 <Text className="text-[9px] font-bold text-emerald-800 dark:text-emerald-300">Released</Text>
                               </View>
-                            ) : isContractor && job.status === 'funded_in_progress' ? (
+                            ) : isContractor && ['funded_in_progress', 'partially_funded'].includes(job.status) ? (
                               <Pressable
                                 onPress={handleMarkComplete}
                                 disabled={actionLoading !== null}
@@ -964,7 +964,7 @@ export default function JobDetailScreen() {
           <View className="p-4 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
             <Text className="text-[14px] font-bold text-neutral-900 dark:text-neutral-50 mb-3">Actions</Text>
             <View style={{ gap: 10 }}>
-              {isContractor && job.status === 'funded_in_progress' && (
+              {isContractor && ['funded_in_progress', 'partially_funded'].includes(job.status) && (
                 <Pressable
                   onPress={handleMarkComplete}
                   disabled={actionLoading !== null}
@@ -979,7 +979,7 @@ export default function JobDetailScreen() {
                   <Text className="text-[14px] font-bold text-white">Mark Job Complete</Text>
                 </Pressable>
               )}
-              {isContractor && job.status === 'funded_in_progress' && (
+              {isContractor && ['funded_in_progress', 'partially_funded'].includes(job.status) && (
                 <Pressable
                   onPress={() => setShowChangeOrder(true)}
                   className="flex-row items-center justify-center py-3.5 bg-amber-500 rounded-xl"
@@ -1064,16 +1064,24 @@ export default function JobDetailScreen() {
                     <Text className="text-[14px] font-bold text-white">Release Payment</Text>
                   </Pressable>
                 )}
-              {isUser && job.status === 'funded_in_progress' && (
+              {isUser && ['funded_in_progress', 'partially_funded'].includes(job.status) && (
                 <View className="flex-row items-center justify-center py-3 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900 rounded-xl" style={{ gap: 8 }}>
                   <FontAwesome5 name="shield-alt" size={14} color="#059669" />
-                  <Text className="text-[14px] font-semibold text-emerald-800 dark:text-emerald-300">Payment secured in escrow</Text>
+                  <Text className="text-[14px] font-semibold text-emerald-800 dark:text-emerald-300">
+                    {job.status === 'partially_funded' ? 'Initial milestone funded in escrow' : 'Payment secured in escrow'}
+                  </Text>
                 </View>
               )}
               {isContractor && job.status === 'completed_pending_release' && (
                 <View className="flex-row items-center justify-center py-3 bg-neutral-50 dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700" style={{ gap: 8 }}>
                   <FontAwesome5 name="clock" size={14} color={isDark ? "#a3a3a3" : "#737373"} />
                   <Text className="text-[14px] font-semibold text-neutral-600 dark:text-neutral-400">Awaiting homeowner approval to release payment</Text>
+                </View>
+              )}
+              {isContractor && job.status === 'completed_paid' && (
+                <View className="flex-row items-center justify-center py-3 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900 rounded-xl" style={{ gap: 8 }}>
+                  <FontAwesome5 name="check-circle" size={14} color="#059669" />
+                  <Text className="text-[14px] font-semibold text-emerald-800 dark:text-emerald-300">Payment released to your Stripe account</Text>
                 </View>
               )}
               {(isUser || isContractor) && !['disputed', 'cancelled', 'refunded', 'completed_paid'].includes(job.status) && (

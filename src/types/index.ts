@@ -85,6 +85,7 @@ export interface Contractor {
   reviews?: number;
   isVerified?: boolean;
   licenseVerified?: boolean;
+  claimed?: boolean;
   isSponsored?: boolean;
   isPremium?: boolean;
   distance?: number | string;

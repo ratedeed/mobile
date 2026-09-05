@@ -31,6 +31,7 @@ import {
   getContractorJobs,
   getStripeConnectUrl,
   getStripeAccountStatus,
+  getStripeDashboardLink,
   fetchContractorReviews,
   respondToReview,
   updateContractorProfile, getContractorProfile,
@@ -1054,14 +1055,29 @@ const ContractorDashboardScreen: React.FC = () => {
                   <Text className="text-[10px] font-bold text-neutral-800 dark:text-neutral-100">Edit Cover</Text>
                 </Pressable>
 
-                <Pressable
-                  onPress={() => setShowEditProfile(true)}
-                  className="absolute top-4 right-4 bg-white dark:bg-neutral-900/90 px-3 py-1.5 rounded-lg flex-row items-center shadow-sm"
-                  style={{ gap: 6, zIndex: 50 }}
-                >
-                  <FontAwesome5 name="pen" size={10} color={isDark ? "#d4d4d4" : "#525252"} />
-                  <Text className="text-xs font-semibold text-neutral-800 dark:text-neutral-100">Edit Profile</Text>
-                </Pressable>
+                <View className="absolute top-4 right-4 flex-row items-center" style={{ gap: 8, zIndex: 50 }}>
+                  <Pressable
+                    onPress={() => {
+                      if (contractorId) {
+                        navigation.navigate('BusinessDetail', { id: contractorId });
+                      }
+                    }}
+                    className="bg-white dark:bg-neutral-900/90 px-3 py-1.5 rounded-lg flex-row items-center shadow-sm"
+                    style={{ gap: 6 }}
+                  >
+                    <FontAwesome5 name="external-link-alt" size={10} color={isDark ? "#d4d4d4" : "#525252"} />
+                    <Text className="text-xs font-semibold text-neutral-800 dark:text-neutral-100">Live Profile</Text>
+                  </Pressable>
+
+                  <Pressable
+                    onPress={() => setShowEditProfile(true)}
+                    className="bg-white dark:bg-neutral-900/90 px-3 py-1.5 rounded-lg flex-row items-center shadow-sm"
+                    style={{ gap: 6 }}
+                  >
+                    <FontAwesome5 name="pen" size={10} color={isDark ? "#d4d4d4" : "#525252"} />
+                    <Text className="text-xs font-semibold text-neutral-800 dark:text-neutral-100">Edit Profile</Text>
+                  </Pressable>
+                </View>
               </View>
 
               {/* Profile Card Overlap */}
@@ -1188,6 +1204,32 @@ const ContractorDashboardScreen: React.FC = () => {
               onConnectStripe={() => { setActiveTab('payments'); setPaymentSubTab('overview'); }}
               onVerifyLicense={() => setShowEditProfile(true)}
             />
+
+            {stripeStatus?.chargesEnabled && (
+              <View className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/60 rounded-2xl p-4 flex-row items-center justify-between">
+                <View className="flex-row items-center flex-1 mr-3" style={{ gap: 10 }}>
+                  <FontAwesome5 name="check-circle" size={18} color="#059669" />
+                  <View className="flex-1">
+                    <Text className="text-xs font-bold text-emerald-800 dark:text-emerald-300">
+                      Stripe Payments Active
+                    </Text>
+                    <Text className="text-[11px] text-emerald-700 dark:text-emerald-400 mt-0.5">
+                      Your business is set up to send quotes and receive secure escrow payouts.
+                    </Text>
+                  </View>
+                </View>
+                {contractorId ? (
+                  <Pressable
+                    onPress={() => navigation.navigate('BusinessDetail', { id: contractorId })}
+                    className="bg-white dark:bg-neutral-800 border border-emerald-300 dark:border-emerald-700 px-3 py-1.5 rounded-lg flex-row items-center"
+                    style={{ gap: 5 }}
+                  >
+                    <FontAwesome5 name="external-link-alt" size={10} color="#059669" />
+                    <Text className="text-[11px] font-bold text-emerald-800 dark:text-emerald-300">Live Profile</Text>
+                  </Pressable>
+                ) : null}
+              </View>
+            )}
 
             {/* KPI Cards Grid */}
             <DashboardKpiGrid
@@ -1895,6 +1937,29 @@ const ContractorDashboardScreen: React.FC = () => {
                                 : 'Connect'}
                             </Text>
                           )}
+                        </Pressable>
+                      )}
+                      {stripeStatus?.chargesEnabled && (
+                        <Pressable
+                          onPress={async () => {
+                            try {
+                              const res = await getStripeDashboardLink();
+                              if (res?.url) {
+                                await Linking.openURL(res.url);
+                              } else {
+                                Alert.alert('Unavailable', 'Stripe dashboard link is currently unavailable.');
+                              }
+                            } catch (err: any) {
+                              Alert.alert('Error', err?.message || 'Failed to open Stripe Express Dashboard');
+                            }
+                          }}
+                          className="px-3 py-2 rounded-lg flex-row items-center border border-neutral-300 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800"
+                          style={{ gap: 6 }}
+                        >
+                          <FontAwesome5 name="external-link-alt" size={10} color={isDark ? "#d4d4d4" : "#404040"} />
+                          <Text className="text-xs font-semibold text-neutral-800 dark:text-neutral-200">
+                            Stripe Portal
+                          </Text>
                         </Pressable>
                       )}
                     </View>

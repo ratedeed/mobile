@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, ScrollView, Pressable, FlatList, Alert } from 'react-native';
+import { View, Text, ScrollView, Pressable, FlatList, Alert, Linking } from 'react-native';
 import { useColorScheme } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { getContractorEarnings } from '../api';
-import { getPlatformFeePercent, requestPayout } from '../utils/apiClient';
+import { getPlatformFeePercent, requestPayout, getStripeDashboardLink } from '../utils/apiClient';
 import { SkeletonLoader } from '../components/common/SkeletonLoader';
 import { BouncingDotsLoader, BouncingRefreshFlatList } from '../components/common';
 import HapticFeedback from '../utils/haptics';
@@ -134,6 +134,23 @@ export default function EarningsScreen() {
   }, [loadData]);
 
   const [cashingOut, setCashingOut] = useState(false);
+  const [openingStripe, setOpeningStripe] = useState(false);
+
+  const handleOpenStripeDashboard = useCallback(async () => {
+    setOpeningStripe(true);
+    try {
+      const res = await getStripeDashboardLink();
+      if (res?.url) {
+        await Linking.openURL(res.url);
+      } else {
+        Alert.alert('Unavailable', 'Stripe dashboard link is currently unavailable.');
+      }
+    } catch (err: any) {
+      Alert.alert('Error', err?.message || 'Failed to open Stripe Express Dashboard.');
+    } finally {
+      setOpeningStripe(false);
+    }
+  }, []);
 
   const handleCashOut = useCallback(async () => {
     const balance = (earnings?.availableBalance || 0) / 100;
@@ -287,6 +304,24 @@ export default function EarningsScreen() {
             )}
           </Pressable>
 
+          <Pressable
+            onPress={handleOpenStripeDashboard}
+            disabled={openingStripe}
+            className="mt-2.5 py-3 rounded-xl items-center justify-center flex-row border border-neutral-700 bg-neutral-800/80 active:opacity-80"
+            style={{ gap: 8 }}
+          >
+            {openingStripe ? (
+              <BouncingDotsLoader size="small" color="#fff" />
+            ) : (
+              <>
+                <FontAwesome5 name="external-link-alt" size={12} color="#a3a3a3" />
+                <Text className="text-xs font-semibold text-neutral-200">
+                  Stripe Express Dashboard (Tax & Banking)
+                </Text>
+              </>
+            )}
+          </Pressable>
+
           <View className="mt-4 pt-3 border-t border-neutral-800 flex-row items-center" style={{ gap: 8 }}>
             <FontAwesome5 name="check-circle" size={12} color="#10B981" />
             <Text className="text-[11px] text-neutral-400 font-medium">
@@ -395,7 +430,7 @@ export default function EarningsScreen() {
         <Text className="text-base font-bold text-neutral-900 dark:text-white mb-3">Completed Jobs (Released Escrow)</Text>
       </View>
     ),
-    [availableBalance, pendingPayouts, pendingAvailableAt, totalEarned, feePercent, cashingOut, handleCashOut, navigation]
+    [availableBalance, pendingPayouts, pendingAvailableAt, totalEarned, feePercent, cashingOut, handleCashOut, openingStripe, handleOpenStripeDashboard, navigation]
   );
 
   const renderEmpty = useCallback(

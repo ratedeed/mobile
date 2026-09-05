@@ -448,6 +448,11 @@ export const demoUpdateBannerImage = async (imageUrl: string) => ({ ...clone(dem
 // ===== STRIPE & PAYMENTS =====
 export const demoGetStripeConnectUrl = async () => ({ url: 'https://connect.stripe.com/demo/setup' });
 export const demoGetStripeAccountStatus = async () => clone(demoStripeStatus);
+export const demoGetStripeDashboardLink = async () => ({ url: 'https://dashboard.stripe.com/test/express' });
+export const demoRequestQuote = async (_contractorId: string, _data: any) => {
+  await delay(300);
+  return { message: 'Quote request submitted successfully!', isPendingClaim: false };
+};
 
 export const demoCreateCheckoutSession = async (quoteId: string, _milestoneId?: string) => {
   await delay(300);

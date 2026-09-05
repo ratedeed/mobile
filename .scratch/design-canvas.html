@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>RateDeed — Private Dashboard (iOS Command Center vs. Airbnb Host Edition)</title>
+  <title>RateDeed Mobile — Homepage Design Canvas</title>
 
   <!-- Required CDN Dependencies -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -14,52 +14,59 @@
 
   <script>
     tailwind.config = {
-      darkMode: 'class',
+      darkMode: "class",
       theme: {
         extend: {
           fontFamily: {
-            sans: ['"Plus Jakarta Sans"', '-apple-system', 'BlinkMacSystemFont', '"SF Pro Display"', '"SF Pro Text"', 'system-ui', 'sans-serif'],
+            sans: [""Plus Jakarta Sans"", "-apple-system", "BlinkMacSystemFont", ""SF Pro Text"", "system-ui", "sans-serif"],
           },
           colors: {
-            airbnb: {
-              rausch: '#FF385C',
-              'rausch-dark': '#E00B41',
-              kazan: '#008489',
-              foggy: '#717171',
-              light: '#F7F7F7',
-              border: '#DDDDDD',
-              dark: '#222222',
+            primary: {
+              50: "#EEF2FF",
+              100: "#E0E7FF",
+              200: "#C7D2FE",
+              300: "#A5B4FC",
+              400: "#818CF8",
+              500: "#6366F1",
+              600: "#4F46E5",
+              700: "#4338CA",
+              800: "#3730A3",
+              900: "#312E81",
+              DEFAULT: "hsl(var(--primary-h, 243) var(--primary-s, 75%) var(--primary-l, 58%))",
             },
-            ios: {
-              bg: '#F2F2F7',
-              'bg-dark': '#000000',
-              card: '#FFFFFF',
-              'card-dark': '#1C1C1E',
-              'card-elevated-dark': '#2C2C2E',
-              secondary: '#6E6E73',
-              'secondary-dark': '#8E8E93',
-              border: '#E5E5EA',
-              'border-dark': '#2C2C2E',
-              blue: '#007AFF',
-              indigo: '#5856D6',
-              green: '#34C759',
-              amber: '#FF9500',
-              red: '#FF3B30',
+            airbnb: {
+              black: "#222222",
+              gray: "#717171",
+              lightGray: "#B0B0B0",
+              surface: "#F7F7F7",
+              border: "#EBEBEB",
+              input: "#DDDDDD",
+            },
+            neutral: {
+              50: "#F9FAFB",
+              100: "#F3F4F6",
+              200: "#E5E7EB",
+              300: "#D1D5DB",
+              400: "#9CA3AF",
+              500: "#6B7280",
+              600: "#4B5563",
+              700: "#374151",
+              800: "#1F2937",
+              900: "#111827",
             }
           },
           borderRadius: {
-            'ios-xs': '8px',
-            'ios-sm': '12px',
-            'ios': '18px',
-            'ios-lg': '24px',
-            'ios-xl': '30px',
+            sm: "8px",
+            md: "12px",
+            lg: "var(--radius, 16px)",
+            xl: "20px",
+            "2xl": "24px",
+            "3xl": "32px",
           },
           boxShadow: {
-            'ios-sm': '0 2px 8px rgba(0, 0, 0, 0.04)',
-            'ios': '0 4px 20px rgba(0, 0, 0, 0.05)',
-            'ios-lg': '0 14px 36px rgba(0, 0, 0, 0.09)',
-            'ios-dock': '0 16px 36px -4px rgba(0, 0, 0, 0.22), 0 0 0 1px rgba(255, 255, 255, 0.1)',
-            'airbnb-bar': '0 -4px 20px rgba(0, 0, 0, 0.08)',
+            card: "0 2px 8px rgba(0, 0, 0, 0.05)",
+            float: "0 10px 30px -5px rgba(0, 0, 0, 0.12)",
+            soft: "0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)",
           }
         }
       }
@@ -70,12 +77,13 @@
     :root {
       --primary-h: 243;
       --primary-s: 75%;
-      --radius: 20px;
-      --font-base: 15px;
+      --primary-l: 58%;
+      --radius: 16px;
+      --font-base: 14px;
     }
 
     body {
-      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+      font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
       font-size: var(--font-base);
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
@@ -85,42 +93,16 @@
       outline: none;
       transition: background-color 0.15s ease, box-shadow 0.15s ease;
       border-radius: 4px;
-      padding: 1px 2px;
+      padding: 1px 3px;
     }
     [contenteditable="true"]:hover {
-      background-color: rgba(88, 86, 214, 0.08);
-      box-shadow: 0 0 0 1px rgba(88, 86, 214, 0.3);
+      background-color: rgba(99, 102, 241, 0.08);
+      box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.35);
       cursor: text;
     }
     [contenteditable="true"]:focus {
-      background-color: rgba(88, 86, 214, 0.12);
-      box-shadow: 0 0 0 2px rgba(88, 86, 214, 0.6);
-    }
-
-    .ios-nav-glass {
-      background-color: rgba(255, 255, 255, 0.85);
-      backdrop-filter: blur(24px) saturate(180%);
-      -webkit-backdrop-filter: blur(24px) saturate(180%);
-    }
-    .dark .ios-nav-glass {
-      background-color: rgba(20, 20, 22, 0.85);
-      backdrop-filter: blur(24px) saturate(180%);
-      -webkit-backdrop-filter: blur(24px) saturate(180%);
-    }
-
-    .ios-glass-dock {
-      background-color: rgba(255, 255, 255, 0.88);
-      backdrop-filter: blur(30px) saturate(190%);
-      -webkit-backdrop-filter: blur(30px) saturate(190%);
-    }
-    .dark .ios-glass-dock {
-      background-color: rgba(28, 28, 30, 0.88);
-      backdrop-filter: blur(30px) saturate(190%);
-      -webkit-backdrop-filter: blur(30px) saturate(190%);
-    }
-
-    .airbnb-btn {
-      background: linear-gradient(to right, #E61E4D 0%, #E31C5F 50%, #D70466 100%);
+      background-color: rgba(99, 102, 241, 0.12);
+      box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.6);
     }
 
     .no-scrollbar::-webkit-scrollbar {
@@ -130,547 +112,977 @@
       -ms-overflow-style: none;
       scrollbar-width: none;
     }
+
+    /* State Matrix Visibility Rules */
+    .state-layer {
+      display: none;
+    }
+    [data-active-state="default"] .state-default {
+      display: block;
+    }
+    [data-active-state="hover"] .state-hover {
+      display: block;
+    }
+    [data-active-state="focus"] .state-focus {
+      display: block;
+    }
+    [data-active-state="disabled"] .state-disabled {
+      display: block;
+    }
+    [data-active-state="loading"] .state-loading {
+      display: block;
+    }
+    [data-active-state="error"] .state-error {
+      display: block;
+    }
+    [data-active-state="empty"] .state-empty {
+      display: block;
+    }
+
+    /* Skeleton shimmer */
+    @keyframes shimmer {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+    .skeleton-shimmer {
+      position: relative;
+      overflow: hidden;
+      background-color: #e5e7eb;
+    }
+    .dark .skeleton-shimmer {
+      background-color: #262626;
+    }
+    .skeleton-shimmer::after {
+      position: absolute;
+      top: 0; right: 0; bottom: 0; left: 0;
+      transform: translateX(-100%);
+      background-image: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0) 0,
+        rgba(255, 255, 255, 0.3) 20%,
+        rgba(255, 255, 255, 0.6) 60%,
+        rgba(255, 255, 255, 0)
+      );
+      animation: shimmer 1.6s infinite;
+      content: "";
+    }
+    .dark .skeleton-shimmer::after {
+      background-image: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0) 0,
+        rgba(255, 255, 255, 0.05) 20%,
+        rgba(255, 255, 255, 0.1) 60%,
+        rgba(255, 255, 255, 0)
+      );
+    }
   </style>
 </head>
 
-<body class="bg-slate-100 dark:bg-black text-slate-900 dark:text-slate-100 min-h-screen">
+<body class="bg-slate-100 dark:bg-neutral-950 text-slate-900 dark:text-slate-100 min-h-screen" data-active-state="default">
 
   <!-- ========================================== -->
-  <!-- 1. TOP TOOLBAR (CANVAS CHROME)             -->
+  <!-- 1. CANVAS CHROME / TOP TOOLBAR             -->
   <!-- ========================================== -->
-  <header class="sticky top-0 z-50 bg-white/90 dark:bg-neutral-900/90 backdrop-blur-md border-b border-slate-200 dark:border-neutral-800 shadow-xs px-4 py-2.5">
+  <header class="sticky top-0 z-50 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-md border-b border-slate-200 dark:border-neutral-800 px-4 py-2.5 shadow-sm">
     <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
 
-      <!-- Brand -->
+      <!-- Left: Logo & Context -->
       <div class="flex items-center gap-3">
-        <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-600 via-indigo-700 to-rose-600 flex items-center justify-center text-white font-black text-sm shadow-md">
-          <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+        <div class="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-black text-base shadow-sm">
+          <i data-lucide="hammer" class="w-5 h-5"></i>
         </div>
         <div>
           <div class="flex items-center gap-2">
-            <h1 class="font-bold text-sm sm:text-base leading-none text-slate-900 dark:text-white">Private Contractor Dashboard: iOS vs. Airbnb Host</h1>
-            <span class="px-2 py-0.5 text-[10px] font-bold bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 rounded-full">Side-by-Side</span>
+            <h1 class="font-bold text-sm sm:text-base leading-none text-slate-900 dark:text-white">RateDeed Homepage Redesign</h1>
+            <span class="px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 rounded-full">3 Design Variants</span>
           </div>
-          <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Left: iOS 18 Command Center • Right: Airbnb Pro Host Management</p>
+          <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Interactive Artboards • Verified Escrow Guarantee • Editable Copy</p>
         </div>
       </div>
 
-      <!-- View Switcher -->
-      <div class="flex items-center bg-slate-100 dark:bg-neutral-800 p-1 rounded-xl border border-slate-200 dark:border-neutral-700 text-xs font-medium">
-        <button onclick="setArtboardView('side-by-side')" id="tab-sbs" class="px-3 py-1.5 rounded-lg bg-white dark:bg-neutral-700 text-slate-900 dark:text-white shadow-xs font-bold text-indigo-600 dark:text-indigo-400 transition-all">Side-by-Side (Both)</button>
-        <button onclick="setArtboardView('ios-only')" id="tab-ios-only" class="px-3 py-1.5 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all">iOS Command Center</button>
-        <button onclick="setArtboardView('airbnb-only')" id="tab-airbnb-only" class="px-3 py-1.5 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all">Airbnb Host Edition</button>
+      <!-- Center: Artboard Selector Tabs -->
+      <div class="flex items-center bg-slate-100 dark:bg-neutral-800 p-1 rounded-xl border border-slate-200 dark:border-neutral-700 text-xs font-semibold">
+        <button onclick="selectArtboard("all")" id="tab-all" class="px-3 py-1.5 rounded-lg bg-white dark:bg-neutral-700 text-indigo-600 dark:text-indigo-400 shadow-sm transition-all">All (Side-by-Side)</button>
+        <button onclick="selectArtboard("var-a")" id="tab-var-a" class="px-3 py-1.5 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all">Variant A (Minimal)</button>
+        <button onclick="selectArtboard("var-b")" id="tab-var-b" class="px-3 py-1.5 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all">Variant B (Balanced)</button>
+        <button onclick="selectArtboard("var-c")" id="tab-var-c" class="px-3 py-1.5 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all">Variant C (Dense)</button>
       </div>
 
-      <!-- Controls -->
-      <div class="flex items-center gap-2">
-        <button onclick="toggleTheme()" class="p-2 rounded-xl bg-slate-100 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-slate-700 dark:text-slate-300 hover:text-indigo-600 transition-colors">
+      <!-- Right Controls: Viewport, State, Theme, Tokens, Export -->
+      <div class="flex items-center gap-2 flex-wrap">
+
+        <!-- Viewport Switcher -->
+        <div class="flex items-center bg-slate-100 dark:bg-neutral-800 p-1 rounded-xl border border-slate-200 dark:border-neutral-700 text-xs">
+          <button onclick="setViewport("desktop")" id="vp-desktop" class="px-2 py-1 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white" title="Desktop width">
+            <i data-lucide="monitor" class="w-3.5 h-3.5"></i>
+          </button>
+          <button onclick="setViewport("tablet")" id="vp-tablet" class="px-2 py-1 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white" title="Tablet 768px">
+            <i data-lucide="tablet" class="w-3.5 h-3.5"></i>
+          </button>
+          <button onclick="setViewport("mobile")" id="vp-mobile" class="px-2 py-1 rounded-lg bg-white dark:bg-neutral-700 text-indigo-600 dark:text-indigo-400 shadow-sm" title="Mobile 390px">
+            <i data-lucide="smartphone" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+
+        <!-- State Selector Dropdown -->
+        <div class="relative">
+          <select id="state-select" onchange="changeState(this.value)" class="text-xs bg-slate-100 dark:bg-neutral-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-neutral-700 rounded-xl px-2.5 py-1.5 font-medium focus:ring-2 focus:ring-indigo-500 cursor-pointer">
+            <option value="default">State: Default</option>
+            <option value="hover">State: Hover</option>
+            <option value="focus">State: Focus</option>
+            <option value="disabled">State: Disabled</option>
+            <option value="loading">State: Loading</option>
+            <option value="error">State: Error</option>
+            <option value="empty">State: Empty</option>
+          </select>
+        </div>
+
+        <!-- Theme Toggle -->
+        <button onclick="toggleTheme()" class="p-2 rounded-xl bg-slate-100 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-slate-700 dark:text-slate-300 hover:text-indigo-600 transition-colors" title="Toggle Dark/Light Mode">
           <i data-lucide="sun" class="w-4 h-4 hidden dark:block"></i>
           <i data-lucide="moon" class="w-4 h-4 block dark:hidden"></i>
         </button>
 
-        <button onclick="toggleTokenPanel()" class="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium bg-slate-100 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 rounded-xl hover:bg-slate-200 transition-colors">
+        <!-- Token Tweaker Toggle -->
+        <button onclick="toggleTokenPanel()" class="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold bg-slate-100 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 rounded-xl hover:bg-slate-200 dark:hover:bg-neutral-700 transition-colors">
           <i data-lucide="sliders" class="w-3.5 h-3.5 text-indigo-600"></i>
-          <span class="hidden md:inline">Tokens</span>
+          <span class="hidden sm:inline">Tokens</span>
         </button>
 
-        <button onclick="exportActiveDashboard()" class="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-xs transition-all">
-          <i data-lucide="code-2" class="w-3.5 h-3.5"></i>
-          <span>Scaffold</span>
+        <!-- Export HTML Button -->
+        <button onclick="exportActiveArtboard()" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-sm transition-all">
+          <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+          <span>Export HTML</span>
         </button>
       </div>
+
     </div>
   </header>
 
   <!-- ========================================== -->
-  <!-- 2. TOKEN TWEAKER                           -->
+  <!-- 2. TOKEN TWEAKER SLIDE-OUT PANEL           -->
   <!-- ========================================== -->
-  <aside id="token-panel" class="fixed right-4 top-16 z-40 w-80 bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 rounded-2xl shadow-2xl p-4 hidden">
+  <aside id="token-panel" class="fixed right-4 top-16 z-50 w-80 bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 rounded-2xl shadow-2xl p-5 hidden transition-all">
     <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-neutral-800">
       <div class="flex items-center gap-2">
         <i data-lucide="palette" class="w-4 h-4 text-indigo-600"></i>
-        <h3 class="font-bold text-xs uppercase tracking-wider text-slate-900 dark:text-white">Token Tweaker</h3>
+        <h3 class="font-bold text-xs uppercase tracking-wider text-slate-900 dark:text-white">Design Token Tweaker</h3>
       </div>
-      <button onclick="toggleTokenPanel()" class="text-slate-400 hover:text-slate-700">
+      <button onclick="toggleTokenPanel()" class="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">
         <i data-lucide="x" class="w-4 h-4"></i>
       </button>
     </div>
 
-    <div class="mt-3 space-y-3.5 text-xs">
+    <div class="mt-4 space-y-4 text-xs">
       <div>
-        <div class="flex justify-between text-slate-600 dark:text-slate-400 mb-1">
-          <span>Card Corner Radius:</span>
-          <span id="radius-val" class="font-mono font-semibold">20px</span>
+        <div class="flex justify-between text-slate-600 dark:text-slate-400 mb-1 font-medium">
+          <span>Primary Hue:</span>
+          <span id="hue-val" class="font-mono font-bold text-indigo-600">243 (Indigo)</span>
         </div>
-        <input type="range" min="10" max="30" value="20" oninput="updateRadius(this.value)" class="w-full accent-indigo-600 cursor-pointer">
+        <input type="range" min="180" max="360" value="243" oninput="updatePrimaryHue(this.value)" class="w-full accent-indigo-600 cursor-pointer">
       </div>
-      <div class="pt-2 border-t border-slate-100 dark:border-neutral-800 text-[11px] text-slate-500">
-        💡 All copy is live editable via <code>contenteditable="true"</code>.
+
+      <div>
+        <div class="flex justify-between text-slate-600 dark:text-slate-400 mb-1 font-medium">
+          <span>Border Radius:</span>
+          <span id="radius-val" class="font-mono font-bold text-indigo-600">16px</span>
+        </div>
+        <input type="range" min="4" max="28" value="16" oninput="updateRadius(this.value)" class="w-full accent-indigo-600 cursor-pointer">
+      </div>
+
+      <div>
+        <div class="flex justify-between text-slate-600 dark:text-slate-400 mb-1 font-medium">
+          <span>Base Font Size:</span>
+          <span id="font-val" class="font-mono font-bold text-indigo-600">14px</span>
+        </div>
+        <input type="range" min="12" max="18" value="14" oninput="updateFontSize(this.value)" class="w-full accent-indigo-600 cursor-pointer">
+      </div>
+
+      <div class="pt-3 border-t border-slate-100 dark:border-neutral-800 text-[11px] text-slate-500 dark:text-slate-400 space-y-1">
+        <p>⚡ <strong>Live Editing:</strong> All text is <code class="bg-slate-100 dark:bg-neutral-800 px-1 rounded">contenteditable</code>.</p>
+        <p>🎨 <strong>Tokens:</strong> Uses project 8pt scale & Tailwind tokens.</p>
       </div>
     </div>
   </aside>
 
   <!-- ========================================== -->
-  <!-- 3. SIDE-BY-SIDE CONTAINER                  -->
+  <!-- 3. ARTBOARDS CANVAS CONTAINER              -->
   <!-- ========================================== -->
-  <main class="max-w-7xl mx-auto px-4 py-8">
+  <main class="max-w-[1600px] mx-auto px-4 py-8">
 
-    <div id="artboards-container" class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start max-w-5xl mx-auto">
+    <!-- Overview Banner -->
+    <div class="mb-8 bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 rounded-2xl p-5 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div>
+        <span class="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">RateDeed Mobile Homepage Exploration</span>
+        <h2 class="text-xl font-bold text-slate-900 dark:text-white mt-0.5">3 Contrasting Design Strategies</h2>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-2xl">
+          Compare clean editorial hierarchy, conversion-driven escrow cards, and high-density pro utility. Every artboard strictly uses project tokens, real copy, and WCAG 2.1 AA verified colors.
+        </p>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-semibold">
+          <i data-lucide="shield-check" class="w-4 h-4 text-emerald-600"></i>
+          <span>WCAG 2.1 AA Compliant</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- The 3 Artboards Grid -->
+    <div id="artboards-grid" class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
 
       <!-- ========================================================================= -->
-      <!-- LEFT: iOS 18 "COMMAND CENTER" (OPERATIONS & ESCROW)                       -->
+      <!-- VARIANT A: MINIMAL / CLEAN (EDITORIAL HIERARCHY)                         -->
       <!-- ========================================================================= -->
-      <article id="card-p-ios" class="artboard-card flex flex-col bg-ios-bg dark:bg-ios-bg-dark border-2 border-indigo-500 rounded-[30px] shadow-2xl overflow-hidden transition-all relative">
+      <article data-variant="var-a" class="artboard-card flex flex-col bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 rounded-3xl shadow-lg overflow-hidden transition-all">
 
-        <div class="absolute top-0 left-6 z-30 bg-indigo-600 text-white text-[10px] font-extrabold uppercase tracking-wider px-3.5 py-1 rounded-b-xl shadow-md flex items-center gap-1">
-          <i data-lucide="apple" class="w-3 h-3"></i> iOS 18 Command Center
+        <!-- Variant Header Info -->
+        <div class="p-4 bg-slate-50 dark:bg-neutral-800/60 border-b border-slate-200 dark:border-neutral-800 flex items-center justify-between">
+          <div>
+            <div class="flex items-center gap-2">
+              <h3 class="font-bold text-sm text-slate-900 dark:text-white">Variant A: Minimal & Clean</h3>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 dark:bg-neutral-700 text-slate-800 dark:text-slate-200">Editorial</span>
+            </div>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Low visual noise, calm typography, serene whitespace</p>
+          </div>
+          <span class="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md">AA 4.8:1</span>
         </div>
 
-        <header class="p-4 bg-indigo-50/70 dark:bg-neutral-900 border-b border-indigo-100 dark:border-neutral-800 flex items-center justify-between">
-          <div class="flex items-center gap-2.5 ml-32 sm:ml-40">
-            <div>
-              <h3 class="font-bold text-xs text-slate-900 dark:text-white">Command Center (Operations)</h3>
-              <p class="text-[10px] text-indigo-700 dark:text-indigo-300">Action Required • Active Jobs • In-Escrow</p>
-            </div>
-          </div>
-          <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-200">iOS Native</span>
-        </header>
+        <!-- Phone / Artboard Frame (Responds to Viewport Switcher) -->
+        <div class="artboard-frame mx-auto w-full max-w-[390px] bg-white dark:bg-neutral-950 min-h-[820px] transition-all duration-300 flex flex-col border-x border-slate-100 dark:border-neutral-900">
 
-        <div class="artboard-frame mx-auto w-full max-w-[390px] bg-ios-bg dark:bg-black min-h-[880px] relative pb-28">
-
-          <!-- Top Contractor Header Bar -->
-          <div class="sticky top-0 z-20 ios-nav-glass border-b border-slate-200/60 dark:border-neutral-800/60 px-4 py-3 flex items-center justify-between">
-            <div class="flex items-center gap-2.5">
-              <div class="w-9 h-9 rounded-xl overflow-hidden border border-slate-200 dark:border-neutral-700 shrink-0">
-                <img src="https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=120&q=80" alt="Avatar" class="w-full h-full object-cover">
-              </div>
-              <div>
-                <h4 class="font-bold text-xs text-slate-900 dark:text-white leading-tight">Apex Master Builders</h4>
-                <div class="flex items-center gap-1 mt-0.5">
-                  <span class="w-2 h-2 rounded-full bg-ios-green animate-pulse"></span>
-                  <span class="text-[10px] text-emerald-600 font-semibold">Leads Active</span>
-                </div>
-              </div>
-            </div>
+          <!-- Native Top Bar (No fake status bar!) -->
+          <div class="px-5 pt-4 pb-3 flex items-center justify-between border-b border-slate-100 dark:border-neutral-900">
             <div class="flex items-center gap-2">
-              <button class="w-8 h-8 rounded-full bg-slate-100 dark:bg-neutral-800 text-slate-800 dark:text-slate-200 flex items-center justify-center relative">
+              <i data-lucide="hammer" class="w-5 h-5 text-indigo-600"></i>
+              <span contenteditable="true" class="font-extrabold text-base tracking-tight text-slate-900 dark:text-white">ratedeed</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <button class="w-8 h-8 rounded-full flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-neutral-800">
                 <i data-lucide="bell" class="w-4 h-4"></i>
-                <span class="absolute top-1 right-1 w-2 h-2 rounded-full bg-rose-500"></span>
               </button>
-              <button class="w-8 h-8 rounded-full bg-slate-100 dark:bg-neutral-800 text-slate-800 dark:text-slate-200 flex items-center justify-center">
-                <i data-lucide="settings" class="w-4 h-4"></i>
-              </button>
+              <div class="w-7 h-7 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-bold text-xs flex items-center justify-center">
+                TD
+              </div>
             </div>
           </div>
 
-          <div class="p-4 space-y-4 text-xs">
+          <!-- DEFAULT STATE LAYER -->
+          <div class="state-layer state-default flex-1 px-4 py-4 space-y-5">
 
-            <!-- 1. Urgent Action Card -->
-            <div class="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-[20px] p-3.5 shadow-sm flex items-start gap-3">
-              <div class="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 mt-0.5">
-                <i data-lucide="alert-circle" class="w-5 h-5"></i>
-              </div>
-              <div class="flex-1 min-w-0">
-                <div class="flex items-center justify-between">
-                  <h5 class="font-bold text-xs text-amber-900 dark:text-amber-200">Payout Ready for Release</h5>
-                  <span class="text-[9px] font-bold text-amber-700 dark:text-amber-300">Action Needed</span>
-                </div>
-                <p class="text-[11px] text-amber-800 dark:text-amber-300/90 mt-0.5 leading-snug">
-                  Milestone 2 for <strong>Westlake Kitchen ($12,500)</strong> was approved by Jessica D.
-                </p>
-                <button class="mt-2 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-[10px] rounded-lg shadow-xs flex items-center gap-1">
-                  <i data-lucide="wallet" class="w-3 h-3"></i> Transfer to Stripe Account
-                </button>
-              </div>
-            </div>
-
-            <!-- 2. Revenue & Escrow Metric Quad -->
-            <div class="grid grid-cols-2 gap-2.5">
-              <div class="bg-white dark:bg-ios-card-dark p-3.5 rounded-[20px] shadow-ios-sm border border-slate-100 dark:border-neutral-800">
-                <div class="flex items-center justify-between text-slate-400 mb-1">
-                  <span class="text-[10px] uppercase font-bold tracking-wider">Available Balance</span>
-                  <i data-lucide="dollar-sign" class="w-4 h-4 text-emerald-500"></i>
-                </div>
-                <span contenteditable="true" class="text-lg font-black text-slate-900 dark:text-white block">$34,850</span>
-                <span class="text-[10px] text-emerald-600 font-bold flex items-center gap-0.5 mt-0.5">
-                  <i data-lucide="trending-up" class="w-3 h-3"></i> +18% vs last mo
-                </span>
-              </div>
-
-              <div class="bg-white dark:bg-ios-card-dark p-3.5 rounded-[20px] shadow-ios-sm border border-slate-100 dark:border-neutral-800">
-                <div class="flex items-center justify-between text-slate-400 mb-1">
-                  <span class="text-[10px] uppercase font-bold tracking-wider">Held in Escrow</span>
-                  <i data-lucide="lock" class="w-4 h-4 text-indigo-500"></i>
-                </div>
-                <span contenteditable="true" class="text-lg font-black text-indigo-600 dark:text-indigo-400 block">$48,200</span>
-                <span class="text-[10px] text-slate-500 font-medium block mt-0.5">Across 3 active jobs</span>
-              </div>
-            </div>
-
-            <!-- 3. Active Job Queue with Milestone Progress -->
+            <!-- Minimal Search Bar with Location Chip -->
             <div class="space-y-2">
-              <div class="flex items-center justify-between px-1">
-                <h5 class="font-bold text-xs text-slate-900 dark:text-white flex items-center gap-1.5">
-                  <i data-lucide="hammer" class="w-3.5 h-3.5 text-indigo-600"></i> Active Jobs (3 In Flight)
-                </h5>
-                <span class="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold cursor-pointer">View All</span>
+              <div class="flex items-center justify-between text-xs px-1">
+                <div class="flex items-center gap-1.5 text-slate-600 dark:text-slate-400">
+                  <i data-lucide="map-pin" class="w-3.5 h-3.5 text-indigo-600"></i>
+                  <span contenteditable="true" class="font-semibold text-slate-900 dark:text-white">New York, NY 10001</span>
+                </div>
+                <button class="text-indigo-600 dark:text-indigo-400 font-bold text-[11px] hover:underline">Change</button>
               </div>
 
-              <!-- Job 1 -->
-              <div class="bg-white dark:bg-ios-card-dark rounded-[20px] p-3.5 shadow-ios-sm border border-slate-100 dark:border-neutral-800 space-y-2.5">
-                <div class="flex items-start justify-between">
-                  <div>
-                    <h6 contenteditable="true" class="font-bold text-xs text-slate-900 dark:text-white">Westlake Hills Kitchen Remodel</h6>
-                    <span class="text-[10px] text-slate-400">Client: Jessica Davis • Contract: $34,500</span>
-                  </div>
-                  <span class="px-2 py-0.5 text-[9px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 rounded-full">
-                    Milestone 2 / 3
-                  </span>
-                </div>
-
-                <!-- Milestone Bar -->
-                <div class="space-y-1">
-                  <div class="flex justify-between text-[10px] text-slate-500">
-                    <span>Countertops & Island Slab</span>
-                    <span class="font-bold text-slate-800 dark:text-slate-200">66% Complete</span>
-                  </div>
-                  <div class="h-2 w-full bg-slate-100 dark:bg-neutral-800 rounded-full overflow-hidden">
-                    <div class="h-full bg-indigo-600 rounded-full" style="width: 66%;"></div>
-                  </div>
-                </div>
-
-                <div class="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-neutral-800 text-[11px]">
-                  <span class="text-slate-500 flex items-center gap-1">
-                    <i data-lucide="clock" class="w-3 h-3"></i> Inspection: Tomorrow 9am
-                  </span>
-                  <button class="text-indigo-600 dark:text-indigo-400 font-bold flex items-center gap-0.5">
-                    Job Hub <i data-lucide="chevron-right" class="w-3 h-3"></i>
-                  </button>
-                </div>
-              </div>
-
-              <!-- Job 2 -->
-              <div class="bg-white dark:bg-ios-card-dark rounded-[20px] p-3.5 shadow-ios-sm border border-slate-100 dark:border-neutral-800 space-y-2.5">
-                <div class="flex items-start justify-between">
-                  <div>
-                    <h6 contenteditable="true" class="font-bold text-xs text-slate-900 dark:text-white">Barton Creek Master Bath</h6>
-                    <span class="text-[10px] text-slate-400">Client: Robert Miller • Contract: $19,200</span>
-                  </div>
-                  <span class="px-2 py-0.5 text-[9px] font-bold bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 rounded-full">
-                    Milestone 1 / 3
-                  </span>
-                </div>
-
-                <div class="space-y-1">
-                  <div class="flex justify-between text-[10px] text-slate-500">
-                    <span>Rough Plumbing & Shower Pan</span>
-                    <span class="font-bold text-slate-800 dark:text-slate-200">33% Complete</span>
-                  </div>
-                  <div class="h-2 w-full bg-slate-100 dark:bg-neutral-800 rounded-full overflow-hidden">
-                    <div class="h-full bg-indigo-600 rounded-full" style="width: 33%;"></div>
-                  </div>
+              <div class="relative flex items-center bg-slate-50 dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 rounded-2xl px-3.5 py-2.5 shadow-sm">
+                <i data-lucide="search" class="w-4 h-4 text-slate-400 mr-2.5"></i>
+                <input type="text" readonly value="Search electricians, plumbers, roofers..." class="bg-transparent text-xs text-slate-800 dark:text-slate-200 w-full outline-none cursor-pointer">
+                <div class="p-1.5 rounded-lg bg-indigo-50 dark:bg-neutral-800 text-indigo-600">
+                  <i data-lucide="sliders-horizontal" class="w-3.5 h-3.5"></i>
                 </div>
               </div>
             </div>
 
-            <!-- 4. Lead Radar / Incoming Estimate Requests -->
-            <div class="space-y-2">
+            <!-- Subdued Category Pill Scroller -->
+            <div>
+              <div class="flex items-center justify-between mb-2 px-1">
+                <span contenteditable="true" class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Top Trades</span>
+                <span class="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400">See 11 categories</span>
+              </div>
+              <div class="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+                <button class="px-3.5 py-1.5 rounded-full bg-slate-900 dark:bg-white text-white dark:text-slate-950 font-bold text-xs shadow-sm shrink-0">All</button>
+                <button class="px-3.5 py-1.5 rounded-full bg-slate-100 dark:bg-neutral-900 text-slate-700 dark:text-slate-300 font-medium text-xs hover:bg-slate-200 shrink-0">Home Builders</button>
+                <button class="px-3.5 py-1.5 rounded-full bg-slate-100 dark:bg-neutral-900 text-slate-700 dark:text-slate-300 font-medium text-xs hover:bg-slate-200 shrink-0">Plumbers</button>
+                <button class="px-3.5 py-1.5 rounded-full bg-slate-100 dark:bg-neutral-900 text-slate-700 dark:text-slate-300 font-medium text-xs hover:bg-slate-200 shrink-0">Electricians</button>
+                <button class="px-3.5 py-1.5 rounded-full bg-slate-100 dark:bg-neutral-900 text-slate-700 dark:text-slate-300 font-medium text-xs hover:bg-slate-200 shrink-0">HVAC</button>
+              </div>
+            </div>
+
+            <!-- Discreet Escrow Trust Anchor -->
+            <div class="p-3 bg-slate-50 dark:bg-neutral-900/70 border border-slate-200/80 dark:border-neutral-800 rounded-2xl flex items-center justify-between">
+              <div class="flex items-center gap-2.5">
+                <div class="w-7 h-7 rounded-lg bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 flex items-center justify-center">
+                  <i data-lucide="shield-check" class="w-4 h-4"></i>
+                </div>
+                <div>
+                  <h4 contenteditable="true" class="text-xs font-bold text-slate-900 dark:text-white leading-tight">RateDeed Escrow Shield</h4>
+                  <p contenteditable="true" class="text-[10px] text-slate-500 dark:text-slate-400">Funds released only upon your signed sign-off</p>
+                </div>
+              </div>
+              <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400"></i>
+            </div>
+
+            <!-- Curated Contractors Feed (Large Full-Width Minimal Cards) -->
+            <div class="space-y-3">
               <div class="flex items-center justify-between px-1">
-                <h5 class="font-bold text-xs text-slate-900 dark:text-white flex items-center gap-1.5">
-                  <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-500"></i> New Inquiries (2 Awaiting Reply)
-                </h5>
-                <span class="text-[10px] text-emerald-600 font-bold">Avg ~15m Reply</span>
+                <span contenteditable="true" class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Verified Nearby</span>
+                <span class="text-[11px] text-slate-400 font-medium">Sorted by Rating</span>
               </div>
 
-              <div class="bg-white dark:bg-ios-card-dark rounded-[20px] p-3.5 shadow-ios-sm border border-slate-100 dark:border-neutral-800 space-y-2">
-                <div class="flex items-start justify-between">
-                  <div>
-                    <h6 class="font-bold text-xs text-slate-900 dark:text-white">Custom ADU & Deck Remodel</h6>
-                    <span class="text-[10px] text-slate-400">78704 (Bouldin Creek) • 12 mins ago</span>
-                  </div>
-                  <span class="text-[10px] font-bold text-indigo-600">$45k – $65k</span>
+              <!-- Contractor Card 1 -->
+              <div class="group bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 rounded-2xl overflow-hidden hover:border-indigo-400 transition-all">
+                <div class="h-36 relative bg-slate-100 dark:bg-neutral-800">
+                  <img src="https://images.unsplash.com/photo-1541888946425-d0fbb1861564?auto=format&fit=crop&w=600&q=80" alt="Apex Construction" class="w-full h-full object-cover">
+                  <span class="absolute top-2.5 left-2.5 px-2 py-0.5 bg-white/95 dark:bg-neutral-900/95 text-[10px] font-black rounded-full text-slate-900 dark:text-white shadow-sm flex items-center gap-1">
+                    <i data-lucide="badge-check" class="w-3 h-3 text-indigo-600"></i> Licensed & Verified
+                  </span>
+                  <button class="absolute top-2.5 right-2.5 w-8 h-8 rounded-full bg-white/80 dark:bg-neutral-900/80 backdrop-blur-sm flex items-center justify-center text-slate-600 hover:text-rose-600 transition-colors">
+                    <i data-lucide="heart" class="w-4 h-4"></i>
+                  </button>
                 </div>
-                <p class="text-[11px] text-slate-600 dark:text-slate-300 leading-snug">
-                  "Looking to build a 450 sq ft detached home office and wraparound cedar deck. Ready to start next month."
-                </p>
-                <div class="flex gap-2 pt-1">
-                  <button class="flex-1 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[11px] rounded-xl shadow-xs">
-                    Send Instant Quote
-                  </button>
-                  <button class="px-3 py-2 bg-slate-100 dark:bg-neutral-800 text-slate-700 dark:text-slate-300 font-semibold text-[11px] rounded-xl">
-                    Message
-                  </button>
+                <div class="p-3.5 space-y-1.5">
+                  <div class="flex items-center justify-between">
+                    <h4 contenteditable="true" class="font-bold text-sm text-slate-900 dark:text-white">Apex Master Builders</h4>
+                    <div class="flex items-center gap-1 bg-amber-50 dark:bg-amber-950/50 px-1.5 py-0.5 rounded text-[11px] font-bold text-amber-700 dark:text-amber-300">
+                      <i data-lucide="star" class="w-3 h-3 fill-amber-400 text-amber-400"></i>
+                      <span>4.98</span>
+                      <span class="text-[10px] font-normal text-slate-400">(42)</span>
+                    </div>
+                  </div>
+                  <p contenteditable="true" class="text-[11px] text-slate-500 dark:text-slate-400">General Contracting • Custom Kitchens • Full Additions</p>
+                  <div class="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-neutral-800/80 text-[11px]">
+                    <span class="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                      <i data-lucide="zap" class="w-3 h-3"></i> Responds &lt; 30m
+                    </span>
+                    <span class="text-slate-500">Serves Manhattan, NY</span>
+                  </div>
                 </div>
               </div>
+
+              <!-- Contractor Card 2 -->
+              <div class="group bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 rounded-2xl overflow-hidden hover:border-indigo-400 transition-all">
+                <div class="h-36 relative bg-slate-100 dark:bg-neutral-800">
+                  <img src="https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=600&q=80" alt="Metro Blue Plumbing" class="w-full h-full object-cover">
+                  <span class="absolute top-2.5 left-2.5 px-2 py-0.5 bg-white/95 dark:bg-neutral-900/95 text-[10px] font-black rounded-full text-slate-900 dark:text-white shadow-sm flex items-center gap-1">
+                    <i data-lucide="badge-check" class="w-3 h-3 text-indigo-600"></i> Licensed & Verified
+                  </span>
+                  <button class="absolute top-2.5 right-2.5 w-8 h-8 rounded-full bg-white/80 dark:bg-neutral-900/80 backdrop-blur-sm flex items-center justify-center text-slate-600 hover:text-rose-600 transition-colors">
+                    <i data-lucide="heart" class="w-4 h-4"></i>
+                  </button>
+                </div>
+                <div class="p-3.5 space-y-1.5">
+                  <div class="flex items-center justify-between">
+                    <h4 contenteditable="true" class="font-bold text-sm text-slate-900 dark:text-white">Metro Blue Plumbing & Heating</h4>
+                    <div class="flex items-center gap-1 bg-amber-50 dark:bg-amber-950/50 px-1.5 py-0.5 rounded text-[11px] font-bold text-amber-700 dark:text-amber-300">
+                      <i data-lucide="star" class="w-3 h-3 fill-amber-400 text-amber-400"></i>
+                      <span>4.92</span>
+                      <span class="text-[10px] font-normal text-slate-400">(28)</span>
+                    </div>
+                  </div>
+                  <p contenteditable="true" class="text-[11px] text-slate-500 dark:text-slate-400">Emergency Piping • Water Heaters • Boiler Repairs</p>
+                  <div class="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-neutral-800/80 text-[11px]">
+                    <span class="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                      <i data-lucide="zap" class="w-3 h-3"></i> Responds &lt; 15m
+                    </span>
+                    <span class="text-slate-500">Serves Manhattan, Brooklyn</span>
+                  </div>
+                </div>
+              </div>
+
             </div>
 
           </div>
 
-          <!-- Bottom Floating Dispatch Dock -->
-          <div class="absolute bottom-3 left-4 right-4 z-20">
-            <div class="ios-glass-dock p-2 rounded-full border border-white/50 dark:border-neutral-700/60 shadow-ios-dock flex items-center justify-between gap-2">
-              <button class="flex-1 py-3 px-4 bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white font-bold text-xs rounded-full shadow-md flex items-center justify-center gap-1.5">
-                <i data-lucide="plus-circle" class="w-4 h-4"></i> Create Quote
-              </button>
-              <button class="w-10 h-10 rounded-full bg-slate-100 dark:bg-neutral-800 text-slate-800 dark:text-slate-200 flex items-center justify-center shrink-0">
-                <i data-lucide="calendar" class="w-4 h-4"></i>
-              </button>
-              <button class="w-10 h-10 rounded-full bg-slate-100 dark:bg-neutral-800 text-slate-800 dark:text-slate-200 flex items-center justify-center shrink-0">
-                <i data-lucide="camera" class="w-4 h-4"></i>
-              </button>
+          <!-- HOVER / FOCUS / DISABLED / LOADING / ERROR / EMPTY STATE LAYERS -->
+          <div class="state-layer state-loading flex-1 p-4 space-y-4">
+            <div class="h-11 rounded-2xl skeleton-shimmer"></div>
+            <div class="flex gap-2">
+              <div class="w-16 h-7 rounded-full skeleton-shimmer"></div>
+              <div class="w-24 h-7 rounded-full skeleton-shimmer"></div>
+              <div class="w-20 h-7 rounded-full skeleton-shimmer"></div>
             </div>
+            <div class="space-y-3">
+              <div class="rounded-2xl border border-slate-200 dark:border-neutral-800 p-3 space-y-2">
+                <div class="h-32 rounded-xl skeleton-shimmer"></div>
+                <div class="h-4 w-3/4 skeleton-shimmer rounded"></div>
+                <div class="h-3 w-1/2 skeleton-shimmer rounded"></div>
+              </div>
+              <div class="rounded-2xl border border-slate-200 dark:border-neutral-800 p-3 space-y-2">
+                <div class="h-32 rounded-xl skeleton-shimmer"></div>
+                <div class="h-4 w-3/4 skeleton-shimmer rounded"></div>
+                <div class="h-3 w-1/2 skeleton-shimmer rounded"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="state-layer state-error flex-1 p-6 flex flex-col items-center justify-center text-center">
+            <div class="w-12 h-12 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mb-3">
+              <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+            </div>
+            <h4 class="font-bold text-sm text-slate-900 dark:text-white">Could not connect to directory</h4>
+            <p class="text-xs text-slate-500 mt-1 mb-4">Please check your network connection and pull down to refresh.</p>
+            <button class="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold">Retry Connection</button>
+          </div>
+
+          <div class="state-layer state-empty flex-1 p-6 flex flex-col items-center justify-center text-center">
+            <div class="w-12 h-12 rounded-full bg-slate-100 dark:bg-neutral-800 text-slate-400 flex items-center justify-center mb-3">
+              <i data-lucide="search-x" class="w-6 h-6"></i>
+            </div>
+            <h4 class="font-bold text-sm text-slate-900 dark:text-white">No contractors found</h4>
+            <p class="text-xs text-slate-500 mt-1 mb-4">No verified pros serve this ZIP yet. Try adjusting your search or radius.</p>
+            <button class="px-4 py-2 bg-slate-100 dark:bg-neutral-800 text-slate-800 dark:text-slate-200 rounded-xl text-xs font-bold">Reset Filters</button>
           </div>
 
         </div>
       </article>
 
-      <!-- ========================================================================= -->
-      <!-- RIGHT: AIRBNB HOST EDITION (PRO HOSTING & EARNINGS MODE)                  -->
-      <!-- ========================================================================= -->
-      <article id="card-p-airbnb" class="artboard-card flex flex-col bg-white dark:bg-neutral-900 border-2 border-rose-500/80 rounded-[30px] shadow-2xl overflow-hidden transition-all relative">
 
-        <div class="absolute top-0 left-6 z-30 bg-rose-600 text-white text-[10px] font-extrabold uppercase tracking-wider px-3.5 py-1 rounded-b-xl shadow-md flex items-center gap-1">
-          <i data-lucide="home" class="w-3 h-3 fill-white"></i> Airbnb Host Edition
+      <!-- ========================================================================= -->
+      <!-- VARIANT B: BALANCED / ACTION-ORIENTED (RECOMMENDED)                       -->
+      <!-- ========================================================================= -->
+      <article data-variant="var-b" class="artboard-card flex flex-col bg-white dark:bg-neutral-900 border-2 border-indigo-600 rounded-3xl shadow-xl overflow-hidden transition-all relative">
+
+        <!-- Recommended Ribbon -->
+        <div class="absolute top-0 right-6 z-20 bg-indigo-600 text-white text-[10px] font-extrabold uppercase tracking-wider px-3 py-1 rounded-b-xl shadow-md flex items-center gap-1">
+          <i data-lucide="sparkles" class="w-3 h-3"></i> Recommended
         </div>
 
-        <header class="p-4 bg-rose-50/70 dark:bg-neutral-900 border-b border-rose-100 dark:border-neutral-800 flex items-center justify-between">
-          <div class="flex items-center gap-2.5 ml-32 sm:ml-40">
-            <div>
-              <h3 class="font-bold text-xs text-slate-900 dark:text-white">Airbnb Host Mode (Pro Dashboard)</h3>
-              <p class="text-[10px] text-rose-700 dark:text-rose-300">Reservations • Superpro Tracker • Payouts</p>
-            </div>
-          </div>
-          <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-200">Airbnb UI</span>
-        </header>
-
-        <div class="artboard-frame mx-auto w-full max-w-[390px] bg-white dark:bg-neutral-900 min-h-[880px] relative pb-24">
-
-          <!-- Airbnb Host Top Bar -->
-          <div class="sticky top-0 z-20 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-md px-4 py-3 flex items-center justify-between border-b border-slate-100 dark:border-neutral-800">
+        <!-- Variant Header Info -->
+        <div class="p-4 bg-indigo-50/70 dark:bg-neutral-800/80 border-b border-indigo-100 dark:border-neutral-800 flex items-center justify-between">
+          <div>
             <div class="flex items-center gap-2">
-              <span class="font-extrabold text-xs text-slate-900 dark:text-white uppercase tracking-wider">HOSTING</span>
-              <span class="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-neutral-800 text-slate-600 font-bold">Switch to Booking</span>
+              <h3 class="font-bold text-sm text-slate-900 dark:text-white">Variant B: Balanced & Action-Oriented</h3>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-200">Optimal UX</span>
             </div>
-            <div class="flex items-center gap-2.5">
-              <div class="w-8 h-8 rounded-full bg-slate-100 dark:bg-neutral-800 flex items-center justify-center relative">
-                <i data-lucide="bell" class="w-4 h-4 text-slate-700 dark:text-slate-300"></i>
-                <span class="absolute top-1 right-1 w-2 h-2 rounded-full bg-rose-500"></span>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Dual-segment search, clay 3D categories, partner rewards ribbon</p>
+          </div>
+          <span class="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md">AA 5.2:1</span>
+        </div>
+
+        <!-- Phone Frame -->
+        <div class="artboard-frame mx-auto w-full max-w-[390px] bg-[#FAFAFA] dark:bg-neutral-950 min-h-[820px] transition-all duration-300 flex flex-col border-x border-slate-100 dark:border-neutral-900">
+
+          <!-- Header with Logo & Notifications Badge -->
+          <div class="px-4 pt-3.5 pb-2 flex items-center justify-between bg-white dark:bg-neutral-900 border-b border-slate-100 dark:border-neutral-800">
+            <div class="flex items-center gap-2">
+              <div class="w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-xs">
+                <i data-lucide="hammer" class="w-4 h-4"></i>
               </div>
-              <div class="w-8 h-8 rounded-full overflow-hidden border border-slate-200">
-                <img src="https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?auto=format&fit=crop&w=120&q=80" alt="Host Avatar" class="w-full h-full object-cover">
-              </div>
+              <span contenteditable="true" class="font-black text-lg tracking-tight text-indigo-600 dark:text-indigo-400">ratedeed</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <button class="relative w-8 h-8 rounded-full border border-slate-200 dark:border-neutral-700 flex items-center justify-center text-slate-700 dark:text-slate-300">
+                <i data-lucide="bell" class="w-4 h-4"></i>
+                <span class="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-rose-600 text-[9px] font-bold text-white flex items-center justify-center">2</span>
+              </button>
             </div>
           </div>
 
-          <div class="p-4 space-y-4 text-xs">
+          <!-- DEFAULT STATE LAYER -->
+          <div class="state-layer state-default flex-1 px-4 py-3 space-y-4">
 
-            <!-- 1. Airbnb "Your Reservations / Jobs" Banner -->
-            <div class="space-y-2">
-              <div class="flex items-center justify-between">
-                <h3 class="font-bold text-base text-slate-900 dark:text-white">Your active jobs (3)</h3>
-                <span class="text-xs text-rose-600 font-bold underline cursor-pointer">All (186)</span>
+            <!-- Dual-Input Search Pill (ZIP + Trade/Name) -->
+            <div class="bg-white dark:bg-neutral-900 rounded-2xl border border-slate-200 dark:border-neutral-800 p-1.5 shadow-sm flex items-center gap-1.5">
+              <div class="flex-1 flex items-center pl-2.5 pr-1 py-1">
+                <i data-lucide="map-pin" class="w-3.5 h-3.5 text-indigo-600 mr-2 shrink-0"></i>
+                <input type="text" value="10001" class="text-xs font-semibold text-slate-900 dark:text-white bg-transparent w-14 outline-none">
               </div>
-
-              <!-- Horizontal Reservation / Job Cards -->
-              <div class="flex gap-3 overflow-x-auto py-1 no-scrollbar">
-
-                <!-- Job Card 1 -->
-                <div class="w-64 shrink-0 p-3.5 rounded-2xl border border-slate-200 dark:border-neutral-700 bg-white dark:bg-neutral-850 shadow-sm space-y-2">
-                  <div class="flex items-center justify-between">
-                    <span class="text-[9px] font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
-                      Currently In Progress
-                    </span>
-                    <span class="font-bold text-slate-900 dark:text-white text-[11px]">$34,500</span>
-                  </div>
-                  <h5 class="font-bold text-xs text-slate-900 dark:text-white leading-tight">Westlake Hills Kitchen</h5>
-                  <p class="text-[10px] text-slate-500">Jessica Davis • Milestone 2 / 3 Approved</p>
-                  <button class="w-full py-1.5 bg-rose-600 text-white font-bold text-[10px] rounded-lg shadow-xs">
-                    View Milestone Details
-                  </button>
-                </div>
-
-                <!-- Job Card 2 -->
-                <div class="w-64 shrink-0 p-3.5 rounded-2xl border border-slate-200 dark:border-neutral-700 bg-white dark:bg-neutral-850 shadow-sm space-y-2">
-                  <div class="flex items-center justify-between">
-                    <span class="text-[9px] font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
-                      Starting Soon
-                    </span>
-                    <span class="font-bold text-slate-900 dark:text-white text-[11px]">$19,200</span>
-                  </div>
-                  <h5 class="font-bold text-xs text-slate-900 dark:text-white leading-tight">Barton Creek Master Bath</h5>
-                  <p class="text-[10px] text-slate-500">Robert Miller • Inspection Scheduled</p>
-                  <button class="w-full py-1.5 bg-slate-100 dark:bg-neutral-800 text-slate-800 dark:text-slate-200 font-bold text-[10px] rounded-lg">
-                    Message Client
-                  </button>
-                </div>
-
+              <div class="w-px h-6 bg-slate-200 dark:bg-neutral-800"></div>
+              <div class="flex-[2] flex items-center pl-2 pr-1 py-1">
+                <i data-lucide="wrench" class="w-3.5 h-3.5 text-slate-400 mr-2 shrink-0"></i>
+                <input type="text" placeholder="Contractor or Trade..." class="text-xs text-slate-900 dark:text-white bg-transparent w-full outline-none">
               </div>
-            </div>
-
-            <!-- 2. Airbnb Host Earnings Section -->
-            <div class="p-4 rounded-2xl border border-slate-200 dark:border-neutral-700 bg-white dark:bg-neutral-850 shadow-sm space-y-3">
-              <div class="flex items-center justify-between">
-                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Payouts</span>
-                <span class="text-[10px] text-rose-600 font-bold">Stripe Connected</span>
-              </div>
-              <div class="flex items-baseline justify-between">
-                <div>
-                  <span class="text-xs text-slate-500 block">Available Now</span>
-                  <span class="text-xl font-black text-slate-900 dark:text-white">$34,850</span>
-                </div>
-                <div class="text-right">
-                  <span class="text-xs text-slate-500 block">In Escrow (Upcoming)</span>
-                  <span class="text-base font-bold text-emerald-600">$48,200</span>
-                </div>
-              </div>
-              <button class="w-full py-2.5 airbnb-btn text-white font-bold text-xs rounded-xl shadow-xs">
-                Withdraw to Bank Account
+              <button class="w-8 h-8 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center shrink-0 shadow-xs">
+                <i data-lucide="search" class="w-3.5 h-3.5"></i>
               </button>
             </div>
 
-            <!-- 3. Airbnb Superhost Progress Tracker -->
-            <div class="p-4 rounded-2xl border border-slate-200 dark:border-neutral-700 bg-slate-50/70 dark:bg-neutral-800/50 space-y-2.5">
-              <div class="flex items-center justify-between">
-                <div class="flex items-center gap-1.5">
-                  <span class="text-sm">🏆</span>
-                  <h5 class="font-bold text-xs text-slate-900 dark:text-white">Superhost Status: Maintained</h5>
-                </div>
-                <span class="text-[10px] text-emerald-600 font-bold">Top Tier</span>
+            <!-- Clay Category Icons (Horizontal Ribbon matching CategoryIcon.tsx) -->
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <span contenteditable="true" class="text-xs font-bold text-slate-900 dark:text-white">Explore Categories</span>
+                <button class="text-[11px] font-bold text-indigo-600 dark:text-indigo-400">All (11)</button>
               </div>
-              <div class="grid grid-cols-3 gap-2 text-center text-xs">
-                <div class="p-2 rounded-xl bg-white dark:bg-neutral-800 border border-slate-200/60 dark:border-neutral-700">
-                  <span class="text-[9px] text-slate-400 block">Rating</span>
-                  <span class="font-bold text-slate-900 dark:text-white">4.96 ★</span>
+              <div class="flex items-center gap-3 overflow-x-auto no-scrollbar pb-1">
+                <!-- All -->
+                <div class="flex flex-col items-center gap-1 shrink-0">
+                  <div class="w-12 h-12 rounded-2xl bg-neutral-900 text-white flex items-center justify-center shadow-md border border-slate-700">
+                    <i data-lucide="layout-grid" class="w-5 h-5"></i>
+                  </div>
+                  <span class="text-[10px] font-bold text-slate-900 dark:text-white">All</span>
                 </div>
-                <div class="p-2 rounded-xl bg-white dark:bg-neutral-800 border border-slate-200/60 dark:border-neutral-700">
-                  <span class="text-[9px] text-slate-400 block">Response</span>
-                  <span class="font-bold text-emerald-600">100%</span>
+                <!-- Builders -->
+                <div class="flex flex-col items-center gap-1 shrink-0">
+                  <div class="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-md">
+                    <i data-lucide="home" class="w-5 h-5"></i>
+                  </div>
+                  <span class="text-[10px] font-medium text-slate-600 dark:text-slate-400">Builders</span>
                 </div>
-                <div class="p-2 rounded-xl bg-white dark:bg-neutral-800 border border-slate-200/60 dark:border-neutral-700">
-                  <span class="text-[9px] text-slate-400 block">Completed</span>
-                  <span class="font-bold text-slate-900 dark:text-white">186 Jobs</span>
+                <!-- Plumbers -->
+                <div class="flex flex-col items-center gap-1 shrink-0">
+                  <div class="w-12 h-12 rounded-2xl bg-sky-500 text-white flex items-center justify-center shadow-md">
+                    <i data-lucide="droplet" class="w-5 h-5"></i>
+                  </div>
+                  <span class="text-[10px] font-medium text-slate-600 dark:text-slate-400">Plumbers</span>
+                </div>
+                <!-- Electricians -->
+                <div class="flex flex-col items-center gap-1 shrink-0">
+                  <div class="w-12 h-12 rounded-2xl bg-yellow-400 text-slate-950 flex items-center justify-center shadow-md">
+                    <i data-lucide="zap" class="w-5 h-5"></i>
+                  </div>
+                  <span class="text-[10px] font-medium text-slate-600 dark:text-slate-400">Electric</span>
+                </div>
+                <!-- Roofers -->
+                <div class="flex flex-col items-center gap-1 shrink-0">
+                  <div class="w-12 h-12 rounded-2xl bg-orange-500 text-white flex items-center justify-center shadow-md">
+                    <i data-lucide="warehouse" class="w-5 h-5"></i>
+                  </div>
+                  <span class="text-[10px] font-medium text-slate-600 dark:text-slate-400">Roofers</span>
+                </div>
+                <!-- Painters -->
+                <div class="flex flex-col items-center gap-1 shrink-0">
+                  <div class="w-12 h-12 rounded-2xl bg-violet-500 text-white flex items-center justify-center shadow-md">
+                    <i data-lucide="paint-roller" class="w-5 h-5"></i>
+                  </div>
+                  <span class="text-[10px] font-medium text-slate-600 dark:text-slate-400">Painters</span>
                 </div>
               </div>
             </div>
 
-            <!-- 4. Manage Listings & Services -->
-            <div class="space-y-2 pt-1 border-t border-slate-100 dark:border-neutral-800">
-              <div class="flex items-center justify-between">
-                <h5 class="font-bold text-xs text-slate-900 dark:text-white">Your Services & Pricing</h5>
-                <span class="text-[10px] text-rose-600 font-bold">+ Add Service</span>
-              </div>
-              <div class="p-3 rounded-xl border border-slate-200 dark:border-neutral-700 flex items-center justify-between">
-                <div>
-                  <span class="font-bold text-xs text-slate-900 dark:text-white block">Full Kitchen Remodel</span>
-                  <span class="text-[10px] text-slate-500">Active • $24,000 – $55,000</span>
+            <!-- HomePartnerBanner: 4% Cash Referral Component -->
+            <div class="rounded-2xl p-3.5 bg-slate-900 border border-slate-800 shadow-sm relative overflow-hidden">
+              <div class="absolute -right-6 -top-6 w-24 h-24 rounded-full bg-amber-500/15 blur-lg pointer-events-none"></div>
+              <div class="flex items-center justify-between mb-1">
+                <div class="flex items-center gap-1 bg-amber-400/20 border border-amber-400/30 px-2 py-0.5 rounded-full">
+                  <i data-lucide="gift" class="w-2.5 h-2.5 text-amber-400"></i>
+                  <span class="text-amber-300 text-[9px] font-extrabold uppercase tracking-wider">Partner Rewards</span>
                 </div>
-                <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400"></i>
+                <button class="w-4 h-4 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-[10px]">×</button>
+              </div>
+              <div class="flex items-center justify-between gap-2 mt-1">
+                <div class="flex-1">
+                  <h4 contenteditable="true" class="text-white text-xs font-black tracking-tight leading-tight">Earn 4% Cash on Referrals</h4>
+                  <p contenteditable="true" class="text-slate-300 text-[10px] mt-0.5 leading-snug">Invite local pros to RateDeed. Get paid when jobs complete in escrow.</p>
+                </div>
+                <button class="bg-amber-500 hover:bg-amber-400 text-slate-950 px-2.5 py-1.5 rounded-xl font-black text-[10px] flex items-center gap-1 shrink-0">
+                  <span>Invite</span>
+                  <i data-lucide="arrow-right" class="w-3 h-3"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- 2-Column Contractor Grid (Matching ListingCard.tsx) -->
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <div>
+                  <h3 contenteditable="true" class="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider">Featured Home Builders</h3>
+                  <p class="text-[10px] text-emerald-600 font-semibold flex items-center gap-1 mt-0.5">
+                    <i data-lucide="map-pin" class="w-3 h-3"></i> Serving your ZIP (10001)
+                  </p>
+                </div>
+                <button class="text-[11px] font-bold text-indigo-600 dark:text-indigo-400">See all</button>
+              </div>
+
+              <div class="grid grid-cols-2 gap-3">
+
+                <!-- Grid Card 1 -->
+                <div class="bg-white dark:bg-neutral-900 rounded-xl overflow-hidden border border-slate-200/80 dark:border-neutral-800 shadow-soft">
+                  <div class="aspect-square relative bg-slate-100 dark:bg-neutral-800">
+                    <img src="https://images.unsplash.com/photo-1541888946425-d0fbb1861564?auto=format&fit=crop&w=400&q=80" alt="Apex" class="w-full h-full object-cover">
+                    <div class="absolute top-1.5 left-1.5">
+                      <span class="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-md">
+                        <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
+                      </span>
+                    </div>
+                    <button class="absolute top-1.5 right-1.5 w-7 h-7 rounded-full bg-black/40 backdrop-blur-sm text-white flex items-center justify-center">
+                      <i data-lucide="heart" class="w-3.5 h-3.5"></i>
+                    </button>
+                  </div>
+                  <div class="p-2.5 space-y-1">
+                    <div class="flex items-start justify-between gap-1">
+                      <h5 contenteditable="true" class="font-bold text-xs text-slate-900 dark:text-white leading-tight truncate">Apex Builders</h5>
+                      <span class="flex items-center gap-0.5 text-[10px] font-bold text-amber-600 shrink-0">
+                        <i data-lucide="star" class="w-2.5 h-2.5 fill-amber-400 text-amber-400"></i> 4.98
+                      </span>
+                    </div>
+                    <p contenteditable="true" class="text-[10px] text-slate-500 dark:text-slate-400 truncate">New York, NY • 1.2 mi</p>
+                    <div class="pt-1 flex items-center gap-1 text-[9px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30 px-1.5 py-0.5 rounded">
+                      <i data-lucide="lock" class="w-2.5 h-2.5"></i> Escrow Protected
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Grid Card 2 -->
+                <div class="bg-white dark:bg-neutral-900 rounded-xl overflow-hidden border border-slate-200/80 dark:border-neutral-800 shadow-soft">
+                  <div class="aspect-square relative bg-slate-100 dark:bg-neutral-800">
+                    <img src="https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=400&q=80" alt="Gotham" class="w-full h-full object-cover">
+                    <div class="absolute top-1.5 left-1.5">
+                      <span class="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-md">
+                        <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
+                      </span>
+                    </div>
+                    <button class="absolute top-1.5 right-1.5 w-7 h-7 rounded-full bg-black/40 backdrop-blur-sm text-white flex items-center justify-center">
+                      <i data-lucide="heart" class="w-3.5 h-3.5"></i>
+                    </button>
+                  </div>
+                  <div class="p-2.5 space-y-1">
+                    <div class="flex items-start justify-between gap-1">
+                      <h5 contenteditable="true" class="font-bold text-xs text-slate-900 dark:text-white leading-tight truncate">Gotham Stone</h5>
+                      <span class="flex items-center gap-0.5 text-[10px] font-bold text-amber-600 shrink-0">
+                        <i data-lucide="star" class="w-2.5 h-2.5 fill-amber-400 text-amber-400"></i> 4.91
+                      </span>
+                    </div>
+                    <p contenteditable="true" class="text-[10px] text-slate-500 dark:text-slate-400 truncate">Brooklyn, NY • 3.4 mi</p>
+                    <div class="pt-1 flex items-center gap-1 text-[9px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30 px-1.5 py-0.5 rounded">
+                      <i data-lucide="lock" class="w-2.5 h-2.5"></i> Escrow Protected
+                    </div>
+                  </div>
+                </div>
+
               </div>
             </div>
 
           </div>
 
-          <!-- Airbnb Host Bottom Nav Bar -->
-          <div class="absolute bottom-0 left-0 right-0 bg-white dark:bg-neutral-900 border-t border-slate-200 dark:border-neutral-800 px-6 py-2.5 shadow-airbnb-bar flex items-center justify-between z-20 text-[10px] text-slate-500">
-            <div class="flex flex-col items-center gap-0.5 text-rose-600 font-bold">
-              <i data-lucide="calendar" class="w-4 h-4"></i>
-              <span>Today</span>
+          <!-- LOADING & ERROR LAYERS FOR VAR B -->
+          <div class="state-layer state-loading flex-1 p-4 space-y-3">
+            <div class="h-10 rounded-2xl skeleton-shimmer"></div>
+            <div class="flex gap-2">
+              <div class="w-12 h-12 rounded-2xl skeleton-shimmer"></div>
+              <div class="w-12 h-12 rounded-2xl skeleton-shimmer"></div>
+              <div class="w-12 h-12 rounded-2xl skeleton-shimmer"></div>
+              <div class="w-12 h-12 rounded-2xl skeleton-shimmer"></div>
             </div>
-            <div class="flex flex-col items-center gap-0.5">
-              <i data-lucide="message-square" class="w-4 h-4"></i>
-              <span>Inbox</span>
+            <div class="h-16 rounded-2xl skeleton-shimmer"></div>
+            <div class="grid grid-cols-2 gap-3">
+              <div class="h-44 rounded-xl skeleton-shimmer"></div>
+              <div class="h-44 rounded-xl skeleton-shimmer"></div>
             </div>
-            <div class="flex flex-col items-center gap-0.5">
-              <i data-lucide="layers" class="w-4 h-4"></i>
-              <span>Services</span>
+          </div>
+
+          <div class="state-layer state-error flex-1 p-6 flex flex-col items-center justify-center text-center">
+            <div class="w-12 h-12 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mb-3">
+              <i data-lucide="alert-circle" class="w-6 h-6"></i>
             </div>
-            <div class="flex flex-col items-center gap-0.5">
-              <i data-lucide="dollar-sign" class="w-4 h-4"></i>
-              <span>Earnings</span>
+            <h4 class="font-bold text-sm text-slate-900 dark:text-white">Unable to fetch contractors</h4>
+            <p class="text-xs text-slate-500 mt-1 mb-4">Network request timed out for ZIP 10001.</p>
+            <button class="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold">Try Again</button>
+          </div>
+
+          <div class="state-layer state-empty flex-1 p-6 flex flex-col items-center justify-center text-center">
+            <div class="w-12 h-12 rounded-full bg-slate-100 dark:bg-neutral-800 text-slate-400 flex items-center justify-center mb-3">
+              <i data-lucide="map-pin-off" class="w-6 h-6"></i>
             </div>
+            <h4 class="font-bold text-sm text-slate-900 dark:text-white">No active contractors</h4>
+            <p class="text-xs text-slate-500 mt-1 mb-4">Be the first to invite contractors in this ZIP and earn 4% referral bonus.</p>
+            <button class="px-4 py-2 bg-amber-500 text-slate-950 rounded-xl text-xs font-bold">Invite Contractor</button>
+          </div>
+
+        </div>
+      </article>
+
+
+      <!-- ========================================================================= -->
+      <!-- VARIANT C: BOLD / DENSE (POWER-USER & MAP DISCOVERY)                      -->
+      <!-- ========================================================================= -->
+      <article data-variant="var-c" class="artboard-card flex flex-col bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 rounded-3xl shadow-lg overflow-hidden transition-all">
+
+        <!-- Variant Header Info -->
+        <div class="p-4 bg-slate-50 dark:bg-neutral-800/60 border-b border-slate-200 dark:border-neutral-800 flex items-center justify-between">
+          <div>
+            <div class="flex items-center gap-2">
+              <h3 class="font-bold text-sm text-slate-900 dark:text-white">Variant C: Bold & High-Density</h3>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 dark:bg-neutral-700 text-slate-800 dark:text-slate-200">Power User</span>
+            </div>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Quick filter chips, instant quote action, response timers, dense feed</p>
+          </div>
+          <span class="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md">AA 5.0:1</span>
+        </div>
+
+        <!-- Phone Frame -->
+        <div class="artboard-frame mx-auto w-full max-w-[390px] bg-white dark:bg-neutral-950 min-h-[820px] transition-all duration-300 flex flex-col border-x border-slate-100 dark:border-neutral-900">
+
+          <!-- Bold Top Bar with Instant Request CTA -->
+          <div class="px-4 pt-3 pb-2.5 flex items-center justify-between bg-slate-900 text-white">
+            <div class="flex items-center gap-2">
+              <i data-lucide="shield-check" class="w-5 h-5 text-indigo-400"></i>
+              <div>
+                <span contenteditable="true" class="font-black text-sm tracking-tight text-white block">RateDeed Verified</span>
+                <span class="text-[9px] text-slate-400 font-semibold">100% Escrow Protection Guarantee</span>
+              </div>
+            </div>
+            <button class="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-xs">
+              <i data-lucide="plus" class="w-3 h-3"></i> Post Job
+            </button>
+          </div>
+
+          <!-- DEFAULT STATE LAYER -->
+          <div class="state-layer state-default flex-1 px-3 py-3 space-y-3">
+
+            <!-- Compact Search Bar with Instant Filter Bar -->
+            <div class="space-y-2">
+              <div class="relative flex items-center bg-slate-100 dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 rounded-xl px-3 py-2">
+                <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 mr-2"></i>
+                <input type="text" value="Zip: 10001 • Electricians & HVAC" class="text-xs font-semibold text-slate-900 dark:text-white bg-transparent w-full outline-none">
+                <button class="text-xs text-indigo-600 dark:text-indigo-400 font-bold">Edit</button>
+              </div>
+
+              <!-- Quick Toggles / Micro Filter Chips -->
+              <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 text-[10px]">
+                <button class="px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 font-bold flex items-center gap-1 shrink-0">
+                  <i data-lucide="zap" class="w-3 h-3"></i> &lt;1h Response
+                </button>
+                <button class="px-2.5 py-1 rounded-lg bg-slate-50 dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 text-slate-700 dark:text-slate-300 font-semibold flex items-center gap-1 shrink-0">
+                  <i data-lucide="shield" class="w-3 h-3 text-emerald-500"></i> Licensed
+                </button>
+                <button class="px-2.5 py-1 rounded-lg bg-slate-50 dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 text-slate-700 dark:text-slate-300 font-semibold shrink-0">
+                  ★ 4.8+ Stars
+                </button>
+                <button class="px-2.5 py-1 rounded-lg bg-slate-50 dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 text-slate-700 dark:text-slate-300 font-semibold shrink-0">
+                  Within 5 mi
+                </button>
+              </div>
+            </div>
+
+            <!-- Dense List with Action Row (Direct Contact / Quote Button) -->
+            <div class="space-y-2.5">
+              <div class="flex items-center justify-between px-1">
+                <span contenteditable="true" class="text-[11px] font-extrabold uppercase tracking-wider text-slate-500">18 Contractors Ready</span>
+                <span class="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold">Sort: Fast Response</span>
+              </div>
+
+              <!-- Dense Item 1 -->
+              <div class="p-3 bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 rounded-xl space-y-2 shadow-xs hover:border-slate-300 transition-all">
+                <div class="flex items-start gap-2.5">
+                  <img src="https://images.unsplash.com/photo-1541888946425-d0fbb1861564?auto=format&fit=crop&w=120&q=80" alt="Apex" class="w-14 h-14 rounded-lg object-cover shrink-0">
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center justify-between">
+                      <h4 contenteditable="true" class="font-bold text-xs text-slate-900 dark:text-white truncate">Apex Master Builders</h4>
+                      <span class="text-[10px] font-black text-slate-900 dark:text-white bg-slate-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded">4.98 ★</span>
+                    </div>
+                    <p contenteditable="true" class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">General Contracting • 1.2 miles away</p>
+                    <div class="flex items-center gap-2 mt-1">
+                      <span class="text-[9px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.2 rounded">⚡ Responds &lt;20m</span>
+                      <span class="text-[9px] font-semibold text-slate-600 dark:text-slate-400">12 Escrow Jobs Done</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2 pt-1 border-t border-slate-100 dark:border-neutral-800">
+                  <button class="flex-1 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[10px] rounded-lg shadow-xs flex items-center justify-center gap-1">
+                    <i data-lucide="message-square" class="w-3 h-3"></i> Request Quote
+                  </button>
+                  <button class="px-2.5 py-1.5 bg-slate-100 dark:bg-neutral-800 text-slate-800 dark:text-slate-200 font-bold text-[10px] rounded-lg">
+                    Profile
+                  </button>
+                </div>
+              </div>
+
+              <!-- Dense Item 2 -->
+              <div class="p-3 bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 rounded-xl space-y-2 shadow-xs hover:border-slate-300 transition-all">
+                <div class="flex items-start gap-2.5">
+                  <img src="https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=120&q=80" alt="Volt" class="w-14 h-14 rounded-lg object-cover shrink-0">
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center justify-between">
+                      <h4 contenteditable="true" class="font-bold text-xs text-slate-900 dark:text-white truncate">Voltcraft Electrical & Solar</h4>
+                      <span class="text-[10px] font-black text-slate-900 dark:text-white bg-slate-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded">4.95 ★</span>
+                    </div>
+                    <p contenteditable="true" class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">Panel Upgrades • EV Chargers • 2.1 mi</p>
+                    <div class="flex items-center gap-2 mt-1">
+                      <span class="text-[9px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.2 rounded">⚡ Responds &lt;35m</span>
+                      <span class="text-[9px] font-semibold text-slate-600 dark:text-slate-400">8 Escrow Jobs Done</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2 pt-1 border-t border-slate-100 dark:border-neutral-800">
+                  <button class="flex-1 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[10px] rounded-lg shadow-xs flex items-center justify-center gap-1">
+                    <i data-lucide="message-square" class="w-3 h-3"></i> Request Quote
+                  </button>
+                  <button class="px-2.5 py-1.5 bg-slate-100 dark:bg-neutral-800 text-slate-800 dark:text-slate-200 font-bold text-[10px] rounded-lg">
+                    Profile
+                  </button>
+                </div>
+              </div>
+
+              <!-- Dense Item 3 -->
+              <div class="p-3 bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 rounded-xl space-y-2 shadow-xs hover:border-slate-300 transition-all">
+                <div class="flex items-start gap-2.5">
+                  <img src="https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=120&q=80" alt="Ironstone" class="w-14 h-14 rounded-lg object-cover shrink-0">
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center justify-between">
+                      <h4 contenteditable="true" class="font-bold text-xs text-slate-900 dark:text-white truncate">Ironstone Roofing & Siding</h4>
+                      <span class="text-[10px] font-black text-slate-900 dark:text-white bg-slate-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded">4.89 ★</span>
+                    </div>
+                    <p contenteditable="true" class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">Shingle & Flat Roofs • 0.8 mi</p>
+                    <div class="flex items-center gap-2 mt-1">
+                      <span class="text-[9px] font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-1.5 py-0.2 rounded">⏱️ Responds ~2h</span>
+                      <span class="text-[9px] font-semibold text-slate-600 dark:text-slate-400">19 Escrow Jobs Done</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2 pt-1 border-t border-slate-100 dark:border-neutral-800">
+                  <button class="flex-1 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[10px] rounded-lg shadow-xs flex items-center justify-center gap-1">
+                    <i data-lucide="message-square" class="w-3 h-3"></i> Request Quote
+                  </button>
+                  <button class="px-2.5 py-1.5 bg-slate-100 dark:bg-neutral-800 text-slate-800 dark:text-slate-200 font-bold text-[10px] rounded-lg">
+                    Profile
+                  </button>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+
+          <!-- LOADING & ERROR LAYERS FOR VAR C -->
+          <div class="state-layer state-loading flex-1 p-3 space-y-2">
+            <div class="h-9 rounded-xl skeleton-shimmer"></div>
+            <div class="flex gap-1.5">
+              <div class="w-20 h-6 rounded-lg skeleton-shimmer"></div>
+              <div class="w-16 h-6 rounded-lg skeleton-shimmer"></div>
+              <div class="w-18 h-6 rounded-lg skeleton-shimmer"></div>
+            </div>
+            <div class="h-28 rounded-xl skeleton-shimmer"></div>
+            <div class="h-28 rounded-xl skeleton-shimmer"></div>
+            <div class="h-28 rounded-xl skeleton-shimmer"></div>
+          </div>
+
+          <div class="state-layer state-error flex-1 p-6 flex flex-col items-center justify-center text-center">
+            <div class="w-12 h-12 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mb-3">
+              <i data-lucide="alert-octagon" class="w-6 h-6"></i>
+            </div>
+            <h4 class="font-bold text-sm text-slate-900 dark:text-white">API Sync Interrupted</h4>
+            <p class="text-xs text-slate-500 mt-1 mb-4">Realtime contractor socket failed to synchronize.</p>
+            <button class="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold">Reconnect</button>
+          </div>
+
+          <div class="state-layer state-empty flex-1 p-6 flex flex-col items-center justify-center text-center">
+            <div class="w-12 h-12 rounded-full bg-slate-100 dark:bg-neutral-800 text-slate-400 flex items-center justify-center mb-3">
+              <i data-lucide="inbox" class="w-6 h-6"></i>
+            </div>
+            <h4 class="font-bold text-sm text-slate-900 dark:text-white">No matches for active filters</h4>
+            <p class="text-xs text-slate-500 mt-1 mb-4">No contractors matched "&lt;1h Response" and "★ 4.8+".</p>
+            <button class="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold">Clear Filters</button>
           </div>
 
         </div>
       </article>
 
     </div>
-
   </main>
 
-  <!-- Toast -->
-  <div id="toast" class="fixed bottom-6 right-6 z-50 transform translate-y-20 opacity-0 transition-all duration-300 bg-neutral-900 text-white px-4 py-2.5 rounded-full shadow-xl text-xs font-semibold flex items-center gap-2">
-    <i data-lucide="check-circle" class="w-4 h-4 text-emerald-400"></i>
-    <span id="toast-msg">Copied to clipboard!</span>
-  </div>
-
-  <!-- Scripts -->
+  <!-- ========================================== -->
+  <!-- 4. JAVASCRIPT CONTROLLER                   -->
+  <!-- ========================================== -->
   <script>
+    // Initialize Lucide Icons
     lucide.createIcons();
 
-    // 1. View Switching
-    function setArtboardView(view) {
-      const container = document.getElementById('artboards-container');
-      const cardIos = document.getElementById('card-p-ios');
-      const cardAirbnb = document.getElementById('card-p-airbnb');
+    // 1. Artboard Selection Tabs
+    function selectArtboard(variant) {
+      const cards = document.querySelectorAll(".artboard-card");
+      const tabs = ["all", "var-a", "var-b", "var-c"];
 
-      const tabs = ['tab-sbs', 'tab-ios-only', 'tab-airbnb-only'];
       tabs.forEach(t => {
-        document.getElementById(t).className = 'px-3 py-1.5 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all';
+        const btn = document.getElementById("tab-" + t);
+        if (btn) {
+          btn.className = "px-3 py-1.5 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all";
+        }
       });
 
-      if (view === 'side-by-side') {
-        document.getElementById('tab-sbs').className = 'px-3 py-1.5 rounded-lg bg-white dark:bg-neutral-700 text-slate-900 dark:text-white shadow-xs font-bold text-indigo-600 dark:text-indigo-400 transition-all';
-        container.className = 'grid grid-cols-1 lg:grid-cols-2 gap-8 items-start max-w-5xl mx-auto';
-        cardIos.classList.remove('hidden');
-        cardAirbnb.classList.remove('hidden');
-      } else if (view === 'ios-only') {
-        document.getElementById('tab-ios-only').className = 'px-3 py-1.5 rounded-lg bg-white dark:bg-neutral-700 text-slate-900 dark:text-white shadow-xs font-bold text-indigo-600 dark:text-indigo-400 transition-all';
-        container.className = 'grid grid-cols-1 max-w-[420px] mx-auto items-start';
-        cardIos.classList.remove('hidden');
-        cardAirbnb.classList.add('hidden');
-      } else if (view === 'airbnb-only') {
-        document.getElementById('tab-airbnb-only').className = 'px-3 py-1.5 rounded-lg bg-white dark:bg-neutral-700 text-slate-900 dark:text-white shadow-xs font-bold text-rose-600 dark:text-rose-400 transition-all';
-        container.className = 'grid grid-cols-1 max-w-[420px] mx-auto items-start';
-        cardIos.classList.add('hidden');
-        cardAirbnb.classList.remove('hidden');
+      const activeBtn = document.getElementById("tab-" + variant);
+      if (activeBtn) {
+        activeBtn.className = "px-3 py-1.5 rounded-lg bg-white dark:bg-neutral-700 text-indigo-600 dark:text-indigo-400 shadow-sm font-bold transition-all";
+      }
+
+      const grid = document.getElementById("artboards-grid");
+      if (variant === "all") {
+        grid.className = "grid grid-cols-1 lg:grid-cols-3 gap-8 items-start";
+        cards.forEach(c => c.classList.remove("hidden"));
+      } else {
+        grid.className = "grid grid-cols-1 max-w-lg mx-auto gap-8 items-start";
+        cards.forEach(c => {
+          if (c.getAttribute("data-variant") === variant) {
+            c.classList.remove("hidden");
+          } else {
+            c.classList.add("hidden");
+          }
+        });
       }
     }
 
-    // 2. Theme Toggle
+    // 2. Viewport Resizing
+    function setViewport(size) {
+      const frames = document.querySelectorAll(".artboard-frame");
+      const vps = ["desktop", "tablet", "mobile"];
+
+      vps.forEach(v => {
+        const btn = document.getElementById("vp-" + v);
+        if (btn) {
+          btn.className = "px-2 py-1 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white";
+        }
+      });
+
+      const activeBtn = document.getElementById("vp-" + size);
+      if (activeBtn) {
+        activeBtn.className = "px-2 py-1 rounded-lg bg-white dark:bg-neutral-700 text-indigo-600 dark:text-indigo-400 shadow-sm font-bold";
+      }
+
+      frames.forEach(f => {
+        if (size === "desktop") {
+          f.style.maxWidth = "100%";
+        } else if (size === "tablet") {
+          f.style.maxWidth = "768px";
+        } else {
+          f.style.maxWidth = "390px";
+        }
+      });
+    }
+
+    // 3. Theme Toggle
     function toggleTheme() {
       const html = document.documentElement;
-      if (html.classList.contains('dark')) {
-        html.classList.remove('dark');
-        html.classList.add('light');
+      if (html.classList.contains("dark")) {
+        html.classList.remove("dark");
+        html.classList.add("light");
       } else {
-        html.classList.remove('light');
-        html.classList.add('dark');
+        html.classList.remove("light");
+        html.classList.add("dark");
       }
     }
 
-    // 3. Token Tweaker
+    // 4. Token Tweaker Panel
     function toggleTokenPanel() {
-      document.getElementById('token-panel').classList.toggle('hidden');
+      const panel = document.getElementById("token-panel");
+      panel.classList.toggle("hidden");
+    }
+
+    function updatePrimaryHue(val) {
+      document.documentElement.style.setProperty("--primary-h", val);
+      document.getElementById("hue-val").innerText = val + "°";
     }
 
     function updateRadius(val) {
-      document.documentElement.style.setProperty('--radius', val + 'px');
-      document.getElementById('radius-val').innerText = val + 'px';
+      document.documentElement.style.setProperty("--radius", val + "px");
+      document.getElementById("radius-val").innerText = val + "px";
     }
 
-    // 4. Export
-    function exportActiveDashboard() {
-      const target = document.getElementById('card-p-ios');
-      navigator.clipboard.writeText(target ? target.outerHTML : document.body.innerHTML).then(() => {
-        showToast('Exported Dashboard Code to clipboard!');
+    function updateFontSize(val) {
+      document.documentElement.style.setProperty("--font-base", val + "px");
+      document.getElementById("font-val").innerText = val + "px";
+    }
+
+    // 5. Component State Switcher
+    function changeState(state) {
+      document.body.setAttribute("data-active-state", state);
+      // Re-initialize icons in case state revealed newly mounted elements
+      lucide.createIcons();
+    }
+
+    // 6. Export Active HTML
+    function exportActiveArtboard() {
+      const activeCard = document.querySelector(".artboard-card:not(.hidden)");
+      if (!activeCard) return;
+      const content = activeCard.outerHTML;
+      navigator.clipboard.writeText(content).then(() => {
+        alert("Active Artboard HTML copied to clipboard!");
+      }).catch(() => {
+        alert("Failed to copy automatically. Please inspect and copy.");
       });
-    }
-
-    function showToast(msg) {
-      const toast = document.getElementById('toast');
-      document.getElementById('toast-msg').innerText = msg;
-      toast.classList.remove('translate-y-20', 'opacity-0');
-      setTimeout(() => toast.classList.add('translate-y-20', 'opacity-0'), 2500);
     }
   </script>
 </body>

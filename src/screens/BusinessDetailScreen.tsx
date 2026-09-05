@@ -23,9 +23,8 @@ import { RootStackParamList, Review, Contractor, Post } from '../types';
 import { FontAwesome5 } from '@expo/vector-icons';
 import HapticFeedback from '../utils/haptics';
 import { SvgImage } from '../components/common/SvgImage';
-import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
-import { fetchContractorDetails, fetchContractorPosts, fetchContractorReviews, extractId, browseContractors, post as apiPost, submitClaim, getContractorBySlug, checkOnlineStatus, onUserOnlineStatus, offUserOnlineStatus } from '../api';
+import { fetchContractorDetails, fetchContractorPosts, fetchContractorReviews, extractId, browseContractors, post as apiPost, submitClaim, getContractorBySlug, checkOnlineStatus, onUserOnlineStatus, offUserOnlineStatus, requestQuote } from '../api';
 import { API_BASE_URL } from '../config';
 import { uploadToCloudinary, CLOUDINARY_FOLDERS } from '../utils/cloudinary';
 import { requestPhotoLibraryPermission } from '../utils/permissions';
@@ -116,6 +115,7 @@ const BusinessDetailScreen: React.FC = () => {
   const [quoteProjectTitle, setQuoteProjectTitle] = useState('');
   const [quoteDescription, setQuoteDescription] = useState('');
   const [quoteContactPreference, setQuoteContactPreference] = useState('email');
+  const [quoteSubmitting, setQuoteSubmitting] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [similarContractors, setSimilarContractors] = useState<Contractor[]>([]);
   const [showClaimModal, setShowClaimModal] = useState(false);
@@ -304,19 +304,54 @@ const BusinessDetailScreen: React.FC = () => {
   };
 
   const handleRequestQuote = async () => {
-    if (!quoteProjectTitle.trim() || !quoteDescription.trim()) {
-      Alert.alert('Error', 'Please fill in all fields');
+    if (!isAuthenticated) {
+      setIsQuoteModalVisible(false);
+      setGuestAction('request a quote');
+      setShowGuestPrompt(true);
       return;
     }
+
+    if (!quoteProjectTitle.trim() || !quoteDescription.trim()) {
+      Alert.alert('Missing Details', 'Please enter a project title and description.');
+      return;
+    }
+
+    const contractorId = contractor?._id || id;
+    if (!contractorId) {
+      Alert.alert('Error', 'Contractor details not available.');
+      return;
+    }
+
+    const formattedMessage = `Project Quote Request: ${quoteProjectTitle.trim()}\n\n${quoteDescription.trim()}`;
     const recipientUserId = contractor?.userId || contractor?.user?._id || (typeof contractor?.user === 'string' ? contractor.user : null) || contractor?._id || id;
-    setIsQuoteModalVisible(false);
-    navigation.navigate('ChatScreen', {
-      recipientId: recipientUserId,
-      recipientName: contractor?.companyName || contractor?.businessName || 'Contractor',
-      initialMessage: `Project Quote Request: ${quoteProjectTitle}\n\n${quoteDescription}`
-    });
-    setQuoteProjectTitle('');
-    setQuoteDescription('');
+    const isUnclaimed = !contractor?.claimed || contractor?.status === 'Unclaimed' || !contractor?.user;
+
+    setQuoteSubmitting(true);
+    try {
+      const res = await requestQuote(contractorId, { message: formattedMessage });
+      HapticFeedback.success();
+      setIsQuoteModalVisible(false);
+      setQuoteProjectTitle('');
+      setQuoteDescription('');
+
+      if (res?.isPendingClaim || isUnclaimed) {
+        Alert.alert(
+          'Quote Request Sent!',
+          'Your project details have been sent to the business owner. We will notify you as soon as they respond.'
+        );
+      } else {
+        navigation.navigate('ChatScreen', {
+          recipientId: recipientUserId,
+          recipientName: contractor?.companyName || contractor?.businessName || 'Contractor',
+          initialMessage: formattedMessage
+        });
+      }
+    } catch (err: any) {
+      HapticFeedback.error();
+      Alert.alert('Error Sending Quote Request', err?.message || 'Could not submit quote request. Please try again.');
+    } finally {
+      setQuoteSubmitting(false);
+    }
   };
 
   const handleReport = async () => {
@@ -1555,11 +1590,25 @@ const BusinessDetailScreen: React.FC = () => {
             </View>
 
             <View className="flex-row" style={{ gap: 12 }}>
-              <Pressable onPress={() => setIsQuoteModalVisible(false)} className="flex-1 py-4 items-center justify-center">
+              <Pressable
+                onPress={() => {
+                  if (!quoteSubmitting) setIsQuoteModalVisible(false);
+                }}
+                disabled={quoteSubmitting}
+                className="flex-1 py-4 items-center justify-center"
+              >
                 <Text className="text-neutral-500 dark:text-neutral-400 font-bold">Cancel</Text>
               </Pressable>
-              <Pressable onPress={handleRequestQuote} className="flex-2 bg-indigo-600 py-4 px-10 rounded-xl items-center justify-center">
-                <Text className="text-white font-bold">Send Request</Text>
+              <Pressable
+                onPress={handleRequestQuote}
+                disabled={quoteSubmitting}
+                className="flex-2 bg-indigo-600 py-4 px-10 rounded-xl items-center justify-center"
+              >
+                {quoteSubmitting ? (
+                  <BouncingDotsLoader color="#fff" />
+                ) : (
+                  <Text className="text-white font-bold">Send Request</Text>
+                )}
               </Pressable>
             </View>
             <Text className="text-center text-xs text-neutral-500 dark:text-neutral-400 mt-3">You won't be charged yet</Text>

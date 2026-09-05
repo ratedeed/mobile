@@ -1206,11 +1206,26 @@ export const getStripeAccountStatus = async (): Promise<StripeConnectStatus> => 
   return get(`${API_BASE}/stripe/status`, authHeaders);
 };
 
+export const getStripeDashboardLink = async (): Promise<{ url: string }> => {
+  if (isDemoMode()) return demo.demoGetStripeDashboardLink();
+  const authHeaders = await getAuthHeaders();
+  return get(`${API_BASE}/stripe/dashboard-link`, authHeaders);
+};
+
 export const createQuote = async (quoteData: any): Promise<Quote> => {
   if (isDemoMode()) return demo.demoCreateQuote(quoteData);
   const authHeaders = await getAuthHeaders();
   const res = await post(`${API_BASE}/quotes`, quoteData, authHeaders);
   return normalizeQuote(res);
+};
+
+export const requestQuote = async (
+  contractorId: string,
+  data: { message: string; contactInfo?: { name?: string; email?: string; phone?: string } }
+): Promise<{ message: string; isPendingClaim?: boolean }> => {
+  if (isDemoMode()) return demo.demoRequestQuote(contractorId, data);
+  const authHeaders = await getAuthHeaders();
+  return post(`${API_BASE}/contractors/${encodeURIComponent(contractorId)}/quote-request`, data, authHeaders);
 };
 
 export const getContractorLeads = async (): Promise<Lead[]> => {
