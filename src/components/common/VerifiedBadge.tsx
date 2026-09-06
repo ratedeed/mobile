@@ -344,9 +344,7 @@ export const VerifiedBadge = memo(function VerifiedBadge({
             <Path id={`text-arc-${uid}`} d="M 6,50 A 44,44 0 0,0 94,50" />
           </Defs>
 
-          {/* 100% Solid Opaque Backing (Guarantees NO background text/images ever show through) */}
-          <Circle cx="50" cy="50" r="49.5" fill="#FAF7F0" />
-          <Circle cx="50" cy="50" r="49" fill={`url(#badge-bg-${uid})`} />
+          {/* Gold Borders */}
           <Circle cx="50" cy="50" r="46.5" fill="none" stroke={`url(#gold-grad-${uid})`} strokeWidth={3.5} />
           <Circle cx="50" cy="50" r="44" fill="none" stroke={`url(#gold-grad-${uid})`} strokeWidth={0.6} opacity={0.6} />
 
@@ -373,8 +371,6 @@ export const VerifiedBadge = memo(function VerifiedBadge({
           </G>
 
           <Circle cx="50" cy="50" r="35" fill="none" stroke={`url(#gold-dark-${uid})`} strokeWidth={0.75} />
-          <Circle cx="50" cy="50" r="34.5" fill="#FAF7F0" />
-          <Circle cx="50" cy="50" r="34.5" fill={`url(#badge-bg-${uid})`} />
         </Svg>
 
         {/* Layer 1: Chiseled Arc Text */}
@@ -566,7 +562,6 @@ const styles = StyleSheet.create({
     left: 0,
     overflow: 'visible',
     borderRadius: 9999,
-    backgroundColor: '#FAF7F0',
   },
   shineContainer: {
     position: 'absolute',
