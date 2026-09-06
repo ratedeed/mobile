@@ -1,12 +1,15 @@
-import React, { useEffect, memo } from 'react';
-import { View, Text, StyleSheet, useColorScheme } from 'react-native';
+import React, { useEffect, useCallback, memo } from 'react';
+import { View, Text, StyleSheet, useColorScheme, LayoutChangeEvent } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import MaskedView from '@react-native-masked-view/masked-view';
+import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
   withDelay,
   withSequence,
+  withRepeat,
   Easing,
   interpolate,
 } from 'react-native-reanimated';
@@ -18,6 +21,31 @@ export interface FreeDiagnosticCardProps {
   notes?: string;
   delayMs?: number;
 }
+
+// 9-stop gradient cycles matching the web CSS @keyframes diagnosticShimmer 3.5s linear infinite
+const LIGHT_SHIMMER_COLORS = [
+  '#059669',
+  '#10B981',
+  '#34D399',
+  '#10B981',
+  '#059669',
+  '#10B981',
+  '#34D399',
+  '#10B981',
+  '#059669',
+] as const;
+
+const DARK_SHIMMER_COLORS = [
+  '#10B981',
+  '#34D399',
+  '#6EE7B7',
+  '#34D399',
+  '#10B981',
+  '#34D399',
+  '#6EE7B7',
+  '#34D399',
+  '#10B981',
+] as const;
 
 export const FreeDiagnosticCard = memo(function FreeDiagnosticCard({
   type = 'free',
@@ -56,6 +84,17 @@ export const FreeDiagnosticCard = memo(function FreeDiagnosticCard({
   const iconProgress = useSharedValue(0);
   const iconRotate = useSharedValue(0);
   const iconScale = useSharedValue(0.86);
+
+  // Moving text shimmer values (3.5s linear infinite loop matching web)
+  const shimmerProgress = useSharedValue(0);
+  const containerWidth = useSharedValue(120);
+
+  const onTextLayout = useCallback((e: LayoutChangeEvent) => {
+    const w = e.nativeEvent.layout.width;
+    if (w > 0) {
+      containerWidth.value = w;
+    }
+  }, [containerWidth]);
 
   useEffect(() => {
     // 1. Smooth card expansion & arrival after 1.4s
@@ -100,7 +139,17 @@ export const FreeDiagnosticCard = memo(function FreeDiagnosticCard({
         withTiming(1.0, { duration: 500 })
       )
     );
-  }, [delayMs, cardProgress, textProgress, iconProgress, iconRotate, iconScale]);
+
+    // 4. Infinite seamless text shimmer sheen (3.5s cycle)
+    shimmerProgress.value = withRepeat(
+      withTiming(1, {
+        duration: 3500,
+        easing: Easing.linear,
+      }),
+      -1,
+      false
+    );
+  }, [delayMs, cardProgress, textProgress, iconProgress, iconRotate, iconScale, shimmerProgress]);
 
   // Card container animated style (expand height & slide in)
   const containerAnimatedStyle = useAnimatedStyle(() => {
@@ -141,6 +190,18 @@ export const FreeDiagnosticCard = memo(function FreeDiagnosticCard({
     };
   });
 
+  // Shimmer gradient track translation style
+  const shimmerGradientStyle = useAnimatedStyle(() => {
+    const w = containerWidth.value;
+    const translateX = interpolate(shimmerProgress.value, [0, 1], [-w, 0]);
+    return {
+      width: w * 2,
+      transform: [{ translateX }],
+    };
+  });
+
+  const gradientColors = isDark ? DARK_SHIMMER_COLORS : LIGHT_SHIMMER_COLORS;
+
   return (
     <Animated.View style={[styles.outerWrapper, containerAnimatedStyle]}>
       <View
@@ -159,14 +220,57 @@ export const FreeDiagnosticCard = memo(function FreeDiagnosticCard({
 
         {/* Text Container with Left-to-Right Stagger */}
         <Animated.View style={[styles.textWrapper, textAnimatedStyle]}>
-          <Text style={styles.textLine} numberOfLines={1}>
-            <Text style={[styles.boldLabel, isDark ? styles.boldLabelDark : styles.boldLabelLight]}>
-              {boldText}
+          <View style={styles.textRow}>
+            {/* Shimmering Bold Label with Masked Gradient */}
+            <View onLayout={onTextLayout} style={styles.boldTextContainer}>
+              {/* Crisp base text */}
+              <Text
+                style={[
+                  styles.boldLabel,
+                  isDark ? styles.boldLabelDark : styles.boldLabelLight,
+                ]}
+              >
+                {boldText}
+              </Text>
+
+              {/* Masked moving gradient shimmer sheen */}
+              <MaskedView
+                style={StyleSheet.absoluteFill}
+                pointerEvents="none"
+                maskElement={
+                  <Text
+                    style={[
+                      styles.boldLabel,
+                      { backgroundColor: 'transparent' },
+                    ]}
+                  >
+                    {boldText}
+                  </Text>
+                }
+              >
+                <Animated.View style={[styles.gradientTrack, shimmerGradientStyle]}>
+                  <LinearGradient
+                    colors={gradientColors}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={StyleSheet.absoluteFill}
+                  />
+                </Animated.View>
+              </MaskedView>
+            </View>
+
+            {/* Subtitle text */}
+            <Text
+              style={[
+                styles.subtitle,
+                isDark ? styles.subtitleDark : styles.subtitleLight,
+              ]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              · {subtitleText}
             </Text>
-            <Text style={[styles.subtitle, isDark ? styles.subtitleDark : styles.subtitleLight]}>
-              {' '}· {subtitleText}
-            </Text>
-          </Text>
+          </View>
         </Animated.View>
 
         {/* Calendar Icon */}
@@ -230,11 +334,19 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingRight: 10,
   },
-  textLine: {
-    fontSize: 13,
-    lineHeight: 18,
+  textRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  boldTextContainer: {
+    position: 'relative',
+    alignSelf: 'center',
+    overflow: 'hidden',
   },
   boldLabel: {
+    fontSize: 13,
+    lineHeight: 18,
     fontWeight: '700',
   },
   boldLabelLight: {
@@ -243,8 +355,18 @@ const styles = StyleSheet.create({
   boldLabelDark: {
     color: '#34D399',
   },
+  gradientTrack: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+  },
   subtitle: {
+    fontSize: 13,
+    lineHeight: 18,
     fontWeight: '400',
+    flexShrink: 1,
+    marginLeft: 5,
   },
   subtitleLight: {
     color: '#717171',
