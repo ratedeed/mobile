@@ -74,7 +74,8 @@ export const VerifiedBadge = memo(function VerifiedBadge({
   style?: any;
   transformOrigin?: 'top-left' | 'top-right' | 'center';
 }) {
-  const uid = useId().replace(/:/g, '-');
+  const rawId = useId().replace(/[^a-zA-Z0-9]/g, '');
+  const uid = `vb_${rawId || 'def'}`;
   const finalSize = typeof size === 'string' ? SIZE_MAP[size] || 28 : size;
   const heroPx = Math.round(finalSize * HERO_SCALE);
   const restingRatio = 1 / HERO_SCALE;
@@ -117,9 +118,9 @@ export const VerifiedBadge = memo(function VerifiedBadge({
     let currentRelativeScale = restingRatio;
 
     if (t < 0.15) {
-      // Phase 1: Pop zoom out to Hero Scale (3.6x)
+      // Phase 1: Pop zoom out smoothly from resting size to Hero Scale (3.6x)
       const popProg = sub(t, 0, 0.15);
-      currentRelativeScale = Math.max(0.001, easeOutBack(popProg));
+      currentRelativeScale = restingRatio + (1.0 - restingRatio) * easeOutBack(popProg);
     } else if (t < 0.80) {
       // Phase 2: Hold Hero Scale during Temple construction
       currentRelativeScale = 1.0;
@@ -313,11 +314,11 @@ export const VerifiedBadge = memo(function VerifiedBadge({
         {/* Layer 0: Coin Background, Outer Beaded Rim & Milled Edges with 100% Solid Opaque Backing at Full Retina HD Resolution */}
         <Svg width={heroPx} height={heroPx} viewBox="0 0 100 100" style={StyleSheet.absoluteFill}>
           <Defs>
-            <RadialGradient id={`badge-bg-${uid}`} cx="50%" cy="50%" r="50%">
+            <LinearGradient id={`badge-bg-${uid}`} x1="0" y1="0" x2="0" y2="1">
               <Stop offset="0%" stopColor="#FFFFFF" />
               <Stop offset="60%" stopColor="#FAF7F0" />
               <Stop offset="100%" stopColor="#EAE5D9" />
-            </RadialGradient>
+            </LinearGradient>
             <LinearGradient id={`gold-grad-${uid}`} x1="0" y1="0" x2="1" y2="1">
               <Stop offset="0%" stopColor="#FFECA8" />
               <Stop offset="25%" stopColor="#D4AF37" />
