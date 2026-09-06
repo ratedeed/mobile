@@ -23,3 +23,4 @@ export { default as ActionSheet } from './ActionSheet';
 export { default as PullToRefresh } from './PullToRefresh';
 export { default as ImageLightbox } from '../ImageLightbox';
 export { VerifiedBadge } from './VerifiedBadge';
+export { FreeDiagnosticCard } from './FreeDiagnosticCard';

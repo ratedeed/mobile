@@ -38,7 +38,7 @@ import ServiceAreaMap from '../components/common/ServiceAreaMap';
 import { useAuth } from '../context/AuthContext';
 import GuestPrompt from '../components/GuestPrompt';
 import LazyImage from '../components/common/LazyImage';
-import { BouncingDotsLoader, BouncingRefreshScrollView } from '../components/common';
+import { BouncingDotsLoader, BouncingRefreshScrollView, FreeDiagnosticCard } from '../components/common';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -825,69 +825,20 @@ const BusinessDetailScreen: React.FC = () => {
             </View>
           </View>
 
+          {/* Free Diagnosis / Estimate Card (Smooth Arrival) */}
+          {((c.estimatePolicy?.type === 'free' || c.estimatePolicy?.type === 'virtual_only' || (c as any).hasFreeEstimates || (!c.estimatePolicy?.type || c.estimatePolicy?.type === 'none')) || (c.estimatePolicy?.type === 'service_fee' && c.estimatePolicy?.feeWaivedIfHired)) && (
+            <FreeDiagnosticCard
+              key={(c as any).id || c._id}
+              type={c.estimatePolicy?.type === 'service_fee' ? 'service_fee' : (c.estimatePolicy?.type === 'virtual_only' ? 'virtual_only' : 'free')}
+              feeAmount={c.estimatePolicy?.feeAmount}
+              feeWaivedIfHired={c.estimatePolicy?.feeWaivedIfHired !== false}
+              notes={c.estimatePolicy?.notes}
+              delayMs={1400}
+            />
+          )}
+
           {/* Quick Highlights */}
           <View className="py-4 border-y border-neutral-100 dark:border-neutral-800 mt-5" style={{ gap: 14 }}>
-            {/* Estimate Policy Highlight */}
-            {(() => {
-              const ep = (c as any).estimatePolicy;
-              const hasFree = (c as any).hasFreeEstimates;
-              const isEnabled = ep ? (ep.enabled !== false && ep.type && ep.type !== 'none') : !!hasFree;
-              if (!isEnabled) return null;
-
-              if (ep?.type === 'service_fee') {
-                return (
-                  <View className="flex-row items-center" style={{ gap: 12 }}>
-                    <View className="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200/60 dark:border-indigo-900/40 items-center justify-center">
-                      <FontAwesome5 name="calculator" size={15} color="#4f46e5" />
-                    </View>
-                    <View className="flex-1">
-                      <Text className="text-sm font-semibold text-neutral-900 dark:text-neutral-50">
-                        ${ep.feeAmount || 75} Diagnostic / Service Call Fee
-                      </Text>
-                      <Text className="text-xs text-neutral-500 dark:text-neutral-400">
-                        {ep.feeWaivedIfHired !== false ? 'Waived toward total cost if you proceed with repair' : 'Standard on-site diagnostic trip fee'}
-                      </Text>
-                    </View>
-                  </View>
-                );
-              }
-              if (ep?.type === 'virtual_only') {
-                return (
-                  <View className="flex-row items-center" style={{ gap: 12 }}>
-                    <View className="w-10 h-10 rounded-full bg-purple-50 dark:bg-purple-950/40 border border-purple-200/60 dark:border-purple-900/40 items-center justify-center">
-                      <FontAwesome5 name="camera" size={15} color="#7c3aed" />
-                    </View>
-                    <View className="flex-1">
-                      <Text className="text-sm font-semibold text-neutral-900 dark:text-neutral-50">
-                        Free Photo / Online Estimates
-                      </Text>
-                      <Text className="text-xs text-neutral-500 dark:text-neutral-400">
-                        Send project photos via chat for a preliminary quote
-                      </Text>
-                    </View>
-                  </View>
-                );
-              }
-              if (ep?.type === 'free' || hasFree) {
-                return (
-                  <View className="flex-row items-center" style={{ gap: 12 }}>
-                    <View className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/60 dark:border-emerald-900/40 items-center justify-center">
-                      <FontAwesome5 name="check-circle" size={15} color="#059669" />
-                    </View>
-                    <View className="flex-1">
-                      <Text className="text-sm font-semibold text-neutral-900 dark:text-neutral-50">
-                        100% Free Project Estimates
-                      </Text>
-                      <Text className="text-xs text-neutral-500 dark:text-neutral-400">
-                        No obligation · Free consultation
-                      </Text>
-                    </View>
-                  </View>
-                );
-              }
-              return null;
-            })()}
-
             {(c.isVerified || (c as any).licenseVerified) && (
               <View className="flex-row items-center" style={{ gap: 12 }}>
                 <View className="w-10 h-10 rounded-full bg-amber-50 dark:bg-amber-950/40 border border-amber-200/60 dark:border-amber-900/40 items-center justify-center">
