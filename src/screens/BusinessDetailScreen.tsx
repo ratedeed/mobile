@@ -745,8 +745,8 @@ const BusinessDetailScreen: React.FC = () => {
               )}
             </View>
             {/* Business details */}
-            <View className="flex-1 pl-[84px] pr-2">
-              <View className="flex-row items-center flex-wrap" style={{ gap: 6 }}>
+            <View className="flex-1 pl-[84px] pr-2" style={{ zIndex: 50, elevation: 10 }}>
+              <View className="flex-row items-center flex-wrap" style={{ gap: 6, zIndex: 60, elevation: 20 }}>
                 <Text className="text-xl font-bold text-neutral-900 dark:text-neutral-50 leading-tight" numberOfLines={2}>
                   {c.companyName || c.businessName || 'Company'}
                 </Text>
@@ -754,7 +754,7 @@ const BusinessDetailScreen: React.FC = () => {
                   <VerifiedBadge size={26} animate={true} transformOrigin="center" />
                 )}
               </View>
-              <View className="flex-row items-center mt-1" style={{ gap: 4 }}>
+              <View className="flex-row items-center mt-1" style={{ gap: 4, zIndex: 1 }}>
                 <FontAwesome5 name="star" solid size={11} color="#eab308" />
                 <Text className="text-xs font-semibold text-neutral-800 dark:text-neutral-200">
                   {reviewCount > 0 ? avgRating.toFixed(2) : 'New'}
@@ -764,7 +764,7 @@ const BusinessDetailScreen: React.FC = () => {
                 </Text>
               </View>
               {!!location && (
-                <View className="flex-row items-center mt-1" style={{ gap: 4 }}>
+                <View className="flex-row items-center mt-1" style={{ gap: 4, zIndex: 1 }}>
                   <FontAwesome5 name="map-marker-alt" size={10} color="#737373" />
                   <Text className="text-xs text-neutral-500 dark:text-neutral-400 flex-1" numberOfLines={1}>
                     {location}

@@ -111,6 +111,16 @@ export const VerifiedBadge = memo(function VerifiedBadge({
     }
   }, [animate, play, progress]);
 
+  // 0. Anchor Container Stacking Style
+  const anchorAnimatedStyle = useAnimatedStyle(() => {
+    const t = progress.value;
+    const isHeroActive = t > 0.01 && t < 1.05;
+    return {
+      zIndex: isHeroActive ? 9999 : 20,
+      elevation: isHeroActive ? 50 : 2,
+    };
+  });
+
   // 1. Master Container Animation (HD Canvas Scaled & Anchor Locked)
   const masterAnimatedStyle = useAnimatedStyle(() => {
     const t = progress.value;
@@ -294,22 +304,26 @@ export const VerifiedBadge = memo(function VerifiedBadge({
   });
 
   return (
-    <Pressable
-      onPress={play}
-      hitSlop={8}
+    <Animated.View
       style={[
         styles.anchorWrapper,
         { width: finalSize, height: finalSize },
+        anchorAnimatedStyle,
         style,
       ]}
     >
-      <Animated.View
-        style={[
-          styles.masterHeroCanvas,
-          { width: heroPx, height: heroPx },
-          masterAnimatedStyle,
-        ]}
+      <Pressable
+        onPress={play}
+        hitSlop={8}
+        style={styles.fillPressable}
       >
+        <Animated.View
+          style={[
+            styles.masterHeroCanvas,
+            { width: heroPx, height: heroPx },
+            masterAnimatedStyle,
+          ]}
+        >
         {/* Layer 0: Coin Background, Outer Beaded Rim & Milled Edges with 100% Solid Opaque Backing at Full Retina HD Resolution */}
         <Svg width={heroPx} height={heroPx} viewBox="0 0 100 100" style={StyleSheet.absoluteFill}>
           <Defs>
@@ -550,13 +564,20 @@ export const VerifiedBadge = memo(function VerifiedBadge({
           </Svg>
         </Animated.View>
       </Animated.View>
-    </Pressable>
+      </Pressable>
+    </Animated.View>
   );
 });
 
 const styles = StyleSheet.create({
   anchorWrapper: {
     position: 'relative',
+    overflow: 'visible',
+    zIndex: 20,
+  },
+  fillPressable: {
+    width: '100%',
+    height: '100%',
     overflow: 'visible',
   },
   masterHeroCanvas: {
