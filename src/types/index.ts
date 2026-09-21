@@ -389,6 +389,10 @@ export interface Job {
   stripeTransferId?: string;
   completionNotes?: string;
   completionDate?: string;
+  completedAt?: string;
+  reminderSent_3d?: boolean;
+  reminderSent_7d?: boolean;
+  inactivityEscalated?: boolean;
   startedAt?: string;
   createdAt: string;
   updatedAt?: string;

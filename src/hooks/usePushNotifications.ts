@@ -284,7 +284,11 @@ export const usePushNotifications = () => {
       } else if (data?.type === 'quote_request' && data?.quoteId) {
         navigation.navigate('QuoteReview', { quoteId: String(data.quoteId) });
       } else if (data?.type === 'review_reminder' || data?.type === 'funds_release_reminder') {
-        navigation.navigate('Main', { screen: 'Jobs' });
+        if (data?.jobId) {
+          navigation.navigate('JobDetail', { jobId: String(data.jobId) });
+        } else {
+          navigation.navigate('Main', { screen: 'Jobs' });
+        }
       } else if (data?.type === 'job_update' || data?.type === 'job_cancelled' || data?.type === 'refund_processed' || data?.type === 'dispute') {
         if (userRole === 'contractor' || userRole === 'admin') {
           navigation.navigate('ContractorDashboard');
