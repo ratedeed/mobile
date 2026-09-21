@@ -42,7 +42,7 @@ module.exports = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        airbnb: {
+        brandNeutrals: {
           black: "#222222",
           gray: "#717171",
           lightGray: "#B0B0B0",
