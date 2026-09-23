@@ -206,6 +206,10 @@ const ListingCard = memo(({ listing, isFavorite, onToggleFavorite, detectedZip, 
   );
   const serviceZips = listing.zipCodesCovered || [];
   const distance = listing.distance;
+  const isVerified = Boolean(listing.isVerified || (listing as any).licenseVerified);
+  const reviewCount = listing.reviewCount || 0;
+  const rating = Number(listing.averageRating || 0);
+  const subLine = [listing.category, location, distance].filter(Boolean).join(' · ');
 
   return (
     <Pressable
@@ -215,7 +219,7 @@ const ListingCard = memo(({ listing, isFavorite, onToggleFavorite, detectedZip, 
       accessibilityRole="button"
       style={({ pressed }) => ({ overflow: 'visible', transform: [{ scale: pressed ? 0.98 : 1 }] })}
     >
-      <View className="relative rounded-xl overflow-hidden bg-[#F7F7F7] dark:bg-neutral-800 aspect-square">
+      <View className="relative rounded-2xl overflow-hidden bg-[#F7F7F7] dark:bg-neutral-800" style={{ aspectRatio: 20 / 19 }}>
         {isSvgUrl(coverImage) ? (
           <View className="absolute inset-0 w-full h-full">
             <SvgImage uri={coverImage} width="100%" height="100%" />
@@ -224,10 +228,10 @@ const ListingCard = memo(({ listing, isFavorite, onToggleFavorite, detectedZip, 
           <Image source={{ uri: coverImage }} className="absolute inset-0 w-full h-full" resizeMode="cover" />
         ) : null}
 
-        {/* Favorite Heart - Restored Original Look */}
+        {/* Favorite Heart */}
         <Pressable
           onPress={() => onToggleFavorite(listing._id)}
-          className="absolute top-2 right-2 w-11 h-11 items-center justify-center"
+          className="absolute top-2 right-2 w-9 h-9 items-center justify-center z-10"
           accessibilityLabel={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
           accessibilityRole="button"
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -235,46 +239,43 @@ const ListingCard = memo(({ listing, isFavorite, onToggleFavorite, detectedZip, 
           <FontAwesome5
             name="heart"
             solid={isFavorite}
-            size={24}
+            size={20}
             color={isFavorite ? 'rgba(225,29,72,1)' : 'rgba(0,0,0,0.5)'}
           />
         </Pressable>
+
+        {isVerified && (
+          <View className="absolute top-2.5 left-2.5 z-20 bg-white/95 dark:bg-neutral-900/90 rounded-full px-2 py-0.5 flex-row items-center shadow-xs" style={{ gap: 3 }}>
+            <VerifiedBadge size={11} animate={false} />
+            <Text className="text-[10px] font-bold text-neutral-900 dark:text-neutral-100">Verified Pro</Text>
+          </View>
+        )}
       </View>
 
-      {(listing.isVerified || (listing as any).licenseVerified) && (
-        <View className="absolute top-2 left-2" style={{ zIndex: 60, overflow: 'visible' }}>
-          <VerifiedBadge size={28} animate={false} transformOrigin="top-left" />
-        </View>
-      )}
-
-      <View className="mt-2">
-        <View className="flex-row items-start justify-between" style={{ gap: 4 }}>
+      <View className="mt-2 text-left">
+        <View className="flex-row items-center justify-between" style={{ gap: 4 }}>
           <Text
             className="text-[13px] font-semibold text-[#222222] dark:text-white leading-tight flex-1"
             numberOfLines={1}
           >
             {listing.companyName || listing.businessName || 'Company'}
           </Text>
-          {(listing.reviewCount || 0) > 0 ? (
+          {reviewCount > 0 ? (
             <View className="flex-row items-center shrink-0" style={{ gap: 2 }}>
-              <FontAwesome5 name="star" solid size={12} color="#eab308" />
+              <FontAwesome5 name="star" solid size={11} color="#eab308" />
               <Text className="text-xs font-bold text-[#222222] dark:text-neutral-200">
-                {(listing.averageRating || 0).toFixed(2)}
+                {rating.toFixed(1)}
               </Text>
             </View>
           ) : (
-            <Text className="text-xs font-bold text-neutral-400 dark:text-neutral-500 shrink-0">New</Text>
+            <Text className="text-[10px] font-medium text-neutral-400 dark:text-neutral-500 shrink-0">New</Text>
           )}
         </View>
 
-        {location ? (
+        {subLine ? (
           <Text className="text-xs text-[#717171] dark:text-neutral-400 mt-0.5" numberOfLines={1}>
-            {location}
+            {subLine}
           </Text>
-        ) : null}
-
-        {distance ? (
-          <Text className="text-[11px] text-[#717171] dark:text-neutral-400 mt-0.5">{distance}</Text>
         ) : null}
 
         {detectedZip && serviceZips.includes(detectedZip) && (

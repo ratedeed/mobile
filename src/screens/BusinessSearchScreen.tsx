@@ -92,10 +92,14 @@ const ListingCard = React.memo(({
   const rawImage = (listing as any).bannerUrl || listing.bannerImage || (listing as any).imageUrl || listing.profilePicture || '';
   const coverImage = getCoverImageUrl(listing.companyName || listing.businessName || 'Contractor', rawImage, listing.category, 400, 400);
   const distance = (listing as any).distance;
+  const isVerified = Boolean(listing.isVerified || (listing as any).licenseVerified);
+  const reviewCount = listing.reviewCount || 0;
+  const rating = Number(listing.averageRating || 0);
+  const subLine = [listing.category, location, distance].filter(Boolean).join(' · ');
 
   return (
     <Pressable className="mb-4" onPress={onPress} style={({ pressed }) => ({ overflow: 'visible', transform: [{ scale: pressed ? 0.98 : 1 }] })}>
-      <View className="relative rounded-xl overflow-hidden bg-[#F7F7F7] dark:bg-neutral-800 aspect-square">
+      <View className="relative rounded-2xl overflow-hidden bg-[#F7F7F7] dark:bg-neutral-800" style={{ aspectRatio: 20 / 19 }}>
         {isSvgUrl(coverImage) ? (
           <View className="absolute inset-0 w-full h-full">
             <SvgImage uri={coverImage} width="100%" height="100%" />
@@ -107,40 +111,45 @@ const ListingCard = React.memo(({
             resizeMode="cover"
           />
         ) : null}
+
+        {isVerified && (
+          <View className="absolute top-2.5 left-2.5 z-20 bg-white/95 dark:bg-neutral-900/90 rounded-full px-2 py-0.5 flex-row items-center shadow-xs" style={{ gap: 3 }}>
+            <VerifiedBadge size={11} animate={false} />
+            <Text className="text-[10px] font-bold text-neutral-900 dark:text-neutral-100">Verified Pro</Text>
+          </View>
+        )}
       </View>
-      {(listing.isVerified || (listing as any).licenseVerified) && (
-        <View className="absolute top-2 left-2" style={{ zIndex: 60, overflow: 'visible' }}>
-          <VerifiedBadge size={28} animate={false} transformOrigin="top-left" />
-        </View>
-      )}
-      <View className="mt-2">
-        <View className="flex-row items-start justify-between" style={{ gap: 4 }}>
+
+      <View className="mt-2 text-left">
+        <View className="flex-row items-center justify-between" style={{ gap: 4 }}>
           <Text className="text-[13px] font-semibold text-[#222222] dark:text-white leading-tight flex-1" numberOfLines={1}>
             {listing.companyName || listing.businessName || 'Company'}
           </Text>
-          {(listing.reviewCount || 0) > 0 ? (
+          {reviewCount > 0 ? (
             <View className="flex-row items-center shrink-0" style={{ gap: 2 }}>
-              <FontAwesome5 name="star" solid size={12} color="#eab308" />
+              <FontAwesome5 name="star" solid size={11} color="#eab308" />
               <Text className="text-xs font-bold text-[#222222] dark:text-neutral-200">
-                {(listing.averageRating || 0).toFixed(2)}
+                {rating.toFixed(1)}
               </Text>
             </View>
           ) : (
-            <Text className="text-xs font-bold text-neutral-400 dark:text-neutral-500 shrink-0">New</Text>
+            <Text className="text-[10px] font-medium text-neutral-400 dark:text-neutral-500 shrink-0">New</Text>
           )}
         </View>
-        {location ? (
+
+        {subLine ? (
           <Text className="text-xs text-[#717171] dark:text-neutral-400 mt-0.5" numberOfLines={1}>
-            {location}
+            {subLine}
           </Text>
         ) : null}
-        {distance ? <Text className="text-[11px] text-[#717171] dark:text-neutral-400 mt-0.5">{distance}</Text> : null}
+
         {searchZip && (listing.zipCodesCovered?.includes(searchZip) || listing.distance) && (
           <View className="flex-row items-center mt-0.5" style={{ gap: 2 }}>
             <FontAwesome5 name="map-marker-alt" size={10} color="#059669" />
             <Text className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-400">Serves your area</Text>
           </View>
         )}
+
         {listing.avgResponseHours !== undefined && listing.avgResponseHours !== null && (
           <View className="flex-row items-center mt-0.5" style={{ gap: 4 }}>
             {listing.avgResponseHours < 1 ? (
@@ -154,22 +163,18 @@ const ListingCard = React.memo(({
             )}
           </View>
         )}
-        <View className="flex-row items-center flex-wrap mt-1.5" style={{ gap: 6 }}>
-          {(((listing as any).estimatePolicy && (listing as any).estimatePolicy.enabled !== false && (listing as any).estimatePolicy.type && (listing as any).estimatePolicy.type !== 'none') || (listing as any).hasFreeEstimates) ? (
-            <EstimateBadge
-              type={(listing as any).estimatePolicy?.type === 'service_fee' ? 'applied_credit' : ((listing as any).estimatePolicy?.type === 'virtual_only' ? 'virtual_only' : 'free')}
-              feeAmount={(listing as any).estimatePolicy?.feeAmount || 75}
-              size="sm"
-            />
-          ) : null}
+
+        <View className="flex-row items-center justify-between gap-1 pt-0.5">
           <View className="flex-row items-center" style={{ gap: 4 }}>
             <FontAwesome5 name="lock" size={9} color="#059669" />
             <Text className="text-[11px] font-semibold text-neutral-800 dark:text-neutral-200">Escrow Protected</Text>
           </View>
+          {price ? (
+            <Text className="text-[12px] font-semibold text-neutral-800 dark:text-neutral-200">
+              {formatPriceString(price)}
+            </Text>
+          ) : null}
         </View>
-        <Text className="text-[13px] font-semibold text-neutral-800 dark:text-neutral-200 mt-1">
-          {formatPriceString(price)}
-        </Text>
       </View>
     </Pressable>
   );

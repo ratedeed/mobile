@@ -164,10 +164,15 @@ const SavedScreen = () => {
       );
       const contractorId = item._id || (item as any).id;
       const price = derivePrice(item);
+      const isVerified = Boolean((item as any).isVerified || (item as any).licenseVerified);
+      const reviewCount = item.reviewCount || 0;
+      const rating = Number(item.averageRating || 0);
+      const locationStr = [item.contactInfo?.city, item.contactInfo?.state].filter(Boolean).join(', ');
+      const subLine = [item.category, locationStr].filter(Boolean).join(' · ');
 
       return (
         <Pressable className="w-[48%] mb-6" onPress={() => navigation.navigate('BusinessDetail', { id: contractorId })}>
-          <View className="relative aspect-square rounded-xl overflow-hidden bg-[#F7F7F7] dark:bg-neutral-800">
+          <View className="relative aspect-[20/19] rounded-2xl overflow-hidden bg-[#F7F7F7] dark:bg-neutral-800">
             {isSvgUrl(coverImage) ? (
               <View className="absolute inset-0 w-full h-full">
                 <SvgImage uri={coverImage} width="100%" height="100%" />
@@ -176,39 +181,48 @@ const SavedScreen = () => {
               <Image source={{ uri: coverImage }} className="absolute inset-0 w-full h-full" resizeMode="cover" />
             )}
 
-            <Pressable onPress={() => handleRemove(contractorId)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} className="absolute top-2 right-2 p-1">
-              <Heart size={24} color="rgba(225,29,72,1)" weight="fill" />
+            <Pressable onPress={() => handleRemove(contractorId)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} className="absolute top-2 right-2 w-9 h-9 items-center justify-center z-10">
+              <Heart size={20} color="rgba(225,29,72,1)" weight="fill" />
             </Pressable>
 
-            {((item as any).isVerified || (item as any).licenseVerified) && (
-              <View className="absolute top-2 left-2" style={{ zIndex: 60, overflow: 'visible' }}>
-                <VerifiedBadge size={28} animate={false} transformOrigin="top-left" />
+            {isVerified && (
+              <View className="absolute top-2.5 left-2.5 z-20 bg-white/95 dark:bg-neutral-900/90 rounded-full px-2 py-0.5 flex-row items-center shadow-xs" style={{ gap: 3 }}>
+                <VerifiedBadge size={11} animate={false} />
+                <Text className="text-[10px] font-bold text-neutral-900 dark:text-neutral-100">Verified Pro</Text>
               </View>
             )}
           </View>
-          <View className="mt-2">
-            <Text
-              className="text-[13px] font-semibold text-[#222222] dark:text-white leading-tight"
-              numberOfLines={1}
-            >
-              {item.companyName || item.businessName || 'Company'}
-            </Text>
-            {(item.reviewCount || 0) > 0 ? (
-              <View className="flex-row items-center mt-0.5" style={{ gap: 4 }}>
-                <Star size={10} color="#eab308" weight="fill" />
-                <Text className="text-xs font-bold text-[#222222] dark:text-neutral-200">
-                  {(item.averageRating || 0).toFixed(2)}
-                </Text>
-              </View>
-            ) : (
-              <Text className="text-xs font-bold text-neutral-400 dark:text-neutral-500 mt-0.5">New</Text>
-            )}
-            <Text className="text-xs text-[#717171] dark:text-neutral-400 mt-0.5" numberOfLines={1}>
-              {item.contactInfo?.city || 'Local'}, {item.contactInfo?.state || 'Area'}
-            </Text>
-            <Text className="text-[13px] font-semibold text-neutral-800 dark:text-neutral-200 mt-1">
-              {formatPriceString(price)}
-            </Text>
+          <View className="mt-2 text-left">
+            <View className="flex-row items-center justify-between" style={{ gap: 4 }}>
+              <Text
+                className="text-[13px] font-semibold text-[#222222] dark:text-white leading-tight flex-1"
+                numberOfLines={1}
+              >
+                {item.companyName || item.businessName || 'Company'}
+              </Text>
+              {reviewCount > 0 ? (
+                <View className="flex-row items-center shrink-0" style={{ gap: 2 }}>
+                  <Star size={11} color="#eab308" weight="fill" />
+                  <Text className="text-xs font-bold text-[#222222] dark:text-neutral-200">
+                    {rating.toFixed(1)}
+                  </Text>
+                </View>
+              ) : (
+                <Text className="text-[10px] font-medium text-neutral-400 dark:text-neutral-500 shrink-0">New</Text>
+              )}
+            </View>
+
+            {subLine ? (
+              <Text className="text-xs text-[#717171] dark:text-neutral-400 mt-0.5" numberOfLines={1}>
+                {subLine}
+              </Text>
+            ) : null}
+
+            {price ? (
+              <Text className="text-[12px] font-semibold text-neutral-800 dark:text-neutral-200 mt-1">
+                {formatPriceString(price)}
+              </Text>
+            ) : null}
           </View>
         </Pressable>
       );
