@@ -306,7 +306,7 @@ export const CategoryIcon = memo(function CategoryIcon({
   if (!config || !activeBgColor) return null;
 
   return (
-    <View className="items-center" style={{ gap: compact ? 3 : 8, paddingVertical: compact ? 2 : 8 }}>
+    <View className="items-center" style={{ gap: compact ? 4 : 8, paddingVertical: compact ? 0 : 8 }}>
       <Pressable
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
@@ -347,7 +347,7 @@ export const CategoryIcon = memo(function CategoryIcon({
 
       {label && (
         <Text
-          className={`text-[9.5px] font-semibold tracking-tight text-center ${
+          className={`text-[10px] font-semibold tracking-tight text-center ${
             active ? 'text-[#222222] dark:text-white' : 'text-[#717171] dark:text-neutral-400'
           }`}
           numberOfLines={1}

@@ -999,17 +999,41 @@ const HomeScreen = () => {
           ) : null}
         </View>
 
-        <View className="px-2 pt-1 pb-1">
-          <View className="flex-row flex-wrap justify-between" style={{ rowGap: 4 }}>
-            {CATEGORIES.map((cat, i) => (
-              <View key={cat.id} style={{ width: '16.2%', minWidth: 52 }} className="items-center">
+        <View className="px-3 pt-2 pb-1" style={{ gap: 14 }}>
+          {/* Row 1: 6 categories across */}
+          <View className="flex-row items-center justify-between">
+            {CATEGORIES.slice(0, 6).map((cat, i) => (
+              <View key={cat.id} style={{ width: 56 }} className="items-center">
                 <CategoryIcon
                   name={cat.icon}
                   active={activeCategory === cat.id}
-                  size={38}
+                  size={42}
                   compact={true}
                   label={cat.label}
                   index={i}
+                  onClick={() => {
+                    HapticFeedback.selection();
+                    requestAnimationFrame(() => {
+                      setActiveCategory(cat.id);
+                      loadContractors(searchZip || null, 1, false, cat.id);
+                    });
+                  }}
+                />
+              </View>
+            ))}
+          </View>
+
+          {/* Row 2: 5 categories centered */}
+          <View className="flex-row items-center justify-around px-4">
+            {CATEGORIES.slice(6).map((cat, i) => (
+              <View key={cat.id} style={{ width: 56 }} className="items-center">
+                <CategoryIcon
+                  name={cat.icon}
+                  active={activeCategory === cat.id}
+                  size={42}
+                  compact={true}
+                  label={cat.label}
+                  index={i + 6}
                   onClick={() => {
                     HapticFeedback.selection();
                     requestAnimationFrame(() => {
