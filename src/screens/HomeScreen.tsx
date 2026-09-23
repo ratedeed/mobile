@@ -213,7 +213,7 @@ const ListingCard = memo(({ listing, isFavorite, onToggleFavorite, detectedZip, 
 
   return (
     <Pressable
-      className="mb-4"
+      className="mb-1"
       onPress={() => onPress(listing)}
       accessibilityLabel={`View ${listing.companyName || listing.businessName || 'contractor'} details`}
       accessibilityRole="button"
@@ -347,7 +347,7 @@ const CategoryRow = memo(({ category, zip, favorites, toggleFav, handleContracto
 
   if (loading) {
     return (
-      <View className="flex-col px-4 mb-10" style={{ gap: 16 }}>
+      <View className="flex-col px-4 mb-5" style={{ gap: 8 }}>
         <View className="flex-row items-center justify-between">
           <Text className="text-xl font-bold text-neutral-900 dark:text-neutral-50">{category.label}</Text>
         </View>
@@ -369,7 +369,7 @@ const CategoryRow = memo(({ category, zip, favorites, toggleFav, handleContracto
   if (contractors.length === 0) return null;
 
   return (
-    <View className="flex-col px-4 mb-10" style={{ gap: 16 }}>
+    <View className="flex-col px-4 mb-5" style={{ gap: 8 }}>
       <View className="flex-row items-center justify-between">
         <Text className="text-xl font-bold text-neutral-900 dark:text-neutral-50">{category.label}</Text>
         <Pressable
@@ -999,36 +999,28 @@ const HomeScreen = () => {
           ) : null}
         </View>
 
-        <View className="relative mt-2">
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{
-              alignItems: 'center',
-              gap: 16,
-              paddingHorizontal: 16,
-              paddingRight: 100,
-              paddingVertical: 12,
-            }}
-          >
+        <View className="px-2 pt-1 pb-1">
+          <View className="flex-row flex-wrap justify-between" style={{ rowGap: 4 }}>
             {CATEGORIES.map((cat, i) => (
-              <CategoryIcon
-                key={cat.id}
-                name={cat.icon}
-                active={activeCategory === cat.id}
-                size={48}
-                label={cat.label}
-                index={i}
-                onClick={() => {
-                  HapticFeedback.selection();
-                  requestAnimationFrame(() => {
-                    setActiveCategory(cat.id);
-                    loadContractors(searchZip || null, 1, false, cat.id);
-                  });
-                }}
-              />
+              <View key={cat.id} style={{ width: '16.2%', minWidth: 52 }} className="items-center">
+                <CategoryIcon
+                  name={cat.icon}
+                  active={activeCategory === cat.id}
+                  size={38}
+                  compact={true}
+                  label={cat.label}
+                  index={i}
+                  onClick={() => {
+                    HapticFeedback.selection();
+                    requestAnimationFrame(() => {
+                      setActiveCategory(cat.id);
+                      loadContractors(searchZip || null, 1, false, cat.id);
+                    });
+                  }}
+                />
+              </View>
             ))}
-          </ScrollView>
+          </View>
         </View>
 
         {showPartnerBanner && (

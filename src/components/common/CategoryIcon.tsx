@@ -210,19 +210,21 @@ function CustomIcon({ name, active }: { name: string; active: boolean }) {
 
 let categoryEntrancePlayed = false;
 
-export const CategoryIcon = memo(function CategoryIcon({ 
-  name, 
-  active, 
+export const CategoryIcon = memo(function CategoryIcon({
+  name,
+  active,
   index = 0,
   size = 48,
   label,
-  onClick 
-}: { 
-  name: string; 
-  active: boolean; 
+  compact = false,
+  onClick
+}: {
+  name: string;
+  active: boolean;
   index?: number;
   size?: number;
   label?: string;
+  compact?: boolean;
   onClick?: (name: string) => void;
 }) {
   const config = catGradients[name];
@@ -304,19 +306,19 @@ export const CategoryIcon = memo(function CategoryIcon({
   if (!config || !activeBgColor) return null;
 
   return (
-    <View className="items-center" style={{ gap: 8, paddingVertical: 8 }}>
-      <Pressable 
+    <View className="items-center" style={{ gap: compact ? 3 : 8, paddingVertical: compact ? 2 : 8 }}>
+      <Pressable
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         onPress={() => onClick?.(name)}
         style={({ pressed }) => [
           {
             // Sufficient padding to prevent clipping during animation
-            padding: 4,
+            padding: compact ? 2 : 4,
           }
         ]}
       >
-        <Animated.View 
+        <Animated.View
           className={`rounded-2xl items-center justify-center ${active ? activeBgColor : config.bg}`}
           style={[
             { width: size, height: size },
@@ -342,11 +344,14 @@ export const CategoryIcon = memo(function CategoryIcon({
           <CustomIcon name={name} active={active} />
         </Animated.View>
       </Pressable>
-      
+
       {label && (
-        <Text className={`text-[10px] font-semibold tracking-tight ${
-          active ? 'text-[#222222] dark:text-white' : 'text-[#717171] dark:text-neutral-400'
-        }`}>
+        <Text
+          className={`text-[9.5px] font-semibold tracking-tight text-center ${
+            active ? 'text-[#222222] dark:text-white' : 'text-[#717171] dark:text-neutral-400'
+          }`}
+          numberOfLines={1}
+        >
           {label}
         </Text>
       )}
