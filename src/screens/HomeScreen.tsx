@@ -999,7 +999,7 @@ const HomeScreen = () => {
           ) : null}
         </View>
 
-        <View className="px-3 pt-2 pb-1" style={{ gap: 14 }}>
+        <View className="px-3 pt-2 pb-1" style={{ gap: 8 }}>
           {/* Row 1: 6 categories across */}
           <View className="flex-row items-center justify-between">
             {CATEGORIES.slice(0, 6).map((cat, i) => (
