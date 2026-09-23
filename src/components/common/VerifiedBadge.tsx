@@ -276,7 +276,7 @@ export const VerifiedBadge = memo(function VerifiedBadge({
     };
   });
 
-  // 8. Chiseled Arc Text Animation
+  // 8. Chiseled Arc Text Animations
   const textAnimatedStyle = useAnimatedStyle(() => {
     const t = progress.value;
     const textProg = sub(t, 0.65, 0.85);
